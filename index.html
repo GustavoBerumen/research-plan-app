@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="tb-inner">
+    <div class="tb-badge"><span class="tb-dot"></span>Research Plan</div>
+    <div class="tb-btns">
+      <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
+      <button class="btn btn-dark" id="print-btn">↓ Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="doc" id="doc">
+
+    <div class="doc-header">
+      <div class="sup-label">Document Title</div>
+      <input type="text" class="title-inp" data-field="title" placeholder="Untitled Research Plan">
+      <div class="meta-grid">
+        <div class="mf"><div class="mlabel">Project Owner</div><input type="text" class="minput" data-field="projectOwner" placeholder="Person"></div>
+        <div class="mf"><div class="mlabel">Research Owner</div><input type="text" class="minput" data-field="researchOwner" placeholder="Person"></div>
+        <div class="mf"><div class="mlabel">Research Team</div><input type="text" class="minput" data-field="researchTeam" placeholder="Person, Person, …"></div>
+        <div class="mf"><div class="mlabel">Last Updated</div><input type="text" class="minput" data-field="lastUpdated" placeholder="e.g. 1 July 2026"></div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="false">
+      <button class="acc-head" data-acc-toggle aria-expanded="false" aria-controls="body-alignment">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Alignment</span></div>
+        <span class="acc-count">4 fields</span>
+      </button>
+      <div class="acc-body" id="body-alignment" hidden>
+        <div class="tbl-wrap">
+          <table class="atbl">
+            <tbody>
+              <tr>
+                <td><div class="clbl">Project</div><input type="text" class="cinput" data-field="alignProject" placeholder="Initiative name"></td>
+                <td><div class="clbl">Area</div><input type="text" class="cinput" data-field="alignArea" placeholder="Department"></td>
+              </tr>
+              <tr>
+                <td><div class="clbl">Jira Project</div><input type="text" class="cinput" data-field="alignJiraProject" placeholder="Ticket reference"></td>
+                <td><div class="clbl">Jira Research</div><input type="text" class="cinput" data-field="alignJiraResearch" placeholder="Ticket reference"></td>
+              </tr>
+              <tr>
+                <td><div class="clbl">Project Deadline</div><input type="text" class="cinput" data-field="alignProjectDeadline" placeholder="Date"></td>
+                <td><div class="clbl">Report Deadline</div><input type="text" class="cinput" data-field="alignReportDeadline" placeholder="Date"></td>
+              </tr>
+              <tr>
+                <td><div class="clbl">Sign off — Project Owner</div><input type="text" class="cinput" data-field="alignSignOffProject" placeholder="Name / initials"></td>
+                <td><div class="clbl">Sign off — Research Owner</div><input type="text" class="cinput" data-field="alignSignOffResearch" placeholder="Name / initials"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="true">
+      <button class="acc-head" data-acc-toggle aria-expanded="true" aria-controls="body-context">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Project Context</span></div>
+        <span class="acc-count">3 fields</span>
+      </button>
+      <div class="acc-body" id="body-context">
+        <div class="fields">
+          <div class="field"><label class="flabel">Background</label><textarea class="finput field-ta" data-field="background" placeholder="Relevant information to understand the project"></textarea></div>
+          <div class="field"><label class="flabel">Goal</label><textarea class="finput field-ta" data-field="goal" placeholder="Aim of the project and the outcomes you are trying to achieve"></textarea></div>
+          <div class="field" id="problem-field">
+            <label class="flabel">Problem</label>
+            <textarea class="finput field-ta" id="problem-ta" data-field="problem" placeholder="Issues requiring attention that could prevent the project achieving its goal"></textarea>
+            <button class="ex-toggle" id="example-toggle" type="button">Show example</button>
+            <div class="ex-panel" id="example-panel" hidden>
+              <div class="ex-block ex-good"><span class="ex-block-label">Good</span>Mobile checkout abandonment rose from 24% to 36% (Q1→Q2 2026), 68% of drop-offs concentrated at the payment-info step, correlated with a rise in "payment error" support tickets. We suspect the new card-scanning feature added friction but haven't confirmed with users. Closing this gap would recover an estimated $180K/quarter.</div>
+              <div class="ex-block ex-bad"><span class="ex-block-label">Bad</span>Users are complaining about the checkout flow and we need to fix it.</div>
+            </div>
+            <button class="eval-btn" id="eval-btn" type="button"><span class="eval-spinner"></span><span id="eval-btn-txt">Evaluate Problem</span></button>
+            <div class="eval-panel" id="eval-panel" hidden>
+              <div class="eval-head"><span class="eval-badge" id="eval-badge"></span><span class="eval-hl">Problem Evaluation</span><button class="eval-x" id="eval-dismiss" type="button">✕</button></div>
+              <div class="eval-metrics" id="eval-metrics"></div>
+              <div class="eval-rlabel">Recommendations</div>
+              <ul class="eval-recs" id="eval-recs"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="false">
+      <button class="acc-head" data-acc-toggle aria-expanded="false" aria-controls="body-research">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Research</span></div>
+        <span class="acc-count">4 fields</span>
+      </button>
+      <div class="acc-body" id="body-research" hidden>
+        <div class="fields">
+          <div class="field"><label class="flabel">Objective</label><textarea class="finput field-ta" data-field="objective" placeholder="Purpose and high-level goals of the research"></textarea></div>
+          <div class="field"><label class="flabel">Hypothesis <span class="fopt">(optional)</span></label><textarea class="finput field-ta" data-field="hypothesis" placeholder="Baseline assumptions to be tested during the study"></textarea></div>
+          <div class="field"><label class="flabel">Research Questions</label><textarea class="finput field-ta" data-field="researchQuestions" placeholder="Questions that provide insights into the main issues and aspects we need to understand"></textarea></div>
+          <div class="field"><label class="flabel">Outcomes</label><textarea class="finput field-ta" data-field="outcomes" placeholder="Deliverables of the research (e.g., list of recommendations, design selection, decision on project)"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="false">
+      <button class="acc-head" data-acc-toggle aria-expanded="false" aria-controls="body-methodology">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Methodology</span></div>
+        <span class="acc-count">3 fields</span>
+      </button>
+      <div class="acc-body" id="body-methodology" hidden>
+        <div class="fields">
+          <div class="field"><label class="flabel">Theory <span class="fopt">(optional)</span></label><textarea class="finput field-ta" data-field="theory" placeholder="Any useful framework that can guide our research"></textarea></div>
+          <div class="field"><label class="flabel">Methods</label><textarea class="finput field-ta" data-field="methods" placeholder="Any specific research methods to collect and analyse the data"></textarea></div>
+          <div class="field"><label class="flabel">Participants</label><textarea class="finput field-ta" data-field="participants" placeholder="Characteristics of target user profile including an estimation of the sample"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="false">
+      <button class="acc-head" data-acc-toggle aria-expanded="false" aria-controls="body-execution">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Execution</span></div>
+        <span class="acc-count">4 fields</span>
+      </button>
+      <div class="acc-body" id="body-execution" hidden>
+        <div class="fields">
+          <div class="field"><label class="flabel">Requirements</label><textarea class="finput field-ta" data-field="requirements" placeholder="Any resources (physical, digital, and approvals) needed to execute the study"></textarea></div>
+          <div class="field"><label class="flabel">Timeframe</label><textarea class="finput field-ta" data-field="timeframe" placeholder="Scheduled duration for each research phase"></textarea></div>
+          <div class="field">
+            <label class="flabel">Stage Timeline</label>
+            <div class="tbl-wrap">
+              <table class="dtbl" id="stage-table">
+                <thead><tr><th>Stage</th><th>Completion Date</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><input type="text" class="cinput" placeholder="e.g. Recruitment"></td>
+                    <td><input type="text" class="cinput" placeholder="Date"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="add-btn" id="add-stage-btn" type="button">+ Add stage</button>
+          </div>
+          <div class="field">
+            <label class="flabel">Action Points</label>
+            <div class="tbl-wrap">
+              <table class="dtbl" id="action-table">
+                <thead><tr><th>Action</th><th>Responsible</th><th style="width:130px">Status</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><input type="text" class="cinput" placeholder="Task description"></td>
+                    <td><input type="text" class="cinput" placeholder="Person"></td>
+                    <td><select class="ssel"><option value="not-started">Not Started</option><option value="in-progress" selected="selected">In Progress</option><option value="complete">Complete</option><option value="blocked">Blocked</option></select></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="add-btn" id="add-action-btn" type="button">+ Add action</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc" data-open="false">
+      <button class="acc-head" data-acc-toggle aria-expanded="false" aria-controls="body-resources">
+        <div class="acc-head-left"><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg><span class="acc-title">Resources</span></div>
+        <span class="acc-count">2 fields</span>
+      </button>
+      <div class="acc-body" id="body-resources" hidden>
+        <div class="fields">
+          <div class="field"><label class="flabel">Previous Knowledge</label><textarea class="finput field-ta" data-field="previousKnowledge" placeholder="Existing research and internal data relevant to the project"></textarea></div>
+          <div class="field"><label class="flabel">Documentation</label><textarea class="finput field-ta" data-field="documentation" placeholder="Reference materials required to understand and execute the study"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
