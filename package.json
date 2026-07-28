@@ -1,0 +1,12 @@
+{
+  "name": "research-plan-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Research plan form with LLM-based rubric evaluation",
+  "scripts": {
+    "start": "node --env-file=.env server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0"
+  }
+}

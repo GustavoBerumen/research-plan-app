@@ -32,7 +32,7 @@ title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
-# Title (text): Untitled Research Plan
+# Title (text): Title for your research plan
 
 Project Owner (text): Person
 Research Owner (text): Person
@@ -55,8 +55,6 @@ Sign off — Research Owner (text): Name / initials
 Background (textarea): Relevant information to understand the project
 Goal (textarea): Aim of the project and the outcomes you are trying to achieve
 Problem (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
-  Good: Mobile checkout abandonment rose from 24% to 36% (Q1→Q2 2026), 68% of drop-offs concentrated at the payment-info step, correlated with a rise in "payment error" support tickets. We suspect the new card-scanning feature added friction but haven't confirmed with users. Closing this gap would recover an estimated $180K/quarter.
-  Bad: Users are complaining about the checkout flow and we need to fix it.
 
 # Research
 

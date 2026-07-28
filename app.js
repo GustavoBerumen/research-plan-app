@@ -3,6 +3,7 @@
 
   const DRAFT_KEY = 'research-plan-draft';
   const SCHEMA_URL = 'research-plan-template.md';
+  const RUBRIC_URL = 'research-plan-rubric.md';
   const doc = document.getElementById('doc');
 
   // tables holds one entry per rendered <table> field: its DOM id, the
@@ -125,6 +126,38 @@
     return { header, sections };
   }
 
+  // ---------- rubric parsing (research-plan-rubric.md) ----------
+  function parseRubric(text) {
+    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    const rubrics = {};
+    let currentKey = null;
+    text.split('\n').forEach((raw) => {
+      const line = raw.replace(/\s+$/, '');
+      if (!line.trim()) return;
+
+      const heading = line.match(/^#\s+(.+)$/);
+      if (heading) {
+        currentKey = toCamelKey(heading[1].trim());
+        rubrics[currentKey] = [];
+        return;
+      }
+
+      const bullet = line.match(/^-\s*(.+?)\s*:\s*(.*)$/);
+      if (bullet && currentKey) {
+        rubrics[currentKey].push({ name: bullet[1].trim(), desc: bullet[2].trim() });
+      }
+    });
+    return rubrics;
+  }
+
+  function attachRubrics(schema, rubrics) {
+    const allFields = [schema.header.title, ...schema.header.meta];
+    schema.sections.forEach((s) => allFields.push(...s.fields));
+    allFields.forEach((f) => {
+      if (rubrics[f.key]) f.rubric = rubrics[f.key];
+    });
+  }
+
   // ---------- textarea autosize ----------
   function resizeTa(ta) {
     ta.style.height = 'auto';
@@ -211,77 +244,31 @@
     return tr;
   }
 
-  // ---------- evaluate (mock — swap body for a real Claude API call later) ----------
-  function getMockKey(text) {
-    const len = text.trim().length;
-    if (len < 50) return 'needs-work';
-    if (len < 130) return 'developing';
-    if (len < 260) return 'good';
-    return 'ready';
+  // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
+  const SCORE_STYLES = [
+    { max: 2, label: 'Needs Work', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+    { max: 3, label: 'Developing', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+    { max: 4.5, label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+    { max: Infinity, label: 'Ready', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  ];
+  function styleForScore(avg) {
+    return SCORE_STYLES.find((s) => avg < s.max);
   }
 
-  const EVAL_DATA = {
-    'needs-work': {
-      label: 'Needs Work', color: '#dc2626', bg: '#fef2f2', border: '#fecaca',
-      metrics: [
-        { name: 'Clarity', score: 1, desc: 'Statement is vague and undefined' },
-        { name: 'Specificity', score: 1, desc: 'No measurable criteria mentioned' },
-        { name: 'Feasibility', score: 2, desc: 'Scope too broad to assess' },
-        { name: 'Significance', score: 1, desc: 'User or business impact not stated' },
-      ],
-      recs: [
-        'Define the specific user segment affected — narrow it to one persona and context.',
-        'Include quantifiable data such as drop-off rates, error frequency, or support volume.',
-        'Link the problem directly to a measurable business or UX outcome to establish stakes.',
-      ],
-    },
-    'developing': {
-      label: 'Developing', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa',
-      metrics: [
-        { name: 'Clarity', score: 2, desc: 'Problem area identified, scope is broad' },
-        { name: 'Specificity', score: 2, desc: 'Some context; key metrics are missing' },
-        { name: 'Feasibility', score: 3, desc: 'Addressable, but constraints are unclear' },
-        { name: 'Significance', score: 2, desc: 'Impact implied but not quantified' },
-      ],
-      recs: [
-        'Narrow the scope to a single, well-defined friction point in the user journey.',
-        'Add baseline data — e.g. current conversion rate, NPS score, or task completion rate.',
-        'Specify which user personas are most affected and articulate the cost to them clearly.',
-      ],
-    },
-    'good': {
-      label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe',
-      metrics: [
-        { name: 'Clarity', score: 4, desc: 'Well described with sufficient context' },
-        { name: 'Specificity', score: 3, desc: 'Good detail; success criteria could sharpen' },
-        { name: 'Feasibility', score: 4, desc: 'Well-scoped and clearly actionable' },
-        { name: 'Significance', score: 4, desc: 'User and business impact are evident' },
-      ],
-      recs: [
-        'Add a root-cause hypothesis to sharpen your research focus and inform methodology choice.',
-        'Quantify the expected impact if this problem is resolved to strengthen prioritisation.',
-        'Identify known constraints (time, budget, technical) that may affect the solution space.',
-      ],
-    },
-    'ready': {
-      label: 'Ready', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0',
-      metrics: [
-        { name: 'Clarity', score: 5, desc: 'Precisely articulated with clear scope' },
-        { name: 'Specificity', score: 5, desc: 'Metrics, segments, and context all defined' },
-        { name: 'Feasibility', score: 5, desc: 'Constraints acknowledged and actionable' },
-        { name: 'Significance', score: 4, desc: 'Business and user impact well established' },
-      ],
-      recs: [
-        'Stress-test the statement with a secondary stakeholder before finalising it.',
-        'Ensure each research question maps directly to a dimension of the problem described.',
-        'Document assumptions baked into this statement to revisit them after fieldwork.',
-      ],
-    },
-  };
-
-  // Swap this function's body for a real API call later; callers don't change.
-  function evaluateField(text) {
-    return Promise.resolve(EVAL_DATA[getMockKey(text)]);
+  function evaluateField(text, field) {
+    return fetch('/api/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, fieldLabel: field.label, rubric: field.rubric || [] }),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((data) => {
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        return data;
+      });
+    }).then((data) => {
+      const avg = data.metrics.reduce((sum, m) => sum + m.score, 0) / data.metrics.length;
+      return { ...styleForScore(avg), metrics: data.metrics, recs: data.recommendations };
+    });
   }
 
   function renderEvalResult(panel, data) {
@@ -389,8 +376,10 @@
       btn.disabled = true;
       btn.classList.add('loading');
       txt.textContent = 'Evaluating…';
-      evaluateField(text).then((data) => {
+      evaluateField(text, field).then((data) => {
         renderEvalResult(panel, data);
+      }).catch((err) => {
+        alert('Evaluation failed: ' + err.message);
       }).finally(() => {
         btn.disabled = false;
         btn.classList.remove('loading');
@@ -664,6 +653,13 @@
   }
 
   // ---------- wire up ----------
+  function fetchText(url) {
+    return fetch(url).then((res) => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    });
+  }
+
   function showLoadError(err) {
     doc.innerHTML = '';
     const msg = el('div', 'doc-error');
@@ -676,13 +672,17 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    fetch(SCHEMA_URL)
-      .then((res) => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      })
-      .then((text) => {
-        renderSchema(parseSchema(text));
+    Promise.all([
+      fetchText(SCHEMA_URL),
+      fetchText(RUBRIC_URL).catch((err) => {
+        console.warn('Failed to load rubric "' + RUBRIC_URL + '" — evaluation will run without scoring criteria:', err);
+        return '';
+      }),
+    ])
+      .then(([schemaText, rubricText]) => {
+        const schema = parseSchema(schemaText);
+        attachRubrics(schema, parseRubric(rubricText));
+        renderSchema(schema);
         restoreDraft();
         initTextareas(doc);
         initStatusSelects(doc);
