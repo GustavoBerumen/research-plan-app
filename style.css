@@ -22,6 +22,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .minput:focus{border-bottom-color:#6366f1}
 .minput::placeholder{color:#ccc9c3}
 
+.doc-loading{color:#a8a29e;font-size:14px}
+.doc-error{color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 18px;font-size:13.5px;line-height:1.6}
+
 .acc{margin-bottom:14px;border:1px solid #eeebe6;border-radius:10px;overflow:hidden}
 .acc-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#faf8f6;border:none;cursor:pointer;padding:14px 18px;font-family:inherit;text-align:left}
 .acc-head:hover{background:#f5f2ee}
