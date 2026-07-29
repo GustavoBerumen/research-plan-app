@@ -345,6 +345,19 @@
     return [toggle, panel];
   }
 
+  function saveForCalibration(field, text, data) {
+    return fetch('/api/calibration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: field.label, text, metrics: data.metrics, recommendations: data.recs }),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((body) => {
+        if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
+        return body;
+      });
+    });
+  }
+
   function renderEvalControls(field, input) {
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
@@ -365,7 +378,12 @@
     const rlabel = el('div', 'eval-rlabel');
     rlabel.textContent = 'Recommendations';
     const recs = el('ul', 'eval-recs');
-    panel.append(head, metrics, rlabel, recs);
+    const saveBtn = el('button', 'eval-save-btn', { type: 'button' });
+    saveBtn.textContent = 'Save for calibration';
+    saveBtn.disabled = true;
+    panel.append(head, metrics, rlabel, recs, saveBtn);
+
+    let lastResult = null;
 
     btn.addEventListener('click', () => {
       const text = input.value;
@@ -378,6 +396,9 @@
       txt.textContent = 'Evaluating…';
       evaluateField(text, field).then((data) => {
         renderEvalResult(panel, data);
+        lastResult = { text, data };
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save for calibration';
       }).catch((err) => {
         alert('Evaluation failed: ' + err.message);
       }).finally(() => {
@@ -387,6 +408,19 @@
       });
     });
     dismiss.addEventListener('click', () => { panel.hidden = true; });
+
+    saveBtn.addEventListener('click', () => {
+      if (!lastResult) return;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      saveForCalibration(field, lastResult.text, lastResult.data).then(() => {
+        saveBtn.textContent = 'Saved ✓';
+      }).catch((err) => {
+        alert('Save failed: ' + err.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save for calibration';
+      });
+    });
 
     return [btn, panel];
   }

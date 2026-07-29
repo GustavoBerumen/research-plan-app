@@ -81,29 +81,62 @@ const EVAL_TOOL = {
           properties: {
             name: { type: 'string' },
             score: { type: 'integer', minimum: 1, maximum: 5 },
-            desc: { type: 'string', description: 'One sentence justifying the score, grounded in the actual text.' },
+            desc: {
+              type: 'string',
+              maxLength: 70,
+              description: 'One short sentence (10 words max) justifying the score, grounded in the actual text.',
+            },
           },
           required: ['name', 'score', 'desc'],
         },
       },
       recommendations: {
         type: 'array',
-        description: '2-3 concrete, specific recommendations, each tied to a specific criterion that scored low.',
-        items: { type: 'string' },
+        minItems: 2,
+        maxItems: 2,
+        description: 'Exactly 2 concrete, specific recommendations, each tied to a specific criterion that scored low.',
+        items: { type: 'string', maxLength: 100, description: 'One sentence (15 words max).' },
       },
     },
     required: ['metrics', 'recommendations'],
   },
 };
 
+// Calibrates the model's bar for specific criteria, keyed by criterion name.
+// Not every criterion needs one — only add where the literal rubric wording
+// alone tends to over- or under-score real answers.
+const CRITERION_EXAMPLES = {
+  'Focused on User Understanding': {
+    weak: 'Validate our new checkout button design.',
+    strong: 'Understand why users drop off at the payment step during checkout.',
+  },
+  'Actionable': {
+    weak: 'Gather user opinions on our dashboard.',
+    strong: 'Identify which data visualization errors cause users to misinterpret their monthly report, so we can refine the Q3 dashboard redesign.',
+  },
+  'Feasible': {
+    weak: "Understand our users' entire financial workflow.",
+    strong: 'Understand how new users categorize their first expense during onboarding.',
+  },
+  'Relevant': {
+    weak: 'Explore how power users customize their profile themes (when the active project is fixing payment gateway churn).',
+    strong: 'Identify the main points of confusion for existing subscribers trying to update their payment methods.',
+  },
+};
+
 function buildPrompt(fieldLabel, text, rubric) {
-  const rubricList = rubric.map((r, i) => `${i + 1}. ${r.name}: ${r.desc}`).join('\n');
+  const rubricList = rubric.map((r, i) => {
+    const ex = CRITERION_EXAMPLES[r.name];
+    const exampleText = ex ? ` (Weak: "${ex.weak}" | Strong: "${ex.strong}")` : '';
+    return `${i + 1}. ${r.name}: ${r.desc}${exampleText}`;
+  }).join('\n');
   return `You are evaluating a "${fieldLabel}" statement written for a UX research plan.\n\n` +
     `Statement:\n"""\n${text}\n"""\n\n` +
     `Score it against exactly these criteria (return one metric per criterion, same order, same name):\n${rubricList}\n\n` +
-    `For each criterion, give an integer score from 1-5 and a one-sentence justification grounded in the actual ` +
-    `statement (reference specifics from it, don't just restate the rubric). Then give 2-3 concrete recommendations ` +
-    `for improving the statement, each tied to whichever criteria scored lowest.`;
+    `For each criterion, give an integer score from 1-5 and a short justification (10 words max) grounded in the ` +
+    `actual statement (reference specifics from it, don't just restate the rubric). Then give exactly 2 concrete ` +
+    `recommendations (one sentence each, 15 words max) for improving the statement, each tied to whichever criteria ` +
+    `scored lowest.`;
 }
 
 async function handleEvaluate(req, res) {
@@ -152,9 +185,49 @@ async function handleEvaluate(req, res) {
   }
 }
 
+const CALIBRATION_FILE = path.join(ROOT, 'calibration-data.jsonl');
+
+async function handleSaveCalibration(req, res) {
+  let payload;
+  try {
+    payload = await readJsonBody(req);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+    return;
+  }
+
+  const field = typeof payload.field === 'string' ? payload.field.trim() : '';
+  const text = typeof payload.text === 'string' ? payload.text.trim() : '';
+  const metrics = Array.isArray(payload.metrics) ? payload.metrics : [];
+  const recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
+
+  if (!field || !text) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'field and text are required' }));
+    return;
+  }
+
+  const record = { field, text, metrics, recommendations, savedAt: new Date().toISOString() };
+
+  try {
+    await fs.promises.appendFile(CALIBRATION_FILE, JSON.stringify(record) + '\n');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error('Saving calibration record failed:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Saving calibration record failed: ' + err.message }));
+  }
+}
+
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/evaluate') {
     handleEvaluate(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/api/calibration') {
+    handleSaveCalibration(req, res);
     return;
   }
   if (req.method === 'GET') {

@@ -57,7 +57,7 @@ Goal (textarea): Aim of the project and the outcomes you are trying to achieve
 Problem (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
 # Research
 
-Objective (textarea): Purpose and high-level goals of the research
+Objective (textarea, eval): Purpose and high-level goals of the research
 Hypothesis (textarea, optional): Baseline assumptions to be tested during the study
 Research Questions (textarea): Questions that provide insights into the main issues and aspects we need to understand
 Outcomes (textarea): Deliverables of the research (e.g., list of recommendations, design selection, decision on project)
