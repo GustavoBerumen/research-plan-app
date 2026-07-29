@@ -55,7 +55,6 @@ Sign off — Research Owner (text): Name / initials
 Background (textarea): Relevant information to understand the project
 Goal (textarea): Aim of the project and the outcomes you are trying to achieve
 Problem (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
-
 # Research
 
 Objective (textarea): Purpose and high-level goals of the research
