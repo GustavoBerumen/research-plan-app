@@ -62,6 +62,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 .dtbl th:not(:last-child){border-right:1px solid #e8e4de}
 .ssel{font-family:inherit;font-size:11.5px;font-weight:600;border:none;border-radius:20px;padding:4px 11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s,color .15s}
 .ss-ns{background:#f3f4f6;color:#6b7280}
+.ss-assigned{background:#fefce8;color:#a16207}
 .ss-ip{background:#eff6ff;color:#2563eb}
 .ss-done{background:#f0fdf4;color:#16a34a}
 .ss-block{background:#fef2f2;color:#dc2626}

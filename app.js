@@ -172,6 +172,7 @@
   // ---------- status select coloring ----------
   const STATUS_CLASS = {
     'not-started': 'ss-ns',
+    'assigned': 'ss-assigned',
     'in-progress': 'ss-ip',
     'complete': 'ss-done',
     'blocked': 'ss-block',
@@ -446,7 +447,7 @@
       if (col.type === 'status') {
         const sel = document.createElement('select');
         sel.className = 'ssel ss-ns';
-        [['not-started', 'Not Started'], ['in-progress', 'In Progress'], ['complete', 'Complete'], ['blocked', 'Blocked']].forEach(([v, l]) => {
+        [['not-started', 'Not Started'], ['assigned', 'Assigned'], ['in-progress', 'In Progress'], ['complete', 'Complete'], ['blocked', 'Blocked']].forEach(([v, l]) => {
           const o = document.createElement('option');
           o.value = v;
           o.textContent = l;
