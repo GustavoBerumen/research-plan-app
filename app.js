@@ -1,7 +1,6 @@
 (() => {
   'use strict';
 
-  const DRAFT_KEY = 'research-plan-draft';
   const SCHEMA_URL = 'research-plan-template.md';
   const RUBRIC_URL = 'research-plan-rubric.md';
   const doc = document.getElementById('doc');
@@ -603,87 +602,6 @@
     doc.querySelectorAll('.eval-panel').forEach((p) => { p.hidden = true; });
     doc.querySelectorAll('.ex-panel').forEach((p) => { p.hidden = true; });
     doc.querySelectorAll('.ex-toggle').forEach((t) => { t.textContent = 'Show example'; });
-
-    localStorage.removeItem(DRAFT_KEY);
-  }
-
-  // ---------- save / restore draft ----------
-  function serializeDraft() {
-    const fields = {};
-    doc.querySelectorAll('[data-field]').forEach((el) => {
-      fields[el.dataset.field] = el.value;
-    });
-    const readRows = (tableId, cols) => {
-      const rows = [];
-      document.getElementById(tableId).querySelectorAll('tbody tr').forEach((tr) => {
-        const cells = tr.querySelectorAll('input, select');
-        const row = {};
-        cols.forEach((c, i) => { row[c] = cells[i] ? cells[i].value : ''; });
-        rows.push(row);
-      });
-      return rows;
-    };
-    const tableData = {};
-    tables.forEach(({ id, cols }) => { tableData[id] = readRows(id, cols); });
-    return { fields, tables: tableData };
-  }
-
-  function saveDraft() {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(serializeDraft()));
-    } catch (e) {
-      // localStorage unavailable (e.g. private browsing) — fail silently, nothing to recover
-    }
-  }
-
-  function restoreDraft() {
-    let raw;
-    try {
-      raw = localStorage.getItem(DRAFT_KEY);
-    } catch (e) {
-      return;
-    }
-    if (!raw) return;
-    let draft;
-    try {
-      draft = JSON.parse(raw);
-    } catch (e) {
-      return;
-    }
-
-    Object.entries(draft.fields || {}).forEach(([key, value]) => {
-      const el = doc.querySelector(`[data-field="${key}"]`);
-      if (el) el.value = value;
-    });
-
-    tables.forEach(({ id, cols, columns }) => {
-      const rows = draft.tables && draft.tables[id];
-      if (!rows || rows.length === 0) return;
-      const tbody = document.getElementById(id).querySelector('tbody');
-      tbody.innerHTML = '';
-      rows.forEach((rowData) => {
-        const tr = buildRow(columns);
-        tbody.appendChild(tr);
-        const cells = tr.querySelectorAll('input, select');
-        cols.forEach((c, i) => { if (cells[i]) cells[i].value = rowData[c] || ''; });
-        const sel = tr.querySelector('select');
-        if (sel) updateSelectClass(sel);
-      });
-    });
-
-    doc.querySelectorAll('.field-ta').forEach(resizeTa);
-  }
-
-  function initAutosave() {
-    let t = null;
-    doc.addEventListener('input', () => {
-      clearTimeout(t);
-      t = setTimeout(saveDraft, 400);
-    });
-    doc.addEventListener('change', () => {
-      clearTimeout(t);
-      t = setTimeout(saveDraft, 400);
-    });
   }
 
   // ---------- wire up ----------
@@ -717,11 +635,9 @@
         const schema = parseSchema(schemaText);
         attachRubrics(schema, parseRubric(rubricText));
         renderSchema(schema);
-        restoreDraft();
         initTextareas(doc);
         initStatusSelects(doc);
         initAccordion();
-        initAutosave();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
       })
