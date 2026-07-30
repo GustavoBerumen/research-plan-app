@@ -344,11 +344,11 @@
     return [toggle, panel];
   }
 
-  function saveForCalibration(field, text, data) {
+  function saveForCalibration(field, text, data, feedback) {
     return fetch('/api/calibration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field: field.label, text, metrics: data.metrics, recommendations: data.recs }),
+      body: JSON.stringify({ field: field.label, text, metrics: data.metrics, recommendations: data.recs, feedback: feedback || null }),
     }).then((res) => {
       return res.json().catch(() => ({})).then((body) => {
         if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
@@ -377,10 +377,21 @@
     const rlabel = el('div', 'eval-rlabel');
     rlabel.textContent = 'Recommendations';
     const recs = el('ul', 'eval-recs');
-    const saveBtn = el('button', 'eval-save-btn', { type: 'button' });
-    saveBtn.textContent = 'Save for calibration';
+    const saveBtn = el('button', 'eval-fb-btn eval-save-btn', { type: 'button' });
+    saveBtn.textContent = '📤';
+    saveBtn.title = 'Save';
     saveBtn.disabled = true;
-    panel.append(head, metrics, rlabel, recs, saveBtn);
+    const likeBtn = el('button', 'eval-fb-btn eval-like-btn', { type: 'button' });
+    likeBtn.textContent = '👍';
+    likeBtn.title = 'Like';
+    likeBtn.disabled = true;
+    const dislikeBtn = el('button', 'eval-fb-btn eval-dislike-btn', { type: 'button' });
+    dislikeBtn.textContent = '👎';
+    dislikeBtn.title = 'Dislike';
+    dislikeBtn.disabled = true;
+    const actions = el('div', 'eval-actions');
+    actions.append(likeBtn, dislikeBtn, saveBtn);
+    panel.append(head, metrics, rlabel, recs, actions);
 
     let lastResult = null;
 
@@ -397,7 +408,12 @@
         renderEvalResult(panel, data);
         lastResult = { text, data };
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Save for calibration';
+        saveBtn.classList.remove('active');
+        saveBtn.title = 'Save';
+        likeBtn.disabled = false;
+        likeBtn.classList.remove('active');
+        dislikeBtn.disabled = false;
+        dislikeBtn.classList.remove('active');
       }).catch((err) => {
         alert('Evaluation failed: ' + err.message);
       }).finally(() => {
@@ -411,13 +427,54 @@
     saveBtn.addEventListener('click', () => {
       if (!lastResult) return;
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
+      likeBtn.disabled = true;
+      dislikeBtn.disabled = true;
+      saveBtn.title = 'Saving…';
       saveForCalibration(field, lastResult.text, lastResult.data).then(() => {
-        saveBtn.textContent = 'Saved ✓';
+        saveBtn.title = 'Saved';
+        saveBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Save for calibration';
+        likeBtn.disabled = false;
+        dislikeBtn.disabled = false;
+        saveBtn.title = 'Save';
+      });
+    });
+
+    likeBtn.addEventListener('click', () => {
+      if (!lastResult) return;
+      saveBtn.disabled = true;
+      likeBtn.disabled = true;
+      dislikeBtn.disabled = true;
+      likeBtn.title = 'Saving…';
+      saveForCalibration(field, lastResult.text, lastResult.data, 'like').then(() => {
+        likeBtn.title = 'Liked';
+        likeBtn.classList.add('active');
+      }).catch((err) => {
+        alert('Save failed: ' + err.message);
+        saveBtn.disabled = false;
+        likeBtn.disabled = false;
+        dislikeBtn.disabled = false;
+        likeBtn.title = 'Like';
+      });
+    });
+
+    dislikeBtn.addEventListener('click', () => {
+      if (!lastResult) return;
+      saveBtn.disabled = true;
+      likeBtn.disabled = true;
+      dislikeBtn.disabled = true;
+      dislikeBtn.title = 'Saving…';
+      saveForCalibration(field, lastResult.text, lastResult.data, 'dislike').then(() => {
+        dislikeBtn.title = 'Disliked';
+        dislikeBtn.classList.add('active');
+      }).catch((err) => {
+        alert('Save failed: ' + err.message);
+        saveBtn.disabled = false;
+        likeBtn.disabled = false;
+        dislikeBtn.disabled = false;
+        dislikeBtn.title = 'Dislike';
       });
     });
 

@@ -197,6 +197,7 @@ async function handleSaveCalibration(req, res) {
   const text = typeof payload.text === 'string' ? payload.text.trim() : '';
   const metrics = Array.isArray(payload.metrics) ? payload.metrics : [];
   const recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
+  const feedback = payload.feedback === 'like' || payload.feedback === 'dislike' ? payload.feedback : null;
 
   if (!field || !text) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -204,7 +205,7 @@ async function handleSaveCalibration(req, res) {
     return;
   }
 
-  const record = { field, text, metrics, recommendations, savedAt: new Date().toISOString() };
+  const record = { field, text, metrics, recommendations, feedback, savedAt: new Date().toISOString() };
 
   try {
     await fs.promises.appendFile(CALIBRATION_FILE, JSON.stringify(record) + '\n');
