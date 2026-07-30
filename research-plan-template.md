@@ -12,7 +12,7 @@ Types:
   date      — native date picker (calendar); placeholder text is ignored
   table     — repeatable rows. Placeholder text instead describes columns as
               "ColLabel:coltype=placeholder | ColLabel:coltype=placeholder"
-              coltype is one of: text, date, person, status (dropdown)
+              coltype is one of: text, date, person, status (dropdown), url, file (click to attach, 15MB max)
 
 Flags (comma-separated inside the parentheses):
   optional  — marks the field "(optional)" in its label
@@ -77,5 +77,5 @@ Action Points (table): Action:text=Task description | Responsible:person | Statu
 
 # Resources
 
-Previous Knowledge (textarea): Existing research and internal data relevant to the project
-Documentation (textarea): Reference materials required to understand and execute the study
+Previous Knowledge (table): Name:text=e.g. Q3 Checkout Usability Study | File:file
+<!-- Documentation (textarea): Reference materials required to understand and execute the study -->

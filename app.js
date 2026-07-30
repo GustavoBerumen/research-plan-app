@@ -39,7 +39,7 @@
       label = label.trim();
       type = (type || 'text').trim().toLowerCase();
       if (placeholder === undefined) {
-        placeholder = type === 'date' ? 'Date' : type === 'person' ? 'Person' : type === 'status' ? '' : 'Enter text…';
+        placeholder = type === 'date' ? 'Date' : type === 'person' ? 'Person' : type === 'status' ? '' : type === 'url' ? 'https://…' : type === 'file' ? 'No file chosen' : 'Enter text…';
       } else {
         placeholder = placeholder.trim();
       }
@@ -206,7 +206,239 @@
     });
   }
 
+  // ---------- file upload ----------
+  const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+  function readFileAsBase64(fileOrBlob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+      reader.readAsDataURL(fileOrBlob);
+    });
+  }
+
+  function uploadFile(fileOrBlob, filename) {
+    return readFileAsBase64(fileOrBlob).then((dataBase64) => {
+      return fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: filename || fileOrBlob.name, dataBase64 }),
+      });
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((body) => {
+        if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
+        return body;
+      });
+    });
+  }
+
+  // ---------- Google Drive picker ----------
+  let configPromise = null;
+  function getConfig() {
+    if (!configPromise) configPromise = fetch('/api/config').then((res) => res.json());
+    return configPromise;
+  }
+
+  function waitFor(check, timeout, interval) {
+    timeout = timeout || 8000;
+    interval = interval || 100;
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      (function poll() {
+        if (check()) { resolve(); return; }
+        if (Date.now() - start > timeout) { reject(new Error('Google scripts failed to load')); return; }
+        setTimeout(poll, interval);
+      })();
+    });
+  }
+
+  let pickerApiPromise = null;
+  function loadPickerApi() {
+    if (!pickerApiPromise) {
+      pickerApiPromise = waitFor(() => window.gapi).then(() => new Promise((resolve) => gapi.load('picker', resolve)));
+    }
+    return pickerApiPromise;
+  }
+
+  let driveTokenCache = null;
+  function getDriveAccessToken(clientId) {
+    if (driveTokenCache && driveTokenCache.expiresAt > Date.now()) {
+      return Promise.resolve(driveTokenCache.token);
+    }
+    return waitFor(() => window.google && google.accounts && google.accounts.oauth2).then(() => {
+      return new Promise((resolve, reject) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/drive.readonly',
+          callback: (resp) => {
+            if (resp.error) { reject(new Error(resp.error)); return; }
+            driveTokenCache = { token: resp.access_token, expiresAt: Date.now() + (Number(resp.expires_in || 3000) - 60) * 1000 };
+            resolve(resp.access_token);
+          },
+        });
+        tokenClient.requestAccessToken();
+      });
+    });
+  }
+
+  function openDrivePicker(token, apiKey) {
+    return new Promise((resolve, reject) => {
+      const picker = new google.picker.PickerBuilder()
+        .addView(google.picker.ViewId.DOCS)
+        .setOAuthToken(token)
+        .setDeveloperKey(apiKey)
+        .setCallback((data) => {
+          if (data.action === google.picker.Action.PICKED) {
+            resolve(data.docs[0]);
+          } else if (data.action === google.picker.Action.CANCEL) {
+            reject(new Error('cancelled'));
+          }
+        })
+        .build();
+      picker.setVisible(true);
+    });
+  }
+
+  function downloadDriveFile(file, token) {
+    const isGoogleNative = file.mimeType && file.mimeType.indexOf('application/vnd.google-apps.') === 0;
+    const url = isGoogleNative
+      ? `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${encodeURIComponent('application/pdf')}`
+      : `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+    return fetch(url, { headers: { Authorization: 'Bearer ' + token } }).then((res) => {
+      if (!res.ok) throw new Error('Drive download failed (HTTP ' + res.status + ')');
+      return res.blob();
+    }).then((blob) => ({ blob, name: isGoogleNative ? file.name + '.pdf' : file.name }));
+  }
+
+  function addFromDrive() {
+    return getConfig().then((cfg) => {
+      if (!cfg.googleClientId || !cfg.googleApiKey) {
+        throw new Error('Google Drive is not configured for this app (missing GOOGLE_CLIENT_ID / GOOGLE_API_KEY).');
+      }
+      return loadPickerApi()
+        .then(() => getDriveAccessToken(cfg.googleClientId))
+        .then((token) => openDrivePicker(token, cfg.googleApiKey).then((file) => downloadDriveFile(file, token)));
+    });
+  }
+
   // ---------- dynamic table rows ----------
+  function buildFileCell(placeholder) {
+    const wrap = el('div', 'file-cell');
+    const valueInp = document.createElement('input');
+    valueInp.type = 'hidden';
+    valueInp.className = 'cinput file-value';
+    const fileInp = document.createElement('input');
+    fileInp.type = 'file';
+    fileInp.className = 'file-native';
+
+    const addWrap = el('div', 'file-add-wrap');
+    const addBtn = el('button', 'file-add-btn', { type: 'button' });
+    addBtn.textContent = '+';
+    addBtn.title = 'Add a file';
+    const menu = el('div', 'file-menu');
+    menu.hidden = true;
+    const uploadItem = el('button', 'file-menu-item', { type: 'button' });
+    uploadItem.textContent = 'Upload file';
+    const driveItem = el('button', 'file-menu-item', { type: 'button' });
+    driveItem.textContent = 'Add from Drive';
+    menu.append(uploadItem, driveItem);
+    addWrap.append(addBtn, menu);
+
+    const nameSpan = el('span', 'file-name');
+    nameSpan.textContent = placeholder;
+
+    let closeHandlers = null;
+    function closeMenu() {
+      menu.hidden = true;
+      if (closeHandlers) {
+        document.removeEventListener('click', closeHandlers.onDocClick);
+        window.removeEventListener('scroll', closeHandlers.onScroll, true);
+        closeHandlers = null;
+      }
+      if (menu.parentNode === document.body) addWrap.appendChild(menu);
+    }
+    function openMenu() {
+      // Reparent to <body> with fixed positioning so the menu escapes any
+      // ancestor with overflow:hidden (the table wrapper, the accordion body).
+      const rect = addBtn.getBoundingClientRect();
+      document.body.appendChild(menu);
+      menu.style.position = 'fixed';
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.left = rect.left + 'px';
+      menu.hidden = false;
+      const onDocClick = (e) => {
+        if (!menu.contains(e.target) && !addWrap.contains(e.target)) closeMenu();
+      };
+      const onScroll = () => closeMenu();
+      closeHandlers = { onDocClick, onScroll };
+      setTimeout(() => document.addEventListener('click', onDocClick), 0);
+      window.addEventListener('scroll', onScroll, true);
+    }
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menu.hidden) openMenu(); else closeMenu();
+    });
+
+    function setUploading() {
+      addBtn.disabled = true;
+      nameSpan.textContent = 'Uploading…';
+    }
+    function setUploaded(body) {
+      valueInp.value = body.url;
+      nameSpan.innerHTML = '';
+      const link = document.createElement('a');
+      link.href = body.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = body.filename;
+      nameSpan.appendChild(link);
+    }
+    function setFailed(err) {
+      alert('Adding file failed: ' + err.message);
+      nameSpan.textContent = placeholder;
+    }
+    function finishUpload() {
+      addBtn.disabled = false;
+      fileInp.value = '';
+    }
+
+    uploadItem.addEventListener('click', () => {
+      closeMenu();
+      fileInp.click();
+    });
+
+    fileInp.addEventListener('change', () => {
+      const file = fileInp.files[0];
+      if (!file) return;
+      if (file.size > MAX_UPLOAD_BYTES) {
+        alert('File exceeds the 15MB limit.');
+        fileInp.value = '';
+        return;
+      }
+      setUploading();
+      uploadFile(file).then(setUploaded).catch(setFailed).finally(finishUpload);
+    });
+
+    driveItem.addEventListener('click', () => {
+      closeMenu();
+      addFromDrive().then(({ blob, name }) => {
+        if (blob.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 15MB limit.');
+        setUploading();
+        return uploadFile(blob, name).then(setUploaded).catch(setFailed).finally(finishUpload);
+      }).catch((err) => {
+        if (err && err.message !== 'cancelled') alert('Could not add file from Drive: ' + err.message);
+      });
+    });
+
+    wrap.append(fileInp, addWrap, nameSpan, valueInp);
+    return wrap;
+  }
+
   function buildRow(columns) {
     const tr = document.createElement('tr');
     columns.forEach((col) => {
@@ -222,9 +454,11 @@
         });
         sel.addEventListener('change', () => updateSelectClass(sel));
         td.appendChild(sel);
+      } else if (col.type === 'file') {
+        td.appendChild(buildFileCell(col.placeholder || 'No file chosen'));
       } else {
         const inp = document.createElement('input');
-        inp.type = 'text';
+        inp.type = col.type === 'url' ? 'url' : 'text';
         inp.className = 'cinput';
         inp.placeholder = col.placeholder || '';
         td.appendChild(inp);
@@ -655,6 +889,10 @@
       tbody.querySelectorAll('tr').forEach((row, i) => { if (i > 0) row.remove(); });
     });
     doc.querySelectorAll('.ssel').forEach((el) => { el.value = 'not-started'; updateSelectClass(el); });
+    doc.querySelectorAll('.file-cell').forEach((cell) => {
+      cell.querySelector('.file-value').value = '';
+      cell.querySelector('.file-name').textContent = 'No file chosen';
+    });
 
     doc.querySelectorAll('.eval-panel').forEach((p) => { p.hidden = true; });
     doc.querySelectorAll('.ex-panel').forEach((p) => { p.hidden = true; });

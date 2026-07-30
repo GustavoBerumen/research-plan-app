@@ -4,3 +4,4 @@ Notes Progress.md
 node_modules/
 .env
 calibration-data.jsonl
+uploads/

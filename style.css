@@ -66,6 +66,19 @@ textarea.finput{min-height:72px;overflow:hidden}
 .ss-done{background:#f0fdf4;color:#16a34a}
 .ss-block{background:#fef2f2;color:#dc2626}
 .add-btn{width:100%;margin-top:7px;font-family:inherit;font-size:12px;font-weight:500;color:#a8a29e;background:none;border:1.5px dashed #ddd8d0;border-radius:7px;padding:7px 12px;cursor:pointer;transition:all .15s;text-align:center}
+.file-cell{display:flex;align-items:center;gap:10px}
+.file-native{display:none}
+.file-add-wrap{position:relative;flex-shrink:0}
+.file-add-btn{font-family:inherit;font-size:16px;font-weight:600;line-height:1;color:#6b7280;background:#faf8f6;border:1px solid #ddd8d0;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.file-add-btn:hover{background:#f3f4f6;color:#374151}
+.file-add-btn:disabled{opacity:.5;cursor:not-allowed}
+.file-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.1);padding:4px;z-index:1000;min-width:150px}
+.file-menu[hidden]{display:none}
+.file-menu-item{display:block;width:100%;text-align:left;font-family:inherit;font-size:12.5px;color:#374151;background:none;border:none;border-radius:5px;padding:7px 10px;cursor:pointer;transition:background .15s}
+.file-menu-item:hover{background:#f3f4f6}
+.file-name{font-size:12.5px;color:#a8a29e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-name a{color:#6366f1;text-decoration:none}
+.file-name a:hover{text-decoration:underline}
 .add-btn:hover{color:#4b5563;border-color:#9ca3af;background:#faf8f6}
 
 .eval-btn{font-family:inherit;font-size:12.5px;font-weight:600;color:#6366f1;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;padding:8px 16px;cursor:pointer;margin-top:10px;transition:all .15s;display:inline-flex;align-items:center;gap:7px;line-height:1;align-self:flex-start}
@@ -113,7 +126,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 @media(max-width:560px){.ex-panel{grid-template-columns:1fr}}
 
 @media print{
-  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap{display:none!important}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}

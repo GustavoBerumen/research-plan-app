@@ -3,11 +3,14 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const PORT = process.env.PORT || 8934;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const ROOT = __dirname;
+const UPLOAD_DIR = path.join(ROOT, 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error(
@@ -47,12 +50,12 @@ function serveStatic(req, res) {
   });
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, maxBytes = 1e6) {
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;
-      if (body.length > 1e6) req.destroy(new Error('Request body too large'));
+      if (body.length > maxBytes) req.destroy(new Error('Request body too large'));
     });
     req.on('end', () => {
       try {
@@ -218,6 +221,65 @@ async function handleSaveCalibration(req, res) {
   }
 }
 
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+async function handleUpload(req, res) {
+  let payload;
+  try {
+    // base64 inflates size ~33%, so allow headroom over the raw file cap
+    payload = await readJsonBody(req, MAX_UPLOAD_BYTES * 1.4);
+  } catch (e) {
+    res.writeHead(413, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid or oversized request body' }));
+    return;
+  }
+
+  const filename = typeof payload.filename === 'string' ? payload.filename.trim() : '';
+  const dataBase64 = typeof payload.dataBase64 === 'string' ? payload.dataBase64 : '';
+
+  if (!filename || !dataBase64) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'filename and dataBase64 are required' }));
+    return;
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(dataBase64, 'base64');
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'dataBase64 is not valid base64' }));
+    return;
+  }
+
+  if (buffer.length > MAX_UPLOAD_BYTES) {
+    res.writeHead(413, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'File exceeds the 15MB limit' }));
+    return;
+  }
+
+  const ext = path.extname(filename).replace(/[^a-zA-Z0-9.]/g, '').slice(0, 10);
+  const storedName = crypto.randomBytes(8).toString('hex') + ext;
+
+  try {
+    await fs.promises.writeFile(path.join(UPLOAD_DIR, storedName), buffer);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ url: '/uploads/' + storedName, filename }));
+  } catch (err) {
+    console.error('Saving uploaded file failed:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Saving uploaded file failed: ' + err.message }));
+  }
+}
+
+function handleConfig(req, res) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    googleApiKey: process.env.GOOGLE_API_KEY || '',
+  }));
+}
+
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/evaluate') {
     handleEvaluate(req, res);
@@ -225,6 +287,14 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && req.url === '/api/calibration') {
     handleSaveCalibration(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/api/upload') {
+    handleUpload(req, res);
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/api/config') {
+    handleConfig(req, res);
     return;
   }
   if (req.method === 'GET') {
