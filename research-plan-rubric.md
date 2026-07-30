@@ -20,7 +20,6 @@ Syntax:
 
 # Objective
 
-- Focused on User Understanding: Seeks to understand why a problem occurs, how users complete a task, where friction exists, or what their mental model is, rather than validating a specific feature
+- User Understanding: Seeks to understand why a problem occurs, how users complete a task, where friction exists, or what their mental model is, rather than validating a specific feature
 - Actionable: Resolves a specific unknown that directly informs an upcoming product decision, such as launching an initiative, choosing a design direction, or prioritizing a roadmap item
 - Feasible: Targets specific user profiles, workflows, or friction points with a scope tightly bounded enough to avoid bloated studies or inconclusive data
-- Relevant: Aligns directly with the active project context, current sprint goals, or business priorities

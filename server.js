@@ -80,7 +80,7 @@ const EVAL_TOOL = {
           type: 'object',
           properties: {
             name: { type: 'string' },
-            score: { type: 'integer', minimum: 1, maximum: 5 },
+            score: { type: 'integer', minimum: 1, maximum: 3 },
             desc: {
               type: 'string',
               maxLength: 70,
@@ -106,7 +106,7 @@ const EVAL_TOOL = {
 // Not every criterion needs one — only add where the literal rubric wording
 // alone tends to over- or under-score real answers.
 const CRITERION_EXAMPLES = {
-  'Focused on User Understanding': {
+  'User Understanding': {
     weak: 'Validate our new checkout button design.',
     strong: 'Understand why users drop off at the payment step during checkout.',
   },
@@ -117,10 +117,6 @@ const CRITERION_EXAMPLES = {
   'Feasible': {
     weak: "Understand our users' entire financial workflow.",
     strong: 'Understand how new users categorize their first expense during onboarding.',
-  },
-  'Relevant': {
-    weak: 'Explore how power users customize their profile themes (when the active project is fixing payment gateway churn).',
-    strong: 'Identify the main points of confusion for existing subscribers trying to update their payment methods.',
   },
 };
 
@@ -133,10 +129,10 @@ function buildPrompt(fieldLabel, text, rubric) {
   return `You are evaluating a "${fieldLabel}" statement written for a UX research plan.\n\n` +
     `Statement:\n"""\n${text}\n"""\n\n` +
     `Score it against exactly these criteria (return one metric per criterion, same order, same name):\n${rubricList}\n\n` +
-    `For each criterion, give an integer score from 1-5 and a short justification (10 words max) grounded in the ` +
+    `For each criterion, give an integer score from 1-3 and a short justification (10 words max) grounded in the ` +
     `actual statement (reference specifics from it, don't just restate the rubric). Then give exactly 2 concrete ` +
     `recommendations (one sentence each, 15 words max) for improving the statement, each tied to whichever criteria ` +
-    `scored lowest.`;
+    `scored lowest. Use British English spelling throughout (e.g. "prioritise", "colour", "analyse").`;
 }
 
 async function handleEvaluate(req, res) {

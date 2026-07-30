@@ -245,9 +245,9 @@
 
   // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
   const SCORE_STYLES = [
-    { max: 2, label: 'Needs Work', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-    { max: 3, label: 'Developing', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-    { max: 4.5, label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+    { max: 1.5, label: 'Needs Work', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+    { max: 2, label: 'Developing', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+    { max: 2.75, label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
     { max: Infinity, label: 'Ready', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
   ];
   function styleForScore(avg) {
@@ -288,7 +288,7 @@
       name.textContent = m.name;
       const dots = document.createElement('div');
       dots.className = 'eval-dots';
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         const dot = document.createElement('span');
         dot.className = 'eval-dot';
         dot.style.background = i < m.score ? data.color : '#e5e7eb';
