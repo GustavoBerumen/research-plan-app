@@ -716,6 +716,104 @@
     return [btn, panel];
   }
 
+  // ---------- stage timeline visualization ----------
+  function getCellValue(td) {
+    const select = td.querySelector('select');
+    if (select) return select.value;
+    const fileValue = td.querySelector('.file-value');
+    if (fileValue) return fileValue.value;
+    const input = td.querySelector('input');
+    return input ? input.value : '';
+  }
+
+  // Dates in this app's table cells are typed as free text in DD/MM/YYYY
+  // order, not ISO — new Date(str) reads slash dates as MM/DD/YYYY, which
+  // silently misreads or invalidates them (e.g. "21/01/2026" has no month
+  // 21). Parse DD/MM/YYYY explicitly; fall back to native parsing for any
+  // other format (e.g. ISO) someone might type.
+  function parseTimelineDate(value) {
+    if (!value) return null;
+    const trimmed = value.trim();
+    const m = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+      const day = Number(m[1]);
+      const month = Number(m[2]);
+      const year = Number(m[3]);
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+      const d = new Date(year, month - 1, day);
+      // reject dates that rolled over (e.g. 30/02 -> Mar 2)
+      if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+      return d;
+    }
+    const d = new Date(trimmed);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatTimelineDate(date) {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    return dd + '/' + mm + '/' + date.getFullYear();
+  }
+
+  function renderTimelineChart(tableId, columns, container) {
+    const stageIdx = columns.findIndex((c) => c.key === 'stage');
+    const startIdx = columns.findIndex((c) => c.key === 'startDate');
+    const endIdx = columns.findIndex((c) => c.key === 'completionDate');
+
+    const rows = Array.from(document.getElementById(tableId).querySelectorAll('tbody tr')).map((tr) => {
+      const cells = tr.children;
+      return {
+        stage: stageIdx >= 0 ? getCellValue(cells[stageIdx]) : '',
+        start: startIdx >= 0 ? parseTimelineDate(getCellValue(cells[startIdx])) : null,
+        end: endIdx >= 0 ? parseTimelineDate(getCellValue(cells[endIdx])) : null,
+      };
+    });
+    const valid = rows.filter((r) => r.start && r.end && r.start <= r.end);
+
+    container.innerHTML = '';
+    if (valid.length === 0) {
+      const msg = el('div', 'timeline-empty');
+      msg.textContent = 'Add stages with start and completion dates to see a timeline.';
+      container.appendChild(msg);
+      return;
+    }
+
+    const minStart = Math.min(...valid.map((r) => r.start.getTime()));
+    const maxEnd = Math.max(...valid.map((r) => r.end.getTime()));
+    const span = Math.max(maxEnd - minStart, 1);
+
+    const axis = el('div', 'timeline-axis');
+    const axisSpacer = el('div', 'timeline-label');
+    const axisTrack = el('div', 'timeline-axis-track');
+    const axisStart = el('span', 'timeline-axis-date');
+    axisStart.textContent = formatTimelineDate(new Date(minStart));
+    const axisEnd = el('span', 'timeline-axis-date');
+    axisEnd.textContent = formatTimelineDate(new Date(maxEnd));
+    axisTrack.append(axisStart, axisEnd);
+    axis.append(axisSpacer, axisTrack);
+    container.appendChild(axis);
+
+    valid.forEach((r) => {
+      const row = el('div', 'timeline-row');
+      const label = el('div', 'timeline-label');
+      label.textContent = r.stage || '(untitled stage)';
+      const track = el('div', 'timeline-track');
+      const bar = el('div', 'timeline-bar');
+      const left = ((r.start.getTime() - minStart) / span) * 100;
+      const width = Math.min(Math.max(((r.end.getTime() - r.start.getTime()) / span) * 100, 1.5), 100 - left);
+      bar.style.left = left + '%';
+      bar.style.width = width + '%';
+      const startLabel = formatTimelineDate(r.start);
+      const endLabel = formatTimelineDate(r.end);
+      bar.title = r.stage + ': ' + startLabel + ' – ' + endLabel;
+      track.appendChild(bar);
+      const dates = el('div', 'timeline-dates');
+      dates.textContent = startLabel + ' – ' + endLabel;
+      row.append(label, track, dates);
+      container.appendChild(row);
+    });
+  }
+
   function renderTableField(field) {
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
@@ -745,6 +843,25 @@
     addBtn.textContent = '+ Add ' + singular;
     addBtn.addEventListener('click', () => addRow(table.id, field.columns));
     wrap.appendChild(addBtn);
+
+    if (field.key === 'stageTimeline') {
+      const vizBtn = el('button', 'btn btn-ghost timeline-viz-btn', { type: 'button' });
+      vizBtn.textContent = 'Visualize Timeline';
+      const chart = el('div', 'timeline-chart');
+      chart.hidden = true;
+
+      const refreshTimeline = () => renderTimelineChart(table.id, field.columns, chart);
+
+      vizBtn.addEventListener('click', () => {
+        chart.hidden = !chart.hidden;
+        vizBtn.textContent = chart.hidden ? 'Visualize Timeline' : 'Hide Timeline';
+        if (!chart.hidden) refreshTimeline();
+      });
+      table.addEventListener('input', () => { if (!chart.hidden) refreshTimeline(); });
+      table.addEventListener('change', () => { if (!chart.hidden) refreshTimeline(); });
+
+      wrap.append(vizBtn, chart);
+    }
 
     return wrap;
   }

@@ -72,7 +72,7 @@ Participants (textarea): Characteristics of target user profile including an est
 
 Requirements (textarea): Any resources (physical, digital, and approvals) needed to execute the study
 Timeframe (textarea): Scheduled duration for each research phase
-Stage Timeline (table): Stage:text=e.g. Recruitment | Completion Date:date
+Stage Timeline (table): Stage:text=e.g. Recruitment | Start Date:date | Completion Date:date
 Action Points (table): Action:text=Task description | Responsible:person | Status:status
 
 # Resources
