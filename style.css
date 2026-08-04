@@ -40,10 +40,28 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .field{display:flex;flex-direction:column;gap:7px}
 .flabel{font-size:12px;font-weight:600;color:#57534e;display:flex;align-items:center;gap:5px}
 .fopt{font-size:11px;font-weight:400;color:#b0aaa3;font-style:italic}
+.info-tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid #d4d0cb;color:#b0aaa3;font-size:9px;font-weight:700;line-height:1;cursor:help;user-select:none}
+.info-tip:hover,.info-tip:focus{border-color:#a8a29e;color:#6b7280;outline:none}
+.info-tip:focus-visible{box-shadow:0 0 0 2px rgba(99,102,241,.35)}
+.info-tip-bubble{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);width:190px;background:#18181b;color:#fff;font-size:11px;font-weight:400;font-style:normal;line-height:1.4;text-align:center;padding:7px 10px;border-radius:6px;white-space:normal;opacity:0;visibility:hidden;transition:opacity .15s;pointer-events:none;z-index:50}
+.info-tip-bubble::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#18181b}
+.info-tip:hover .info-tip-bubble,.info-tip:focus .info-tip-bubble{opacity:1;visibility:visible}
+.field-hint{font-size:11px;font-weight:400;color:#b0aaa3;font-style:italic;display:block;margin-top:4px}
+.field-warning{font-size:11px;font-weight:600;color:#b45309;display:block;margin-top:4px}
+.field-warning[hidden]{display:none}
+.field-warning::before{content:'⚠ '}
 .finput{font-family:inherit;font-size:14px;color:#1f2937;border:1px solid #e8e4de;border-radius:7px;padding:10px 13px;outline:none;transition:border-color .18s,box-shadow .18s;background:#faf8f6;resize:none;line-height:1.65;width:100%}
 .finput:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.09);background:#fff}
 .finput::placeholder{color:#c9c5be}
 textarea.finput{min-height:72px;overflow:hidden}
+
+.list-rows{display:flex;flex-direction:column;gap:8px}
+.list-row{display:flex;align-items:center;gap:8px}
+.list-num{width:18px;flex-shrink:0;font-size:12.5px;color:#a8a29e;text-align:right}
+.list-input{flex:1;min-width:0}
+.list-remove{flex-shrink:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;color:#a8a29e;font-size:13px;border-radius:4px;cursor:pointer;transition:all .15s}
+.list-remove:hover{background:#fef2f2;color:#dc2626}
+.list-remove-spacer{visibility:hidden;cursor:default}
 
 .tbl-wrap{border:1px solid #e8e4de;border-radius:8px;overflow:hidden}
 .atbl,.dtbl{width:100%;border-collapse:collapse}
@@ -60,6 +78,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 .dtbl tr:last-child td{border-bottom:none}
 .dtbl td:not(:last-child){border-right:1px solid #f2efe9}
 .dtbl th:not(:last-child){border-right:1px solid #e8e4de}
+.row-remove-cell{width:1%;padding:8px 10px;text-align:center;white-space:nowrap}
 .ssel{font-family:inherit;font-size:11.5px;font-weight:600;border:none;border-radius:20px;padding:4px 11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s,color .15s}
 .ss-ns{background:#f3f4f6;color:#6b7280}
 .ss-assigned{background:#fefce8;color:#a16207}
@@ -91,6 +110,10 @@ textarea.finput{min-height:72px;overflow:hidden}
 .file-menu-item:hover{background:#f3f4f6}
 .file-name{font-size:12.5px;color:#a8a29e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-name a{color:#6366f1;text-decoration:none}
+.combo-menu{position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.1);padding:4px;z-index:1000;max-height:280px;overflow-y:auto}
+.combo-menu[hidden]{display:none}
+.combo-item{display:block;width:100%;text-align:left;font-family:inherit;font-size:12.5px;color:#374151;background:none;border:none;border-radius:5px;padding:7px 10px;cursor:pointer}
+.combo-item:hover,.combo-item.active{background:#f3f4f6}
 .file-name a:hover{text-decoration:underline}
 .add-btn:hover{color:#4b5563;border-color:#9ca3af;background:#faf8f6}
 
@@ -139,7 +162,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 @media(max-width:560px){.ex-panel{grid-template-columns:1fr}}
 
 @media print{
-  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu{display:none!important}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}

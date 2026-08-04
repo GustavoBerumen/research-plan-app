@@ -10,6 +10,11 @@ Types:
   text      — single-line input
   textarea  — multi-line input
   date      — native date picker (calendar); placeholder text is ignored
+  list      — dynamic stack of single-line inputs, one per item, with its
+              own "+ Add …" button (like table rows, but one column).
+              Exception: "Outcomes" is special-cased in code to be a linked
+              list with no controls of its own — its rows track Research
+              Questions 1:1 by position instead.
   table     — repeatable rows. Placeholder text instead describes columns as
               "ColLabel:coltype=placeholder | ColLabel:coltype=placeholder"
               coltype is one of: text, date, person, status (dropdown), url, file (click to attach, 15MB max)
@@ -17,6 +22,11 @@ Types:
 Flags (comma-separated inside the parentheses):
   optional  — marks the field "(optional)" in its label
   eval      — attaches the mock AI-evaluation button/panel to this field
+
+Exception: "Methods" rows are special-cased in code to be searchable
+comboboxes — suggestions come from research-methods.md (one method per
+bullet, edit that file to change the list), but each row still accepts
+free text.
 
 Section headings ("# Name") become collapsible sections.
   "# Name {open}" makes that section expanded by default.
@@ -34,21 +44,21 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 
 # Title (text): Title for your research plan
 
-Project Owner (text): Person
-Research Owner (text): Person
-Research Team (text): Person, Person, …
+Project Owner (text): Name
+Research Owner (text): Name
+Research Team (text): Team members
 Last Updated (date):
 
 # Alignment {grid}
 
-Project (text): Initiative name
-Area (text): Department
+Project (text): Initiative
+<!-- Area (text): Department -->
 Jira Project (text): Ticket reference
-Jira Research (text): Ticket reference
-Project Deadline (text): Date
-Report Deadline (text): Date
-Sign off — Project Owner (text): Name / initials
-Sign off — Research Owner (text): Name / initials
+<!-- Jira Research (text): Ticket reference -->
+Project Decision (date):
+Report Research (date):
+Sign off: Project Owner (text): Type initials
+Sign off: Research Owner (text): Type initials
 
 # Project Context {open}
 
@@ -59,13 +69,13 @@ Problem (textarea, eval): Issues requiring attention that could prevent the proj
 
 Objective (textarea, eval): Purpose and high-level goals of the research
 Hypothesis (textarea, optional): Baseline assumptions to be tested during the study
-Research Questions (textarea): Questions that provide insights into the main issues and aspects we need to understand
-Outcomes (textarea): Deliverables of the research (e.g., list of recommendations, design selection, decision on project)
+Research Questions (list): What do you want to understand?
+Outcomes (list): Deliverable for this question
 
 # Methodology
 
 Theory (textarea, optional): Any useful framework that can guide our research
-Methods (textarea): Any specific research methods to collect and analyse the data
+Methods (list): Search or type a method
 Participants (textarea): Characteristics of target user profile including an estimation of the sample
 
 # Execution

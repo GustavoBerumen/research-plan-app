@@ -3,7 +3,13 @@
 
   const SCHEMA_URL = 'research-plan-template.md';
   const RUBRIC_URL = 'research-plan-rubric.md';
+  const METHODS_URL = 'research-methods.md';
   const doc = document.getElementById('doc');
+
+  // Populated from research-methods.md before renderSchema() runs; read by
+  // attachMethodsCombobox via renderField's special-case for the "Methods"
+  // field. Empty until loaded — the combobox just won't offer suggestions.
+  let METHODS = [];
 
   // tables holds one entry per rendered <table> field: its DOM id, the
   // column definitions (for building rows), and the column keys (for
@@ -155,6 +161,15 @@
     allFields.forEach((f) => {
       if (rubrics[f.key]) f.rubric = rubrics[f.key];
     });
+  }
+
+  // ---------- methods list (research-methods.md) ----------
+  function parseMethodsList(text) {
+    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    return text.split('\n')
+      .map((line) => line.match(/^-\s*(.+?)\s*$/))
+      .filter(Boolean)
+      .map((m) => m[1]);
   }
 
   // ---------- textarea autosize ----------
@@ -440,8 +455,41 @@
     return wrap;
   }
 
+  // Keeps every row's remove button in sync with the current row count: once
+  // only one row is left, its button reserves its space but goes invisible
+  // and inert (same visibility trick as the list-field remove buttons) so a
+  // table can never be emptied to zero rows.
+  function updateRowRemoveButtons(tbody) {
+    const rows = tbody.querySelectorAll('tr');
+    const onlyOneLeft = rows.length <= 1;
+    rows.forEach((tr) => {
+      const btn = tr.querySelector('.row-remove');
+      if (!btn) return;
+      btn.disabled = onlyOneLeft;
+      btn.classList.toggle('list-remove-spacer', onlyOneLeft);
+    });
+  }
+
+  // Keeps a completion-date column from ever holding a date earlier than its
+  // row's start-date column: min= constrains the native picker itself, and
+  // the change-listeners clamp as a hard fallback (typed/pasted values,
+  // or the start date moving later than an already-picked completion date).
+  function attachDateRangeConstraint(startInput, endInput) {
+    function clampEnd() {
+      if (startInput.value && endInput.value && endInput.value < startInput.value) {
+        endInput.value = startInput.value;
+      }
+      endInput.min = startInput.value || '';
+    }
+    startInput.addEventListener('change', clampEnd);
+    endInput.addEventListener('change', clampEnd);
+    clampEnd();
+  }
+
   function buildRow(columns) {
     const tr = document.createElement('tr');
+    let startDateInput = null;
+    let completionDateInput = null;
     columns.forEach((col) => {
       const td = document.createElement('td');
       if (col.type === 'status') {
@@ -459,13 +507,35 @@
         td.appendChild(buildFileCell(col.placeholder || 'No file chosen'));
       } else {
         const inp = document.createElement('input');
-        inp.type = col.type === 'url' ? 'url' : 'text';
+        inp.type = col.type === 'url' ? 'url' : col.type === 'date' ? 'date' : 'text';
         inp.className = 'cinput';
-        inp.placeholder = col.placeholder || '';
+        // Native date inputs ignore the placeholder attribute, so only set
+        // one for types that actually render free text.
+        if (col.type !== 'date') inp.placeholder = col.placeholder || '';
         td.appendChild(inp);
+        if (col.key === 'startDate') startDateInput = inp;
+        if (col.key === 'completionDate') completionDateInput = inp;
       }
       tr.appendChild(td);
     });
+
+    if (startDateInput && completionDateInput) {
+      attachDateRangeConstraint(startDateInput, completionDateInput);
+    }
+
+    const removeTd = document.createElement('td');
+    removeTd.className = 'row-remove-cell';
+    const removeBtn = el('button', 'list-remove row-remove', { type: 'button' });
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => {
+      if (removeBtn.disabled) return;
+      const tbody = tr.parentElement;
+      tr.remove();
+      updateRowRemoveButtons(tbody);
+    });
+    removeTd.appendChild(removeBtn);
+    tr.appendChild(removeTd);
+
     return tr;
   }
 
@@ -473,6 +543,7 @@
     const tbody = document.getElementById(tableId).querySelector('tbody');
     const tr = buildRow(columns);
     tbody.appendChild(tr);
+    updateRowRemoveButtons(tbody);
     const first = tr.querySelector('input, select');
     if (first) first.focus();
     return tr;
@@ -592,7 +663,7 @@
     });
   }
 
-  function renderEvalControls(field, input) {
+  function renderEvalControls(field, getText) {
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
@@ -631,7 +702,7 @@
     let lastResult = null;
 
     btn.addEventListener('click', () => {
-      const text = input.value;
+      const text = getText();
       if (!text.trim()) {
         alert('Please enter a value to evaluate.');
         return;
@@ -731,20 +802,27 @@
   // silently misreads or invalidates them (e.g. "21/01/2026" has no month
   // 21). Parse DD/MM/YYYY explicitly; fall back to native parsing for any
   // other format (e.g. ISO) someone might type.
+  // Builds a local-midnight Date from y/m/d and rejects values that rolled
+  // over (e.g. day 30 in a 28-day month) instead of silently normalizing.
+  function localDateFrom(year, month, day) {
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const d = new Date(year, month - 1, day);
+    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+    return d;
+  }
+
   function parseTimelineDate(value) {
     if (!value) return null;
     const trimmed = value.trim();
-    const m = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (m) {
-      const day = Number(m[1]);
-      const month = Number(m[2]);
-      const year = Number(m[3]);
-      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-      const d = new Date(year, month - 1, day);
-      // reject dates that rolled over (e.g. 30/02 -> Mar 2)
-      if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
-      return d;
-    }
+    // Native <input type="date"> always yields ISO YYYY-MM-DD. Parse it as a
+    // local date explicitly — new Date("YYYY-MM-DD") parses as UTC midnight,
+    // which shifts a day off in negative-UTC-offset timezones once read back
+    // through local getters (getDate/getMonth/getFullYear).
+    const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return localDateFrom(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+    // Free-text fallback (DD/MM/YYYY), kept for any date typed by hand.
+    const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) return localDateFrom(Number(dmy[3]), Number(dmy[2]), Number(dmy[1]));
     const d = new Date(trimmed);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -818,6 +896,7 @@
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
     label.textContent = field.label;
+    appendInfoTip(label, field.key);
     wrap.appendChild(label);
 
     const tblWrap = el('div', 'tbl-wrap');
@@ -829,9 +908,13 @@
       th.textContent = c.label;
       headRow.appendChild(th);
     });
+    const removeTh = document.createElement('th');
+    removeTh.className = 'row-remove-th';
+    headRow.appendChild(removeTh);
     thead.appendChild(headRow);
     const tbody = el('tbody');
     tbody.appendChild(buildRow(field.columns));
+    updateRowRemoveButtons(tbody);
     table.append(thead, tbody);
     tblWrap.appendChild(table);
     wrap.appendChild(tblWrap);
@@ -866,12 +949,374 @@
     return wrap;
   }
 
+  // ---------- list fields (dynamic stack of single-line inputs) ----------
+  function collectListValues(list) {
+    return Array.from(list.querySelectorAll('.list-input')).map((i) => i.value.trim()).filter(Boolean);
+  }
+
+  // Outcomes is a "linked" list (see renderLinkedOutcomesField below): it has
+  // no add/remove controls of its own, so Research Questions drives it
+  // directly here, gated by field.key so renderListField stays generic.
+  function outcomesListEl() {
+    return doc.querySelector('.list-rows[data-list-key="outcomes"]');
+  }
+
+  function renumberOutcomes() {
+    const list = outcomesListEl();
+    if (!list) return;
+    list.querySelectorAll('.list-row').forEach((row, i) => {
+      row.querySelector('.list-num').textContent = (i + 1) + '.';
+    });
+  }
+
+  function addOutcomeRow() {
+    const list = outcomesListEl();
+    if (!list) return;
+    const row = el('div', 'list-row');
+    const num = el('span', 'list-num');
+    const inp = el('input', 'finput list-input', {
+      type: 'text',
+      'data-field': list.dataset.fieldKey || 'outcomes',
+      placeholder: list.dataset.placeholder || '',
+    });
+    row.append(num, inp);
+    list.appendChild(row);
+    renumberOutcomes();
+  }
+
+  // Only removes the paired Outcome row if it's still empty — preserving
+  // anything the user typed takes priority over keeping the pairing tidy.
+  function removeOutcomeRowAt(index) {
+    const list = outcomesListEl();
+    if (!list) return;
+    const row = list.querySelectorAll('.list-row')[index];
+    if (!row) return;
+    const input = row.querySelector('.list-input');
+    if (input && input.value.trim()) return;
+    row.remove();
+    renumberOutcomes();
+  }
+
+  function renderListField(field) {
+    const wrap = el('div', 'field');
+    const label = el('label', 'flabel');
+    label.textContent = field.label;
+    appendInfoTip(label, field.key);
+    if (field.optional) {
+      const opt = el('span', 'fopt');
+      opt.textContent = '(optional)';
+      label.append(' ', opt);
+    }
+    wrap.appendChild(label);
+
+    const list = el('div', 'list-rows');
+    list.dataset.listKey = field.key;
+    wrap.appendChild(list);
+
+    function renumber() {
+      const rows = list.querySelectorAll('.list-row');
+      rows.forEach((row, i) => {
+        row.querySelector('.list-num').textContent = (i + 1) + '.';
+        const removeBtn = row.querySelector('.list-remove');
+        // Keep the button's space reserved (visibility, not display:none) so
+        // every row's input stays the same width regardless of which row is
+        // first — only actually hiding it would make row 1 stretch wider.
+        removeBtn.classList.toggle('list-remove-spacer', i === 0);
+        removeBtn.disabled = i === 0;
+      });
+    }
+
+    function addRow(focus) {
+      const row = el('div', 'list-row');
+      const num = el('span', 'list-num');
+      const inp = el('input', 'finput list-input', {
+        type: 'text',
+        'data-field': field.key,
+        placeholder: field.placeholder || '',
+      });
+      if (field.key === 'methods') attachMethodsCombobox(inp, METHODS);
+      const removeBtn = el('button', 'list-remove', { type: 'button' });
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => {
+        if (removeBtn.disabled) return;
+        if (field.key === 'researchQuestions') {
+          const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
+          removeOutcomeRowAt(index);
+        }
+        row.remove();
+        renumber();
+      });
+      row.append(num, inp, removeBtn);
+      list.appendChild(row);
+      renumber();
+      if (field.key === 'researchQuestions') addOutcomeRow();
+      if (focus) inp.focus();
+      return row;
+    }
+
+    addRow(false);
+
+    const addBtn = el('button', 'add-btn', { type: 'button' });
+    const singular = field.label.replace(/s$/i, '').toLowerCase();
+    addBtn.textContent = '+ Add ' + singular;
+    addBtn.addEventListener('click', () => addRow(true));
+    wrap.appendChild(addBtn);
+
+    if (field.examples) wrap.append(...renderExamplePanel(field));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
+
+    return wrap;
+  }
+
+  // Outcomes: same list-row visuals as renderListField, but with no add/
+  // remove controls of its own — its rows are driven positionally by
+  // Research Questions (see addOutcomeRow/removeOutcomeRowAt above). Starts
+  // empty; initOutcomesSync() seeds it to match once the whole form (and
+  // Research Questions) has actually rendered.
+  function renderLinkedOutcomesField(field) {
+    const wrap = el('div', 'field');
+    const label = el('label', 'flabel');
+    label.textContent = field.label;
+    appendInfoTip(label, field.key);
+    wrap.appendChild(label);
+
+    const list = el('div', 'list-rows');
+    list.dataset.listKey = field.key;
+    list.dataset.fieldKey = field.key;
+    list.dataset.placeholder = field.placeholder || '';
+    wrap.appendChild(list);
+
+    if (field.examples) wrap.append(...renderExamplePanel(field));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
+
+    return wrap;
+  }
+
+  function initOutcomesSync() {
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    const outcomesList = outcomesListEl();
+    if (!rqList || !outcomesList) return;
+    const targetCount = rqList.querySelectorAll('.list-row').length;
+    while (outcomesListEl().querySelectorAll('.list-row').length < targetCount) {
+      addOutcomeRow();
+    }
+  }
+
+  // ---------- info tooltip (reusable hover/focus hint icon) ----------
+  // Keyed by field.key, same lookup pattern as attachSignOffStamp below.
+  // Add an entry here to put a "?" icon on any other field's label later.
+  const FIELD_INFO_TIPS = {
+    researchQuestions: 'We recommend three research questions per plan.',
+  };
+
+  function renderInfoTip(text) {
+    const tip = el('span', 'info-tip', { tabindex: '0', role: 'note', 'aria-label': text });
+    tip.textContent = '?';
+    const bubble = el('span', 'info-tip-bubble');
+    bubble.textContent = text;
+    tip.appendChild(bubble);
+    return tip;
+  }
+
+  function appendInfoTip(label, key) {
+    const text = FIELD_INFO_TIPS[key];
+    if (text) label.append(' ', renderInfoTip(text));
+  }
+
+  // ---------- Methods combobox (search suggestions, still free text) ----------
+  // Same reparent-to-<body>-with-fixed-position trick as the file-upload "+"
+  // menu, so the dropdown escapes the Methodology accordion's overflow:hidden
+  // instead of getting clipped.
+  function attachMethodsCombobox(input, methods) {
+    if (!methods || methods.length === 0) return;
+
+    const menu = el('div', 'combo-menu', { role: 'listbox' });
+    menu.hidden = true;
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('autocomplete', 'off');
+
+    let matches = [];
+    let activeIndex = -1;
+    let closeHandlers = null;
+
+    function closeMenu() {
+      menu.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+      if (closeHandlers) {
+        document.removeEventListener('click', closeHandlers.onDocClick);
+        window.removeEventListener('scroll', closeHandlers.onScroll, true);
+        closeHandlers = null;
+      }
+      if (menu.parentNode === document.body) menu.remove();
+    }
+
+    function renderMatches() {
+      menu.innerHTML = '';
+      let activeEl = null;
+      matches.forEach((m, i) => {
+        const item = el('div', 'combo-item' + (i === activeIndex ? ' active' : ''), { role: 'option' });
+        item.textContent = m;
+        item.setAttribute('aria-selected', i === activeIndex ? 'true' : 'false');
+        // mousedown (not click) + preventDefault so this fires before the
+        // input's blur would otherwise close the menu first — that also
+        // means focus never actually left the input, so there's no need to
+        // refocus it here (doing so would re-fire the focus handler below
+        // and reopen the dropdown showing the just-picked value as a match).
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          input.value = m;
+          closeMenu();
+        });
+        if (i === activeIndex) activeEl = item;
+        menu.appendChild(item);
+      });
+      // Keyboard nav needs to scroll the highlighted item into view itself —
+      // browsers don't do this automatically for a plain scrollable div.
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+    }
+
+    function position() {
+      const rect = input.getBoundingClientRect();
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.left = rect.left + 'px';
+      menu.style.width = rect.width + 'px';
+    }
+
+    function openMenu() {
+      document.body.appendChild(menu);
+      position();
+      menu.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      const onDocClick = (e) => {
+        if (!menu.contains(e.target) && e.target !== input) closeMenu();
+      };
+      // Close if the page scrolls (the dropdown is position:fixed, so it'd
+      // visually detach from the input) — but not for scrolling inside the
+      // dropdown's own list, which is a capture-phase 'scroll' event too.
+      const onScroll = (e) => {
+        if (menu.contains(e.target)) return;
+        closeMenu();
+      };
+      closeHandlers = { onDocClick, onScroll };
+      setTimeout(() => document.addEventListener('click', onDocClick), 0);
+      window.addEventListener('scroll', onScroll, true);
+    }
+
+    function updateMatches() {
+      const q = input.value.trim().toLowerCase();
+      if (!q) { closeMenu(); return; }
+      // No arbitrary cap here — .combo-menu's max-height + overflow-y:auto
+      // (in style.css) is what limits how many show at once, so every match
+      // stays reachable by scrolling instead of silently disappearing.
+      matches = methods.filter((m) => m.toLowerCase().includes(q));
+      activeIndex = -1;
+      if (matches.length === 0) { closeMenu(); return; }
+      renderMatches();
+      if (menu.hidden) openMenu(); else position();
+    }
+
+    input.addEventListener('input', updateMatches);
+    input.addEventListener('focus', () => { if (input.value.trim()) updateMatches(); });
+    input.addEventListener('blur', () => { setTimeout(closeMenu, 100); });
+    input.addEventListener('keydown', (e) => {
+      if (menu.hidden) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, matches.length - 1);
+        renderMatches();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        renderMatches();
+      } else if (e.key === 'Enter') {
+        if (activeIndex >= 0) {
+          e.preventDefault();
+          input.value = matches[activeIndex];
+          closeMenu();
+        }
+      } else if (e.key === 'Escape') {
+        closeMenu();
+      }
+    });
+  }
+
+  // Sign-off fields: type initials, blur, and today's date gets appended
+  // automatically (once) so nobody has to type the date by hand.
+  function attachSignOffStamp(input, key) {
+    if (key !== 'signOffProjectOwner' && key !== 'signOffResearchOwner') return;
+    input.addEventListener('blur', () => {
+      const val = input.value.trim();
+      if (val && !/ — \d{2}\/\d{2}\/\d{4}$/.test(val)) {
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+      }
+    });
+  }
+
+  function signOffHint(key) {
+    if (key !== 'signOffProjectOwner' && key !== 'signOffResearchOwner') return null;
+    const hint = el('div', 'field-hint');
+    return hint;
+  }
+
+  // Warns when Report Research lands less than a week before Project
+  // Decision, so there's no buffer for setbacks. Both are native date
+  // inputs (always YYYY-MM-DD), so no ambiguous-format parsing needed.
+  function initDeadlineConstraints() {
+    const decisionInput = doc.querySelector('[data-field="projectDecision"]');
+    const researchInput = doc.querySelector('[data-field="reportResearch"]');
+    if (!decisionInput || !researchInput) return;
+
+    // Report Research can't land after Project Decision — hard-blocked via
+    // max= (constrains the native picker itself) plus a clamp-on-change
+    // fallback, same approach as attachDateRangeConstraint for Stage
+    // Timeline's start/completion pair (just the ceiling flipped).
+    function clampResearch() {
+      if (decisionInput.value && researchInput.value && researchInput.value > decisionInput.value) {
+        researchInput.value = decisionInput.value;
+      }
+      researchInput.max = decisionInput.value || '';
+    }
+    decisionInput.addEventListener('change', clampResearch);
+    researchInput.addEventListener('change', clampResearch);
+    clampResearch();
+
+    // Softer, complementary check: even a Report Research date that's
+    // technically before the decision might not leave enough buffer.
+    const warning = el('div', 'field-warning');
+    warning.textContent = 'Allow a one-week buffer before the decision date.';
+    warning.hidden = true;
+    researchInput.insertAdjacentElement('afterend', warning);
+
+    function checkWarning() {
+      const decision = decisionInput.value ? new Date(decisionInput.value) : null;
+      const research = researchInput.value ? new Date(researchInput.value) : null;
+      if (!decision || !research || isNaN(decision) || isNaN(research)) {
+        warning.hidden = true;
+        return;
+      }
+      const diffDays = (decision - research) / 86400000;
+      warning.hidden = diffDays >= 7;
+    }
+
+    decisionInput.addEventListener('change', checkWarning);
+    researchInput.addEventListener('change', checkWarning);
+    checkWarning();
+  }
+
   function renderField(field) {
     if (field.type === 'table') return renderTableField(field);
+    if (field.type === 'list') return field.key === 'outcomes' ? renderLinkedOutcomesField(field) : renderListField(field);
 
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
     label.textContent = field.label;
+    appendInfoTip(label, field.key);
     if (field.optional) {
       const opt = el('span', 'fopt');
       opt.textContent = '(optional)';
@@ -885,10 +1330,13 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = field.type === 'date' ? 'date' : 'text';
+    attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
+    const hint = signOffHint(field.key);
+    if (hint) wrap.appendChild(hint);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, input));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => input.value));
 
     return wrap;
   }
@@ -940,7 +1388,10 @@
             const lbl = el('div', 'clbl');
             lbl.textContent = f.label;
             const inp = el('input', 'cinput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+            attachSignOffStamp(inp, f.key);
             td.append(lbl, inp);
+            const hint = signOffHint(f.key);
+            if (hint) td.appendChild(hint);
           }
           tr.appendChild(td);
         });
@@ -978,6 +1429,12 @@
       const label = el('div', 'mlabel');
       label.textContent = f.label;
       const input = el('input', 'minput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+      if (f.key === 'lastUpdated') {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        input.value = now.getFullYear() + '-' + mm + '-' + dd;
+      }
       mf.append(label, input);
       metaGrid.appendChild(mf);
     });
@@ -1005,6 +1462,15 @@
     tables.forEach(({ id }) => {
       const tbody = document.getElementById(id).querySelector('tbody');
       tbody.querySelectorAll('tr').forEach((row, i) => { if (i > 0) row.remove(); });
+      updateRowRemoveButtons(tbody);
+    });
+    doc.querySelectorAll('.list-rows').forEach((list) => {
+      list.querySelectorAll('.list-row').forEach((row, i) => { if (i > 0) row.remove(); });
+      const remaining = list.querySelector('.list-remove');
+      if (remaining) {
+        remaining.classList.add('list-remove-spacer');
+        remaining.disabled = true;
+      }
     });
     doc.querySelectorAll('.ssel').forEach((el) => { el.value = 'not-started'; updateSelectClass(el); });
     doc.querySelectorAll('.file-cell').forEach((cell) => {
@@ -1043,14 +1509,21 @@
         console.warn('Failed to load rubric "' + RUBRIC_URL + '" — evaluation will run without scoring criteria:', err);
         return '';
       }),
+      fetchText(METHODS_URL).catch((err) => {
+        console.warn('Failed to load methods list "' + METHODS_URL + '" — Methods field will have no suggestions:', err);
+        return '';
+      }),
     ])
-      .then(([schemaText, rubricText]) => {
+      .then(([schemaText, rubricText, methodsText]) => {
         const schema = parseSchema(schemaText);
         attachRubrics(schema, parseRubric(rubricText));
+        METHODS = parseMethodsList(methodsText);
         renderSchema(schema);
         initTextareas(doc);
         initStatusSelects(doc);
         initAccordion();
+        initDeadlineConstraints();
+        initOutcomesSync();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
       })
