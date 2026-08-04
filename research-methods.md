@@ -1,0 +1,132 @@
+<!--
+METHODS LIST — suggestions for the Methods field's searchable dropdown
+(combobox). One method per bullet; edit freely to add, remove, or rename
+entries without touching any code. This is a suggestion list only — the
+Methods field still accepts any free text typed by hand.
+-->
+
+- A/B Testing
+- AEIOU
+- Affinity Diagramming
+- Artefact Analysis
+- Automated Remote Research
+- Backcasting
+- Behavioural Design
+- Behavioural Mapping
+- Blockbusting
+- Bodystorming
+- Brainstorm Graphic Organisers
+- Brand Experience Workshop
+- Bull's-Eye Diagramming
+- Business Origami
+- Card Sorting
+- Case Studies
+- Civic Design & Policy
+- Cognitive Mapping
+- Cognitive Walkthrough
+- Collage
+- Competitive Testing
+- Concept Mapping
+- Content Analysis
+- Content Inventory & Audit
+- Contextual Design
+- Contextual Inquiry
+- Creative Matrix
+- Creative Toolkits
+- Critical Incident Technique
+- Critiques
+- Crowdsourcing
+- Cultural Probes
+- Customer Experience Audit
+- Data Physicalisation
+- Data Visualisation
+- Design Charette
+- Design Ethnography
+- Design Fiction
+- Design Workshops
+- Desirability Testing
+- Diary Studies
+- Directed Storytelling
+- Drawing
+- Elito Method
+- Empathy Maps
+- Ergonomic Analysis
+- Evaluative Research
+- Evidence-based Design
+- Experience Prototyping
+- Experience Sampling Method
+- Experiments
+- Exploratory Research
+- Eyetracking
+- Flexible Modelling
+- Fly-on-the-Wall Observation
+- Focus Groups
+- Gap Analysis
+- Generative Research
+- Graffiti Walls
+- Heuristic Evaluation
+- Highlight Reels
+- Horizon Scanning
+- How Might We
+- Image Boards
+- Importance-Difficulty Matrix
+- Interviews
+- KJ Technique
+- Kano Analysis
+- Key Performance Indicators
+- Laddering
+- Literature Reviews
+- The Love Letter & the Breakup Letter
+- Mental Model Diagrams
+- Metaphors
+- Mind Mapping
+- Observation
+- Parallel Prototyping
+- Participant Observation
+- Participatory Action Research (PAR)
+- Participatory Design
+- Personal Inventories
+- Personas
+- Photo Studies
+- Picture Cards
+- Prototyping
+- Questionnaires
+- Rapid Iterative Testing & Evaluation (RITE)
+- Remote Moderated Research
+- Research Through Design
+- Role-playing
+- Rose Thorn Bud
+- Scenarios
+- Secondary Research
+- Semantic Differential
+- Service Blueprint
+- Service Design
+- Shadowing
+- Simulations
+- Site Search Analytics
+- Speed Dating
+- Stakeholder Maps
+- Stakeholder Walkthrough
+- Storyboards
+- Surveys
+- Swimlanes
+- Task Analysis
+- Territory Maps
+- Thematic Networks
+- Think-aloud Protocol
+- Time-aware Research
+- Touchstone Tours
+- Transition Design
+- Tree Testing
+- Triading
+- Triangulation
+- Unobtrusive Measures
+- Usability Report
+- Usability Testing
+- User Journey Maps
+- Value Opportunity Analysis
+- Values-Based Assessment
+- Web Analytics
+- Weighted Matrix
+- Wizard of Oz
+- Word Clouds
