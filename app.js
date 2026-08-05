@@ -49,7 +49,11 @@
       } else {
         placeholder = placeholder.trim();
       }
-      return { label, key: toCamelKey(label), type, placeholder };
+      const col = { label, key: toCamelKey(label), type, placeholder };
+      // For select columns the placeholder slot holds "Option A,Option B,…"
+      // instead of literal placeholder text.
+      if (type === 'select') col.options = placeholder.split(',').map((s) => s.trim()).filter(Boolean);
+      return col;
     });
   }
 
@@ -503,6 +507,52 @@
         });
         sel.addEventListener('change', () => updateSelectClass(sel));
         td.appendChild(sel);
+      } else if (col.type === 'select') {
+        const wrap = el('div', 'select-cell');
+        const sel = document.createElement('select');
+        sel.className = 'ssel ss-ns';
+        (col.options || []).forEach((opt) => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          sel.appendChild(o);
+        });
+        const otherOpt = document.createElement('option');
+        otherOpt.value = '__other__';
+        otherOpt.textContent = 'Other…';
+        sel.appendChild(otherOpt);
+
+        // Picking "Other…" swaps the dropdown out entirely for a plain text
+        // input (rather than showing both at once); getCellValue() reads
+        // from that input instead of the sentinel value whenever it's
+        // showing. The back button swaps the dropdown back in if needed.
+        const otherRow = el('div', 'select-other-row');
+        const otherInput = el('input', 'cinput select-other-input', {
+          type: 'text',
+          placeholder: 'Type a custom value…',
+        });
+        const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead' });
+        backBtn.textContent = '▾';
+        otherRow.append(otherInput, backBtn);
+        otherRow.hidden = true;
+
+        sel.addEventListener('change', () => {
+          if (sel.value === '__other__') {
+            sel.hidden = true;
+            otherRow.hidden = false;
+            otherInput.focus();
+          }
+        });
+        backBtn.addEventListener('click', () => {
+          otherInput.value = '';
+          otherRow.hidden = true;
+          sel.hidden = false;
+          sel.value = (col.options && col.options[0]) || '';
+          sel.focus();
+        });
+
+        wrap.append(sel, otherRow);
+        td.appendChild(wrap);
       } else if (col.type === 'file') {
         td.appendChild(buildFileCell(col.placeholder || 'No file chosen'));
       } else {
@@ -790,7 +840,13 @@
   // ---------- stage timeline visualization ----------
   function getCellValue(td) {
     const select = td.querySelector('select');
-    if (select) return select.value;
+    if (select) {
+      if (select.value === '__other__') {
+        const other = td.querySelector('.select-other-input');
+        return other ? other.value : '';
+      }
+      return select.value;
+    }
     const fileValue = td.querySelector('.file-value');
     if (fileValue) return fileValue.value;
     const input = td.querySelector('input');
@@ -833,6 +889,16 @@
     return dd + '/' + mm + '/' + date.getFullYear();
   }
 
+  // Same accent colors already used elsewhere (eval panel, status pills,
+  // score styles), cycled if there are more stages than colors. Empty cells
+  // use the same gray as an unfilled eval-dot ("0 contributions" look).
+  const TIMELINE_STAGE_COLORS = ['#6366f1', '#16a34a', '#2563eb', '#dc2626', '#ea580c', '#a16207'];
+
+  // One row per stage (table order), label + dates either side of the track,
+  // same as the original bar chart — the only change is that each row's bar
+  // is textured into small connected day/week squares (GitHub-contributions
+  // style) instead of one solid rectangle. Position/width of that textured
+  // region within the track is still proportional to the overall plan span.
   function renderTimelineChart(tableId, columns, container) {
     const stageIdx = columns.findIndex((c) => c.key === 'stage');
     const startIdx = columns.findIndex((c) => c.key === 'startDate');
@@ -856,9 +922,52 @@
       return;
     }
 
+    // First-seen order decides color assignment, independent of duplicates.
+    const stageNames = [];
+    valid.forEach((r) => {
+      const name = r.stage || '(untitled stage)';
+      if (!stageNames.includes(name)) stageNames.push(name);
+    });
+    const colorFor = (name) => TIMELINE_STAGE_COLORS[stageNames.indexOf(name) % TIMELINE_STAGE_COLORS.length];
+
+    const dayMs = 86400000;
     const minStart = Math.min(...valid.map((r) => r.start.getTime()));
     const maxEnd = Math.max(...valid.map((r) => r.end.getTime()));
-    const span = Math.max(maxEnd - minStart, 1);
+    const totalDays = Math.round((maxEnd - minStart) / dayMs) + 1;
+    const useWeeks = totalDays > 90;
+    const unitDays = useWeeks ? 7 : 1;
+
+    // "Week 1" is the Monday of the calendar week containing the earliest
+    // day in the timeline — not the plan's own (possibly midweek) start.
+    function mondayOf(ms) {
+      const d = new Date(ms);
+      const day = d.getDay(); // 0 = Sunday .. 6 = Saturday
+      const sinceMonday = day === 0 ? 6 : day - 1;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate() - sinceMonday).getTime();
+    }
+    function sundayOf(ms) {
+      const d = new Date(ms);
+      const day = d.getDay();
+      const untilSunday = day === 0 ? 0 : 7 - day;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate() + untilSunday).getTime();
+    }
+    const week1 = mondayOf(minStart);
+    // In daily mode, pad the grid out to the Sunday of the last week so the
+    // final week is shown complete (e.g. a plan ending Thursday still shows
+    // Fri/Sat/Sun as empty cells) rather than cutting off mid-week. In
+    // weekly mode this is a no-op — each cell already IS a full week.
+    const gridEnd = unitDays === 1 ? sundayOf(maxEnd) : maxEnd;
+
+    // One shared grid (same column count, same 1fr sizing) reused by the
+    // week ruler and every stage row, instead of each computing its own
+    // independent left%/width% — that's what let the two drift out of
+    // pixel alignment before. Cells run from Week 1's Monday through the
+    // last day/week that covers maxEnd, so a stage starting after the
+    // plan's earliest day gets real empty cells before it, not just gap.
+    const cellStarts = [];
+    for (let t = week1; t <= gridEnd; t += unitDays * dayMs) cellStarts.push(t);
+    const cellCount = cellStarts.length;
+    const cellsPerWeek = 7 / unitDays;
 
     const axis = el('div', 'timeline-axis');
     const axisSpacer = el('div', 'timeline-label');
@@ -871,23 +980,50 @@
     axis.append(axisSpacer, axisTrack);
     container.appendChild(axis);
 
+    const weeksRow = el('div', 'timeline-weeks');
+    const weeksSpacer = el('div', 'timeline-label');
+    const weeksGrid = el('div', 'timeline-weeks-grid');
+    weeksGrid.style.gridTemplateColumns = 'repeat(' + cellCount + ', 1fr)';
+    let weekNum = 0;
+    cellStarts.forEach((cellStart, i) => {
+      if (i % cellsPerWeek !== 0) return;
+      weekNum++;
+      const mark = el('span', 'timeline-week-mark');
+      mark.style.gridColumnStart = i + 1;
+      mark.textContent = weekNum === 1 ? 'week 1' : 'w ' + weekNum;
+      weeksGrid.appendChild(mark);
+    });
+    weeksRow.append(weeksSpacer, weeksGrid);
+    container.appendChild(weeksRow);
+
     valid.forEach((r) => {
-      const row = el('div', 'timeline-row');
-      const label = el('div', 'timeline-label');
-      label.textContent = r.stage || '(untitled stage)';
-      const track = el('div', 'timeline-track');
-      const bar = el('div', 'timeline-bar');
-      const left = ((r.start.getTime() - minStart) / span) * 100;
-      const width = Math.min(Math.max(((r.end.getTime() - r.start.getTime()) / span) * 100, 1.5), 100 - left);
-      bar.style.left = left + '%';
-      bar.style.width = width + '%';
+      const name = r.stage || '(untitled stage)';
+      const color = colorFor(name);
       const startLabel = formatTimelineDate(r.start);
       const endLabel = formatTimelineDate(r.end);
-      bar.title = r.stage + ': ' + startLabel + ' – ' + endLabel;
-      track.appendChild(bar);
+
+      const row = el('div', 'timeline-row');
+      const label = el('div', 'timeline-label');
+      label.textContent = name;
+      const grid = el('div', 'timeline-row-grid');
+      grid.style.gridTemplateColumns = 'repeat(' + cellCount + ', 1fr)';
+
+      cellStarts.forEach((cellStart) => {
+        const cellEnd = cellStart + (unitDays - 1) * dayMs;
+        const covered = r.start.getTime() <= cellEnd && r.end.getTime() >= cellStart;
+        const cell = el('div', 'timeline-bar-cell');
+        if (covered) {
+          cell.style.background = color;
+          cell.title = name + ': ' + startLabel + ' – ' + endLabel;
+        } else {
+          cell.title = formatTimelineDate(new Date(cellStart));
+        }
+        grid.appendChild(cell);
+      });
+
       const dates = el('div', 'timeline-dates');
       dates.textContent = startLabel + ' – ' + endLabel;
-      row.append(label, track, dates);
+      row.append(label, grid, dates);
       container.appendChild(row);
     });
   }
@@ -1026,14 +1162,17 @@
       });
     }
 
+    // Research Questions rows grow taller as their text wraps, instead of
+    // scrolling horizontally like a normal single-line list input.
+    const isGrowable = field.key === 'researchQuestions';
+
     function addRow(focus) {
       const row = el('div', 'list-row');
       const num = el('span', 'list-num');
-      const inp = el('input', 'finput list-input', {
-        type: 'text',
-        'data-field': field.key,
-        placeholder: field.placeholder || '',
-      });
+      const inp = isGrowable
+        ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
+        : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
+      if (isGrowable) inp.addEventListener('input', () => resizeTa(inp));
       if (field.key === 'methods') attachMethodsCombobox(inp, METHODS);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
@@ -1048,6 +1187,7 @@
       });
       row.append(num, inp, removeBtn);
       list.appendChild(row);
+      if (isGrowable) resizeTa(inp);
       renumber();
       if (field.key === 'researchQuestions') addOutcomeRow();
       if (focus) inp.focus();

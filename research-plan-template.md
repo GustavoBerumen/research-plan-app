@@ -17,7 +17,10 @@ Types:
               Questions 1:1 by position instead.
   table     — repeatable rows. Placeholder text instead describes columns as
               "ColLabel:coltype=placeholder | ColLabel:coltype=placeholder"
-              coltype is one of: text, date, person, status (dropdown), url, file (click to attach, 15MB max)
+              coltype is one of: text, date, person, status (fixed dropdown),
+              select (dropdown with custom options — placeholder becomes a
+              comma-separated option list, e.g. "Stage:select=A,B,C"),
+              url, file (click to attach, 15MB max)
 
 Flags (comma-separated inside the parentheses):
   optional  — marks the field "(optional)" in its label
@@ -81,8 +84,8 @@ Participants (textarea): Characteristics of target user profile including an est
 # Execution
 
 Requirements (textarea): Any resources (physical, digital, and approvals) needed to execute the study
-Timeframe (textarea): Scheduled duration for each research phase
-Stage Timeline (table): Stage:text=e.g. Recruitment | Start Date:date | Completion Date:date
+<!-- Timeframe (textarea): Scheduled duration for each research phase -->
+Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
 Action Points (table): Action:text=Task description | Responsible:person | Status:status
 
 # Resources

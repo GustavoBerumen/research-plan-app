@@ -59,6 +59,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 .list-row{display:flex;align-items:center;gap:8px}
 .list-num{width:18px;flex-shrink:0;font-size:12.5px;color:#a8a29e;text-align:right}
 .list-input{flex:1;min-width:0}
+.list-row textarea.finput{min-height:44px;overflow:hidden;resize:none}
 .list-remove{flex-shrink:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;color:#a8a29e;font-size:13px;border-radius:4px;cursor:pointer;transition:all .15s}
 .list-remove:hover{background:#fef2f2;color:#dc2626}
 .list-remove-spacer{visibility:hidden;cursor:default}
@@ -85,6 +86,12 @@ textarea.finput{min-height:72px;overflow:hidden}
 .ss-ip{background:#eff6ff;color:#2563eb}
 .ss-done{background:#f0fdf4;color:#16a34a}
 .ss-block{background:#fef2f2;color:#dc2626}
+.select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.select-other-row{display:flex;align-items:center;gap:6px;width:100%}
+.select-other-row[hidden]{display:none}
+.select-other-input{flex:1;min-width:0}
+.select-other-back{flex-shrink:0;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;color:#a8a29e;font-size:11px;border-radius:4px;cursor:pointer;transition:all .15s}
+.select-other-back:hover{background:#f3f4f6;color:#374151}
 .add-btn{width:100%;margin-top:7px;font-family:inherit;font-size:12px;font-weight:500;color:#a8a29e;background:none;border:1.5px dashed #ddd8d0;border-radius:7px;padding:7px 12px;cursor:pointer;transition:all .15s;text-align:center}
 .timeline-viz-btn{display:inline-block;margin-top:10px}
 .timeline-chart{margin-top:14px;padding:16px;border:1px solid #e8e4de;border-radius:8px;background:#faf8f6}
@@ -92,11 +99,14 @@ textarea.finput{min-height:72px;overflow:hidden}
 .timeline-axis{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e8e4de}
 .timeline-axis-track{flex:1;display:flex;justify-content:space-between}
 .timeline-axis-date{font-size:10.5px;font-weight:600;letter-spacing:.03em;color:#9ca3af}
+.timeline-weeks{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.timeline-weeks-grid{position:relative;flex:1;display:grid;height:12px;overflow:hidden}
+.timeline-week-mark{border-left:1px solid #e8e4de;padding-left:3px;font-size:9px;font-weight:600;color:#c4bfb8;white-space:nowrap;line-height:12px}
 .timeline-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .timeline-row:last-child{margin-bottom:0}
 .timeline-label{width:140px;flex-shrink:0;font-size:12.5px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.timeline-track{position:relative;flex:1;height:18px;background:#efece6;border-radius:4px}
-.timeline-bar{position:absolute;top:0;height:100%;background:#6366f1;border-radius:4px;min-width:6px}
+.timeline-row-grid{flex:1;display:grid;gap:1px;height:18px}
+.timeline-bar-cell{height:100%;border-radius:2px;background:#e5e7eb}
 .timeline-dates{width:118px;flex-shrink:0;font-size:11px;color:#a8a29e;white-space:nowrap}
 .file-cell{display:flex;align-items:center;gap:10px}
 .file-native{display:none}
