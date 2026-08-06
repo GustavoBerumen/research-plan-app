@@ -23,8 +23,14 @@ Types:
               url, file (click to attach, 15MB max)
 
 Flags (comma-separated inside the parentheses):
-  optional  — marks the field "(optional)" in its label
-  eval      — attaches the mock AI-evaluation button/panel to this field
+  optional          — marks the field "(optional)" in its label
+  eval              — attaches the mock AI-evaluation button/panel to this field
+  editable-headers  — table fields only: column headers render as editable
+                       text inputs instead of fixed labels, so users can
+                       rename a column (e.g. "Physical" → something else)
+                       directly in the UI. Off by default — other table
+                       fields (Stage Timeline, Action Points) keep fixed
+                       headers unless they also set this flag.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -34,6 +40,11 @@ free text.
 Section headings ("# Name") become collapsible sections.
   "# Name {open}" makes that section expanded by default.
   "# Name {grid}" lays that section's fields out two-per-row instead of stacked.
+
+"## Name" groups the fields that follow under a labeled sub-heading
+inside the current section (a bordered cluster with "Name" above it),
+without opening a new collapsible section of its own. The group ends
+at the next "##" or "#" line.
 
 A field line may be followed by indented example lines, shown in a toggle
 panel under that field:
@@ -65,8 +76,8 @@ Sign off: Research Owner (text): Type initials
 
 # Project Context {open}
 
-Background (textarea): Relevant information to understand the project
-Goal (textarea): Aim of the project and the outcomes you are trying to achieve
+Background (textarea, eval): Relevant information to understand the project
+Goal (textarea, eval): Aim of the project and the outcomes you are trying to achieve
 Problem (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
 # Research
 
@@ -79,11 +90,16 @@ Outcomes (list): Deliverable for this question
 
 Theory (textarea, optional): Any useful framework that can guide our research
 Methods (list): Search or type a method
-Participants (textarea): Characteristics of target user profile including an estimation of the sample
+
+## Participants
+
+Characteristics (list): e.g. Frequent mobile shoppers
+User Groups (list): e.g. New customers
+Sample Size (text): e.g. 8–12 participants
 
 # Execution
 
-Requirements (textarea): Any resources (physical, digital, and approvals) needed to execute the study
+Requirements (table, editable-headers): Physical | Digital | Approvals
 <!-- Timeframe (textarea): Scheduled duration for each research phase -->
 Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
 Action Points (table): Action:text=Task description | Responsible:person | Status:status

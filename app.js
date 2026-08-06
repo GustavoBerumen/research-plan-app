@@ -69,6 +69,7 @@
       type,
       optional: typeParts.includes('optional'),
       eval: typeParts.includes('eval'),
+      editableHeaders: typeParts.includes('editable-headers'),
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
@@ -93,10 +94,19 @@
     let mode = 'header-pretitle';
     let currentSection = null;
     let currentField = null;
+    let currentGroup = null;
 
     lines.forEach((raw) => {
       const line = raw.replace(/\s+$/, '');
       if (!line.trim()) return;
+
+      // "## Name" groups the fields that follow under a labeled sub-heading
+      // within the current section, without opening a new collapsible
+      // section of its own.
+      if (/^##\s+/.test(line)) {
+        currentGroup = line.replace(/^##\s+/, '').trim();
+        return;
+      }
 
       if (/^#\s+/.test(line)) {
         if (mode === 'header-pretitle') {
@@ -111,6 +121,7 @@
         sections.push(currentSection);
         mode = 'section';
         currentField = null;
+        currentGroup = null;
         return;
       }
 
@@ -123,6 +134,7 @@
 
       const field = parseFieldLine(line);
       if (!field) return;
+      if (currentGroup) field.group = currentGroup;
 
       if (mode === 'header-meta') {
         header.meta.push(field);
@@ -180,6 +192,29 @@
   function resizeTa(ta) {
     ta.style.height = 'auto';
     ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  // Grows a text input to fit its current value, the same way resizeTa()
+  // grows a textarea's height — but inputs have no content-based CSS
+  // auto-size (width:auto falls back to the `size` attribute's ~20ch
+  // default, not the rendered text width), so this measures via a hidden
+  // mirror element using the input's own computed font.
+  let sizeMirror = null;
+  function sizeInputToContent(input, extraPadding) {
+    if (!sizeMirror) {
+      sizeMirror = document.createElement('span');
+      sizeMirror.style.position = 'absolute';
+      sizeMirror.style.visibility = 'hidden';
+      sizeMirror.style.whiteSpace = 'pre';
+      sizeMirror.style.top = '-9999px';
+      sizeMirror.style.left = '-9999px';
+      document.body.appendChild(sizeMirror);
+    }
+    const cs = getComputedStyle(input);
+    sizeMirror.style.font = cs.font;
+    sizeMirror.style.letterSpacing = cs.letterSpacing;
+    sizeMirror.textContent = input.value;
+    input.style.width = (sizeMirror.offsetWidth + (extraPadding || 0)) + 'px';
   }
   function initTextareas(root) {
     root.querySelectorAll('.field-ta').forEach((ta) => {
@@ -1041,7 +1076,13 @@
     const headRow = el('tr');
     field.columns.forEach((c) => {
       const th = document.createElement('th');
-      th.textContent = c.label;
+      if (field.editableHeaders) {
+        const headInp = el('input', 'th-input', { type: 'text', value: c.label });
+        headInp.addEventListener('input', () => { c.label = headInp.value; });
+        th.appendChild(headInp);
+      } else {
+        th.textContent = c.label;
+      }
       headRow.appendChild(th);
     });
     const removeTh = document.createElement('th');
@@ -1091,8 +1132,11 @@
   }
 
   // Outcomes is a "linked" list (see renderLinkedOutcomesField below): it has
-  // no add/remove controls of its own, so Research Questions drives it
-  // directly here, gated by field.key so renderListField stays generic.
+  // no *add* button of its own — Research Questions drives new rows here,
+  // gated by field.key so renderListField stays generic — but each row does
+  // get its own remove button, same as Research Questions' rows, so a
+  // stray/extra Outcome can be deleted directly without touching the
+  // paired question.
   function outcomesListEl() {
     return doc.querySelector('.list-rows[data-list-key="outcomes"]');
   }
@@ -1102,6 +1146,12 @@
     if (!list) return;
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
+      const removeBtn = row.querySelector('.list-remove');
+      if (!removeBtn) return;
+      // Same "keep at least one row" pattern as renderListField: row 0's
+      // button reserves its space but goes invisible and inert.
+      removeBtn.classList.toggle('list-remove-spacer', i === 0);
+      removeBtn.disabled = i === 0;
     });
   }
 
@@ -1115,7 +1165,14 @@
       'data-field': list.dataset.fieldKey || 'outcomes',
       placeholder: list.dataset.placeholder || '',
     });
-    row.append(num, inp);
+    const removeBtn = el('button', 'list-remove', { type: 'button' });
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => {
+      if (removeBtn.disabled) return;
+      row.remove();
+      renumberOutcomes();
+    });
+    row.append(num, inp, removeBtn);
     list.appendChild(row);
     renumberOutcomes();
   }
@@ -1208,10 +1265,11 @@
     return wrap;
   }
 
-  // Outcomes: same list-row visuals as renderListField, but with no add/
-  // remove controls of its own — its rows are driven positionally by
-  // Research Questions (see addOutcomeRow/removeOutcomeRowAt above). Starts
-  // empty; initOutcomesSync() seeds it to match once the whole form (and
+  // Outcomes: same list-row visuals as renderListField, but with no *add*
+  // button of its own — new rows are driven positionally by Research
+  // Questions (see addOutcomeRow/removeOutcomeRowAt above); each row still
+  // gets its own remove button, wired in addOutcomeRow. Starts empty;
+  // initOutcomesSync() seeds it to match once the whole form (and
   // Research Questions) has actually rendered.
   function renderLinkedOutcomesField(field) {
     const wrap = el('div', 'field');
@@ -1247,14 +1305,59 @@
   // Add an entry here to put a "?" icon on any other field's label later.
   const FIELD_INFO_TIPS = {
     researchQuestions: 'We recommend three research questions per plan.',
+    background: 'Provides sufficient context for the study, defines essential terms used across later sections, and stays focused without unnecessary clutter.',
   };
 
+  // The bubble is reparented to <body> with position:fixed while shown —
+  // same trick as .combo-menu — so it always escapes any ancestor's
+  // overflow:hidden (e.g. the accordion box) regardless of which field it's
+  // attached to, and position is computed fresh each time so it can flip
+  // below the icon when there isn't room above (e.g. a field near the top
+  // of an open accordion).
   function renderInfoTip(text) {
     const tip = el('span', 'info-tip', { tabindex: '0', role: 'note', 'aria-label': text });
     tip.textContent = '?';
     const bubble = el('span', 'info-tip-bubble');
     bubble.textContent = text;
-    tip.appendChild(bubble);
+    bubble.hidden = true;
+
+    let hideTimer = null;
+
+    function position() {
+      const rect = tip.getBoundingClientRect();
+      const gap = 7;
+      const bw = bubble.offsetWidth;
+      const bh = bubble.offsetHeight;
+
+      const fitsAbove = rect.top - gap - bh >= 0;
+      bubble.style.top = (fitsAbove ? rect.top - bh - gap : rect.bottom + gap) + 'px';
+      bubble.classList.toggle('info-tip-bubble-below', !fitsAbove);
+
+      const left = Math.max(6, Math.min(rect.left + rect.width / 2 - bw / 2, window.innerWidth - bw - 6));
+      bubble.style.left = left + 'px';
+    }
+
+    function show() {
+      clearTimeout(hideTimer);
+      if (bubble.parentNode !== document.body) document.body.appendChild(bubble);
+      bubble.hidden = false;
+      position();
+      bubble.classList.add('show');
+    }
+
+    function hide() {
+      bubble.classList.remove('show');
+      hideTimer = setTimeout(() => {
+        bubble.hidden = true;
+        if (bubble.parentNode === document.body) bubble.remove();
+      }, 160);
+    }
+
+    tip.addEventListener('mouseenter', show);
+    tip.addEventListener('mouseleave', hide);
+    tip.addEventListener('focus', show);
+    tip.addEventListener('blur', hide);
+
     return tip;
   }
 
@@ -1375,6 +1478,165 @@
         if (activeIndex >= 0) {
           e.preventDefault();
           input.value = matches[activeIndex];
+          closeMenu();
+        }
+      } else if (e.key === 'Escape') {
+        closeMenu();
+      }
+    });
+  }
+
+  // Jira ticket connector: searches the server-side Jira proxy (the API
+  // token lives only in server.js — see /api/jira/search — never sent to
+  // the browser) and lets the user pick a ticket, writing "KEY — summary"
+  // into the field. Same reparented-dropdown pattern as attachMethodsCombobox,
+  // but results come from the network instead of a static list, so matches
+  // are debounced and stamped with a request id to discard stale responses.
+  function attachJiraCombobox(input) {
+    const menu = el('div', 'combo-menu', { role: 'listbox' });
+    menu.hidden = true;
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('autocomplete', 'off');
+
+    let matches = [];
+    let activeIndex = -1;
+    let closeHandlers = null;
+    let requestId = 0;
+    let debounceTimer = null;
+    let jiraEnabled = null; // unknown until /api/config resolves
+
+    // Pill state (populated value) needs an explicit content-fit width —
+    // see sizeInputToContent(). 26 = the pill's 11px horizontal padding on
+    // each side, plus a small buffer.
+    function updateWidth() {
+      if (input.value.trim()) sizeInputToContent(input, 26);
+      else input.style.width = '';
+    }
+
+    function closeMenu() {
+      menu.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+      if (closeHandlers) {
+        document.removeEventListener('click', closeHandlers.onDocClick);
+        window.removeEventListener('scroll', closeHandlers.onScroll, true);
+        closeHandlers = null;
+      }
+      if (menu.parentNode === document.body) menu.remove();
+    }
+
+    function renderMatches(message) {
+      menu.innerHTML = '';
+      if (message) {
+        const note = el('div', 'combo-item combo-note');
+        note.textContent = message;
+        menu.appendChild(note);
+        return;
+      }
+      let activeEl = null;
+      matches.forEach((m, i) => {
+        const item = el('div', 'combo-item' + (i === activeIndex ? ' active' : ''), { role: 'option' });
+        const keySpan = el('span', 'combo-jira-key');
+        keySpan.textContent = m.key;
+        const sumSpan = el('span', 'combo-jira-summary');
+        sumSpan.textContent = m.summary;
+        item.append(keySpan, ' — ', sumSpan);
+        item.setAttribute('aria-selected', i === activeIndex ? 'true' : 'false');
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          input.value = m.key + ' — ' + m.summary;
+          updateWidth();
+          closeMenu();
+        });
+        if (i === activeIndex) activeEl = item;
+        menu.appendChild(item);
+      });
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+    }
+
+    function position() {
+      const rect = input.getBoundingClientRect();
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.left = rect.left + 'px';
+      menu.style.width = rect.width + 'px';
+    }
+
+    function openMenu() {
+      document.body.appendChild(menu);
+      position();
+      menu.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      const onDocClick = (e) => {
+        if (!menu.contains(e.target) && e.target !== input) closeMenu();
+      };
+      const onScroll = (e) => {
+        if (menu.contains(e.target)) return;
+        closeMenu();
+      };
+      closeHandlers = { onDocClick, onScroll };
+      setTimeout(() => document.addEventListener('click', onDocClick), 0);
+      window.addEventListener('scroll', onScroll, true);
+    }
+
+    function runSearch(q) {
+      const myId = ++requestId;
+      matches = [];
+      activeIndex = -1;
+      renderMatches('Searching…');
+      if (menu.hidden) openMenu(); else position();
+      fetch('/api/jira/search?q=' + encodeURIComponent(q))
+        .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
+        .then(({ ok, body }) => {
+          if (myId !== requestId) return; // a newer keystroke already superseded this request
+          if (!ok) { renderMatches(body.error || 'Jira search failed'); return; }
+          matches = body.issues || [];
+          activeIndex = -1;
+          if (matches.length === 0) { renderMatches('No matching tickets'); return; }
+          renderMatches();
+        })
+        .catch(() => {
+          if (myId !== requestId) return;
+          matches = [];
+          renderMatches('Jira search failed');
+        });
+    }
+
+    function updateMatches() {
+      const q = input.value.trim();
+      clearTimeout(debounceTimer);
+      if (!q) { closeMenu(); return; }
+      if (jiraEnabled === false) {
+        matches = [];
+        renderMatches('Jira is not configured — add JIRA_BASE_URL/EMAIL/API_TOKEN to .env');
+        if (menu.hidden) openMenu(); else position();
+        return;
+      }
+      debounceTimer = setTimeout(() => runSearch(q), 250);
+    }
+
+    getConfig().then((cfg) => { jiraEnabled = !!cfg.jiraEnabled; });
+
+    input.addEventListener('input', updateMatches);
+    input.addEventListener('input', updateWidth);
+    input.addEventListener('focus', () => { if (input.value.trim()) updateMatches(); });
+    input.addEventListener('blur', () => { setTimeout(closeMenu, 100); });
+    input.addEventListener('keydown', (e) => {
+      if (menu.hidden) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, matches.length - 1);
+        renderMatches();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        renderMatches();
+      } else if (e.key === 'Enter') {
+        if (activeIndex >= 0 && matches[activeIndex]) {
+          e.preventDefault();
+          input.value = matches[activeIndex].key + ' — ' + matches[activeIndex].summary;
+          updateWidth();
           closeMenu();
         }
       } else if (e.key === 'Escape') {
@@ -1520,21 +1782,40 @@
       const tblWrap = el('div', 'tbl-wrap');
       const table = el('table', 'atbl');
       const tbody = el('tbody');
-      for (let i = 0; i < section.fields.length; i += 2) {
+
+      function buildGridCell(f) {
+        const td = document.createElement('td');
+        const lbl = el('div', 'clbl');
+        lbl.textContent = f.label;
+        const inp = el('input', 'cinput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        attachSignOffStamp(inp, f.key);
+        if (f.key === 'jiraProject') attachJiraCombobox(inp);
+        td.append(lbl, inp);
+        const hint = signOffHint(f.key);
+        if (hint) td.appendChild(hint);
+        return td;
+      }
+
+      // Jira Project gets its own full-width row (more room for the ticket
+      // combobox and its "KEY — summary" pill) instead of the usual
+      // 2-per-row pairing. Whatever field would have shared a row with it
+      // also gets bumped to its own full-width row rather than left paired
+      // with an empty cell.
+      let i = 0;
+      while (i < section.fields.length) {
+        const f = section.fields[i];
+        const next = section.fields[i + 1];
         const tr = el('tr');
-        [section.fields[i], section.fields[i + 1]].forEach((f) => {
-          const td = document.createElement('td');
-          if (f) {
-            const lbl = el('div', 'clbl');
-            lbl.textContent = f.label;
-            const inp = el('input', 'cinput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
-            attachSignOffStamp(inp, f.key);
-            td.append(lbl, inp);
-            const hint = signOffHint(f.key);
-            if (hint) td.appendChild(hint);
-          }
+        if (f.key === 'jiraProject' || (next && next.key === 'jiraProject')) {
+          const td = buildGridCell(f);
+          td.colSpan = 2;
           tr.appendChild(td);
-        });
+          i += 1;
+        } else {
+          tr.appendChild(buildGridCell(f));
+          if (next) tr.appendChild(buildGridCell(next));
+          i += 2;
+        }
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
@@ -1542,7 +1823,25 @@
       body.appendChild(tblWrap);
     } else {
       const fieldsWrap = el('div', 'fields');
-      section.fields.forEach((f) => fieldsWrap.appendChild(renderField(f)));
+      let groupWrap = null;
+      let groupName = null;
+      section.fields.forEach((f) => {
+        if (f.group) {
+          if (f.group !== groupName) {
+            groupName = f.group;
+            groupWrap = el('div', 'field-group');
+            const groupTitle = el('div', 'field-group-title');
+            groupTitle.textContent = groupName;
+            groupWrap.appendChild(groupTitle);
+            fieldsWrap.appendChild(groupWrap);
+          }
+          groupWrap.appendChild(renderField(f));
+        } else {
+          groupName = null;
+          groupWrap = null;
+          fieldsWrap.appendChild(renderField(f));
+        }
+      });
       body.appendChild(fieldsWrap);
     }
 

@@ -23,6 +23,11 @@ if (!process.env.ANTHROPIC_API_KEY) {
 
 const anthropic = new Anthropic();
 
+const JIRA_BASE_URL = (process.env.JIRA_BASE_URL || '').replace(/\/+$/, '');
+const JIRA_EMAIL = process.env.JIRA_EMAIL || '';
+const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || '';
+const JIRA_ENABLED = !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -280,7 +285,49 @@ function handleConfig(req, res) {
   res.end(JSON.stringify({
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleApiKey: process.env.GOOGLE_API_KEY || '',
+    jiraEnabled: JIRA_ENABLED,
   }));
+}
+
+// Proxies to Jira's issue picker (a lightweight autocomplete endpoint built
+// for exactly this) so the browser never sees the Jira API token — only the
+// server holds it, via Basic auth.
+async function handleJiraSearch(req, res) {
+  if (!JIRA_ENABLED) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Jira is not configured (set JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN in .env)' }));
+    return;
+  }
+
+  const query = new URL(req.url, 'http://localhost').searchParams.get('q') || '';
+  if (!query.trim()) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ issues: [] }));
+    return;
+  }
+
+  const auth = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64');
+  const url = `${JIRA_BASE_URL}/rest/api/3/issue/picker?query=${encodeURIComponent(query)}`;
+
+  try {
+    const jiraRes = await fetch(url, {
+      headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' },
+    });
+    if (!jiraRes.ok) {
+      const body = await jiraRes.text();
+      throw new Error(`Jira responded ${jiraRes.status}: ${body.slice(0, 200)}`);
+    }
+    const data = await jiraRes.json();
+    const issues = (data.sections || [])
+      .flatMap((s) => s.issues || [])
+      .map((i) => ({ key: i.key, summary: i.summaryText || '' }));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ issues }));
+  } catch (err) {
+    console.error('Jira search failed:', err);
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Jira search failed: ' + err.message }));
+  }
 }
 
 const server = http.createServer((req, res) => {
@@ -298,6 +345,10 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'GET' && req.url === '/api/config') {
     handleConfig(req, res);
+    return;
+  }
+  if (req.method === 'GET' && req.url.startsWith('/api/jira/search')) {
+    handleJiraSearch(req, res);
     return;
   }
   if (req.method === 'GET') {

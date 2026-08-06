@@ -37,15 +37,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .acc-body[hidden]{display:none}
 
 .fields{display:flex;flex-direction:column;gap:18px}
+.field-group{display:flex;flex-direction:column;gap:18px;padding:18px 20px;border:1px solid #eeebe6;border-radius:8px;background:#faf8f6}
+.field-group-title{font-size:11px;font-weight:700;letter-spacing:.02em;color:#8b8680}
 .field{display:flex;flex-direction:column;gap:7px}
 .flabel{font-size:12px;font-weight:600;color:#57534e;display:flex;align-items:center;gap:5px}
 .fopt{font-size:11px;font-weight:400;color:#b0aaa3;font-style:italic}
 .info-tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid #d4d0cb;color:#b0aaa3;font-size:9px;font-weight:700;line-height:1;cursor:help;user-select:none}
 .info-tip:hover,.info-tip:focus{border-color:#a8a29e;color:#6b7280;outline:none}
 .info-tip:focus-visible{box-shadow:0 0 0 2px rgba(99,102,241,.35)}
-.info-tip-bubble{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);width:190px;background:#18181b;color:#fff;font-size:11px;font-weight:400;font-style:normal;line-height:1.4;text-align:center;padding:7px 10px;border-radius:6px;white-space:normal;opacity:0;visibility:hidden;transition:opacity .15s;pointer-events:none;z-index:50}
+/* Reparented to <body> with position:fixed and top/left set by JS (see
+   renderInfoTip in app.js) — same escape-any-clipping-ancestor trick as
+   .combo-menu, plus it lets JS flip the bubble below the icon when there
+   isn't enough room above (e.g. the Background field, near the top of an
+   open accordion). left/top default to 0 until JS positions it; opacity
+   stays 0 until positioning is computed, so it never flashes in place
+   before jumping to its real spot. */
+.info-tip-bubble{position:fixed;top:0;left:0;width:190px;background:#18181b;color:#fff;font-size:11px;font-weight:400;font-style:normal;line-height:1.4;text-align:center;padding:7px 10px;border-radius:6px;white-space:normal;opacity:0;transition:opacity .15s;pointer-events:none;z-index:1000}
+.info-tip-bubble[hidden]{display:none}
+.info-tip-bubble.show{opacity:1}
 .info-tip-bubble::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#18181b}
-.info-tip:hover .info-tip-bubble,.info-tip:focus .info-tip-bubble{opacity:1;visibility:visible}
+.info-tip-bubble.info-tip-bubble-below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#18181b}
 .field-hint{font-size:11px;font-weight:400;color:#b0aaa3;font-style:italic;display:block;margin-top:4px}
 .field-warning{font-size:11px;font-weight:600;color:#b45309;display:block;margin-top:4px}
 .field-warning[hidden]{display:none}
@@ -75,13 +86,23 @@ textarea.finput{min-height:72px;overflow:hidden}
 .cinput::placeholder{color:#d0cbc4}
 .dtbl thead tr{background:#faf8f6}
 .dtbl th{padding:9px 14px;font-size:11px;font-weight:700;letter-spacing:.02em;color:#9ca3af;border-bottom:1px solid #e8e4de;text-align:left}
+.th-input{width:100%;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.02em;color:#9ca3af;border:none;border-bottom:1px solid transparent;outline:none;background:transparent;padding:0 0 2px}
+.th-input:focus{color:#6b7280;border-bottom-color:#6366f1}
 .dtbl td{padding:8px 14px;border-bottom:1px solid #f2efe9;vertical-align:middle}
 .dtbl tr:last-child td{border-bottom:none}
 .dtbl td:not(:last-child){border-right:1px solid #f2efe9}
 .dtbl th:not(:last-child){border-right:1px solid #e8e4de}
 .row-remove-cell{width:1%;padding:8px 10px;text-align:center;white-space:nowrap}
-.ssel{font-family:inherit;font-size:11.5px;font-weight:600;border:none;border-radius:20px;padding:4px 11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s,color .15s}
-.ss-ns{background:#f3f4f6;color:#6b7280}
+.ssel,
+.cinput[data-field="jiraProject"]:not(:placeholder-shown){font-family:inherit;font-size:11.5px;font-weight:600;border:none;border-radius:20px;padding:4px 11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s,color .15s}
+.ss-ns,
+.cinput[data-field="jiraProject"]:not(:placeholder-shown){background:#f3f4f6;color:#6b7280}
+/* Stage's <select> shrinks to its content width automatically; a text
+   input has no content-based auto-size (width:auto falls back to the
+   `size` attribute's ~20ch default, not the rendered text), so app.js's
+   sizeInputToContent() sets an explicit inline width once populated —
+   this just caps it and stops .cinput's width:100% from taking over. */
+.cinput[data-field="jiraProject"]:not(:placeholder-shown){display:inline-block;max-width:100%;cursor:text}
 .ss-assigned{background:#fefce8;color:#a16207}
 .ss-ip{background:#eff6ff;color:#2563eb}
 .ss-done{background:#f0fdf4;color:#16a34a}
@@ -124,6 +145,10 @@ textarea.finput{min-height:72px;overflow:hidden}
 .combo-menu[hidden]{display:none}
 .combo-item{display:block;width:100%;text-align:left;font-family:inherit;font-size:12.5px;color:#374151;background:none;border:none;border-radius:5px;padding:7px 10px;cursor:pointer}
 .combo-item:hover,.combo-item.active{background:#f3f4f6}
+.combo-jira-key{font-weight:700;color:#4f46e5}
+.combo-jira-summary{color:#6b7280}
+.combo-note{cursor:default;color:#9ca3af;font-style:italic}
+.combo-note:hover{background:none}
 .file-name a:hover{text-decoration:underline}
 .add-btn:hover{color:#4b5563;border-color:#9ca3af;background:#faf8f6}
 
