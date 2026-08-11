@@ -35,3 +35,16 @@ Syntax:
 - User Understanding: Seeks to understand why a problem occurs, how users complete a task, where friction exists, or what their mental model is, rather than validating a specific feature
 - Actionable: Resolves a specific unknown that directly informs an upcoming product decision, such as launching an initiative, choosing a design direction, or prioritizing a roadmap item
 - Feasible: Targets specific user profiles, workflows, or friction points with a scope tightly bounded enough to avoid bloated studies or inconclusive data
+
+# Hypothesis
+
+- Testable: Designed so an experiment or qualitative study can directly verify whether the assumption is right or wrong through observable user behavior or feedback.
+- Falsifiable: Formulated in a way that makes it genuinely possible to prove the statement incorrect, avoiding unfalsifiable claims like "users might find this nice".
+- Defined Variables: Clear connection between an independent variable (the cause/change) and a dependent variable (the effect/user outcome).
+<!--  Grounded in Knowledge: Built on prior user research, telemetry, or observed friction points, rather than a random guess. -->
+
+# Research Questions
+
+- Clear: Uses simple, direct, and unambiguous language so every stakeholder instantly understands what is being investigated.
+- Focused: Narrows down to a single core problem or workflow step, rather than trying to explore a broad, multi-layered topic all at once.
+- Specific: Identifies the exact target population, feature setting, or behavior variable under investigation.

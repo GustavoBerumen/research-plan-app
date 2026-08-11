@@ -1155,7 +1155,7 @@
     });
   }
 
-  function addOutcomeRow() {
+  function addOutcomeRow(focus) {
     const list = outcomesListEl();
     if (!list) return;
     const row = el('div', 'list-row');
@@ -1175,6 +1175,7 @@
     row.append(num, inp, removeBtn);
     list.appendChild(row);
     renumberOutcomes();
+    if (focus) inp.focus();
   }
 
   // Only removes the paired Outcome row if it's still empty — preserving
@@ -1223,6 +1224,25 @@
     // scrolling horizontally like a normal single-line list input.
     const isGrowable = field.key === 'researchQuestions';
 
+    // Soft nudge, not a hard cap: past 3 questions a study tends to get
+    // unfocused, so flag it on the 4th row and keep flagging however many
+    // more get added — only clearing once it's back down to 3 or fewer.
+    let rqWarning = null;
+    function updateResearchQuestionsWarning() {
+      if (field.key !== 'researchQuestions') return;
+      const rows = list.querySelectorAll('.list-row');
+      if (rows.length < 4) {
+        if (rqWarning) rqWarning.hidden = true;
+        return;
+      }
+      if (!rqWarning) {
+        rqWarning = el('div', 'field-warning');
+        rqWarning.textContent = 'Four questions may be too many for a study.';
+      }
+      rows[3].insertAdjacentElement('afterend', rqWarning);
+      rqWarning.hidden = false;
+    }
+
     function addRow(focus) {
       const row = el('div', 'list-row');
       const num = el('span', 'list-num');
@@ -1241,23 +1261,30 @@
         }
         row.remove();
         renumber();
+        updateResearchQuestionsWarning();
       });
       row.append(num, inp, removeBtn);
       list.appendChild(row);
       if (isGrowable) resizeTa(inp);
       renumber();
       if (field.key === 'researchQuestions') addOutcomeRow();
+      updateResearchQuestionsWarning();
       if (focus) inp.focus();
       return row;
     }
 
     addRow(false);
 
+    const addBtnRow = el('div', 'add-btn-row');
     const addBtn = el('button', 'add-btn', { type: 'button' });
     const singular = field.label.replace(/s$/i, '').toLowerCase();
     addBtn.textContent = '+ Add ' + singular;
     addBtn.addEventListener('click', () => addRow(true));
-    wrap.appendChild(addBtn);
+    addBtnRow.appendChild(addBtn);
+    if (field.key === 'researchQuestions') {
+      addBtnRow.appendChild(renderInfoTip('We recommend three research questions for a well-balanced study.'));
+    }
+    wrap.appendChild(addBtnRow);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
@@ -1265,12 +1292,12 @@
     return wrap;
   }
 
-  // Outcomes: same list-row visuals as renderListField, but with no *add*
-  // button of its own — new rows are driven positionally by Research
-  // Questions (see addOutcomeRow/removeOutcomeRowAt above); each row still
-  // gets its own remove button, wired in addOutcomeRow. Starts empty;
-  // initOutcomesSync() seeds it to match once the whole form (and
-  // Research Questions) has actually rendered.
+  // Outcomes: same list-row visuals as renderListField. Rows are also driven
+  // positionally by Research Questions (see addOutcomeRow/removeOutcomeRowAt
+  // above) — each row gets its own remove button, wired in addOutcomeRow.
+  // Its own "+ Add outcome" button lets extra outcomes be added beyond that
+  // count. Starts empty; initOutcomesSync() seeds it to match once the whole
+  // form (and Research Questions) has actually rendered.
   function renderLinkedOutcomesField(field) {
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
@@ -1283,6 +1310,11 @@
     list.dataset.fieldKey = field.key;
     list.dataset.placeholder = field.placeholder || '';
     wrap.appendChild(list);
+
+    const addBtn = el('button', 'add-btn', { type: 'button' });
+    addBtn.textContent = '+ Add outcome';
+    addBtn.addEventListener('click', () => addOutcomeRow(true));
+    wrap.appendChild(addBtn);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
@@ -1304,8 +1336,12 @@
   // Keyed by field.key, same lookup pattern as attachSignOffStamp below.
   // Add an entry here to put a "?" icon on any other field's label later.
   const FIELD_INFO_TIPS = {
-    researchQuestions: 'We recommend three research questions per plan.',
-    background: 'Provides sufficient context for the study, defines essential terms used across later sections, and stays focused without unnecessary clutter.',
+    researchQuestions: 'Defines an inquiry that translates your objective into a clear and discoverable topic.',
+    background: 'Provides sufficient context for the study, defines essential terms used across sections, and stays focused without unnecessary clutter.',
+    goal: 'Focus on the target state of the product or user experience: What build, feature, or business metric will change if this project succeeds?',
+    problem: 'Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.',
+    objective: 'Focus on deep understanding rather than proving a bias, connects to an upcoming decision, and remains realistic in scope.',
+    hypothesis: 'An educated idea about user behaviour or product performance that your study will directly test. Rather than guessing, connects past knowledge to an upcoming product decision.',
   };
 
   // The bubble is reparented to <body> with position:fixed while shown —

@@ -82,8 +82,8 @@ Problem (textarea, eval): Issues requiring attention that could prevent the proj
 # Research
 
 Objective (textarea, eval): Purpose and high-level goals of the research
-Hypothesis (textarea, optional): Baseline assumptions to be tested during the study
-Research Questions (list): What do you want to understand?
+Hypothesis (textarea, optional, eval): Baseline assumptions to be tested during the study
+Research Questions (list, eval): What do you want to understand?
 Outcomes (list): Deliverable for this question
 
 # Methodology

@@ -182,6 +182,9 @@ async function handleEvaluate(req, res) {
 
     const toolUse = message.content.find((b) => b.type === 'tool_use');
     if (!toolUse) throw new Error('Model did not return a structured evaluation');
+    if (!Array.isArray(toolUse.input.metrics) || toolUse.input.metrics.length === 0) {
+      throw new Error('Model returned an unexpected evaluation shape — please try again');
+    }
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(toolUse.input));
