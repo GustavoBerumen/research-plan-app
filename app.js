@@ -2143,11 +2143,18 @@
       if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
     }
 
+    // Width/left come from the input's containing <td> (its stable layout
+    // width in the Alignment grid), not the input itself — the input's own
+    // width shrinks to fit its content while searching/showing the "pill"
+    // (see updateWidth/sizeInputToContent above), so sizing the menu off
+    // the input directly made it collapse to a couple of characters wide
+    // mid-search, wrapping every suggestion's text into a vertical column.
     function position() {
       const rect = input.getBoundingClientRect();
+      const widthRect = (input.closest('td') || input).getBoundingClientRect();
       menu.style.top = (rect.bottom + 4) + 'px';
-      menu.style.left = rect.left + 'px';
-      menu.style.width = rect.width + 'px';
+      menu.style.left = widthRect.left + 'px';
+      menu.style.width = widthRect.width + 'px';
     }
 
     function openMenu() {
@@ -2529,11 +2536,45 @@
     return wrap;
   }
 
+  // "Additional Comments" isn't a titled accordion section like the others
+  // — it's a single optional field, so showing an empty box for it by
+  // default is more clutter than it's worth. renderField(field) builds the
+  // exact same label/textarea/info-tip markup as always (so once revealed
+  // it's indistinguishable from any other optional textarea field); this
+  // just starts it hidden behind an "+ Add a comment" button matching the
+  // .add-btn pattern used everywhere else. The field element itself is
+  // always in the DOM from first render, never lazily created — see the
+  // print override below for why that matters.
+  function renderCommentsReveal(field) {
+    const wrap = el('div', 'comments-block');
+
+    const fieldEl = renderField(field);
+    fieldEl.hidden = true;
+
+    const btn = el('button', 'add-btn', { type: 'button' });
+    btn.textContent = '+ Add a comment';
+    btn.addEventListener('click', () => {
+      btn.hidden = true;
+      fieldEl.hidden = false;
+      const ta = fieldEl.querySelector('[data-field="' + field.key + '"]');
+      if (ta) ta.focus();
+    });
+
+    wrap.append(btn, fieldEl);
+    return wrap;
+  }
+
   function renderSchema(schema) {
     doc.innerHTML = '';
     tables.length = 0;
     doc.appendChild(renderHeader(schema.header));
-    schema.sections.forEach((s) => doc.appendChild(renderSection(s)));
+
+    const sections = schema.sections.slice();
+    const commentsIdx = sections.findIndex((s) => s.title === 'Additional Comments');
+    const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
+
+    sections.forEach((s) => doc.appendChild(renderSection(s)));
+    if (commentsField) doc.appendChild(renderCommentsReveal(commentsField));
   }
 
   // ---------- clear form ----------

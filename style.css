@@ -26,6 +26,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .doc-error{color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 18px;font-size:13.5px;line-height:1.6}
 
 .acc{margin-bottom:14px;border:1px solid #eeebe6;border-radius:10px;overflow:hidden}
+.comments-block{margin-top:14px}
+.comments-block .add-btn{margin-top:0}
 .acc-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#faf8f6;border:none;cursor:pointer;padding:14px 18px;font-family:inherit;text-align:left}
 .acc-head:hover{background:#f5f2ee}
 .acc-head-left{display:flex;align-items:center;gap:10px}
@@ -221,12 +223,22 @@ textarea.finput{min-height:72px;overflow:hidden}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}
+  .comments-block .field[hidden]{display:flex!important}
   body,html{background:#fff!important}
   .page-wrap{padding:0!important}
   .doc{box-shadow:none!important;border-radius:0!important;max-width:100%!important;padding:24px 36px!important;margin:0!important}
   .doc-header{border-bottom-color:#ccc!important}
   .finput{border-color:#ccc!important;box-shadow:none!important;background:#fff!important}
-  textarea.finput{overflow:visible!important;height:auto!important}
+  /* overflow:visible only, deliberately no height:auto here: resizeTa()
+     already sets an accurate inline height as soon as each textarea is
+     created (both the initial render and every dynamically-added Research
+     Questions row), so print just inherits that height — a
+     height:auto!important would instead win over that plain inline style
+     and collapse textareas back to their native ~3-row size, clipping
+     their content. overflow:visible stays only as a safety net against
+     screen/print font-metric rounding leaving a sliver of the last line
+     clipped by the base overflow:hidden rule. */
+  textarea.finput{overflow:visible!important}
   .tbl-wrap{border-color:#ccc!important}
   .atbl td,.dtbl td,.dtbl th{border-color:#ddd!important}
   .dtbl thead tr{background:#f5f5f5!important}
@@ -234,4 +246,5 @@ textarea.finput{min-height:72px;overflow:hidden}
   .eval-panel{border-color:#ccc!important}
   .acc{border-color:#ddd!important}
   .acc-head{background:#fff!important}
+  .acc,.field,.dtbl tr,.atbl tr,.list-row{page-break-inside:avoid;break-inside:avoid}
 }
