@@ -186,6 +186,24 @@ textarea.finput{min-height:72px;overflow:hidden}
 .eval-save-btn.active{background:#eff6ff;border-color:#bfdbfe;color:#2563eb;opacity:1}
 @media(max-width:620px){.eval-metrics{grid-template-columns:1fr 1fr}}
 
+.fw-rationale{font-size:13px;color:#374151;line-height:1.5;margin:0 0 10px}
+.fw-category{font-size:11px;font-weight:700;letter-spacing:.02em;color:#92400e;margin-bottom:8px}
+.fw-entry{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.65;white-space:pre-wrap;background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.08);border-radius:8px;padding:14px 16px}
+.fw-ref{font-size:12.5px;color:#374151;line-height:1.5;margin:0;padding-top:10px;border-top:1px solid rgba(0,0,0,.07)}
+.fw-warn{margin-top:12px}
+.fw-add-btn{margin-top:0}
+
+.ms-group{margin-bottom:16px}
+.ms-group:last-of-type{margin-bottom:0}
+.ms-question{font-size:12.5px;font-weight:700;color:#374151;margin-bottom:8px;line-height:1.4}
+.ms-method{padding:10px 12px;background:rgba(255,255,255,.65);border:1px solid rgba(0,0,0,.08);border-radius:8px;margin-bottom:8px}
+.ms-method:last-child{margin-bottom:0}
+.ms-method-name{font-size:12.5px;font-weight:600;color:#111827}
+.ms-method-reason{font-size:12px;color:#6b7280;line-height:1.45;margin-top:3px}
+.ms-method-source{font-size:11px;color:#9ca3af;margin-top:4px;font-style:italic}
+.ms-search-tag{font-size:10px;font-weight:700;letter-spacing:.02em;color:#6366f1;background:#e0e7ff;border-radius:10px;padding:2px 7px;margin-left:6px;vertical-align:middle}
+.ms-none{font-size:12px;color:#9ca3af;font-style:italic;margin-bottom:8px}
+
 .ex-toggle{align-self:flex-start;font-family:inherit;font-size:12px;font-weight:500;color:#8b8680;background:none;border:none;cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px}
 .ex-toggle:hover{color:#57534e}
 .ex-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:2px}
@@ -199,7 +217,7 @@ textarea.finput{min-height:72px;overflow:hidden}
 @media(max-width:560px){.ex-panel{grid-template-columns:1fr}}
 
 @media print{
-  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back{display:none!important}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}

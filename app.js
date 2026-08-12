@@ -73,6 +73,8 @@
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
+    } else if (type === 'select') {
+      field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
     } else {
       field.placeholder = m[3].trim();
     }
@@ -872,6 +874,441 @@
     return [btn, panel];
   }
 
+  // ---------- theoretical framework suggestion (Theory field) ----------
+  // Pulls the six context fields, asks the backend to either match an
+  // existing entry in research-theoretical-frameworks.md or draft a new one.
+  // A drafted entry is only ever a proposal shown in the panel — nothing is
+  // written to the file until the user explicitly clicks "Add this to my
+  // framework library" (see handleAddFramework in server.js), since the
+  // draft's citations may be AI-fabricated and the file holds real sources.
+  function collectFrameworkContextFields() {
+    const val = (key) => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      return input ? input.value : '';
+    };
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    return {
+      background: val('background'),
+      goal: val('goal'),
+      problem: val('problem'),
+      objective: val('objective'),
+      hypothesis: val('hypothesis'),
+      researchQuestions: rqList ? collectListValues(rqList).join('\n') : '',
+    };
+  }
+
+  function suggestFramework() {
+    return fetch('/api/suggest-framework', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: collectFrameworkContextFields() }),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((data) => {
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        return data;
+      });
+    });
+  }
+
+  function addFrameworkEntry(draft) {
+    return fetch('/api/add-framework', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((data) => {
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        return data;
+      });
+    });
+  }
+
+  // Pulls just the first "Key References" bullet out of a matched entry's
+  // raw markdown — the file lists the more foundational/original citation
+  // first within each entry (e.g. Reckwitz before Kuijer, Davis before
+  // Venkatesh), so "first" is a reasonable deterministic stand-in for "most
+  // foundational" without needing another model call to choose one.
+  function extractFirstReference(entryText) {
+    const m = entryText.match(/\*\*Key References:\*\*\s*\n\s*\*\s*(.+)/);
+    return m ? m[1].trim() : null;
+  }
+
+  // Condenses one of the file's full academic citations — "Surname, F. M.,
+  // Surname, F. (Year). Title. *Journal*, vol(issue), pages. URL" or
+  // "Surname, F. (Year). *Title*. Publisher." — down to the short
+  // "Author et al. (Year). Title. URL" form used in the panel. Pure string
+  // reformatting of text that already came verbatim from the file, so there
+  // is nothing here for the model to get wrong or invent.
+  function formatFrameworkReference(raw) {
+    const m = raw.match(/^(.*?)\((\d{4})\)\.\s*(.*)$/);
+    if (!m) return raw;
+    const authorsPart = m[1].trim();
+    const year = m[2];
+    let rest = m[3].trim();
+
+    let url = '';
+    const urlMatch = rest.match(/(https?:\/\/\S+?)\.?$/);
+    if (urlMatch) {
+      url = urlMatch[1];
+      rest = rest.slice(0, urlMatch.index).trim();
+    }
+
+    // The title's own end boundary is the first sentence period — except
+    // when the citation IS just "*Book Title*. Publisher." with nothing
+    // before the italics, since then the italicised text is the title
+    // itself rather than a container it needs distinguishing from (e.g. a
+    // journal name, or an editors/book clause in "In X (Eds.), *Book*").
+    let title;
+    const starIdx = rest.indexOf('*');
+    if (starIdx === 0) {
+      const italicTitleMatch = rest.match(/^\*(.+?)\*/);
+      title = italicTitleMatch ? italicTitleMatch[1] : rest;
+    } else {
+      const periodIdx = rest.indexOf('. ');
+      title = (periodIdx === -1 ? rest : rest.slice(0, periodIdx)).replace(/\.$/, '').trim();
+    }
+
+    const surnames = [...authorsPart.matchAll(/([A-Z][A-Za-zÀ-ÿ'’-]+),\s*[A-Z]\./g)].map((mm) => mm[1]);
+    let authorLabel = authorsPart;
+    if (surnames.length === 1) authorLabel = surnames[0];
+    else if (surnames.length === 2) authorLabel = surnames[0] + ' & ' + surnames[1];
+    else if (surnames.length > 2) authorLabel = surnames[0] + ' et al.';
+
+    return `${authorLabel} (${year}). ${title}.` + (url ? ' ' + url : '');
+  }
+
+  function renderFrameworkSuggest() {
+    const btn = el('button', 'eval-btn', { type: 'button' });
+    const spinner = el('span', 'eval-spinner');
+    const txt = el('span');
+    txt.textContent = 'Suggest a framework';
+    btn.append(spinner, txt);
+
+    const panel = el('div', 'eval-panel fw-panel');
+    panel.hidden = true;
+    const head = el('div', 'eval-head');
+    const badge = el('span', 'eval-badge');
+    const hl = el('span', 'eval-hl');
+    hl.textContent = 'Framework Suggestion';
+    const dismiss = el('button', 'eval-x', { type: 'button' });
+    dismiss.textContent = '✕';
+    head.append(badge, hl, dismiss);
+
+    const body = el('div', 'fw-body');
+    panel.append(head, body);
+
+    // Declining just hides the panel — nothing was ever written for a match,
+    // and a draft is only written on explicit confirmation below, so there's
+    // nothing to undo here.
+    dismiss.addEventListener('click', () => { panel.hidden = true; });
+
+    function renderMatched(data) {
+      badge.textContent = 'MATCH FOUND';
+      badge.style.background = '#2563eb';
+      panel.style.background = '#eff6ff';
+      panel.style.borderColor = '#bfdbfe';
+      body.innerHTML = '';
+
+      const summary = el('p', 'fw-rationale');
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = data.name;
+      summary.append('We recommend the ', nameEl, '. ', data.rationale);
+      body.appendChild(summary);
+
+      const rawRef = extractFirstReference(data.entry);
+      if (rawRef) {
+        const refBlock = el('p', 'fw-ref');
+        refBlock.textContent = 'For a starting point, see: ' + formatFrameworkReference(rawRef);
+        body.appendChild(refBlock);
+      }
+    }
+
+    function renderDraft(data) {
+      const d = data.draft;
+      badge.textContent = 'NEW DRAFT';
+      badge.style.background = '#d97706';
+      panel.style.background = '#fffbeb';
+      panel.style.borderColor = '#fde68a';
+      body.innerHTML = '';
+
+      const note = el('p', 'fw-rationale');
+      note.textContent = 'No existing framework in the library is a strong fit. ' + d.rationale;
+      body.appendChild(note);
+
+      const category = el('div', 'fw-category');
+      category.textContent = 'Proposed category: ' + d.category.replace(/^##\s*\d+\.\s*/, '');
+      body.appendChild(category);
+
+      const entryText = '### ' + d.name + '\n' +
+        '* **Core Focus:** ' + d.coreFocus + '\n' +
+        '* **UXR Application:** ' + d.uxrApplication + '\n' +
+        '* **Key References:**\n' +
+        d.references.map((r) => '  * ' + r).join('\n');
+      const entry = el('div', 'fw-entry');
+      entry.textContent = entryText;
+      body.appendChild(entry);
+
+      const warn = el('div', 'field-warning fw-warn');
+      warn.textContent = 'AI-drafted, including the citations — verify accuracy before adding it to the library.';
+      body.appendChild(warn);
+
+      const actions = el('div', 'eval-actions');
+      const addBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
+      addBtn.textContent = 'Add this to my framework library';
+      actions.appendChild(addBtn);
+      body.appendChild(actions);
+
+      addBtn.addEventListener('click', () => {
+        addBtn.disabled = true;
+        addBtn.textContent = 'Adding…';
+        addFrameworkEntry({
+          category: d.category,
+          name: d.name,
+          coreFocus: d.coreFocus,
+          uxrApplication: d.uxrApplication,
+          references: d.references,
+        }).then(() => {
+          addBtn.textContent = 'Added to library ✓';
+        }).catch((err) => {
+          alert('Adding framework failed: ' + err.message);
+          addBtn.disabled = false;
+          addBtn.textContent = 'Add this to my framework library';
+        });
+      });
+    }
+
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      btn.classList.add('loading');
+      txt.textContent = 'Suggesting…';
+      suggestFramework().then((data) => {
+        if (data.matched) renderMatched(data);
+        else renderDraft(data);
+        panel.hidden = false;
+      }).catch((err) => {
+        alert('Framework suggestion failed: ' + err.message);
+      }).finally(() => {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        txt.textContent = 'Suggest a framework';
+      });
+    });
+
+    return [btn, panel];
+  }
+
+  // ---------- methods suggestion (Methods field) ----------
+  // Same shape as renderFrameworkSuggest above: a button that calls a
+  // backend endpoint and a panel that renders the result. Unlike the
+  // framework suggestion, there's no separate "approve before writing" step
+  // here — applying just fills in the (freely-editable) Methods field, the
+  // same as typing method names in by hand, so it's a plain "Apply" action
+  // rather than a save-to-a-source-of-truth-file confirmation.
+  function methodsListEl() {
+    return doc.querySelector('.list-rows[data-list-key="methods"]');
+  }
+
+  function renumberMethodsList() {
+    const list = methodsListEl();
+    if (!list) return;
+    list.querySelectorAll('.list-row').forEach((row, i) => {
+      row.querySelector('.list-num').textContent = (i + 1) + '.';
+      const removeBtn = row.querySelector('.list-remove');
+      removeBtn.classList.toggle('list-remove-spacer', i === 0);
+      removeBtn.disabled = i === 0;
+    });
+  }
+
+  function addMethodRow(value, focus) {
+    const list = methodsListEl();
+    if (!list) return null;
+    const row = el('div', 'list-row');
+    const num = el('span', 'list-num');
+    const inp = el('input', 'finput list-input', { type: 'text', 'data-field': 'methods', placeholder: list.dataset.placeholder || '' });
+    attachMethodsCombobox(inp, METHODS);
+    inp.value = value || '';
+    const removeBtn = el('button', 'list-remove', { type: 'button' });
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => {
+      if (removeBtn.disabled) return;
+      row.remove();
+      renumberMethodsList();
+    });
+    row.append(num, inp, removeBtn);
+    list.appendChild(row);
+    renumberMethodsList();
+    if (focus) inp.focus();
+    return row;
+  }
+
+  // Fills any blank rows already in the list before adding new ones, and
+  // skips names already present (case-insensitive), so clicking Apply
+  // doesn't leave a stray empty row above the suggestions or duplicate a
+  // method the user already typed in.
+  function applyMethodsToField(names) {
+    const list = methodsListEl();
+    if (!list || names.length === 0) return;
+    const rows = Array.from(list.querySelectorAll('.list-row'));
+    const existing = new Set(collectListValues(list).map((v) => v.toLowerCase()));
+    let rowIdx = 0;
+    names.forEach((name) => {
+      if (existing.has(name.toLowerCase())) return;
+      while (rowIdx < rows.length && rows[rowIdx].querySelector('.list-input').value.trim()) rowIdx++;
+      if (rowIdx < rows.length) {
+        rows[rowIdx].querySelector('.list-input').value = name;
+        rowIdx++;
+      } else {
+        addMethodRow(name, false);
+      }
+      existing.add(name.toLowerCase());
+    });
+    renumberMethodsList();
+  }
+
+  function suggestMethods(objective, researchQuestions) {
+    return fetch('/api/suggest-methods', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ objective, researchQuestions }),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((data) => {
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        return data;
+      });
+    });
+  }
+
+  function renderMethodsSuggest() {
+    const btn = el('button', 'eval-btn', { type: 'button' });
+    btn.disabled = true;
+    const spinner = el('span', 'eval-spinner');
+    const txt = el('span');
+    txt.textContent = 'Suggest methods';
+    btn.append(spinner, txt);
+
+    const panel = el('div', 'eval-panel fw-panel');
+    panel.hidden = true;
+    const head = el('div', 'eval-head');
+    const badge = el('span', 'eval-badge');
+    badge.textContent = 'SUGGESTED METHODS';
+    badge.style.background = '#6366f1';
+    const hl = el('span', 'eval-hl');
+    hl.textContent = 'Methods Suggestion';
+    const dismiss = el('button', 'eval-x', { type: 'button' });
+    dismiss.textContent = '✕';
+    head.append(badge, hl, dismiss);
+    const body = el('div', 'fw-body');
+    panel.append(head, body);
+    panel.style.background = '#eef2ff';
+    panel.style.borderColor = '#c7d2fe';
+
+    dismiss.addEventListener('click', () => { panel.hidden = true; });
+
+    // Enabled only once Objective and at least one Research Question have
+    // content — delegated on doc so it stays correct as rows/text change,
+    // regardless of add/remove order relative to when this button renders.
+    function isReady() {
+      const objectiveInput = doc.querySelector('[data-field="objective"]');
+      const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+      const hasObjective = !!(objectiveInput && objectiveInput.value.trim());
+      const hasQuestion = !!(rqList && collectListValues(rqList).some((v) => v.trim()));
+      return hasObjective && hasQuestion;
+    }
+    function updateEnabled() {
+      if (!btn.classList.contains('loading')) btn.disabled = !isReady();
+    }
+    doc.addEventListener('input', updateEnabled);
+    doc.addEventListener('click', updateEnabled);
+    updateEnabled();
+
+    function renderResults(questions, perQuestion) {
+      body.innerHTML = '';
+      const allNames = [];
+
+      questions.forEach((q, i) => {
+        const group = el('div', 'ms-group');
+        const qEl = el('div', 'ms-question');
+        qEl.textContent = q;
+        group.appendChild(qEl);
+
+        const methods = (perQuestion[i] && perQuestion[i].methods) || [];
+        if (methods.length === 0) {
+          const none = el('div', 'ms-none');
+          none.textContent = 'No confident recommendation found for this question.';
+          group.appendChild(none);
+        }
+        methods.forEach((m) => {
+          const row = el('div', 'ms-method');
+          const nameEl = el('span', 'ms-method-name');
+          nameEl.textContent = m.name || 'Unresolved';
+          if (m.viaSearch) {
+            const tag = el('span', 'ms-search-tag');
+            tag.textContent = 'via web search';
+            nameEl.append(' ', tag);
+          }
+          const reasonEl = el('div', 'ms-method-reason');
+          reasonEl.textContent = m.reason;
+          row.append(nameEl, reasonEl);
+          if (m.source) {
+            const src = el('div', 'ms-method-source');
+            src.textContent = 'Source: ' + m.source;
+            row.appendChild(src);
+          }
+          group.appendChild(row);
+          if (m.name) allNames.push(m.name);
+        });
+
+        body.appendChild(group);
+      });
+
+      const actions = el('div', 'eval-actions');
+      const uniqueNames = [...new Set(allNames)];
+      const applyBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
+      applyBtn.textContent = uniqueNames.length ? 'Apply ' + uniqueNames.length + ' method(s) to Methods' : 'Nothing to apply';
+      applyBtn.disabled = uniqueNames.length === 0;
+      applyBtn.addEventListener('click', () => {
+        applyMethodsToField(uniqueNames);
+        applyBtn.textContent = 'Applied ✓';
+        applyBtn.disabled = true;
+      });
+      actions.appendChild(applyBtn);
+      body.appendChild(actions);
+    }
+
+    btn.addEventListener('click', () => {
+      const objectiveInput = doc.querySelector('[data-field="objective"]');
+      const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+      const objective = objectiveInput ? objectiveInput.value.trim() : '';
+      const questions = rqList ? collectListValues(rqList) : [];
+      if (!objective || questions.length === 0) {
+        alert('Please enter an Objective and at least one Research Question first.');
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('loading');
+      txt.textContent = 'Suggesting…';
+      suggestMethods(objective, questions).then((data) => {
+        if (!Array.isArray(data.perQuestion) || data.perQuestion.length !== questions.length) {
+          throw new Error('Unexpected response shape — please try again');
+        }
+        renderResults(questions, data.perQuestion);
+        panel.hidden = false;
+      }).catch((err) => {
+        alert('Methods suggestion failed: ' + err.message);
+      }).finally(() => {
+        btn.classList.remove('loading');
+        txt.textContent = 'Suggest methods';
+        updateEnabled();
+      });
+    });
+
+    const btnRow = el('div', 'add-btn-row');
+    btnRow.appendChild(btn);
+    btnRow.appendChild(renderInfoTip('This only activates once Objective and at least one Research Question have content.'));
+
+    return [btnRow, panel];
+  }
+
   // ---------- stage timeline visualization ----------
   function getCellValue(td) {
     const select = td.querySelector('select');
@@ -1191,6 +1628,97 @@
     renumberOutcomes();
   }
 
+  // ---------- dynamic placeholders (Characteristics / User Groups) ----------
+  // Generated from Background/Goal/Objective/Research Questions, but only
+  // ever written to .placeholder — never .value — so this behaves exactly
+  // like a normal HTML placeholder: visible only while empty, gone the
+  // instant the user types, never submitted as real content.
+  function collectParticipantContextFields() {
+    const val = (key) => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      return input ? input.value.trim() : '';
+    };
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    return {
+      background: val('background'),
+      goal: val('goal'),
+      objective: val('objective'),
+      researchQuestions: rqList ? collectListValues(rqList).join('\n') : '',
+    };
+  }
+
+  // Cheap pre-check so a near-empty form never even calls the endpoint —
+  // the server has the same check as a backstop, but the point is to avoid
+  // spending the API call in the first place when there's too little to
+  // work from.
+  function hasEnoughContextForPlaceholders(ctx) {
+    return (ctx.background + ctx.goal + ctx.objective + ctx.researchQuestions).trim().length >= 40;
+  }
+
+  function participantContextChanged(a, b) {
+    if (!b) return true;
+    return a.background !== b.background || a.goal !== b.goal || a.objective !== b.objective || a.researchQuestions !== b.researchQuestions;
+  }
+
+  let participantPlaceholderCache = null; // { inputs, characteristics, userGroups }
+  let participantPlaceholderPromise = null; // in-flight request, de-duped across near-simultaneous focus events
+
+  function ensureParticipantPlaceholders() {
+    const ctx = collectParticipantContextFields();
+    if (!hasEnoughContextForPlaceholders(ctx)) return Promise.resolve(null);
+
+    if (participantPlaceholderCache && !participantContextChanged(ctx, participantPlaceholderCache.inputs)) {
+      return Promise.resolve(participantPlaceholderCache);
+    }
+    if (participantPlaceholderPromise) return participantPlaceholderPromise;
+
+    participantPlaceholderPromise = fetch('/api/suggest-participant-placeholders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ctx),
+    }).then((res) => {
+      return res.json().catch(() => ({})).then((data) => {
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        return data;
+      });
+    }).then((data) => {
+      const result = { inputs: ctx, characteristics: data.characteristics, userGroups: data.userGroups };
+      participantPlaceholderCache = result;
+      return result;
+    }).catch((err) => {
+      console.warn('Dynamic placeholder generation failed, keeping static placeholder:', err);
+      return null;
+    }).finally(() => {
+      participantPlaceholderPromise = null;
+    });
+
+    return participantPlaceholderPromise;
+  }
+
+  // Applies to every currently-empty row of both fields, not just the one
+  // that was focused — a single API call covers both fields, so whichever
+  // one the user reaches next already has the fresh hint waiting.
+  function applyParticipantPlaceholders(result) {
+    if (!result) return;
+    if (result.characteristics) {
+      doc.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input').forEach((inp) => {
+        if (!inp.value.trim()) inp.placeholder = result.characteristics;
+      });
+    }
+    if (result.userGroups) {
+      doc.querySelectorAll('.list-rows[data-list-key="userGroups"] .list-input').forEach((inp) => {
+        if (!inp.value.trim()) inp.placeholder = result.userGroups;
+      });
+    }
+  }
+
+  function attachDynamicPlaceholder(inp) {
+    inp.addEventListener('focus', () => {
+      if (inp.value.trim()) return;
+      ensureParticipantPlaceholders().then(applyParticipantPlaceholders);
+    });
+  }
+
   function renderListField(field) {
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
@@ -1251,6 +1779,7 @@
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
       if (isGrowable) inp.addEventListener('input', () => resizeTa(inp));
       if (field.key === 'methods') attachMethodsCombobox(inp, METHODS);
+      if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', () => {
@@ -1288,6 +1817,7 @@
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
+    if (field.key === 'methods') wrap.append(...renderMethodsSuggest());
 
     return wrap;
   }
@@ -1342,6 +1872,27 @@
     problem: 'Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.',
     objective: 'Focus on deep understanding rather than proving a bias, connects to an upcoming decision, and remains realistic in scope.',
     hypothesis: 'An educated idea about user behaviour or product performance that your study will directly test. Rather than guessing, connects past knowledge to an upcoming product decision.',
+    outcomes: 'Ties each deliverable to a specific research question and a concrete product or business decision.',
+    theory: "An academic theory or framework that can help ground this study's design or analysis.",
+    methods: "The research methods you'll use to answer your research questions.",
+    characteristics: 'Traits or behaviours that define who you need to recruit for this study.',
+    userGroups: 'The distinct user segments you want represented among participants.',
+    sampleSize: 'How many participants you plan to recruit for this study.',
+    requirements: "What you'll need to run this study — physical items, digital tools, and approvals.",
+    stageTimeline: 'The planned schedule for each stage of this research, from planning through reporting.',
+    actionPoints: 'Tasks needed to move this research forward, and who owns each one.',
+    previousKnowledge: 'Prior research or documentation relevant to this study, attached for reference.',
+    comments: "Anything else worth noting that didn't fit elsewhere in this plan.",
+    projectOwner: 'The person accountable for this initiative on the product or business side.',
+    researchOwner: 'The person leading and accountable for executing this research study.',
+    researchTeam: 'Everyone contributing to this study beyond the two owners above.',
+    lastUpdated: 'The date this plan was last edited.',
+    project: 'The product or business initiative this research plan supports.',
+    jiraProject: 'Links this plan to its tracking ticket in Jira.',
+    projectDecision: 'The date the product or business decision this research needs to inform will be made.',
+    reportResearch: 'The date you plan to share findings — ideally at least a week before the Project Decision date.',
+    signOffProjectOwner: 'Project Owner approval — type initials and the date is added automatically.',
+    signOffResearchOwner: 'Research Owner approval — type initials and the date is added automatically.',
   };
 
   // The bubble is reparented to <body> with position:fixed while shown —
@@ -1762,6 +2313,63 @@
     }
     wrap.appendChild(label);
 
+    // Reuses the same .ssel dropdown + "Other…" escape hatch as a table's
+    // "select" columns (see buildRow's select branch for Stage Timeline)
+    // instead of introducing a second dropdown component. Only one of
+    // sel/otherInput carries data-field at a time — whichever is currently
+    // showing — so a generic [data-field="key"] lookup elsewhere always
+    // finds the field's actual current value, not a stale hidden one.
+    if (field.type === 'select') {
+      const selectCell = el('div', 'select-cell');
+      selectCell.dataset.fieldKey = field.key;
+      const sel = document.createElement('select');
+      sel.className = 'ssel ss-ns';
+      sel.setAttribute('data-field', field.key);
+      (field.options || []).forEach((opt) => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+      });
+      const otherOpt = document.createElement('option');
+      otherOpt.value = '__other__';
+      otherOpt.textContent = 'Other…';
+      sel.appendChild(otherOpt);
+
+      const otherRow = el('div', 'select-other-row');
+      const otherInput = el('input', 'finput select-other-input', {
+        type: 'text',
+        placeholder: 'Type your own value…',
+      });
+      const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead' });
+      backBtn.textContent = '▾';
+      otherRow.append(otherInput, backBtn);
+      otherRow.hidden = true;
+
+      sel.addEventListener('change', () => {
+        if (sel.value === '__other__') {
+          sel.hidden = true;
+          sel.removeAttribute('data-field');
+          otherRow.hidden = false;
+          otherInput.setAttribute('data-field', field.key);
+          otherInput.focus();
+        }
+      });
+      backBtn.addEventListener('click', () => {
+        otherInput.value = '';
+        otherInput.removeAttribute('data-field');
+        otherRow.hidden = true;
+        sel.hidden = false;
+        sel.setAttribute('data-field', field.key);
+        sel.value = (field.options && field.options[0]) || '';
+        sel.focus();
+      });
+
+      selectCell.append(sel, otherRow);
+      wrap.appendChild(selectCell);
+      return wrap;
+    }
+
     const isTextarea = field.type === 'textarea';
     const input = el(isTextarea ? 'textarea' : 'input', isTextarea ? 'finput field-ta' : 'finput', {
       'data-field': field.key,
@@ -1775,6 +2383,7 @@
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) wrap.append(...renderEvalControls(field, () => input.value));
+    if (field.key === 'theory') wrap.append(...renderFrameworkSuggest());
 
     return wrap;
   }
@@ -1823,6 +2432,7 @@
         const td = document.createElement('td');
         const lbl = el('div', 'clbl');
         lbl.textContent = f.label;
+        appendInfoTip(lbl, f.key);
         const inp = el('input', 'cinput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         attachSignOffStamp(inp, f.key);
         if (f.key === 'jiraProject') attachJiraCombobox(inp);
@@ -1903,6 +2513,7 @@
       const mf = el('div', 'mf');
       const label = el('div', 'mlabel');
       label.textContent = f.label;
+      appendInfoTip(label, f.key);
       const input = el('input', 'minput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
       if (f.key === 'lastUpdated') {
         const now = new Date();
@@ -1947,7 +2558,24 @@
         remaining.disabled = true;
       }
     });
-    doc.querySelectorAll('.ssel').forEach((el) => { el.value = 'not-started'; updateSelectClass(el); });
+    // Reset each dropdown to its own first option rather than hardcoding
+    // 'not-started' — that value only exists on the status columns; other
+    // .ssel dropdowns (Stage Timeline's Stage column, Sample Size) have
+    // their own option sets and would otherwise reset to nothing selected.
+    doc.querySelectorAll('.ssel').forEach((el) => { el.selectedIndex = 0; updateSelectClass(el); });
+    // Any dropdown currently swapped to its "Other…" free-text input (see
+    // the select-cell branch in renderField / buildRow) needs that swap
+    // undone too, including re-attaching data-field to the dropdown.
+    doc.querySelectorAll('.select-cell').forEach((cell) => {
+      const sel = cell.querySelector('.ssel');
+      const otherRow = cell.querySelector('.select-other-row');
+      const otherInput = cell.querySelector('.select-other-input');
+      if (!sel || !otherRow) return;
+      if (otherInput) { otherInput.value = ''; otherInput.removeAttribute('data-field'); }
+      otherRow.hidden = true;
+      sel.hidden = false;
+      if (cell.dataset.fieldKey) sel.setAttribute('data-field', cell.dataset.fieldKey);
+    });
     doc.querySelectorAll('.file-cell').forEach((cell) => {
       cell.querySelector('.file-value').value = '';
       cell.querySelector('.file-name').textContent = 'No file chosen';

@@ -48,3 +48,10 @@ Syntax:
 - Clear: Uses simple, direct, and unambiguous language so every stakeholder instantly understands what is being investigated.
 - Focused: Narrows down to a single core problem or workflow step, rather than trying to explore a broad, multi-layered topic all at once.
 - Specific: Identifies the exact target population, feature setting, or behavior variable under investigation.
+
+# Outcomes
+
+- Actionalble: tie directly to an explicit product or business decision rather than just promising open-ended summaries or reports.
+- Format: Ensures final outputs—such as backlog items, wireframe recommendations, list of issues, or decision matrices—are clearly defined.
+- Alignment: the deliverable maps directly back to a specific research question, the outcome is built with the insight needed to answer that question.
+<!--  - Impact: A clear connection between the research results and broader team goals, key metrics, or Jira project timelines. -->

@@ -10,6 +10,10 @@ Types:
   text      — single-line input
   textarea  — multi-line input
   date      — native date picker (calendar); placeholder text is ignored
+  select    — fixed dropdown; placeholder text becomes a comma-separated
+              option list, e.g. "Small (1–5),Medium (6–12)". Same dropdown
+              styling as a table's "status"/"select" columns, just for a
+              single top-level field instead of a table cell.
   list      — dynamic stack of single-line inputs, one per item, with its
               own "+ Add …" button (like table rows, but one column).
               Exception: "Outcomes" is special-cased in code to be a linked
@@ -84,7 +88,7 @@ Problem (textarea, eval): Issues requiring attention that could prevent the proj
 Objective (textarea, eval): Purpose and high-level goals of the research
 Hypothesis (textarea, optional, eval): Baseline assumptions to be tested during the study
 Research Questions (list, eval): What do you want to understand?
-Outcomes (list): Deliverable for this question
+Outcomes (list, eval): Deliverable for this question
 
 # Methodology
 
@@ -95,7 +99,7 @@ Methods (list): Search or type a method
 
 Characteristics (list): e.g. Frequent mobile shoppers
 User Groups (list): e.g. New customers
-Sample Size (text): e.g. 8–12 participants
+Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
 
 # Execution
 
@@ -108,3 +112,7 @@ Action Points (table): Action:text=Task description | Responsible:person | Statu
 
 Previous Knowledge (table): Name:text=e.g. Q3 Checkout Usability Study | File:file
 <!-- Documentation (textarea): Reference materials required to understand and execute the study -->
+
+# Additional Comments
+
+Comments (textarea, optional): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
