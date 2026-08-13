@@ -1486,6 +1486,48 @@
     });
   }
 
+  // Lets users bolt their own ad-hoc named fields onto a section instead of
+  // being limited to what's predefined in research-plan-template.md — each
+  // block is fully user-named (reusing the same .th-input editable-header
+  // pattern as the Requirements table's column headers) plus a regular
+  // content textarea. No outer field label is shown: the "+ Add additional
+  // section" button is the only static UI, since each block supplies its
+  // own heading. Printing needs no separate handling — it's the same live DOM,
+  // and a block's name renders via .flabel just like every other field's
+  // heading already does.
+  function renderCustomFieldsField(field) {
+    const wrap = el('div', 'field');
+    const list = el('div', 'custom-fields-list');
+    list.dataset.listKey = field.key;
+    wrap.appendChild(list);
+
+    function addBlock(focus) {
+      const block = el('div', 'custom-field-block');
+      const head = el('div', 'custom-field-head');
+      const nameInp = el('input', 'th-input custom-field-name', { type: 'text', placeholder: 'Label' });
+      const removeBtn = el('button', 'list-remove', { type: 'button' });
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => block.remove());
+      head.append(nameInp, removeBtn);
+
+      const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, placeholder: field.placeholder || '' });
+      body.addEventListener('input', () => resizeTa(body));
+
+      block.append(head, body);
+      list.appendChild(block);
+      resizeTa(body);
+      if (focus) nameInp.focus();
+      return block;
+    }
+
+    const addBtn = el('button', 'add-btn', { type: 'button' });
+    addBtn.textContent = '+ Add additional section';
+    addBtn.addEventListener('click', () => addBlock(true));
+    wrap.appendChild(addBtn);
+
+    return wrap;
+  }
+
   function renderTableField(field) {
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
@@ -1870,7 +1912,7 @@
     previousKnowledge: 'Prior research or documentation relevant to this study, attached for reference.',
     comments: "Anything else worth noting that didn't fit elsewhere in this plan.",
     projectOwner: 'The person accountable for this initiative on the product or business side.',
-    researchOwner: 'The person leading and accountable for executing this research study.',
+    researcher: 'The person leading and accountable for executing this research study.',
     researchTeam: 'Everyone contributing to this study beyond the two owners above.',
     lastUpdated: 'The date this plan was last edited.',
     project: 'The product or business initiative this research plan supports.',
@@ -2294,6 +2336,7 @@
   function renderField(field) {
     if (field.type === 'table') return renderTableField(field);
     if (field.type === 'list') return field.key === 'outcomes' ? renderLinkedOutcomesField(field) : renderListField(field);
+    if (field.type === 'custom-fields') return renderCustomFieldsField(field);
 
     const wrap = el('div', 'field');
     const label = el('label', 'flabel');
@@ -2490,19 +2533,8 @@
 
   function renderHeader(header) {
     const wrap = el('div', 'doc-header');
-    const supLabel = el('div', 'sup-label');
-    supLabel.textContent = 'Research Plan';
-    wrap.appendChild(supLabel);
 
-    const titleInput = el('input', 'title-inp', {
-      type: 'text',
-      'data-field': header.title.key,
-      placeholder: header.title.placeholder || 'Title for your research plan',
-    });
-    wrap.appendChild(titleInput);
-
-    const metaGrid = el('div', 'meta-grid');
-    header.meta.forEach((f) => {
+    function buildMetaField(f) {
       const mf = el('div', 'mf');
       const label = el('div', 'mlabel');
       label.textContent = f.label;
@@ -2515,8 +2547,35 @@
         input.value = now.getFullYear() + '-' + mm + '-' + dd;
       }
       mf.append(label, input);
-      metaGrid.appendChild(mf);
+      return mf;
+    }
+
+    // "Last Updated" sits in the top-right corner, next to "Research Plan"
+    // (bottom-aligned with it via align-items:flex-end on the row) instead
+    // of down in the regular meta grid with the other header fields.
+    const topRow = el('div', 'doc-header-top');
+    const supLabel = el('div', 'sup-label');
+    supLabel.textContent = 'Research Plan';
+    topRow.appendChild(supLabel);
+
+    const metaGrid = el('div', 'meta-grid');
+    header.meta.forEach((f) => {
+      const mf = buildMetaField(f);
+      if (f.key === 'lastUpdated') {
+        mf.classList.add('mf-compact');
+        topRow.appendChild(mf);
+      } else {
+        metaGrid.appendChild(mf);
+      }
     });
+    wrap.appendChild(topRow);
+
+    const titleInput = el('textarea', 'title-inp field-ta', {
+      rows: '1',
+      'data-field': header.title.key,
+      placeholder: header.title.placeholder || 'Title for your research plan',
+    });
+    wrap.appendChild(titleInput);
     wrap.appendChild(metaGrid);
 
     return wrap;
@@ -2536,14 +2595,32 @@
 
     const fieldEl = renderField(field);
     fieldEl.hidden = true;
+    const ta = fieldEl.querySelector('[data-field="' + field.key + '"]');
+
+    // Remove button only appears once revealed — it sits next to the label
+    // (same reparent-in-place trick as elsewhere: grab what renderField
+    // already built, wrap it, put it back) rather than being part of
+    // renderField itself, since this reversible reveal/remove pair is
+    // specific to this one field, not a general field capability.
+    const labelEl = fieldEl.querySelector('.flabel');
+    const labelRow = el('div', 'comments-label-row');
+    labelEl.replaceWith(labelRow);
+    const removeBtn = el('button', 'list-remove', { type: 'button', title: 'Remove comment' });
+    removeBtn.textContent = '✕';
+    labelRow.append(labelEl, removeBtn);
 
     const btn = el('button', 'add-btn', { type: 'button' });
     btn.textContent = '+ Add a comment';
     btn.addEventListener('click', () => {
       btn.hidden = true;
       fieldEl.hidden = false;
-      const ta = fieldEl.querySelector('[data-field="' + field.key + '"]');
       if (ta) ta.focus();
+    });
+
+    removeBtn.addEventListener('click', () => {
+      if (ta) ta.value = '';
+      fieldEl.hidden = true;
+      btn.hidden = false;
     });
 
     wrap.append(btn, fieldEl);
