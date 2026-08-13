@@ -1409,33 +1409,18 @@
     const useWeeks = totalDays > 90;
     const unitDays = useWeeks ? 7 : 1;
 
-    // "Week 1" is the Monday of the calendar week containing the earliest
-    // day in the timeline — not the plan's own (possibly midweek) start.
-    function mondayOf(ms) {
-      const d = new Date(ms);
-      const day = d.getDay(); // 0 = Sunday .. 6 = Saturday
-      const sinceMonday = day === 0 ? 6 : day - 1;
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate() - sinceMonday).getTime();
-    }
-    function sundayOf(ms) {
-      const d = new Date(ms);
-      const day = d.getDay();
-      const untilSunday = day === 0 ? 0 : 7 - day;
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate() + untilSunday).getTime();
-    }
-    const week1 = mondayOf(minStart);
-    // In daily mode, pad the grid out to the Sunday of the last week so the
-    // final week is shown complete (e.g. a plan ending Thursday still shows
-    // Fri/Sat/Sun as empty cells) rather than cutting off mid-week. In
-    // weekly mode this is a no-op — each cell already IS a full week.
-    const gridEnd = unitDays === 1 ? sundayOf(maxEnd) : maxEnd;
+    // Week 1 begins on the plan's own earliest start date. In daily mode,
+    // extend the grid to a whole number of plan-relative weeks so the final
+    // week is displayed completely without using calendar-week boundaries.
+    const week1 = minStart;
+    const gridEnd = unitDays === 1
+      ? minStart + (Math.ceil(totalDays / 7) * 7 - 1) * dayMs
+      : maxEnd;
 
-    // One shared grid (same column count, same 1fr sizing) reused by the
-    // week ruler and every stage row, instead of each computing its own
-    // independent left%/width% — that's what let the two drift out of
-    // pixel alignment before. Cells run from Week 1's Monday through the
-    // last day/week that covers maxEnd, so a stage starting after the
-    // plan's earliest day gets real empty cells before it, not just gap.
+    // One shared grid, with the same column count and sizing, is reused by
+    // the week ruler and every stage row. Cells begin on the plan's earliest
+    // start date and continue through its final plan-relative week, so later
+    // stage starts receive real empty cells before them rather than a gap.
     const cellStarts = [];
     for (let t = week1; t <= gridEnd; t += unitDays * dayMs) cellStarts.push(t);
     const cellCount = cellStarts.length;
@@ -1455,7 +1440,8 @@
     const weeksRow = el('div', 'timeline-weeks');
     const weeksSpacer = el('div', 'timeline-label');
     const weeksGrid = el('div', 'timeline-weeks-grid');
-    weeksGrid.style.gridTemplateColumns = 'repeat(' + cellCount + ', 1fr)';
+    const weeksDatesSpacer = el('div', 'timeline-dates');
+    weeksGrid.style.gridTemplateColumns = 'repeat(' + cellCount + ', minmax(0, 1fr))';
     let weekNum = 0;
     cellStarts.forEach((cellStart, i) => {
       if (i % cellsPerWeek !== 0) return;
@@ -1465,7 +1451,7 @@
       mark.textContent = weekNum === 1 ? 'week 1' : 'w ' + weekNum;
       weeksGrid.appendChild(mark);
     });
-    weeksRow.append(weeksSpacer, weeksGrid);
+    weeksRow.append(weeksSpacer, weeksGrid, weeksDatesSpacer);
     container.appendChild(weeksRow);
 
     valid.forEach((r) => {
