@@ -1577,6 +1577,20 @@
 
       const refreshTimeline = () => renderTimelineChart(table.id, field.columns, chart);
 
+      // Always render the current timeline for printing, then restore the
+      // user's previous on-screen visibility choice when printing finishes.
+      let chartWasHiddenBeforePrint = null;
+      window.addEventListener('beforeprint', () => {
+        if (chartWasHiddenBeforePrint === null) chartWasHiddenBeforePrint = chart.hidden;
+        refreshTimeline();
+        chart.hidden = false;
+      });
+      window.addEventListener('afterprint', () => {
+        if (chartWasHiddenBeforePrint === null) return;
+        chart.hidden = chartWasHiddenBeforePrint;
+        chartWasHiddenBeforePrint = null;
+      });
+
       vizBtn.addEventListener('click', () => {
         chart.hidden = !chart.hidden;
         vizBtn.textContent = chart.hidden ? 'Visualize Timeline' : 'Hide Timeline';
