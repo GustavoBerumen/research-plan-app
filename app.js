@@ -511,6 +511,314 @@
     });
   }
 
+  // Native date controls expose a locale-specific segmented editor whose
+  // keyboard behaviour is owned by the browser. Keep a native date input as
+  // the canonical ISO value and calendar picker, but render controllable
+  // day/month/year segments for predictable manual editing.
+  const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const DATE_SEGMENT_DELAY_MS = 900;
+  let dateControlCount = 0;
+
+  function parseMonthSegment(value) {
+    const trimmed = (value || '').trim();
+    if (/^\d{1,2}$/.test(trimmed)) {
+      const month = Number(trimmed);
+      return month >= 1 && month <= 12 ? month : null;
+    }
+    const monthIndex = MONTH_ABBREVIATIONS.findIndex((name) => name.toLowerCase() === trimmed.toLowerCase());
+    return monthIndex === -1 ? null : monthIndex + 1;
+  }
+
+  function parseDateEntry(value) {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return null;
+
+    let year;
+    let month;
+    let day;
+    const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const labelled = trimmed.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+    if (iso) {
+      year = Number(iso[1]);
+      month = Number(iso[2]);
+      day = Number(iso[3]);
+    } else if (dmy) {
+      year = Number(dmy[3]);
+      month = Number(dmy[2]);
+      day = Number(dmy[1]);
+    } else if (labelled) {
+      year = Number(labelled[3]);
+      month = parseMonthSegment(labelled[2]);
+      day = Number(labelled[1]);
+    } else {
+      return null;
+    }
+
+    const date = localDateFrom(year, month, day);
+    if (!date) return null;
+    const yyyy = String(year).padStart(4, '0');
+    const mm = String(month).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return { iso: yyyy + '-' + mm + '-' + dd, year, month, day };
+  }
+
+  function dateSegments(nativeInput) {
+    const control = nativeInput.closest('.date-control');
+    if (!control) return null;
+    return {
+      control,
+      day: control.querySelector('.date-day'),
+      month: control.querySelector('.date-month'),
+      year: control.querySelector('.date-year'),
+    };
+  }
+
+  function readDateSegments(nativeInput) {
+    const segments = dateSegments(nativeInput);
+    if (!segments) return null;
+    const dayText = segments.day.value.trim();
+    const yearText = segments.year.value.trim();
+    if (!/^\d{1,2}$/.test(dayText) || !/^\d{4}$/.test(yearText)) return null;
+    const day = Number(dayText);
+    const month = parseMonthSegment(segments.month.value);
+    const year = Number(yearText);
+    if (!month || !localDateFrom(year, month, day)) return null;
+    return {
+      iso: String(year).padStart(4, '0') + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
+      year,
+      month,
+      day,
+    };
+  }
+
+  function clearDateError(nativeInput) {
+    const segments = dateSegments(nativeInput);
+    if (!segments) return;
+    const error = segments.control.querySelector('.date-error');
+    [segments.day, segments.month, segments.year].forEach((input) => input.setCustomValidity(''));
+    segments.control.removeAttribute('aria-invalid');
+    if (error) error.hidden = true;
+  }
+
+  function showDateError(nativeInput) {
+    const segments = dateSegments(nativeInput);
+    if (!segments) return;
+    const error = segments.control.querySelector('.date-error');
+    segments.day.setCustomValidity('Enter a valid date.');
+    segments.control.setAttribute('aria-invalid', 'true');
+    if (error) error.hidden = false;
+  }
+
+  function setDateInputValue(nativeInput, isoValue) {
+    const parsed = parseDateEntry(isoValue);
+    nativeInput.value = parsed ? parsed.iso : '';
+    const segments = dateSegments(nativeInput);
+    if (segments) {
+      segments.day.value = parsed ? String(parsed.day).padStart(2, '0') : '';
+      segments.month.value = parsed ? MONTH_ABBREVIATIONS[parsed.month - 1] : '';
+      segments.year.value = parsed ? String(parsed.year).padStart(4, '0') : '';
+    }
+    clearDateError(nativeInput);
+  }
+
+  function buildDateControl(inputClass, attrs, label) {
+    const control = el('div', 'date-control ' + inputClass, {
+      role: 'group',
+      'aria-label': label || 'Date',
+    });
+    const errorId = 'date-error-' + (++dateControlCount);
+    control.setAttribute('aria-describedby', errorId);
+    const dayInput = el('input', 'date-segment date-day', {
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: 'DD',
+      autocomplete: 'off',
+      maxlength: '2',
+      'aria-label': (label || 'Date') + ' day',
+    });
+    const monthInput = el('input', 'date-segment date-month', {
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: 'MM',
+      autocomplete: 'off',
+      maxlength: '3',
+      'aria-label': (label || 'Date') + ' month',
+    });
+    const yearInput = el('input', 'date-segment date-year', {
+      type: 'text',
+      inputmode: 'numeric',
+      placeholder: 'YYYY',
+      autocomplete: 'off',
+      maxlength: '4',
+      'aria-label': (label || 'Date') + ' year',
+    });
+    const nativeAttrs = Object.assign({}, attrs || {}, {
+      type: 'date',
+      'aria-label': 'Choose ' + (label || 'date') + ' from calendar',
+    });
+    const nativeInput = el('input', 'date-picker-native', nativeAttrs);
+    const error = el('span', 'date-error', { id: errorId, role: 'alert' });
+    error.textContent = 'Enter a valid date.';
+    error.hidden = true;
+
+    let dispatchingSegmentEvent = false;
+
+    function dispatchNative(type) {
+      dispatchingSegmentEvent = true;
+      try {
+        nativeInput.dispatchEvent(new Event(type, { bubbles: true }));
+      } finally {
+        dispatchingSegmentEvent = false;
+      }
+    }
+
+    function hasAnyValue() {
+      return dayInput.value.trim() || monthInput.value.trim() || yearInput.value.trim();
+    }
+
+    function hasEveryValue() {
+      return dayInput.value.trim() && monthInput.value.trim() && yearInput.value.trim();
+    }
+
+    function syncFromSegments(type, reportInvalid, normalize) {
+      const parsed = readDateSegments(nativeInput);
+      nativeInput.value = parsed ? parsed.iso : '';
+      if (parsed) {
+        clearDateError(nativeInput);
+        if (normalize) setDateInputValue(nativeInput, parsed.iso);
+      } else if (reportInvalid && hasAnyValue()) {
+        showDateError(nativeInput);
+      } else {
+        clearDateError(nativeInput);
+      }
+      if (type) dispatchNative(type);
+      return parsed;
+    }
+
+    function focusAndSelect(input) {
+      input.focus();
+      input.select();
+    }
+
+    [dayInput, monthInput, yearInput].forEach((input) => {
+      input.addEventListener('focus', () => {
+        setTimeout(() => input.select(), 0);
+      });
+    });
+
+    yearInput.addEventListener('input', () => {
+      yearInput.value = yearInput.value.replace(/\D/g, '').slice(0, 4);
+      const complete = yearInput.value.length === 4;
+      syncFromSegments(complete ? 'change' : 'input', complete, false);
+    });
+
+    function configureBufferedSegment(input, options) {
+      let buffer = '';
+      let lastKeyTime = 0;
+      let timer = null;
+
+      function clearTimer() {
+        if (timer) clearTimeout(timer);
+        timer = null;
+      }
+
+      function commit(number, moveNext) {
+        clearTimer();
+        buffer = '';
+        input.value = options.format(number);
+        const complete = hasEveryValue();
+        syncFromSegments(complete ? 'change' : 'input', complete, false);
+        if (moveNext) focusAndSelect(options.next);
+      }
+
+      input.addEventListener('focus', () => {
+        buffer = '';
+        lastKeyTime = 0;
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (!/^\d$/.test(event.key)) return;
+        event.preventDefault();
+        clearTimer();
+        const now = Date.now();
+        buffer = now - lastKeyTime <= DATE_SEGMENT_DELAY_MS ? buffer + event.key : event.key;
+        lastKeyTime = now;
+        if (buffer.length > 2) buffer = event.key;
+        input.value = buffer;
+        clearDateError(nativeInput);
+
+        const number = Number(buffer);
+        if (buffer.length === 2) {
+          if (number >= 1 && number <= options.max) commit(number, true);
+          else syncFromSegments('input', false, false);
+        } else if (number >= options.instantFrom && number <= 9) {
+          commit(number, true);
+        } else if (number >= 1 && number < options.instantFrom) {
+          timer = setTimeout(() => commit(number, document.activeElement === input), DATE_SEGMENT_DELAY_MS);
+        } else {
+          syncFromSegments('input', false, false);
+        }
+      });
+
+      input.addEventListener('input', () => {
+        clearTimer();
+        buffer = '';
+        if (options.numericOnly) input.value = input.value.replace(/\D/g, '').slice(0, 2);
+        syncFromSegments('input', false, false);
+      });
+
+      input.addEventListener('blur', () => {
+        if (timer) commit(Number(buffer), false);
+      });
+    }
+
+    configureBufferedSegment(dayInput, {
+      max: 31,
+      instantFrom: 4,
+      format: (day) => String(day).padStart(2, '0'),
+      next: monthInput,
+      numericOnly: true,
+    });
+    configureBufferedSegment(monthInput, {
+      max: 12,
+      instantFrom: 2,
+      format: (month) => MONTH_ABBREVIATIONS[month - 1],
+      next: yearInput,
+      numericOnly: false,
+    });
+
+    control.addEventListener('paste', (event) => {
+      const parsed = parseDateEntry(event.clipboardData.getData('text'));
+      if (!parsed) return;
+      event.preventDefault();
+      setDateInputValue(nativeInput, parsed.iso);
+      dispatchNative('input');
+      dispatchNative('change');
+      focusAndSelect(yearInput);
+    });
+
+    control.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (control.contains(document.activeElement)) return;
+        syncFromSegments('change', true, true);
+      }, 0);
+    });
+
+    function syncFromCalendar() {
+      if (!dispatchingSegmentEvent) setDateInputValue(nativeInput, nativeInput.value);
+    }
+    nativeInput.addEventListener('input', syncFromCalendar);
+    nativeInput.addEventListener('change', syncFromCalendar);
+
+    const separator1 = el('span', 'date-separator', { 'aria-hidden': 'true' });
+    const separator2 = el('span', 'date-separator', { 'aria-hidden': 'true' });
+    separator1.textContent = '-';
+    separator2.textContent = '-';
+    control.append(dayInput, separator1, monthInput, separator2, yearInput, nativeInput, error);
+    return { element: control, input: nativeInput };
+  }
+
   // Keeps a completion-date column from ever holding a date earlier than its
   // row's start-date column: min= constrains the native picker itself, and
   // the change-listeners clamp as a hard fallback (typed/pasted values,
@@ -518,7 +826,7 @@
   function attachDateRangeConstraint(startInput, endInput) {
     function clampEnd() {
       if (startInput.value && endInput.value && endInput.value < startInput.value) {
-        endInput.value = startInput.value;
+        setDateInputValue(endInput, startInput.value);
       }
       endInput.min = startInput.value || '';
     }
@@ -592,16 +900,18 @@
         td.appendChild(wrap);
       } else if (col.type === 'file') {
         td.appendChild(buildFileCell(col.placeholder || 'No file chosen'));
-      } else {
-        const inp = document.createElement('input');
-        inp.type = col.type === 'url' ? 'url' : col.type === 'date' ? 'date' : 'text';
-        inp.className = 'cinput';
-        // Native date inputs ignore the placeholder attribute, so only set
-        // one for types that actually render free text.
-        if (col.type !== 'date') inp.placeholder = col.placeholder || '';
-        td.appendChild(inp);
+      } else if (col.type === 'date') {
+        const dateControl = buildDateControl('cinput', null, col.label);
+        td.appendChild(dateControl.element);
+        const inp = dateControl.input;
         if (col.key === 'startDate') startDateInput = inp;
         if (col.key === 'completionDate') completionDateInput = inp;
+      } else {
+        const inp = document.createElement('input');
+        inp.type = col.type === 'url' ? 'url' : 'text';
+        inp.className = 'cinput';
+        inp.placeholder = col.placeholder || '';
+        td.appendChild(inp);
       }
       tr.appendChild(td);
     });
@@ -1321,15 +1631,12 @@
     }
     const fileValue = td.querySelector('.file-value');
     if (fileValue) return fileValue.value;
+    const dateInput = td.querySelector('input[type="date"]');
+    if (dateInput) return dateInput.value;
     const input = td.querySelector('input');
     return input ? input.value : '';
   }
 
-  // Dates in this app's table cells are typed as free text in DD/MM/YYYY
-  // order, not ISO — new Date(str) reads slash dates as MM/DD/YYYY, which
-  // silently misreads or invalidates them (e.g. "21/01/2026" has no month
-  // 21). Parse DD/MM/YYYY explicitly; fall back to native parsing for any
-  // other format (e.g. ISO) someone might type.
   // Builds a local-midnight Date from y/m/d and rejects values that rolled
   // over (e.g. day 30 in a 28-day month) instead of silently normalizing.
   function localDateFrom(year, month, day) {
@@ -1348,7 +1655,8 @@
     // through local getters (getDate/getMonth/getFullYear).
     const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) return localDateFrom(Number(iso[1]), Number(iso[2]), Number(iso[3]));
-    // Free-text fallback (DD/MM/YYYY), kept for any date typed by hand.
+    // DD/MM/YYYY remains accepted for compatibility with manually-entered
+    // values and any older draft data.
     const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (dmy) return localDateFrom(Number(dmy[3]), Number(dmy[2]), Number(dmy[1]));
     const d = new Date(trimmed);
@@ -1357,8 +1665,8 @@
 
   function formatTimelineDate(date) {
     const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    return dd + '/' + mm + '/' + date.getFullYear();
+    const month = MONTH_ABBREVIATIONS[date.getMonth()];
+    return dd + '-' + month + '-' + date.getFullYear();
   }
 
   // Same accent colors already used elsewhere (eval panel, status pills,
@@ -2303,8 +2611,9 @@
   }
 
   // Warns when Report Research lands less than a week before Project
-  // Decision, so there's no buffer for setbacks. Both are native date
-  // inputs (always YYYY-MM-DD), so no ambiguous-format parsing needed.
+  // Decision, so there's no buffer for setbacks. The controls keep their
+  // canonical values as ISO YYYY-MM-DD even though the segmented editor is
+  // displayed as DD-MMM-YYYY.
   function initDeadlineConstraints() {
     const decisionInput = doc.querySelector('[data-field="projectDecision"]');
     const researchInput = doc.querySelector('[data-field="reportResearch"]');
@@ -2316,7 +2625,7 @@
     // Timeline's start/completion pair (just the ceiling flipped).
     function clampResearch() {
       if (decisionInput.value && researchInput.value && researchInput.value > decisionInput.value) {
-        researchInput.value = decisionInput.value;
+        setDateInputValue(researchInput, decisionInput.value);
       }
       researchInput.max = decisionInput.value || '';
     }
@@ -2329,7 +2638,7 @@
     const warning = el('div', 'field-warning');
     warning.textContent = 'Allow a one-week buffer before the decision date.';
     warning.hidden = true;
-    researchInput.insertAdjacentElement('afterend', warning);
+    researchInput.closest('.date-control').insertAdjacentElement('afterend', warning);
 
     function checkWarning() {
       const decision = decisionInput.value ? new Date(decisionInput.value) : null;
@@ -2420,12 +2729,18 @@
       return wrap;
     }
 
+    if (field.type === 'date') {
+      const dateControl = buildDateControl('finput', { 'data-field': field.key }, field.label);
+      wrap.appendChild(dateControl.element);
+      return wrap;
+    }
+
     const isTextarea = field.type === 'textarea';
     const input = el(isTextarea ? 'textarea' : 'input', isTextarea ? 'finput field-ta' : 'finput', {
       'data-field': field.key,
       placeholder: field.placeholder || '',
     });
-    if (!isTextarea) input.type = field.type === 'date' ? 'date' : 'text';
+    if (!isTextarea) input.type = 'text';
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
     const hint = signOffHint(field.key);
@@ -2483,10 +2798,19 @@
         const lbl = el('div', 'clbl');
         lbl.textContent = f.label;
         appendInfoTip(lbl, f.key);
-        const inp = el('input', 'cinput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        let inp;
+        let control;
+        if (f.type === 'date') {
+          const dateControl = buildDateControl('cinput', { 'data-field': f.key }, f.label);
+          inp = dateControl.input;
+          control = dateControl.element;
+        } else {
+          inp = el('input', 'cinput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+          control = inp;
+        }
         attachSignOffStamp(inp, f.key);
         if (f.key === 'jiraProject') attachJiraCombobox(inp);
-        td.append(lbl, inp);
+        td.append(lbl, control);
         const hint = signOffHint(f.key);
         if (hint) td.appendChild(hint);
         return td;
@@ -2553,14 +2877,23 @@
       const label = el('div', 'mlabel');
       label.textContent = f.label;
       appendInfoTip(label, f.key);
-      const input = el('input', 'minput', { type: f.type === 'date' ? 'date' : 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+      let input;
+      let control;
+      if (f.type === 'date') {
+        const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
+        input = dateControl.input;
+        control = dateControl.element;
+      } else {
+        input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        control = input;
+      }
       if (f.key === 'lastUpdated') {
         const now = new Date();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const dd = String(now.getDate()).padStart(2, '0');
-        input.value = now.getFullYear() + '-' + mm + '-' + dd;
+        setDateInputValue(input, now.getFullYear() + '-' + mm + '-' + dd);
       }
-      mf.append(label, input);
+      mf.append(label, control);
       return mf;
     }
 
@@ -2658,6 +2991,7 @@
   function clearForm() {
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
+    doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
