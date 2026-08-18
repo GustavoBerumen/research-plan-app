@@ -2740,6 +2740,9 @@
     });
 
     doc.querySelectorAll('.eval-panel').forEach((panel) => { panel.hidden = true; });
+    doc.querySelectorAll('.eval-controls').forEach((controls) => {
+      if (typeof controls._resetEvaluation === 'function') controls._resetEvaluation();
+    });
     openProfileSections(Object.keys(profile.fields));
     return profile;
   }
