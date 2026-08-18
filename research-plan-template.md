@@ -25,6 +25,11 @@ Types:
               select (dropdown with custom options — placeholder becomes a
               comma-separated option list, e.g. "Stage:select=A,B,C"),
               url, file (click to attach, 15MB max)
+  custom-fields — "+ Add additional section" button that appends user-named blocks (an
+              editable label plus a textarea each), for letting users add
+              their own ad-hoc fields to a section instead of being limited
+              to what's predefined here. Placeholder text becomes each new
+              block's textarea placeholder.
 
 Flags (comma-separated inside the parentheses):
   optional          — marks the field "(optional)" in its label
@@ -62,9 +67,9 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 
 # Title (text): Title for your research plan
 
+Researcher (text): Name
 Project Owner (text): Name
-Research Owner (text): Name
-Research Team (text): Team members
+<!-- Research Team (text): Team members -->
 Last Updated (date):
 
 # Alignment {grid}
@@ -76,7 +81,7 @@ Jira Project (text): Ticket reference
 Project Decision (date):
 Report Research (date):
 Sign off: Project Owner (text): Type initials
-Sign off: Research Owner (text): Type initials
+Sign off: Researcher (text): Type initials
 
 # Project Context {open}
 
@@ -112,6 +117,7 @@ Action Points (table): Action:text=Task description | Responsible:person | Statu
 
 Previous Knowledge (table): Name:text=e.g. Q3 Checkout Usability Study | File:file
 <!-- Documentation (textarea): Reference materials required to understand and execute the study -->
+Additional Resources (custom-fields): Add details...
 
 # Additional Comments
 
