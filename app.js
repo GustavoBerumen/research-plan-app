@@ -2707,6 +2707,73 @@
     doc.querySelectorAll('.ex-toggle').forEach((t) => { t.textContent = 'Show example'; });
   }
 
+  // ---------- evaluation test profiles ----------
+  function dispatchFieldUpdate(input) {
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    if (input.tagName === 'TEXTAREA') resizeTa(input);
+  }
+
+  function openProfileSections(fieldKeys) {
+    fieldKeys.forEach((key) => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      const acc = input && input.closest('.acc');
+      if (!acc) return;
+      acc.dataset.open = 'true';
+      const head = acc.querySelector('.acc-head');
+      const body = acc.querySelector('.acc-body');
+      if (head) head.setAttribute('aria-expanded', 'true');
+      if (body) body.hidden = false;
+    });
+  }
+
+  function applyTestProfile(profileKey) {
+    const profiles = window.TEST_PROFILES || {};
+    const profile = profiles[profileKey];
+    if (!profile) throw new Error('Unknown test profile "' + profileKey + '"');
+
+    Object.entries(profile.fields).forEach(([key, value]) => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      if (!input) throw new Error('Could not find field "' + key + '"');
+      input.value = value;
+      dispatchFieldUpdate(input);
+    });
+
+    doc.querySelectorAll('.eval-panel').forEach((panel) => { panel.hidden = true; });
+    openProfileSections(Object.keys(profile.fields));
+    return profile;
+  }
+
+  function initTestProfileControls() {
+    if (!new URLSearchParams(window.location.search).has('test')) return;
+    const profiles = window.TEST_PROFILES || {};
+    const entries = Object.entries(profiles);
+    if (!entries.length) {
+      console.warn('Test mode requested, but no evaluation profiles were loaded.');
+      return;
+    }
+
+    const controls = el('div', 'test-profile-controls');
+    const select = el('select', 'test-profile-select', { 'aria-label': 'Evaluation test profile' });
+    entries.forEach(([key, profile]) => {
+      const option = el('option', '', { value: key });
+      option.textContent = 'Test: ' + profile.label;
+      select.appendChild(option);
+    });
+
+    const applyBtn = el('button', 'btn btn-ghost', { type: 'button' });
+    applyBtn.textContent = 'Load Profile';
+    applyBtn.addEventListener('click', () => {
+      const profile = applyTestProfile(select.value);
+      applyBtn.textContent = 'Loaded ' + profile.label;
+      window.setTimeout(() => { applyBtn.textContent = 'Load Profile'; }, 1200);
+    });
+
+    controls.append(select, applyBtn);
+    document.querySelector('.tb-btns').prepend(controls);
+    window.applyTestProfile = applyTestProfile;
+  }
+
   // ---------- wire up ----------
   function fetchText(url) {
     return fetch(url).then((res) => {
@@ -2748,6 +2815,7 @@
         initAccordion();
         initDeadlineConstraints();
         initOutcomesSync();
+        initTestProfileControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
       })
