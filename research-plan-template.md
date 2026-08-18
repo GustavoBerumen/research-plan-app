@@ -25,7 +25,7 @@ Types:
               select (dropdown with custom options — placeholder becomes a
               comma-separated option list, e.g. "Stage:select=A,B,C"),
               url, file (click to attach, 15MB max)
-  custom-fields — "+ Add info" button that appends user-named blocks (an
+  custom-fields — "+ Add additional section" button that appends user-named blocks (an
               editable label plus a textarea each), for letting users add
               their own ad-hoc fields to a section instead of being limited
               to what's predefined here. Placeholder text becomes each new
@@ -81,7 +81,7 @@ Jira Project (text): Ticket reference
 Project Decision (date):
 Report Research (date):
 Sign off: Project Owner (text): Type initials
-Sign off: Research Owner (text): Type initials
+Sign off: Researcher (text): Type initials
 
 # Project Context {open}
 

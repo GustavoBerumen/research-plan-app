@@ -1934,7 +1934,7 @@
     projectDecision: 'The date the product or business decision this research needs to inform will be made.',
     reportResearch: 'The date you plan to share findings — ideally at least a week before the Project Decision date.',
     signOffProjectOwner: 'Project Owner approval — type initials and the date is added automatically.',
-    signOffResearchOwner: 'Research Owner approval — type initials and the date is added automatically.',
+    signOffResearcher: 'Researcher approval — type initials and the date is added automatically.',
   };
 
   // The bubble is reparented to <body> with position:fixed while shown —
@@ -2284,7 +2284,7 @@
   // Sign-off fields: type initials, blur, and today's date gets appended
   // automatically (once) so nobody has to type the date by hand.
   function attachSignOffStamp(input, key) {
-    if (key !== 'signOffProjectOwner' && key !== 'signOffResearchOwner') return;
+    if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return;
     input.addEventListener('blur', () => {
       const val = input.value.trim();
       if (val && !/ — \d{2}\/\d{2}\/\d{4}$/.test(val)) {
@@ -2297,7 +2297,7 @@
   }
 
   function signOffHint(key) {
-    if (key !== 'signOffProjectOwner' && key !== 'signOffResearchOwner') return null;
+    if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return null;
     const hint = el('div', 'field-hint');
     return hint;
   }
@@ -2632,7 +2632,7 @@
     });
 
     removeBtn.addEventListener('click', () => {
-      if (ta) ta.value = '';
+      if (ta) { ta.value = ''; resizeTa(ta); }
       fieldEl.hidden = true;
       btn.hidden = false;
     });
@@ -2675,6 +2675,9 @@
         remaining.classList.add('list-remove-spacer');
         remaining.disabled = true;
       }
+    });
+    doc.querySelectorAll('.custom-fields-list').forEach((list) => {
+      list.querySelectorAll('.custom-field-block').forEach((block) => block.remove());
     });
     // Reset each dropdown to its own first option rather than hardcoding
     // 'not-started' — that value only exists on the status columns; other
