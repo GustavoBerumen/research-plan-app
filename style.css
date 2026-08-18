@@ -237,6 +237,10 @@ textarea.finput{min-height:72px;overflow:hidden}
      room. @page margins apply per physical page instead, so every page
      gets consistent spacing regardless of where content happens to break. */
   @page{margin:0.75in}
+  .timeline-chart{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
   .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back{display:none!important}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
