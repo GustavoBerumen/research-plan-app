@@ -1,6 +1,5 @@
 <!--
-RUBRIC — scoring criteria used by the "Evaluate" button (the "eval" flag
-on a field in research-plan-template.md). Edit freely: add/remove/relabel
+RUBRIC — scoring criteria used by the "Evaluate" button (the "eval" flag on a field in research-plan-template.md). Edit freely: add/remove/relabel
 criteria, or add a rubric for a new field, without touching any code.
 
 Syntax:
