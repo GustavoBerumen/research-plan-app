@@ -1407,59 +1407,129 @@
     return [btn, panel];
   }
 
-  // ---------- methods suggestion (Methods field) ----------
-  // Same shape as renderFrameworkSuggest above: a button that calls a
-  // backend endpoint and a panel that renders the result. Unlike the
-  // framework suggestion, there's no separate "approve before writing" step
-  // here — applying just fills in the (freely-editable) Methods field, the
-  // same as typing method names in by hand, so it's a plain "Apply" action
-  // rather than a save-to-a-source-of-truth-file confirmation.
-  function methodsListEl() {
-    return doc.querySelector('.list-rows[data-list-key="methods"]');
+  // ---------- methods (grouped by research question) ----------
+  // Methods follows the same "linked list" idea as Outcomes (see
+  // renderLinkedOutcomesField): Research Questions drives the structure. The
+  // difference is shape — Outcomes is one row per question, Methods is a
+  // whole variable-length list per question, so each question gets a labelled
+  // *group* with its own numbered rows and its own "+ Add method" button.
+  // Before any question has content there's a single unlabelled group, so the
+  // field is never unusable.
+  //
+  // Groups are matched to Research Question *rows* positionally, not to the
+  // filtered list of non-empty questions — a blank question row still holds
+  // its place rather than shifting every group below it.
+  function methodsGroupsEl() {
+    return doc.querySelector('.methods-groups');
   }
 
-  function renumberMethodsList() {
-    const list = methodsListEl();
+  function methodsGroupEls() {
+    const container = methodsGroupsEl();
+    return container ? Array.from(container.querySelectorAll('.methods-group')) : [];
+  }
+
+  function methodsGroupAt(index) {
+    return methodsGroupEls()[index] || null;
+  }
+
+  function methodsListIn(group) {
+    return group ? group.querySelector('.list-rows') : null;
+  }
+
+  function methodsGroupValues(group) {
+    const list = methodsListIn(group);
+    return list ? collectListValues(list) : [];
+  }
+
+  function methodsAllValues() {
+    return methodsGroupEls().reduce((all, g) => all.concat(methodsGroupValues(g)), []);
+  }
+
+  // Membership is checked per group, never globally: the same method
+  // legitimately answers more than one research question, so a duplicate
+  // across groups is valid and only a duplicate *within* one group is not.
+  function groupHasMethod(group, name) {
+    const target = name.trim().toLowerCase();
+    return methodsGroupValues(group).some((v) => v.toLowerCase() === target);
+  }
+
+  function renumberMethodsGroup(group) {
+    const list = methodsListIn(group);
     if (!list) return;
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
       const removeBtn = row.querySelector('.list-remove');
+      if (!removeBtn) return;
+      // Same "keep at least one row" pattern as renderListField: row 0's
+      // button reserves its space but goes invisible and inert.
       removeBtn.classList.toggle('list-remove-spacer', i === 0);
       removeBtn.disabled = i === 0;
     });
   }
 
-  function addMethodRow(value, focus) {
-    const list = methodsListEl();
+  // Set by renderMethodsSuggest so group edits made anywhere — the ✕ on a
+  // row, typing a name by hand — keep the suggestion panel's ticks honest.
+  let methodsSuggestRefresh = null;
+  function refreshMethodsSuggestSelection() {
+    if (methodsSuggestRefresh) methodsSuggestRefresh();
+  }
+
+  function addMethodRowTo(group, value, focus) {
+    const list = methodsListIn(group);
     if (!list) return null;
     const row = el('div', 'list-row');
     const num = el('span', 'list-num');
-    const inp = el('input', 'finput list-input', { type: 'text', 'data-field': 'methods', placeholder: list.dataset.placeholder || '' });
+    const inp = el('input', 'finput list-input', {
+      type: 'text',
+      'data-field': 'methods',
+      placeholder: list.dataset.placeholder || '',
+    });
     attachMethodsCombobox(inp, METHODS);
     inp.value = value || '';
+    inp.addEventListener('input', refreshMethodsSuggestSelection);
     const removeBtn = el('button', 'list-remove', { type: 'button' });
     removeBtn.textContent = '✕';
     removeBtn.addEventListener('click', () => {
       if (removeBtn.disabled) return;
       row.remove();
-      renumberMethodsList();
+      renumberMethodsGroup(group);
+      refreshMethodsSuggestSelection();
     });
     row.append(num, inp, removeBtn);
     list.appendChild(row);
-    renumberMethodsList();
+    renumberMethodsGroup(group);
     if (focus) inp.focus();
     return row;
   }
 
-  // Fills any blank rows already in the list before adding new ones, and
-  // skips names already present (case-insensitive), so clicking Apply
-  // doesn't leave a stray empty row above the suggestions or duplicate a
-  // method the user already typed in.
-  function applyMethodsToField(names) {
-    const list = methodsListEl();
+  function buildMethodsGroup(placeholder) {
+    const group = el('div', 'methods-group');
+    const qLabel = el('div', 'methods-group-q');
+    qLabel.hidden = true;
+    group.appendChild(qLabel);
+    const list = el('div', 'list-rows');
+    list.dataset.listKey = 'methods';
+    list.dataset.placeholder = placeholder || '';
+    group.appendChild(list);
+    const addBtnRow = el('div', 'add-btn-row');
+    const addBtn = el('button', 'add-btn', { type: 'button' });
+    addBtn.textContent = '+ Add method';
+    addBtn.addEventListener('click', () => addMethodRowTo(group, '', true));
+    addBtnRow.appendChild(addBtn);
+    group.appendChild(addBtnRow);
+    addMethodRowTo(group, '', false);
+    return group;
+  }
+
+  // Fills any blank rows already in this group before adding new ones, and
+  // skips names already in *this* group (case-insensitive), so adding
+  // suggestions doesn't leave a stray empty row or duplicate a method the
+  // user already typed under this question.
+  function applyMethodsToGroup(group, names) {
+    const list = methodsListIn(group);
     if (!list || names.length === 0) return;
     const rows = Array.from(list.querySelectorAll('.list-row'));
-    const existing = new Set(collectListValues(list).map((v) => v.toLowerCase()));
+    const existing = new Set(methodsGroupValues(group).map((v) => v.toLowerCase()));
     let rowIdx = 0;
     names.forEach((name) => {
       if (existing.has(name.toLowerCase())) return;
@@ -1468,11 +1538,79 @@
         rows[rowIdx].querySelector('.list-input').value = name;
         rowIdx++;
       } else {
-        addMethodRow(name, false);
+        addMethodRowTo(group, name, false);
       }
       existing.add(name.toLowerCase());
     });
-    renumberMethodsList();
+    renumberMethodsGroup(group);
+    refreshMethodsSuggestSelection();
+  }
+
+  // Undo for a mis-clicked suggestion. Clears the row holding this method,
+  // and removes the row outright unless it's the group's only one — every
+  // group keeps at least one row, same as every other list in the form.
+  function removeMethodFromGroup(group, name) {
+    const list = methodsListIn(group);
+    if (!list) return;
+    const target = name.trim().toLowerCase();
+    const rows = Array.from(list.querySelectorAll('.list-row'));
+    const row = rows.find((r) => r.querySelector('.list-input').value.trim().toLowerCase() === target);
+    if (!row) return;
+    if (rows.length > 1) row.remove();
+    else row.querySelector('.list-input').value = '';
+    renumberMethodsGroup(group);
+    refreshMethodsSuggestSelection();
+  }
+
+  // Keeps one group per Research Question row, in order, and keeps each
+  // group's label in step with the question text as it's edited.
+  function syncMethodsGroups() {
+    const container = methodsGroupsEl();
+    if (!container) return;
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    const questions = rqList
+      ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim())
+      : [];
+    const hasAnyQuestion = questions.some(Boolean);
+    const targetCount = hasAnyQuestion ? questions.length : 1;
+    const placeholder = container.dataset.placeholder || '';
+
+    let groups = methodsGroupEls();
+    while (groups.length < targetCount) {
+      container.appendChild(buildMethodsGroup(placeholder));
+      groups = methodsGroupEls();
+    }
+    // Trailing groups only go when they're empty — same priority as
+    // removeOutcomeRowAt, where preserving typed content beats tidiness.
+    while (groups.length > targetCount) {
+      const last = groups[groups.length - 1];
+      if (methodsGroupValues(last).length) break;
+      last.remove();
+      groups = methodsGroupEls();
+    }
+
+    groups.forEach((group, i) => {
+      const label = group.querySelector('.methods-group-q');
+      if (!label) return;
+      const text = questions[i] || '';
+      label.hidden = !hasAnyQuestion;
+      label.textContent = hasAnyQuestion ? (text || 'Research question ' + (i + 1)) : '';
+      label.classList.toggle('methods-group-q-empty', hasAnyQuestion && !text);
+    });
+    container.classList.toggle('methods-grouped', hasAnyQuestion);
+    refreshMethodsSuggestSelection();
+  }
+
+  // Mirrors removeOutcomeRowAt: only drops the paired group when nothing has
+  // been typed into it, so removing a question never silently deletes
+  // methods. Whatever survives is re-labelled by the syncMethodsGroups call
+  // that follows the removal.
+  function removeMethodsGroupAt(index) {
+    const group = methodsGroupAt(index);
+    if (!group) return;
+    if (methodsGroupValues(group).length) return;
+    if (methodsGroupEls().length <= 1) return;
+    group.remove();
   }
 
   function suggestMethods(objective, researchQuestions) {
@@ -1531,14 +1669,28 @@
     doc.addEventListener('click', updateEnabled);
     updateEnabled();
 
-    function renderResults(questions, perQuestion) {
-      body.innerHTML = '';
-      const allNames = [];
+    // Ticks are derived from what's actually in each Methods group rather
+    // than tracked separately here, so a method typed by hand or deleted
+    // with its ✕ shows exactly the same state as one added from this panel.
+    function syncSelection() {
+      body.querySelectorAll('.ms-method[data-method-name]').forEach((row) => {
+        const target = methodsGroupAt(Number(row.dataset.groupIndex));
+        const on = !!target && groupHasMethod(target, row.dataset.methodName);
+        row.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    methodsSuggestRefresh = syncSelection;
 
-      questions.forEach((q, i) => {
+    // `entries` carries each question's Research Question *row* index, not
+    // its position in the filtered list — see the collection in the click
+    // handler below for why the two can differ.
+    function renderResults(entries, perQuestion) {
+      body.innerHTML = '';
+
+      entries.forEach((entry, i) => {
         const group = el('div', 'ms-group');
         const qEl = el('div', 'ms-question');
-        qEl.textContent = q;
+        qEl.textContent = entry.text;
         group.appendChild(qEl);
 
         const methods = (perQuestion[i] && perQuestion[i].methods) || [];
@@ -1547,8 +1699,13 @@
           none.textContent = 'No confident recommendation found for this question.';
           group.appendChild(none);
         }
+
+        const names = [];
         methods.forEach((m) => {
-          const row = el('div', 'ms-method');
+          const name = (m.name || '').trim();
+          const row = el('button', 'ms-method', { type: 'button', 'aria-pressed': 'false' });
+          const tick = el('span', 'ms-method-tick', { 'aria-hidden': 'true' });
+          tick.textContent = '✓';
           const nameEl = el('span', 'ms-method-name');
           nameEl.textContent = m.name || 'Unresolved';
           if (m.viaSearch) {
@@ -1558,38 +1715,65 @@
           }
           const reasonEl = el('div', 'ms-method-reason');
           reasonEl.textContent = m.reason;
-          row.append(nameEl, reasonEl);
+          row.append(tick, nameEl, reasonEl);
           if (m.source) {
             const src = el('div', 'ms-method-source');
             src.textContent = 'Source: ' + m.source;
             row.appendChild(src);
           }
+          // An unresolved suggestion has no name to add, so it stays inert
+          // rather than pretending to be a toggle.
+          if (!name) {
+            row.disabled = true;
+          } else {
+            row.dataset.methodName = name;
+            row.dataset.groupIndex = String(entry.rowIndex);
+            row.setAttribute('aria-label', name + ' — add to "' + entry.text + '"');
+            row.addEventListener('click', () => {
+              const target = methodsGroupAt(entry.rowIndex);
+              if (!target) return;
+              if (groupHasMethod(target, name)) removeMethodFromGroup(target, name);
+              else applyMethodsToGroup(target, [name]);
+            });
+            names.push(name);
+          }
           group.appendChild(row);
-          if (m.name) allNames.push(m.name);
         });
+
+        // Bulk action still exists, but scoped to this one question rather
+        // than applying every suggestion to a single flat list.
+        if (names.length) {
+          const actions = el('div', 'eval-actions');
+          const addAll = el('button', 'eval-btn fw-add-btn ms-add-all', { type: 'button' });
+          addAll.textContent = 'Add all for this question';
+          addAll.addEventListener('click', () => {
+            const target = methodsGroupAt(entry.rowIndex);
+            if (target) applyMethodsToGroup(target, [...new Set(names)]);
+          });
+          actions.appendChild(addAll);
+          group.appendChild(actions);
+        }
 
         body.appendChild(group);
       });
 
-      const actions = el('div', 'eval-actions');
-      const uniqueNames = [...new Set(allNames)];
-      const applyBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
-      applyBtn.textContent = uniqueNames.length ? 'Apply ' + uniqueNames.length + ' method(s) to Methods' : 'Nothing to apply';
-      applyBtn.disabled = uniqueNames.length === 0;
-      applyBtn.addEventListener('click', () => {
-        applyMethodsToField(uniqueNames);
-        applyBtn.textContent = 'Applied ✓';
-        applyBtn.disabled = true;
-      });
-      actions.appendChild(applyBtn);
-      body.appendChild(actions);
+      syncSelection();
     }
 
     btn.addEventListener('click', () => {
       const objectiveInput = doc.querySelector('[data-field="objective"]');
       const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
       const objective = objectiveInput ? objectiveInput.value.trim() : '';
-      const questions = rqList ? collectListValues(rqList) : [];
+      // Keep each question's row index alongside its text. Methods groups are
+      // positional on Research Question *rows*, but blank rows are dropped
+      // before sending, so the filtered array's own index would drift from
+      // the group index as soon as any question row is left empty.
+      const entries = rqList
+        ? Array.from(rqList.querySelectorAll('.list-input'))
+            .map((inp, rowIndex) => ({ text: inp.value.trim(), rowIndex }))
+            .filter((e) => e.text)
+        : [];
+      const questions = entries.map((e) => e.text);
       if (!objective || questions.length === 0) {
         alert('Please enter an Objective and at least one Research Question first.');
         return;
@@ -1601,7 +1785,7 @@
         if (!Array.isArray(data.perQuestion) || data.perQuestion.length !== questions.length) {
           throw new Error('Unexpected response shape — please try again');
         }
-        renderResults(questions, data.perQuestion);
+        renderResults(entries, data.perQuestion);
         panel.hidden = false;
       }).catch((err) => {
         alert('Methods suggestion failed: ' + err.message);
@@ -2128,8 +2312,10 @@
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
       if (isGrowable) inp.addEventListener('input', () => resizeTa(inp));
-      if (field.key === 'methods') attachMethodsCombobox(inp, METHODS);
       if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
+      // Each question's Methods group is labelled with its text, so the label
+      // has to track edits as they're typed.
+      if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', () => {
@@ -2137,16 +2323,21 @@
         if (field.key === 'researchQuestions') {
           const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
           removeOutcomeRowAt(index);
+          removeMethodsGroupAt(index);
         }
         row.remove();
         renumber();
         updateResearchQuestionsWarning();
+        if (field.key === 'researchQuestions') syncMethodsGroups();
       });
       row.append(num, inp, removeBtn);
       list.appendChild(row);
       if (isGrowable) resizeTa(inp);
       renumber();
-      if (field.key === 'researchQuestions') addOutcomeRow();
+      if (field.key === 'researchQuestions') {
+        addOutcomeRow();
+        syncMethodsGroups();
+      }
       updateResearchQuestionsWarning();
       if (focus) inp.focus();
       return row;
@@ -2167,7 +2358,6 @@
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
-    if (field.key === 'methods') wrap.append(...renderMethodsSuggest());
 
     return wrap;
   }
@@ -2200,6 +2390,38 @@
     if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
 
     return wrap;
+  }
+
+  // Methods: a container of question-labelled groups instead of one flat
+  // list. Only the first group is built here — the rest are created, removed
+  // and labelled by syncMethodsGroups, which runs whenever a Research
+  // Question is added, removed or edited, and once from the wire-up below.
+  function renderGroupedMethodsField(field) {
+    const wrap = el('div', 'field');
+    const label = el('label', 'flabel');
+    label.textContent = field.label;
+    appendInfoTip(label, field.key);
+    if (field.optional) {
+      const opt = el('span', 'fopt');
+      opt.textContent = '(optional)';
+      label.append(' ', opt);
+    }
+    wrap.appendChild(label);
+
+    const container = el('div', 'methods-groups');
+    container.dataset.placeholder = field.placeholder || '';
+    container.appendChild(buildMethodsGroup(field.placeholder || ''));
+    wrap.appendChild(container);
+
+    if (field.examples) wrap.append(...renderExamplePanel(field));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => methodsAllValues().join('\n')));
+    wrap.append(...renderMethodsSuggest());
+
+    return wrap;
+  }
+
+  function initMethodsGroupsSync() {
+    syncMethodsGroups();
   }
 
   function initOutcomesSync() {
@@ -2658,7 +2880,11 @@
 
   function renderField(field) {
     if (field.type === 'table') return renderTableField(field);
-    if (field.type === 'list') return field.key === 'outcomes' ? renderLinkedOutcomesField(field) : renderListField(field);
+    if (field.type === 'list') {
+      if (field.key === 'outcomes') return renderLinkedOutcomesField(field);
+      if (field.key === 'methods') return renderGroupedMethodsField(field);
+      return renderListField(field);
+    }
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
 
     const wrap = el('div', 'field');
@@ -2988,8 +3214,390 @@
   }
 
   // ---------- clear form ----------
+  // ---------- draft persistence (localStorage) ----------
+  // The whole form is snapshotted under one key, saved debounced behind
+  // edits, and restored on load. Restoring has to rebuild structure before
+  // writing values: every dynamic list, table and methods group here starts
+  // life with exactly one empty row, so the saved counts are replayed by
+  // clicking the same "+ Add" buttons a user would.
+  //
+  // Version 1 is the pre-grouping shape, where Methods was one flat list
+  // stored under lists.methods. Those drafts still load — see migrateDraft.
+  const DRAFT_KEY = 'research-plan-app:draft';
+  const DRAFT_VERSION = 2;
+  const DRAFT_SAVE_DELAY_MS = 400;
+  let draftRestoring = false;
+  let draftTimer = null;
+
+  // Storage can be absent or throw outright (private modes, blocked
+  // cookies). A draft is a convenience, so every path here degrades to
+  // "no draft" rather than breaking the form.
+  function draftStore() {
+    try {
+      return window.localStorage || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function getCellSnapshot(td) {
+    const fileCell = td.querySelector('.file-cell');
+    if (fileCell) {
+      return {
+        t: 'file',
+        v: fileCell.querySelector('.file-value').value,
+        n: fileCell.querySelector('.file-name').textContent,
+      };
+    }
+    const selectCell = td.querySelector('.select-cell');
+    if (selectCell) {
+      const sel = selectCell.querySelector('.ssel');
+      const other = selectCell.querySelector('.select-other-input');
+      return {
+        t: 'select',
+        v: sel && sel.hidden ? '__other__' : (sel ? sel.value : ''),
+        o: other ? other.value : '',
+      };
+    }
+    const plainSel = td.querySelector('select');
+    if (plainSel) return { t: 'sel', v: plainSel.value };
+    const dateInput = td.querySelector('input[type="date"]');
+    if (dateInput) return { t: 'date', v: dateInput.value };
+    const input = td.querySelector('input');
+    return { t: 'text', v: input ? input.value : '' };
+  }
+
+  function setCellSnapshot(td, snap) {
+    if (!snap) return;
+    if (snap.t === 'file') {
+      const cell = td.querySelector('.file-cell');
+      if (!cell) return;
+      cell.querySelector('.file-value').value = snap.v || '';
+      cell.querySelector('.file-name').textContent = snap.n || 'No file chosen';
+      return;
+    }
+    if (snap.t === 'select') {
+      const cell = td.querySelector('.select-cell');
+      if (!cell) return;
+      const sel = cell.querySelector('.ssel');
+      const otherRow = cell.querySelector('.select-other-row');
+      const other = cell.querySelector('.select-other-input');
+      if (snap.v === '__other__') {
+        if (sel) sel.hidden = true;
+        if (otherRow) otherRow.hidden = false;
+        if (other) other.value = snap.o || '';
+      } else if (sel) {
+        sel.hidden = false;
+        if (otherRow) otherRow.hidden = true;
+        if (other) other.value = '';
+        sel.value = snap.v || '';
+        updateSelectClass(sel);
+      }
+      return;
+    }
+    if (snap.t === 'sel') {
+      const sel = td.querySelector('select');
+      if (sel) {
+        sel.value = snap.v || '';
+        updateSelectClass(sel);
+      }
+      return;
+    }
+    if (snap.t === 'date') {
+      const dateInput = td.querySelector('input[type="date"]');
+      if (dateInput) setDateInputValue(dateInput, snap.v || '');
+      return;
+    }
+    const input = td.querySelector('input');
+    if (input) input.value = snap.v || '';
+  }
+
+  // Scalar fields are every [data-field] that isn't part of a repeating
+  // structure — those are captured by their own collectors below.
+  function scalarFieldEls() {
+    return Array.from(doc.querySelectorAll('[data-field]')).filter((elm) => {
+      return !elm.closest('.list-rows')
+        && !elm.closest('.methods-groups')
+        && !elm.closest('.select-cell')
+        && !elm.classList.contains('custom-field-body');
+    });
+  }
+
+  function collectDraft() {
+    const fields = {};
+    scalarFieldEls().forEach((elm) => { fields[elm.getAttribute('data-field')] = elm.value; });
+
+    const selects = {};
+    doc.querySelectorAll('.select-cell').forEach((cell) => {
+      if (cell.closest('table') || !cell.dataset.fieldKey) return;
+      const sel = cell.querySelector('.ssel');
+      const other = cell.querySelector('.select-other-input');
+      selects[cell.dataset.fieldKey] = {
+        v: sel && sel.hidden ? '__other__' : (sel ? sel.value : ''),
+        o: other ? other.value : '',
+      };
+    });
+
+    const lists = {};
+    doc.querySelectorAll('.list-rows[data-list-key]').forEach((list) => {
+      if (list.closest('.methods-groups')) return;
+      lists[list.dataset.listKey] = Array.from(list.querySelectorAll('.list-input')).map((i) => i.value);
+    });
+
+    const methods = methodsGroupEls().map((group) => {
+      const label = group.querySelector('.methods-group-q');
+      const list = methodsListIn(group);
+      return {
+        question: label && !label.hidden ? label.textContent : '',
+        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i) => i.value) : [],
+      };
+    });
+
+    const tableData = {};
+    tables.forEach(({ id }) => {
+      const table = document.getElementById(id);
+      if (!table) return;
+      tableData[id] = Array.from(table.querySelectorAll('tbody tr'))
+        .map((tr) => Array.from(tr.querySelectorAll('td')).map(getCellSnapshot));
+    });
+
+    const custom = {};
+    doc.querySelectorAll('.custom-fields-list').forEach((list) => {
+      if (!list.dataset.listKey) return;
+      custom[list.dataset.listKey] = Array.from(list.querySelectorAll('.custom-field-block')).map((block) => ({
+        label: (block.querySelector('.custom-field-name') || {}).value || '',
+        body: (block.querySelector('.custom-field-body') || {}).value || '',
+      }));
+    });
+
+    return { fields, selects, lists, methods, tables: tableData, custom };
+  }
+
+  function saveDraft() {
+    const store = draftStore();
+    if (!store || draftRestoring) return;
+    try {
+      const payload = Object.assign(
+        { version: DRAFT_VERSION, savedAt: new Date().toISOString() },
+        collectDraft()
+      );
+      store.setItem(DRAFT_KEY, JSON.stringify(payload));
+    } catch (err) {
+      // Most likely a quota error or storage blocked mid-session. Editing
+      // must keep working, so this is reported and otherwise ignored.
+      console.warn('Could not save draft:', err);
+    }
+  }
+
+  function scheduleDraftSave() {
+    if (draftRestoring) return;
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = window.setTimeout(saveDraft, DRAFT_SAVE_DELAY_MS);
+  }
+
+  function clearDraft() {
+    const store = draftStore();
+    if (!store) return;
+    if (draftTimer) window.clearTimeout(draftTimer);
+    try {
+      store.removeItem(DRAFT_KEY);
+    } catch (err) {
+      console.warn('Could not clear draft:', err);
+    }
+  }
+
+  function readDraft() {
+    const store = draftStore();
+    if (!store) return null;
+    let raw;
+    try {
+      raw = store.getItem(DRAFT_KEY);
+    } catch (err) {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (err) {
+      // A corrupt or hand-edited draft shouldn't wedge the form on every
+      // load, so it's dropped rather than retried.
+      console.warn('Ignoring unreadable draft:', err);
+      return null;
+    }
+  }
+
+  // Version 1 stored Methods as one flat list under lists.methods, with no
+  // question association. Those names land in the first group, which is the
+  // ungrouped list when no research question has content — so an old draft
+  // opens looking exactly as it did before grouping existed.
+  function migrateDraft(draft) {
+    if (!draft) return null;
+    const version = Number(draft.version) || 1;
+    if (version >= 2) return draft;
+    const flat = (draft.lists && draft.lists.methods) || [];
+    const migrated = Object.assign({}, draft, {
+      version: DRAFT_VERSION,
+      methods: flat.length ? [{ question: '', methods: flat }] : [],
+      lists: Object.assign({}, draft.lists),
+    });
+    delete migrated.lists.methods;
+    return migrated;
+  }
+
+  // Replays "+ Add" clicks until the structure is as long as the draft.
+  // The guard stops a malformed count from spinning forever.
+  function growTo(currentCount, target, addBtn) {
+    let guard = 0;
+    while (addBtn && currentCount() < target && guard++ < 500) addBtn.click();
+  }
+
+  function applyDraft(draft) {
+    // Lists first — Research Questions drives both Outcomes rows and Methods
+    // groups, so its rows must exist before either is restored.
+    const orderedListKeys = Object.keys(draft.lists || {})
+      .sort((a, b) => (a === 'researchQuestions' ? -1 : b === 'researchQuestions' ? 1 : 0));
+    orderedListKeys.forEach((key) => {
+      const list = doc.querySelector('.list-rows[data-list-key="' + key + '"]');
+      if (!list || list.closest('.methods-groups')) return;
+      const values = draft.lists[key] || [];
+      const addBtn = list.parentElement ? list.parentElement.querySelector('.add-btn') : null;
+      growTo(() => list.querySelectorAll('.list-row').length, values.length, addBtn);
+      const inputs = Array.from(list.querySelectorAll('.list-input'));
+      values.forEach((v, i) => {
+        if (!inputs[i]) return;
+        inputs[i].value = v;
+        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+
+    syncMethodsGroups();
+    (draft.methods || []).forEach((saved, i) => {
+      const group = methodsGroupAt(i);
+      if (!group) return;
+      const list = methodsListIn(group);
+      const addBtn = group.querySelector('.add-btn');
+      const values = saved.methods || [];
+      growTo(() => list.querySelectorAll('.list-row').length, values.length, addBtn);
+      const inputs = Array.from(list.querySelectorAll('.list-input'));
+      values.forEach((v, j) => { if (inputs[j]) inputs[j].value = v; });
+      renumberMethodsGroup(group);
+    });
+
+    scalarFieldEls().forEach((elm) => {
+      const key = elm.getAttribute('data-field');
+      if (!Object.prototype.hasOwnProperty.call(draft.fields || {}, key)) return;
+      const value = draft.fields[key];
+      if (elm.tagName === 'INPUT' && elm.type === 'date') {
+        setDateInputValue(elm, value || '');
+        elm.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      elm.value = value;
+      if (elm.tagName === 'TEXTAREA') resizeTa(elm);
+      if (elm.tagName === 'SELECT') updateSelectClass(elm);
+      elm.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    // Non-table select cells are restored directly rather than through
+    // setCellSnapshot: that helper searches downward from a <td>, and here
+    // the cell itself is the element we already hold.
+    Object.entries(draft.selects || {}).forEach(([key, snap]) => {
+      const cell = Array.from(doc.querySelectorAll('.select-cell'))
+        .find((c) => !c.closest('table') && c.dataset.fieldKey === key);
+      if (!cell || !snap) return;
+      const sel = cell.querySelector('.ssel');
+      const otherRow = cell.querySelector('.select-other-row');
+      const other = cell.querySelector('.select-other-input');
+      if (snap.v === '__other__') {
+        if (sel) {
+          sel.hidden = true;
+          sel.removeAttribute('data-field');
+        }
+        if (otherRow) otherRow.hidden = false;
+        if (other) {
+          other.value = snap.o || '';
+          other.setAttribute('data-field', key);
+        }
+      } else if (sel) {
+        sel.hidden = false;
+        if (otherRow) otherRow.hidden = true;
+        if (other) {
+          other.value = '';
+          other.removeAttribute('data-field');
+        }
+        sel.value = snap.v || '';
+        sel.setAttribute('data-field', key);
+        updateSelectClass(sel);
+      }
+    });
+
+    Object.entries(draft.tables || {}).forEach(([id, rows]) => {
+      const table = document.getElementById(id);
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const addBtn = table.closest('.field') ? table.closest('.field').querySelector('.add-btn') : null;
+      growTo(() => tbody.querySelectorAll('tr').length, rows.length, addBtn);
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+      rows.forEach((cells, i) => {
+        if (!trs[i]) return;
+        const tds = Array.from(trs[i].querySelectorAll('td'));
+        cells.forEach((snap, j) => { if (tds[j]) setCellSnapshot(tds[j], snap); });
+      });
+      updateRowRemoveButtons(tbody);
+    });
+
+    Object.entries(draft.custom || {}).forEach(([key, blocks]) => {
+      const list = doc.querySelector('.custom-fields-list[data-list-key="' + key + '"]');
+      if (!list) return;
+      const addBtn = list.parentElement ? list.parentElement.querySelector('.add-btn') : null;
+      growTo(() => list.querySelectorAll('.custom-field-block').length, blocks.length, addBtn);
+      const els = Array.from(list.querySelectorAll('.custom-field-block'));
+      blocks.forEach((b, i) => {
+        if (!els[i]) return;
+        const name = els[i].querySelector('.custom-field-name');
+        const body = els[i].querySelector('.custom-field-body');
+        if (name) name.value = b.label || '';
+        if (body) {
+          body.value = b.body || '';
+          resizeTa(body);
+        }
+      });
+    });
+
+    syncMethodsGroups();
+  }
+
+  function restoreDraft() {
+    const draft = migrateDraft(readDraft());
+    if (!draft) return false;
+    draftRestoring = true;
+    try {
+      applyDraft(draft);
+      return true;
+    } catch (err) {
+      // A draft written by a different version of the form could reference
+      // structure that no longer exists. Log it and leave the user with a
+      // blank-but-working form rather than a half-applied one.
+      console.warn('Could not fully restore draft:', err);
+      return false;
+    } finally {
+      draftRestoring = false;
+    }
+  }
+
+  function initDraftPersistence() {
+    restoreDraft();
+    // 'click' is included because adding or removing a row changes the
+    // structure without ever firing input/change.
+    doc.addEventListener('input', scheduleDraftSave);
+    doc.addEventListener('change', scheduleDraftSave);
+    doc.addEventListener('click', scheduleDraftSave);
+  }
+
   function clearForm() {
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
+    clearDraft();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
@@ -3013,6 +3621,16 @@
     doc.querySelectorAll('.custom-fields-list').forEach((list) => {
       list.querySelectorAll('.custom-field-block').forEach((block) => block.remove());
     });
+    // Methods groups are rebuilt from scratch rather than trimmed row by row
+    // like the lists above: the group count tracks Research Questions, so
+    // trimming alone would leave a group behind for every question the reset
+    // just removed.
+    const methodsContainer = methodsGroupsEl();
+    if (methodsContainer) {
+      methodsContainer.innerHTML = '';
+      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || ''));
+      syncMethodsGroups();
+    }
     // Reset each dropdown to its own first option rather than hardcoding
     // 'not-started' — that value only exists on the status columns; other
     // .ssel dropdowns (Stage Timeline's Stage column, Sample Size) have
@@ -3152,7 +3770,9 @@
         initAccordion();
         initDeadlineConstraints();
         initOutcomesSync();
+        initMethodsGroupsSync();
         initTestProfileControls();
+        initDraftPersistence();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
       })
