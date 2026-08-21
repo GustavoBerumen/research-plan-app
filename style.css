@@ -196,6 +196,18 @@ textarea.finput{min-height:72px;overflow:hidden}
 .eval-spinner{width:13px;height:13px;border:2px solid #c7d2fe;border-top-color:#6366f1;border-radius:50%;animation:espin .7s linear infinite;display:none;flex-shrink:0}
 @keyframes espin{to{transform:rotate(360deg)}}
 .eval-btn.loading .eval-spinner{display:inline-block}
+.eval-controls{width:100%}
+.eval-result-btn{width:34px;height:34px;padding:0;margin-top:10px;border:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
+.eval-result-btn:hover{transform:translateY(-1px);box-shadow:0 3px 7px rgba(0,0,0,.18)}
+.eval-result-btn:focus-visible{outline:3px solid #111827;outline-offset:3px}
+.eval-result-problem{background:#dc2626}
+.eval-result-warning{background:#ea580c}
+.eval-result-success{background:#16a34a}
+.eval-result-chevron{font-size:17px;font-weight:700;line-height:1;transition:transform .15s}
+.eval-result-btn[aria-expanded="true"] .eval-result-chevron{transform:rotate(180deg)}
+.eval-btn[hidden],.eval-result-btn[hidden],.eval-error[hidden]{display:none}
+.eval-error{font-size:12.5px;line-height:1.45;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:8px 11px;margin-top:10px;max-width:100%}
+.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .eval-panel{border-radius:10px;border:1.5px solid;padding:22px 24px;margin-top:14px}
 .eval-panel[hidden]{display:none}
 .eval-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
@@ -214,6 +226,9 @@ textarea.finput{min-height:72px;overflow:hidden}
 .eval-rec{font-size:13px;color:#374151;line-height:1.55;padding-left:20px;position:relative}
 .eval-rec::before{content:'•';position:absolute;left:5px;color:#9ca3af;font-size:15px;top:-1px}
 .eval-actions{display:flex;gap:8px;align-items:center;margin-top:16px}
+.eval-reevaluate-btn{font-family:inherit;font-size:12px;font-weight:600;color:#4b5563;background:rgba(255,255,255,.55);border:1px solid #d1d5db;border-radius:7px;padding:8px 11px;cursor:pointer;margin-right:auto;transition:all .15s}
+.eval-reevaluate-btn:hover{background:#fff;color:#111827}
+.eval-reevaluate-btn:disabled{opacity:.5;cursor:not-allowed}
 .eval-fb-btn{font-family:inherit;font-size:14px;line-height:1;color:#6b7280;background:none;border:1px solid #d1d5db;border-radius:7px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
 .eval-fb-btn:hover{background:#f3f4f6;color:#374151}
 .eval-fb-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -263,7 +278,7 @@ textarea.finput{min-height:72px;overflow:hidden}
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
-  .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-result-btn,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error{display:none!important}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}

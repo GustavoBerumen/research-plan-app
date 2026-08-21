@@ -948,10 +948,10 @@
 
   // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
   const SCORE_STYLES = [
-    { max: 1.5, label: 'Needs Work', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-    { max: 2, label: 'Developing', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-    { max: 2.75, label: 'Good', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-    { max: Infinity, label: 'Ready', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+    { max: 1.5, label: 'Needs Work', tone: 'problem', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+    { max: 2, label: 'Developing', tone: 'warning', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+    { max: 2.75, label: 'Good', tone: 'success', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+    { max: Infinity, label: 'Ready', tone: 'success', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
   ];
   function styleForScore(avg) {
     return SCORE_STYLES.find((s) => avg < s.max);
@@ -968,8 +968,16 @@
         return data;
       });
     }).then((data) => {
-      const avg = data.metrics.reduce((sum, m) => sum + m.score, 0) / data.metrics.length;
-      return { ...styleForScore(avg), metrics: data.metrics, recs: data.recommendations };
+      const metrics = Array.isArray(data.metrics) ? data.metrics : [];
+      const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
+      if (metrics.length === 0 || metrics.some((m) => !Number.isFinite(m.score))) {
+        throw new Error('The evaluator returned an unexpected result — please try again');
+      }
+      if (recs.length === 0) {
+        throw new Error('The evaluator returned incomplete recommendations — please try again');
+      }
+      const avg = metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length;
+      return { ...styleForScore(avg), metrics, recs };
     });
   }
 
@@ -1012,8 +1020,6 @@
       li.textContent = r;
       recsEl.appendChild(li);
     });
-
-    panel.hidden = false;
   }
 
   // ---------- field rendering ----------
@@ -1060,14 +1066,32 @@
     });
   }
 
+  let evaluationControlCount = 0;
+
   function renderEvalControls(field, getText) {
+    const controls = el('div', 'eval-controls');
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
     txt.textContent = 'Evaluate ' + field.label;
     btn.append(spinner, txt);
 
-    const panel = el('div', 'eval-panel');
+    const detailsId = 'evaluation-details-' + (++evaluationControlCount);
+    const resultBtn = el('button', 'eval-result-btn', {
+      type: 'button',
+      'aria-controls': detailsId,
+      'aria-expanded': 'false',
+    });
+    resultBtn.hidden = true;
+    const resultChevron = el('span', 'eval-result-chevron', { 'aria-hidden': 'true' });
+    resultChevron.textContent = '▾';
+    const resultStatus = el('span', 'visually-hidden');
+    resultBtn.append(resultChevron, resultStatus);
+
+    const error = el('div', 'eval-error', { role: 'alert' });
+    error.hidden = true;
+
+    const panel = el('div', 'eval-panel', { id: detailsId });
     panel.hidden = true;
     const head = el('div', 'eval-head');
     const badge = el('span', 'eval-badge');
@@ -1075,6 +1099,8 @@
     hl.textContent = field.label + ' Evaluation';
     const dismiss = el('button', 'eval-x', { type: 'button' });
     dismiss.textContent = '✕';
+    dismiss.title = 'Collapse evaluation details';
+    dismiss.setAttribute('aria-label', 'Collapse ' + field.label + ' evaluation details');
     head.append(badge, hl, dismiss);
     const metrics = el('div', 'eval-metrics');
     const rlabel = el('div', 'eval-rlabel');
@@ -1092,40 +1118,95 @@
     dislikeBtn.textContent = '👎';
     dislikeBtn.title = 'Dislike';
     dislikeBtn.disabled = true;
+    const reevaluateBtn = el('button', 'eval-reevaluate-btn', { type: 'button' });
+    reevaluateBtn.textContent = 'Evaluate again';
     const actions = el('div', 'eval-actions');
-    actions.append(likeBtn, dislikeBtn, saveBtn);
+    actions.append(reevaluateBtn, likeBtn, dislikeBtn, saveBtn);
     panel.append(head, metrics, rlabel, recs, actions);
+    controls.append(btn, resultBtn, error, panel);
 
     let lastResult = null;
 
-    btn.addEventListener('click', () => {
+    function setExpanded(expanded) {
+      panel.hidden = !expanded;
+      resultBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      if (!lastResult) return;
+      const action = expanded ? 'Hide' : 'Show';
+      resultBtn.title = lastResult.data.label + ' — ' + action.toLowerCase() + ' evaluation details';
+      resultBtn.setAttribute(
+        'aria-label',
+        field.label + ' evaluation: ' + lastResult.data.label + '. ' + action + ' details.'
+      );
+    }
+
+    function resetFeedbackActions() {
+      saveBtn.disabled = true;
+      saveBtn.classList.remove('active');
+      saveBtn.title = 'Save';
+      likeBtn.disabled = true;
+      likeBtn.classList.remove('active');
+      likeBtn.title = 'Like';
+      dislikeBtn.disabled = true;
+      dislikeBtn.classList.remove('active');
+      dislikeBtn.title = 'Dislike';
+    }
+
+    function showResult(data) {
+      resultBtn.className = 'eval-result-btn eval-result-' + data.tone;
+      resultStatus.textContent = field.label + ' evaluation: ' + data.label;
+      resultBtn.hidden = false;
+      btn.hidden = true;
+      setExpanded(false);
+      resultBtn.focus();
+    }
+
+    function runEvaluation() {
       const text = getText();
       if (!text.trim()) {
         alert('Please enter a value to evaluate.');
         return;
       }
+      lastResult = null;
+      setExpanded(false);
+      resultBtn.hidden = true;
+      error.hidden = true;
+      error.textContent = '';
+      resetFeedbackActions();
+      btn.hidden = false;
+      btn.focus();
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
       btn.classList.add('loading');
       txt.textContent = 'Evaluating…';
+      reevaluateBtn.disabled = true;
       evaluateField(text, field).then((data) => {
         renderEvalResult(panel, data);
         lastResult = { text, data };
+        showResult(data);
         saveBtn.disabled = false;
-        saveBtn.classList.remove('active');
-        saveBtn.title = 'Save';
         likeBtn.disabled = false;
-        likeBtn.classList.remove('active');
         dislikeBtn.disabled = false;
-        dislikeBtn.classList.remove('active');
       }).catch((err) => {
-        alert('Evaluation failed: ' + err.message);
+        error.textContent = 'Evaluation failed: ' + err.message;
+        error.hidden = false;
       }).finally(() => {
         btn.disabled = false;
+        btn.setAttribute('aria-busy', 'false');
         btn.classList.remove('loading');
         txt.textContent = 'Evaluate ' + field.label;
+        reevaluateBtn.disabled = false;
       });
+    }
+
+    btn.addEventListener('click', runEvaluation);
+    resultBtn.addEventListener('click', () => {
+      setExpanded(resultBtn.getAttribute('aria-expanded') !== 'true');
     });
-    dismiss.addEventListener('click', () => { panel.hidden = true; });
+    dismiss.addEventListener('click', () => {
+      setExpanded(false);
+      resultBtn.focus();
+    });
+    reevaluateBtn.addEventListener('click', runEvaluation);
 
     saveBtn.addEventListener('click', () => {
       if (!lastResult) return;
@@ -1181,7 +1262,27 @@
       });
     });
 
-    return [btn, panel];
+    controls._resetEvaluation = () => {
+      lastResult = null;
+      btn.hidden = false;
+      btn.disabled = false;
+      btn.setAttribute('aria-busy', 'false');
+      btn.classList.remove('loading');
+      txt.textContent = 'Evaluate ' + field.label;
+      resultBtn.hidden = true;
+      resultBtn.className = 'eval-result-btn';
+      resultBtn.removeAttribute('aria-label');
+      resultBtn.removeAttribute('title');
+      resultBtn.setAttribute('aria-expanded', 'false');
+      resultStatus.textContent = '';
+      error.hidden = true;
+      error.textContent = '';
+      panel.hidden = true;
+      reevaluateBtn.disabled = false;
+      resetFeedbackActions();
+    };
+
+    return [controls];
   }
 
   // ---------- theoretical framework suggestion (Theory field) ----------
@@ -3037,6 +3138,9 @@
     });
 
     doc.querySelectorAll('.eval-panel').forEach((p) => { p.hidden = true; });
+    doc.querySelectorAll('.eval-controls').forEach((controls) => {
+      if (typeof controls._resetEvaluation === 'function') controls._resetEvaluation();
+    });
     doc.querySelectorAll('.ex-panel').forEach((p) => { p.hidden = true; });
     doc.querySelectorAll('.ex-toggle').forEach((t) => { t.textContent = 'Show example'; });
   }
