@@ -84,9 +84,19 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .finput::placeholder{color:#c9c5be}
 textarea.finput{min-height:72px;overflow:hidden}
 
+/* Ungrouped (no research questions yet) stays a single full-width column;
+   grouped switches to three equal tracks. The tracks are declared rather
+   than derived from the item count, so two questions sit at one-third width
+   each instead of stretching to half — column edges stay put as questions
+   are added. minmax(0,1fr) stops a long method name from widening its own
+   track, and align-items:start keeps a one-method group from stretching to
+   match a five-method neighbour. */
 .methods-groups{display:flex;flex-direction:column;gap:10px}
-.methods-groups.methods-grouped{gap:20px}
-.methods-group-q{font-size:12.5px;font-weight:600;color:#57534e;line-height:1.4;margin-bottom:9px;padding-left:9px;border-left:2px solid #e4e0da}
+.methods-groups.methods-grouped{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:20px 18px}
+@media screen and (max-width:900px){.methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media screen and (max-width:600px){.methods-groups.methods-grouped{grid-template-columns:minmax(0,1fr)}}
+.methods-group{min-width:0}
+.methods-group-q{font-size:12.5px;font-weight:600;color:#57534e;line-height:1.4;margin-bottom:9px;padding-left:9px;border-left:2px solid #e4e0da;overflow-wrap:anywhere}
 .methods-group-q-empty{color:#a8a29e;font-style:italic}
 .methods-group-q[hidden]{display:none}
 .list-rows{display:flex;flex-direction:column;gap:8px}
@@ -277,6 +287,15 @@ textarea.finput{min-height:72px;overflow:hidden}
     print-color-adjust:exact;
   }
   .toolbar,.add-btn,.eval-btn,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  /* Two columns, not three. The printed content box is roughly 600px wide
+     (7in of page inside 0.75in margins, less .doc's own padding), so three
+     tracks would leave each method input about 130px — and an <input>
+     clips rather than wraps, so anything longer than ~15 characters would
+     silently vanish from the PDF. Two tracks give ~233px, which fits the
+     method names actually in research-methods.md. The screen breakpoints
+     above are scoped to `screen` precisely so they don't reach this. */
+  .methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+  .methods-group{break-inside:avoid;page-break-inside:avoid}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}

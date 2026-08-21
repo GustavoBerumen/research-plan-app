@@ -1503,7 +1503,10 @@
   }
 
   function buildMethodsGroup(placeholder) {
-    const group = el('div', 'methods-group');
+    // role=group so the aria-label syncMethodsGroups sets (the full research
+    // question) is actually announced — the visible heading is only the
+    // abbreviated "RQ<n> · <keyword>".
+    const group = el('div', 'methods-group', { role: 'group' });
     const qLabel = el('div', 'methods-group-q');
     qLabel.hidden = true;
     group.appendChild(qLabel);
@@ -1562,6 +1565,190 @@
     refreshMethodsSuggestSelection();
   }
 
+  // A full research question can't fit a third-width column, so group
+  // headings are shortened to "RQ<n> · <topic>". The number is the part that
+  // has to be reliable; the topic is a best-effort hint. Nothing is actually
+  // lost — syncMethodsGroups keeps the full question on the heading's title
+  // and on the group's aria-label.
+  //
+  // The topic is chosen by *what it is*, not by where it sits in the
+  // sentence. Picking the first content words gives "Main pain" for "What
+  // are the main pain points?" — a qualifier plus half a compound. So every
+  // word is classified, maximal runs of adjacent nouns are collected, and
+  // the best run wins.
+
+  // Words that only ever open a question.
+  const QUESTION_LEAD_WORDS = new Set([
+    'what', 'which', 'how', 'why', 'when', 'where', 'who', 'whom', 'whose',
+    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am', 'be',
+    'can', 'could', 'should', 'would', 'will', 'shall', 'may', 'might',
+    'have', 'has', 'had', 'there',
+  ]);
+  // Qualifier adjectives, dropped wherever they appear rather than only at
+  // the front: "the main pain points" is about pain points, not about main.
+  // Ordinals and small cardinals sit here too — a number is never a topic.
+  const QUESTION_QUALIFIERS = new Set([
+    'main', 'key', 'most', 'biggest', 'common', 'important', 'primary', 'top',
+    'major', 'overall', 'general', 'specific', 'various', 'particular',
+    'different', 'best', 'worst', 'more', 'much', 'many', 'some', 'any', 'all',
+    'each', 'every', 'other', 'same', 'such', 'very', 'just', 'only', 'also',
+    'one', 'two', 'three', 'four', 'five', 'first', 'second', 'third',
+    'fourth', 'fifth', 'last', 'next', 'new', 'old',
+  ]);
+  // Verbs describe what is being done, never what the question is about, so
+  // a noun phrase is never allowed to span one. This is also what stops
+  // "users think" and "parts selecting" being read as compounds.
+  const QUESTION_VERBS = new Set([
+    'think', 'thinks', 'feel', 'feels', 'say', 'says', 'want', 'wants',
+    'need', 'needs', 'use', 'uses', 'make', 'makes', 'get', 'gets',
+    'like', 'likes', 'know', 'knows', 'navigate', 'navigates', 'abandon',
+    'abandons', 'experience', 'experiences', 'perceive', 'perceives',
+    'describe', 'describes', 'understand', 'understands', 'expect', 'expects',
+    'prefer', 'prefers', 'choose', 'chooses', 'find', 'finds', 'happen',
+    'happens', 'occur', 'occurs', 'cause', 'causes', 'affect', 'affects',
+    'complete', 'completes', 'select', 'selects', 'enter', 'enters',
+    'leave', 'leaves', 'go', 'goes', 'come', 'comes', 'see', 'sees',
+    'look', 'looks', 'take', 'takes', 'give', 'gives', 'been', 'being',
+  ]);
+  // The people doing the thing. Never the topic on their own — "What do
+  // users think about the checkout?" is about the checkout — but perfectly
+  // good *inside* a compound, which is why "user segment" survives. They
+  // stay as phrase material and are only penalised when a phrase is nothing
+  // but actors.
+  const QUESTION_ACTORS = new Set([
+    'user', 'users', 'person', 'people', 'participant', 'participants',
+    'customer', 'customers', 'shopper', 'shoppers', 'visitor', 'visitors',
+    'respondent', 'respondents', 'someone', 'anyone', 'everyone',
+  ]);
+  // Plural actors are the ones that act as a bare *subject* ("do users
+  // rate…"). A bare singular actor can't be a subject without a determiner,
+  // so it's a modifier instead ("user segment", "customer journey") — which
+  // is why the two are treated differently in questionNounPhrases.
+  const PLURAL_ACTORS = new Set([
+    'users', 'people', 'participants', 'customers', 'shoppers', 'visitors',
+    'respondents',
+  ]);
+  // Auxiliaries that front a question and push the main verb after the
+  // subject: "How do users **rate** …". Without this cue there is no way to
+  // tell that "rate" is the verb and not the noun in "conversion rate".
+  const QUESTION_AUXILIARIES = new Set([
+    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am',
+    'can', 'could', 'will', 'would', 'should', 'shall', 'may', 'might',
+    'have', 'has', 'had',
+  ]);
+  const QUESTION_STOPWORDS = new Set([
+    'a', 'an', 'the', 'of', 'to', 'in', 'on', 'for', 'with', 'about', 'from',
+    'by', 'at', 'as', 'and', 'or', 'but', 'if', 'than', 'then', 'that', 'this',
+    'these', 'those', 'into', 'over', 'before', 'during', 'between',
+    'through', 'across', 'within', 'without', 'after',
+    'our', 'their', 'its', 'his', 'her', 'my', 'your', 'we', 'they', 'it',
+    'you', 'us', 'them', 'me', 'i', 'not', 'no', 'while', 'because',
+    'here', 'them',
+  ]);
+  // Words ending -ing are verb forms often enough to exclude by default;
+  // these are the ones that are genuinely nouns in this domain.
+  const ING_NOUNS = new Set([
+    'onboarding', 'marketing', 'branding', 'testing', 'training', 'meeting',
+    'briefing', 'pricing', 'shipping', 'listing', 'rating', 'setting',
+    'settings', 'wording', 'funding', 'staffing', 'banking', 'messaging',
+    'reporting', 'booking', 'billing',
+  ]);
+  const SHORT_LABEL_MAX = 20;
+
+  function classifyQuestionWord(word) {
+    if (word.length <= 2) return 'skip';
+    if (QUESTION_LEAD_WORDS.has(word)) return 'skip';
+    if (QUESTION_QUALIFIERS.has(word)) return 'skip';
+    if (QUESTION_STOPWORDS.has(word)) return 'skip';
+    if (QUESTION_VERBS.has(word)) return 'skip';
+    // Crude morphology for the verbs not worth listing ("experienced",
+    // "selecting"). The -ed rule needs a length floor or it would swallow
+    // "need", "feed" and "speed".
+    if (/ing$/.test(word) && !ING_NOUNS.has(word)) return 'skip';
+    if (/ed$/.test(word) && word.length > 5) return 'skip';
+    if (QUESTION_ACTORS.has(word)) return 'actor';
+    return 'noun';
+  }
+
+  // Maximal runs of adjacent noun-ish words. Adjacency is measured on the
+  // *original* word positions, so dropping "main" from "the main pain
+  // points" cannot glue two unrelated words into a compound that was never
+  // there — which is the whole point of rule 2.
+  function questionNounPhrases(question) {
+    const words = (question || '').toLowerCase().match(/[a-z0-9][a-z0-9'’-]*/g) || [];
+    const phrases = [];
+    let current = null;
+    let sawAuxiliary = false;
+    let prevWasPluralActor = false;
+    words.forEach((word, index) => {
+      if (QUESTION_AUXILIARIES.has(word)) sawAuxiliary = true;
+      let kind = classifyQuestionWord(word);
+      // In an auxiliary-fronted question the word straight after a plural
+      // subject is the main verb, whatever else it could be elsewhere:
+      // "How do users **rate** the pricing page?" is about the pricing page,
+      // not about a "users rate". Without this, any noun/verb ambiguity
+      // ("rate", "drop", "order", "design") glues itself to the subject and
+      // produces exactly the dangling fragment rule 5 forbids.
+      if (kind === 'noun' && sawAuxiliary && prevWasPluralActor) kind = 'skip';
+      prevWasPluralActor = PLURAL_ACTORS.has(word);
+      if (kind === 'skip') {
+        current = null;
+        return;
+      }
+      if (current && current.end === index - 1) {
+        current.words.push(word);
+        current.end = index;
+        if (kind === 'noun') current.hasNoun = true;
+      } else {
+        current = { words: [word], start: index, end: index, hasNoun: kind === 'noun' };
+        phrases.push(current);
+      }
+    });
+    return phrases;
+  }
+
+  function pickQuestionPhrase(phrases) {
+    let best = null;
+    let bestScore = -Infinity;
+    phrases.forEach((phrase) => {
+      // Containing a real noun dominates everything: a phrase of nothing but
+      // actors is the people, not the topic, and only wins if the question
+      // offers nothing else. Then longer wins, so a compound beats a bare
+      // noun ("user segment" over "issues"). Position is the last tie-break
+      // only, which is what makes "the X of Y" resolve to X.
+      const score = (phrase.hasNoun ? 1000 : 0) + phrase.words.length * 10 - phrase.start;
+      if (score > bestScore) {
+        bestScore = score;
+        best = phrase;
+      }
+    });
+    return best;
+  }
+
+  function shortQuestionLabel(question, index) {
+    const rq = 'RQ' + (index + 1);
+    const cleaned = (question || '').replace(/[?!.\s]+$/, '').trim();
+    if (!cleaned) return rq;
+
+    const phrase = pickQuestionPhrase(questionNounPhrases(cleaned));
+    if (!phrase) return rq;
+
+    // English compounds are head-final, so the last two words carry the head
+    // plus its nearest modifier. Every word in a phrase is a noun, so this
+    // can never end on a verb or a dangling adjective.
+    let keyword = phrase.words.slice(-2).join(' ');
+    if (keyword.length > SHORT_LABEL_MAX) {
+      // Too long to keep the compound. Fall back to the single most
+      // distinctive word rather than truncating both into a stub —
+      // "Accessibility" reads; "Accessibility barri…" does not.
+      keyword = phrase.words.reduce((a, b) => (b.length > a.length ? b : a));
+    }
+    if (keyword.length > SHORT_LABEL_MAX) {
+      keyword = keyword.slice(0, SHORT_LABEL_MAX - 1).replace(/\s+$/, '') + '…';
+    }
+    return rq + ' · ' + keyword.charAt(0).toUpperCase() + keyword.slice(1);
+  }
+
   // Keeps one group per Research Question row, in order, and keeps each
   // group's label in step with the question text as it's edited.
   function syncMethodsGroups() {
@@ -1594,8 +1781,18 @@
       if (!label) return;
       const text = questions[i] || '';
       label.hidden = !hasAnyQuestion;
-      label.textContent = hasAnyQuestion ? (text || 'Research question ' + (i + 1)) : '';
+      label.textContent = hasAnyQuestion ? shortQuestionLabel(text, i) : '';
       label.classList.toggle('methods-group-q-empty', hasAnyQuestion && !text);
+      // The heading is abbreviated, so the full question is carried on the
+      // group instead: title for hover, aria-label so screen-reader users
+      // get the whole question rather than just "RQ2 · Checkout".
+      if (hasAnyQuestion && text) {
+        label.title = text;
+        group.setAttribute('aria-label', 'Methods for ' + shortQuestionLabel(text, i) + ': ' + text);
+      } else {
+        label.removeAttribute('title');
+        group.setAttribute('aria-label', hasAnyQuestion ? 'Methods for RQ' + (i + 1) : 'Methods');
+      }
     });
     container.classList.toggle('methods-grouped', hasAnyQuestion);
     refreshMethodsSuggestSelection();
@@ -2529,6 +2726,8 @@
   // Same reparent-to-<body>-with-fixed-position trick as the file-upload "+"
   // menu, so the dropdown escapes the Methodology accordion's overflow:hidden
   // instead of getting clipped.
+  const COMBO_MIN_WIDTH = 260;
+
   function attachMethodsCombobox(input, methods) {
     if (!methods || methods.length === 0) return;
 
@@ -2580,11 +2779,19 @@
       if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
     }
 
+    // In the grouped Methods layout an input is only a third of the field
+    // wide, which isn't enough to read "Participatory Design Workshops" in.
+    // The menu is position:fixed on <body>, so it can be wider than the
+    // column it belongs to without being clipped by it — it just has to
+    // stay inside the viewport, hence the right-edge clamp.
     function position() {
       const rect = input.getBoundingClientRect();
+      const available = Math.max(window.innerWidth - 16, 0);
+      const width = Math.min(Math.max(rect.width, COMBO_MIN_WIDTH), available);
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
       menu.style.top = (rect.bottom + 4) + 'px';
-      menu.style.left = rect.left + 'px';
-      menu.style.width = rect.width + 'px';
+      menu.style.left = left + 'px';
+      menu.style.width = width + 'px';
     }
 
     function openMenu() {
@@ -3344,12 +3551,21 @@
       lists[list.dataset.listKey] = Array.from(list.querySelectorAll('.list-input')).map((i) => i.value);
     });
 
-    const methods = methodsGroupEls().map((group) => {
-      const label = group.querySelector('.methods-group-q');
+    // The question is read from the Research Questions rows, not from the
+    // group's heading — that heading is only the abbreviated "RQ<n> ·
+    // keyword", so reading it back would store a label where a question is
+    // meant. Nothing consumes this on restore (syncMethodsGroups recomputes
+    // headings from the live questions), but it keeps the saved shape
+    // honest for anything that reads a draft later.
+    const rqDraftList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    const rqDraftTexts = rqDraftList
+      ? Array.from(rqDraftList.querySelectorAll('.list-input')).map((i) => i.value.trim())
+      : [];
+    const methods = methodsGroupEls().map((group, i) => {
       const list = methodsListIn(group);
       return {
-        question: label && !label.hidden ? label.textContent : '',
-        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i) => i.value) : [],
+        question: rqDraftTexts[i] || '',
+        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i2) => i2.value) : [],
       };
     });
 
