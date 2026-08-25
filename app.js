@@ -957,11 +957,37 @@
     return SCORE_STYLES.find((s) => avg < s.max);
   }
 
-  function evaluateField(text, field) {
+  function evaluationValueToText(value) {
+    if (!Array.isArray(value)) return typeof value === 'string' ? value : '';
+    return value.map((entry) => typeof entry === 'string' ? entry : entry.text).filter(Boolean).join('\n');
+  }
+
+  function evaluationContext() {
+    const objective = doc.querySelector('[data-field="objective"]');
+    return { objective: objective ? objective.value.trim() : '' };
+  }
+
+  function evaluateField(value, field) {
+    const body = {
+      fieldKey: field.key,
+      fieldLabel: field.label,
+      rubric: field.rubric || [],
+    };
+    if (field.key === 'researchQuestions' || field.key === 'outcomes') {
+      body.entries = value;
+      body.context = evaluationContext();
+      if (field.key === 'outcomes') {
+        const questions = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+        body.researchQuestions = questions ? collectNumberedListValues(questions) : [];
+      }
+    } else {
+      body.text = evaluationValueToText(value);
+    }
+
     return fetch('/api/evaluate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, fieldLabel: field.label, rubric: field.rubric || [] }),
+      body: JSON.stringify(body),
     }).then((res) => {
       return res.json().catch(() => ({})).then((data) => {
         if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
@@ -1068,7 +1094,7 @@
 
   let evaluationControlCount = 0;
 
-  function renderEvalControls(field, getText) {
+  function renderEvalControls(field, getValue) {
     const controls = el('div', 'eval-controls');
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
@@ -1161,7 +1187,8 @@
     }
 
     function runEvaluation() {
-      const text = getText();
+      const value = getValue();
+      const text = evaluationValueToText(value);
       if (!text.trim()) {
         alert('Please enter a value to evaluate.');
         return;
@@ -1179,7 +1206,7 @@
       btn.classList.add('loading');
       txt.textContent = 'Evaluating…';
       reevaluateBtn.disabled = true;
-      evaluateField(text, field).then((data) => {
+      evaluateField(value, field).then((data) => {
         renderEvalResult(panel, data);
         lastResult = { text, data };
         showResult(data);
@@ -2019,6 +2046,15 @@
     return Array.from(list.querySelectorAll('.list-input')).map((i) => i.value.trim()).filter(Boolean);
   }
 
+  // Keeps each visible row's original number even when an earlier row is
+  // blank, so Outcomes always pair with the same-position Research Question.
+  function collectNumberedListValues(list) {
+    return Array.from(list.querySelectorAll('.list-row')).map((row, index) => ({
+      number: index + 1,
+      text: row.querySelector('.list-input').value.trim(),
+    })).filter((entry) => entry.text);
+  }
+
   // Outcomes is a "linked" list (see renderLinkedOutcomesField below): it has
   // no *add* button of its own — Research Questions drives new rows here,
   // gated by field.key so renderListField stays generic — but each row does
@@ -2267,7 +2303,7 @@
     wrap.appendChild(addBtnRow);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => collectNumberedListValues(list)));
     if (field.key === 'methods') wrap.append(...renderMethodsSuggest());
 
     return wrap;
@@ -2298,7 +2334,7 @@
     wrap.appendChild(addBtn);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => collectListValues(list).join('\n')));
+    if (field.eval) wrap.append(...renderEvalControls(field, () => collectNumberedListValues(list)));
 
     return wrap;
   }
