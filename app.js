@@ -3165,12 +3165,40 @@
     });
   }
 
+  function applyTestProfileList(key, values) {
+    if (!values.length) throw new Error('Test profile list "' + key + '" cannot be empty');
+
+    const list = doc.querySelector('.list-rows[data-list-key="' + key + '"]');
+    if (!list) throw new Error('Could not find list field "' + key + '"');
+    const addBtn = list.closest('.field').querySelector('.add-btn');
+    if (!addBtn) throw new Error('Could not find add control for list field "' + key + '"');
+
+    const rows = () => Array.from(list.querySelectorAll('.list-row'));
+    while (rows().length < values.length) addBtn.click();
+    while (rows().length > values.length) {
+      const currentRows = rows();
+      const removeBtn = currentRows[currentRows.length - 1].querySelector('.list-remove');
+      if (!removeBtn || removeBtn.disabled) throw new Error('Could not resize list field "' + key + '"');
+      removeBtn.click();
+    }
+
+    rows().forEach((row, index) => {
+      const input = row.querySelector('.list-input');
+      input.value = values[index];
+      dispatchFieldUpdate(input);
+    });
+  }
+
   function applyTestProfile(profileKey) {
     const profiles = window.TEST_PROFILES || {};
     const profile = profiles[profileKey];
     if (!profile) throw new Error('Unknown test profile "' + profileKey + '"');
 
     Object.entries(profile.fields).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        applyTestProfileList(key, value);
+        return;
+      }
       const input = doc.querySelector('[data-field="' + key + '"]');
       if (!input) throw new Error('Could not find field "' + key + '"');
       input.value = value;
