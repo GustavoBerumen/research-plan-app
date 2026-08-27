@@ -84,6 +84,21 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .finput::placeholder{color:#c9c5be}
 textarea.finput{min-height:72px;overflow:hidden}
 
+/* Ungrouped (no research questions yet) stays a single full-width column;
+   grouped switches to three equal tracks. The tracks are declared rather
+   than derived from the item count, so two questions sit at one-third width
+   each instead of stretching to half — column edges stay put as questions
+   are added. minmax(0,1fr) stops a long method name from widening its own
+   track, and align-items:start keeps a one-method group from stretching to
+   match a five-method neighbour. */
+.methods-groups{display:flex;flex-direction:column;gap:10px}
+.methods-groups.methods-grouped{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:20px 18px}
+@media screen and (max-width:900px){.methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media screen and (max-width:600px){.methods-groups.methods-grouped{grid-template-columns:minmax(0,1fr)}}
+.methods-group{min-width:0}
+.methods-group-q{font-size:12.5px;font-weight:600;color:#57534e;line-height:1.4;margin-bottom:9px;padding-left:9px;border-left:2px solid #e4e0da;overflow-wrap:anywhere}
+.methods-group-q-empty{color:#a8a29e;font-style:italic}
+.methods-group-q[hidden]{display:none}
 .list-rows{display:flex;flex-direction:column;gap:8px}
 .list-row{display:flex;align-items:center;gap:8px}
 .list-num{width:18px;flex-shrink:0;font-size:12.5px;color:#a8a29e;text-align:right}
@@ -247,7 +262,15 @@ textarea.finput{min-height:72px;overflow:hidden}
 .ms-group{margin-bottom:16px}
 .ms-group:last-of-type{margin-bottom:0}
 .ms-question{font-size:12.5px;font-weight:700;color:#374151;margin-bottom:8px;line-height:1.4}
-.ms-method{padding:10px 12px;background:rgba(255,255,255,.65);border:1px solid rgba(0,0,0,.08);border-radius:8px;margin-bottom:8px}
+/* Each suggestion is a real <button> so it toggles with Enter/Space and
+   reports aria-pressed; the reset below strips the native button look. */
+.ms-method{display:block;width:100%;text-align:left;font-family:inherit;position:relative;padding:10px 34px 10px 12px;background:rgba(255,255,255,.65);border:1px solid rgba(0,0,0,.08);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.ms-method:hover:not(:disabled){background:#fff;border-color:#a5b4fc}
+.ms-method:focus-visible{outline:3px solid #4338ca;outline-offset:2px}
+.ms-method[aria-pressed="true"]{background:#fff;border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.18)}
+.ms-method:disabled{cursor:default;opacity:.6}
+.ms-method-tick{position:absolute;top:9px;right:11px;font-size:13px;font-weight:700;color:#6366f1;opacity:0;transition:opacity .15s}
+.ms-method[aria-pressed="true"] .ms-method-tick{opacity:1}
 .ms-method:last-child{margin-bottom:0}
 .ms-method-name{font-size:12.5px;font-weight:600;color:#111827}
 .ms-method-reason{font-size:12px;color:#6b7280;line-height:1.45;margin-top:3px}
@@ -278,7 +301,16 @@ textarea.finput{min-height:72px;overflow:hidden}
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
-  .toolbar,.add-btn,.eval-btn,.eval-result-btn,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-result-btn,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  /* Two columns, not three. The printed content box is roughly 600px wide
+     (7in of page inside 0.75in margins, less .doc's own padding), so three
+     tracks would leave each method input about 130px — and an <input>
+     clips rather than wraps, so anything longer than ~15 characters would
+     silently vanish from the PDF. Two tracks give ~233px, which fits the
+     method names actually in research-methods.md. The screen breakpoints
+     above are scoped to `screen` precisely so they don't reach this. */
+  .methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+  .methods-group{break-inside:avoid;page-break-inside:avoid}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}
