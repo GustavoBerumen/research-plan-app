@@ -113,6 +113,155 @@ const EVAL_TOOL = {
   },
 };
 
+const LIST_ENTRY_METRIC_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    score: { type: 'integer', minimum: 1, maximum: 3 },
+    desc: {
+      type: 'string',
+      maxLength: 90,
+      description: 'One short sentence (12 words max) justifying the score, grounded in this numbered entry.',
+    },
+  },
+  required: ['name', 'score', 'desc'],
+};
+
+const RESEARCH_QUESTIONS_EVAL_TOOL = {
+  name: 'submit_research_questions_evaluation',
+  description: 'Submit individual evaluations for each research question and an evaluation of the question set.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      entryEvaluations: {
+        type: 'array',
+        minItems: 1,
+        description: 'One evaluation per supplied research question, in the same order and using its supplied number.',
+        items: {
+          type: 'object',
+          properties: {
+            number: { type: 'integer', minimum: 1 },
+            metrics: {
+              type: 'array',
+              minItems: 1,
+              description: 'One entry per supplied rubric criterion, in the same order and with the same name.',
+              items: LIST_ENTRY_METRIC_SCHEMA,
+            },
+          },
+          required: ['number', 'metrics'],
+        },
+      },
+      setMetrics: {
+        type: 'array',
+        minItems: 0,
+        maxItems: 4,
+        description: 'Empty when only one question is supplied; otherwise exactly four metrics, in this order: Duplication, Coherence, Alignment, Overall Scope.',
+        items: LIST_ENTRY_METRIC_SCHEMA,
+      },
+      recommendations: {
+        type: 'array',
+        minItems: 2,
+        maxItems: 2,
+        description: 'Exactly two improvements. Use questionNumber=0 for a set-level recommendation.',
+        items: {
+          type: 'object',
+          properties: {
+            questionNumber: { type: 'integer', minimum: 0 },
+            text: { type: 'string', maxLength: 110, description: 'One concrete sentence (15 words max).' },
+          },
+          required: ['questionNumber', 'text'],
+        },
+      },
+    },
+    required: ['entryEvaluations', 'setMetrics', 'recommendations'],
+  },
+};
+
+function researchQuestionsEvalTool(entryCount) {
+  const hasQuestionSet = entryCount > 1;
+  const setMetricCount = hasQuestionSet ? QUESTION_SET_CRITERIA.length : 0;
+  const setMetrics = RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties.setMetrics;
+  const recommendations = RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties.recommendations;
+  const recommendationItem = recommendations.items;
+  return {
+    ...RESEARCH_QUESTIONS_EVAL_TOOL,
+    input_schema: {
+      ...RESEARCH_QUESTIONS_EVAL_TOOL.input_schema,
+      properties: {
+        ...RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties,
+        setMetrics: {
+          ...setMetrics,
+          minItems: setMetricCount,
+          maxItems: setMetricCount,
+        },
+        recommendations: {
+          ...recommendations,
+          items: {
+            ...recommendationItem,
+            properties: {
+              ...recommendationItem.properties,
+              questionNumber: {
+                ...recommendationItem.properties.questionNumber,
+                minimum: hasQuestionSet ? 0 : 1,
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+const OUTCOMES_EVAL_TOOL = {
+  name: 'submit_outcomes_evaluation',
+  description: 'Submit individual evaluations for each outcome against its positionally corresponding research question.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      entryEvaluations: {
+        type: 'array',
+        minItems: 1,
+        description: 'One evaluation per supplied outcome, in the same order and using its supplied number.',
+        items: {
+          type: 'object',
+          properties: {
+            number: { type: 'integer', minimum: 1 },
+            metrics: {
+              type: 'array',
+              minItems: 1,
+              description: 'One entry per supplied rubric criterion, in the same order and with the same name.',
+              items: LIST_ENTRY_METRIC_SCHEMA,
+            },
+          },
+          required: ['number', 'metrics'],
+        },
+      },
+      recommendations: {
+        type: 'array',
+        minItems: 2,
+        maxItems: 2,
+        description: 'Exactly two improvements, each assigned to a supplied outcome number.',
+        items: {
+          type: 'object',
+          properties: {
+            outcomeNumber: { type: 'integer', minimum: 1 },
+            text: { type: 'string', maxLength: 110, description: 'One concrete sentence (15 words max).' },
+          },
+          required: ['outcomeNumber', 'text'],
+        },
+      },
+    },
+    required: ['entryEvaluations', 'recommendations'],
+  },
+};
+
+const QUESTION_SET_CRITERIA = [
+  { name: 'Duplication', desc: 'Questions make distinct contributions without materially repeating one another.' },
+  { name: 'Coherence', desc: 'Questions work together as a complementary and logically connected set.' },
+  { name: 'Alignment', desc: 'The set collectively addresses the stated research objective when one is supplied.' },
+  { name: 'Overall Scope', desc: 'The combined set is appropriately bounded for one research effort.' },
+];
+
 // Calibrates the model's bar for specific criteria, keyed by criterion name.
 // Not every criterion needs one — only add where the literal rubric wording
 // alone tends to over- or under-score real answers.
@@ -146,6 +295,157 @@ function buildPrompt(fieldLabel, text, rubric) {
     `scored lowest. Use British English spelling throughout (e.g. "prioritise", "colour", "analyse").`;
 }
 
+function parseNumberedEntries(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    if (typeof entry === 'string') return { number: index + 1, text: entry.trim() };
+    if (!entry || typeof entry !== 'object') return { number: index + 1, text: '' };
+    const number = Number.isInteger(entry.number) && entry.number > 0 ? entry.number : index + 1;
+    return { number, text: typeof entry.text === 'string' ? entry.text.trim() : '' };
+  }).filter((entry) => entry.text);
+}
+
+function formatNumberedEntries(entries, label) {
+  return entries.map((entry) => `${label} ${entry.number}:\n${entry.text}`).join('\n\n');
+}
+
+function buildResearchQuestionsPrompt(entries, rubric, objective) {
+  const rubricList = rubric.map((r, i) => `${i + 1}. ${r.name}: ${r.desc}`).join('\n');
+  const setList = QUESTION_SET_CRITERIA.map((r, i) => `${i + 1}. ${r.name}: ${r.desc}`).join('\n');
+  const hasQuestionSet = entries.length > 1;
+  const onlyQuestionNumber = entries[0] ? entries[0].number : 1;
+  const objectiveText = objective
+    ? `Research objective:\n"""\n${objective}\n"""\n\n`
+    : 'No research objective was supplied; judge Alignment from the questions\' shared direction.\n\n';
+  const setInstructions = hasQuestionSet
+    ? `Then evaluate the complete question set against exactly these four criteria, in this order:\n${setList}\n\n`
+    : 'Only one question was supplied, so there is no question set to evaluate. Return setMetrics as an empty array. ' +
+      'Do not assess set-level duplication, coherence, alignment or overall scope, and do not recommend adding another question.\n\n';
+  const recommendationTarget = hasQuestionSet
+    ? 'targeted to a specific question number, or use questionNumber=0 for the whole set. '
+    : `targeted to Question ${onlyQuestionNumber}; do not use questionNumber=0. `;
+
+  return 'You are evaluating a structured list of Research Questions for a UX research plan. Each numbered item is ' +
+    'an intentionally separate question. Multiple distinct, complementary questions are expected: do not lower a score ' +
+    'merely because the questions differ, and do not recommend merging them solely because more than one exists.\n\n' +
+    objectiveText +
+    `Research questions:\n"""\n${formatNumberedEntries(entries, 'Question')}\n"""\n\n` +
+    `Evaluate EACH question independently against every criterion below, preserving its supplied number:\n${rubricList}\n\n` +
+    setInstructions +
+    'For every metric, give an integer score from 1-3 and a short justification grounded in the relevant question or ' +
+    'set. Give exactly two concrete recommendations ' + recommendationTarget +
+    'Distinct questions are a problem only when they are duplicative, incoherent, misaligned, or ' +
+    'collectively too broad. Use British English spelling throughout.';
+}
+
+function buildOutcomesPrompt(entries, researchQuestions, rubric, objective) {
+  const rubricList = rubric.map((r, i) => `${i + 1}. ${r.name}: ${r.desc}`).join('\n');
+  const questionByNumber = new Map(researchQuestions.map((entry) => [entry.number, entry.text]));
+  const pairs = entries.map((entry) => {
+    const question = questionByNumber.get(entry.number);
+    return `Outcome ${entry.number}:\n${entry.text}\n\n` +
+      (question ? `Corresponding Research Question ${entry.number}:\n${question}` : `Corresponding Research Question ${entry.number}:\n[Not supplied]`);
+  }).join('\n\n---\n\n');
+  const objectiveText = objective ? `Research objective:\n"""\n${objective}\n"""\n\n` : '';
+
+  return 'You are evaluating a structured list of Outcomes for a UX research plan. Evaluate EACH numbered outcome ' +
+    'independently against every rubric criterion below. For Alignment, compare Outcome N only with Research Question N; ' +
+    'never pair it with a different question. If that corresponding question was not supplied, identify the missing pair ' +
+    'and score Alignment accordingly.\n\n' +
+    objectiveText +
+    `Outcome-question pairs:\n"""\n${pairs}\n"""\n\n` +
+    `Rubric criteria, in the order required for every outcome:\n${rubricList}\n\n` +
+    'For every metric, give an integer score from 1-3 and a short justification grounded in that numbered outcome and, ' +
+    'where relevant, its same-numbered question. Give exactly two concrete recommendations, each assigned to a supplied ' +
+    'outcome number. Use British English spelling throughout.';
+}
+
+async function requestEvaluation(tool, prompt, maxTokens) {
+  const message = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    tools: [tool],
+    tool_choice: { type: 'tool', name: tool.name },
+    messages: [{ role: 'user', content: prompt }],
+  });
+  const toolUse = message.content.find((block) => block.type === 'tool_use');
+  if (!toolUse) throw new Error('Model did not return a structured evaluation');
+  return toolUse.input;
+}
+
+function flattenEntryMetrics(input, entries, rubric, label) {
+  const evaluations = Array.isArray(input.entryEvaluations) ? input.entryEvaluations : [];
+  if (evaluations.length !== entries.length) {
+    throw new Error('Model returned an unexpected evaluation shape — please try again');
+  }
+  const byNumber = new Map(evaluations.map((entry) => [entry.number, entry]));
+  return entries.flatMap((entry) => {
+    const evaluation = byNumber.get(entry.number);
+    const metrics = evaluation && Array.isArray(evaluation.metrics) ? evaluation.metrics : [];
+    if (metrics.length !== rubric.length) {
+      throw new Error('Model returned an unexpected evaluation shape — please try again');
+    }
+    return rubric.map((criterion, index) => {
+      const metric = metrics[index];
+      const isOutcomeAlignment = label === 'Outcome' && criterion.name.toLowerCase() === 'alignment';
+      return {
+        name: isOutcomeAlignment
+          ? `Outcome ${entry.number} ↔ Question ${entry.number} — ${criterion.name}`
+          : `${label} ${entry.number} — ${criterion.name}`,
+        score: metric.score,
+        desc: metric.desc,
+      };
+    });
+  });
+}
+
+function formatResearchQuestionResult(input, entries, rubric) {
+  const metrics = flattenEntryMetrics(input, entries, rubric, 'Question');
+  const setMetrics = Array.isArray(input.setMetrics) ? input.setMetrics : [];
+  const hasQuestionSet = entries.length > 1;
+  const expectedSetMetricCount = hasQuestionSet ? QUESTION_SET_CRITERIA.length : 0;
+  if (setMetrics.length !== expectedSetMetricCount) {
+    throw new Error('Model returned an unexpected evaluation shape — please try again');
+  }
+  if (hasQuestionSet) {
+    QUESTION_SET_CRITERIA.forEach((criterion, index) => {
+      metrics.push({
+        name: `Question set — ${criterion.name}`,
+        score: setMetrics[index].score,
+        desc: setMetrics[index].desc,
+      });
+    });
+  }
+
+  const validNumbers = new Set(entries.map((entry) => entry.number));
+  const recommendations = Array.isArray(input.recommendations) ? input.recommendations : [];
+  if (recommendations.length !== 2 || recommendations.some((rec) =>
+    (!hasQuestionSet && rec.questionNumber === 0) ||
+    (rec.questionNumber !== 0 && !validNumbers.has(rec.questionNumber))
+  )) {
+    throw new Error('Model returned an unexpected evaluation shape — please try again');
+  }
+  return {
+    metrics,
+    recommendations: recommendations.map((rec) =>
+      `${rec.questionNumber === 0 ? 'Question set' : 'Question ' + rec.questionNumber}: ${rec.text}`
+    ),
+  };
+}
+
+function formatOutcomesResult(input, entries, rubric) {
+  const metrics = flattenEntryMetrics(input, entries, rubric, 'Outcome');
+  const validNumbers = new Set(entries.map((entry) => entry.number));
+  const recommendations = Array.isArray(input.recommendations) ? input.recommendations : [];
+  if (recommendations.length !== 2 || recommendations.some((rec) => !validNumbers.has(rec.outcomeNumber))) {
+    throw new Error('Model returned an unexpected evaluation shape — please try again');
+  }
+  return {
+    metrics,
+    recommendations: recommendations.map((rec) => `Outcome ${rec.outcomeNumber}: ${rec.text}`),
+  };
+}
+
 async function handleEvaluate(req, res) {
   let payload;
   try {
@@ -159,10 +459,16 @@ async function handleEvaluate(req, res) {
   const text = typeof payload.text === 'string' ? payload.text.trim() : '';
   const rubric = Array.isArray(payload.rubric) ? payload.rubric : [];
   const fieldLabel = typeof payload.fieldLabel === 'string' && payload.fieldLabel ? payload.fieldLabel : 'Field';
+  const fieldKey = typeof payload.fieldKey === 'string' ? payload.fieldKey : '';
+  const entries = parseNumberedEntries(payload.entries);
+  const researchQuestions = parseNumberedEntries(payload.researchQuestions);
+  const objective = payload.context && typeof payload.context.objective === 'string'
+    ? payload.context.objective.trim()
+    : '';
 
-  if (!text) {
+  if (!text && entries.length === 0) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'text is required' }));
+    res.end(JSON.stringify({ error: fieldKey === 'researchQuestions' || fieldKey === 'outcomes' ? 'entries are required' : 'text is required' }));
     return;
   }
   if (rubric.length === 0) {
@@ -172,22 +478,37 @@ async function handleEvaluate(req, res) {
   }
 
   try {
-    const message = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      tools: [EVAL_TOOL],
-      tool_choice: { type: 'tool', name: 'submit_evaluation' },
-      messages: [{ role: 'user', content: buildPrompt(fieldLabel, text, rubric) }],
-    });
+    if (fieldKey === 'researchQuestions') {
+      const input = await requestEvaluation(
+        researchQuestionsEvalTool(entries.length),
+        buildResearchQuestionsPrompt(entries, rubric, objective),
+        2048
+      );
+      const result = formatResearchQuestionResult(input, entries, rubric);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+      return;
+    }
 
-    const toolUse = message.content.find((b) => b.type === 'tool_use');
-    if (!toolUse) throw new Error('Model did not return a structured evaluation');
-    if (!Array.isArray(toolUse.input.metrics) || toolUse.input.metrics.length === 0) {
+    if (fieldKey === 'outcomes') {
+      const input = await requestEvaluation(
+        OUTCOMES_EVAL_TOOL,
+        buildOutcomesPrompt(entries, researchQuestions, rubric, objective),
+        2048
+      );
+      const result = formatOutcomesResult(input, entries, rubric);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    const input = await requestEvaluation(EVAL_TOOL, buildPrompt(fieldLabel, text, rubric), 1024);
+    if (!Array.isArray(input.metrics) || input.metrics.length === 0) {
       throw new Error('Model returned an unexpected evaluation shape — please try again');
     }
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(toolUse.input));
+    res.end(JSON.stringify(input));
   } catch (err) {
     console.error('Evaluation request failed:', err);
     res.writeHead(502, { 'Content-Type': 'application/json' });
