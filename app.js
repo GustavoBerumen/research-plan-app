@@ -947,15 +947,7 @@
   }
 
   // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
-  const SCORE_STYLES = [
-    { max: 1.5, label: 'Needs Work', tone: 'problem', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-    { max: 2, label: 'Developing', tone: 'warning', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-    { max: 2.75, label: 'Good', tone: 'success', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { max: Infinity, label: 'Ready', tone: 'success', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-  ];
-  function styleForScore(avg) {
-    return SCORE_STYLES.find((s) => avg < s.max);
-  }
+  const { styleForScore } = window.RPA_SCORE_CLASSIFICATION;
 
   function evaluationValueToText(value) {
     if (!Array.isArray(value)) return typeof value === 'string' ? value : '';
