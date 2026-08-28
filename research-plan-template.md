@@ -87,7 +87,7 @@ Sign off: Researcher (text): Type initials
 
 Background (textarea, eval): Relevant information to understand the project
 Goal (textarea, eval): Aim of the project and the outcomes you are trying to achieve
-Problem (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
+Problem Statement (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
 # Research
 
 Objective (textarea, eval): Purpose and high-level goals of the research

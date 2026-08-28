@@ -13,7 +13,7 @@ Syntax:
 # Background
 
 - Contextual Relevance: Provides sufficient business, product, and/or organisational context to clarify why this study is necessary right now.
-- Essential Knowledge: Introduces and defines key terms early on so that related sections—such as the Problem, Goal, and Objectives—can reference them seamlessly without confusion.
+- Essential Knowledge: Introduces and defines key terms early on so that related sections—such as the Problem Statement, Goal, and Objectives—can reference them seamlessly without confusion.
 - Focus: Stays concise by eliminating unnecessary fluff or broad industry trends that do not directly inform the project's core scope. 
 
 
@@ -22,7 +22,7 @@ Syntax:
 - Result-Oriented: Expresses a clear, measurable target outcome without getting bogged down in implementation details or broad, unmeasurable aspirations.
 - Defines the Future Product State: Clarifies the target state of the product as a result of this initiative, explicitly separating what the team is trying to build or improve from what insights the team needs to gather. 
 
-# Problem
+# Problem Statement
 
 - Clarity: Names the affected user segment and the context they're in
 - Specificity: Includes a quantifiable metric (%, $, count, rate)
