@@ -24,6 +24,21 @@
     return e;
   }
 
+  // "Last Updated" means the date the plan's content last changed. It is
+  // seeded at render for a brand-new plan and then maintained by saveDraft,
+  // which is the only place that knows whether anything actually changed.
+  function todayIso() {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return now.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  function setLastUpdatedToday() {
+    const input = doc.querySelector('[data-field="lastUpdated"]');
+    if (input) setDateInputValue(input, todayIso());
+  }
+
   // ---------- schema parsing (research-plan-template.md) ----------
   function slugify(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -3449,12 +3464,7 @@
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         control = input;
       }
-      if (f.key === 'lastUpdated') {
-        const now = new Date();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        setDateInputValue(input, now.getFullYear() + '-' + mm + '-' + dd);
-      }
+      if (f.key === 'lastUpdated') setDateInputValue(input, todayIso());
       mf.append(label, control);
       return mf;
     }
@@ -3563,6 +3573,7 @@
   const DRAFT_VERSION = 3;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
+  let lastSavedSignature = null;
   let draftTimer = null;
 
   // Storage can be absent or throw outright (private modes, blocked
@@ -3718,13 +3729,31 @@
     return { fields, selects, lists, methods, tables: tableData, custom };
   }
 
+  // Everything about the plan except the stamp itself, so that re-dating the
+  // plan can never look like a change and re-trigger itself.
+  function draftContentSignature(draft) {
+    const fields = Object.assign({}, draft.fields);
+    delete fields.lastUpdated;
+    return JSON.stringify(Object.assign({}, draft, { fields }));
+  }
+
   function saveDraft() {
     const store = draftStore();
     if (!store || draftRestoring) return;
     try {
+      let draft = collectDraft();
+      // Date the plan only when its content actually moved. save is also
+      // scheduled by clicks that change nothing (opening a section, focusing
+      // a field), and merely looking at a plan is not editing it.
+      const signature = draftContentSignature(draft);
+      if (lastSavedSignature !== null && signature !== lastSavedSignature) {
+        setLastUpdatedToday();
+        draft = collectDraft();
+      }
+      lastSavedSignature = signature;
       const payload = Object.assign(
         { version: DRAFT_VERSION, savedAt: new Date().toISOString() },
-        collectDraft()
+        draft
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
     } catch (err) {
@@ -3941,6 +3970,9 @@
       return false;
     } finally {
       draftRestoring = false;
+      // The restored plan is the baseline: reopening it is not an edit, so
+      // its own stored date stands until the user actually changes something.
+      lastSavedSignature = draftContentSignature(collectDraft());
     }
   }
 
@@ -3956,6 +3988,7 @@
   function clearForm() {
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     clearDraft();
+    lastSavedSignature = null;
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
@@ -4018,6 +4051,9 @@
     });
     doc.querySelectorAll('.ex-panel').forEach((p) => { p.hidden = true; });
     doc.querySelectorAll('.ex-toggle').forEach((t) => { t.textContent = 'Show example'; });
+    // Runs after the date inputs above have been blanked: a reset plan is a
+    // new plan, and a new plan is dated today just like a freshly rendered one.
+    setLastUpdatedToday();
   }
 
   // ---------- evaluation test profiles ----------
