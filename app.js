@@ -1320,7 +1320,7 @@
     return {
       background: val('background'),
       goal: val('goal'),
-      problem: val('problem'),
+      problemStatement: val('problemStatement'),
       objective: val('objective'),
       hypothesis: val('hypothesis'),
       researchQuestions: rqList ? collectListValues(rqList).join('\n') : '',
@@ -2767,7 +2767,7 @@
     researchQuestions: 'Defines an inquiry that translates your objective into a clear and discoverable topic.',
     background: 'Provides sufficient context for the study, defines essential terms used across sections, and stays focused without unnecessary clutter.',
     goal: 'Focus on the target state of the product or user experience: What build, feature, or business metric will change if this project succeeds?',
-    problem: 'Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.',
+    problemStatement: 'Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.',
     objective: 'Focus on deep understanding rather than proving a bias, connects to an upcoming decision, and remains realistic in scope.',
     hypothesis: 'An educated idea about user behaviour or product performance that your study will directly test. Rather than guessing, connects past knowledge to an upcoming product decision.',
     outcomes: 'Ties each deliverable to a specific research question and a concrete product or business decision.',
@@ -3560,7 +3560,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 2;
+  const DRAFT_VERSION = 3;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let draftTimer = null;
@@ -3779,14 +3779,27 @@
   function migrateDraft(draft) {
     if (!draft) return null;
     const version = Number(draft.version) || 1;
-    if (version >= 2) return draft;
-    const flat = (draft.lists && draft.lists.methods) || [];
-    const migrated = Object.assign({}, draft, {
-      version: DRAFT_VERSION,
-      methods: flat.length ? [{ question: '', methods: flat }] : [],
-      lists: Object.assign({}, draft.lists),
-    });
-    delete migrated.lists.methods;
+    if (version >= DRAFT_VERSION) return draft;
+    const migrated = Object.assign({}, draft, { version: DRAFT_VERSION });
+    if (version < 2) {
+      const flat = (draft.lists && draft.lists.methods) || [];
+      migrated.methods = flat.length ? [{ question: '', methods: flat }] : [];
+      migrated.lists = Object.assign({}, draft.lists);
+      delete migrated.lists.methods;
+    }
+    // v3: RPA-31 renamed the "Problem" field to "Problem Statement", and the
+    // field key is derived from the label by toCamelKey, so the stored key
+    // changed with it. applyDraft only restores keys that match a live
+    // data-field, so without this the old value would be dropped in silence.
+    if (version < 3) {
+      migrated.fields = Object.assign({}, migrated.fields);
+      if (Object.prototype.hasOwnProperty.call(migrated.fields, 'problem')) {
+        if (!migrated.fields.problemStatement) {
+          migrated.fields.problemStatement = migrated.fields.problem;
+        }
+        delete migrated.fields.problem;
+      }
+    }
     return migrated;
   }
 

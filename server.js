@@ -563,7 +563,7 @@ const FRAMEWORK_DRAFT_TOOL = {
 const FRAMEWORK_FIELD_ORDER = [
   ['Background', 'background'],
   ['Goal', 'goal'],
-  ['Problem', 'problem'],
+  ['Problem Statement', 'problemStatement'],
   ['Objective', 'objective'],
   ['Hypothesis', 'hypothesis'],
   ['Research Questions', 'researchQuestions'],
@@ -639,7 +639,7 @@ async function handleSuggestFramework(req, res) {
   const fieldsText = buildFieldsText(fields);
   if (!fieldsText) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'At least one of Background, Goal, Problem, Objective, Hypothesis, or Research Questions is required' }));
+    res.end(JSON.stringify({ error: 'At least one of Background, Goal, Problem Statement, Objective, Hypothesis, or Research Questions is required' }));
     return;
   }
 
