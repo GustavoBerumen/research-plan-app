@@ -5,6 +5,12 @@
   const RUBRIC_URL = 'research-plan-rubric.md';
   const METHODS_URL = 'research-methods.md';
   const doc = document.getElementById('doc');
+  const {
+    bindTextarea,
+    bindTextareas,
+    resizeTextarea,
+    resizeTextareas,
+  } = window.RPA_TEXTAREA_AUTOSIZE;
 
   // Populated from research-methods.md before renderSchema() runs; read by
   // attachMethodsCombobox via renderField's special-case for the "Methods"
@@ -207,8 +213,7 @@
 
   // ---------- textarea autosize ----------
   function resizeTa(ta) {
-    ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
+    resizeTextarea(ta);
   }
 
   // Grows a text input to fit its current value, the same way resizeTa()
@@ -234,10 +239,10 @@
     input.style.width = (sizeMirror.offsetWidth + (extraPadding || 0)) + 'px';
   }
   function initTextareas(root) {
-    root.querySelectorAll('.field-ta').forEach((ta) => {
-      resizeTa(ta);
-      ta.addEventListener('input', () => resizeTa(ta));
-    });
+    bindTextareas(root);
+    window.addEventListener('resize', () => resizeTextareas(root));
+    window.addEventListener('beforeprint', () => resizeTextareas(root));
+    window.addEventListener('afterprint', () => resizeTextareas(root));
   }
 
   // ---------- status select coloring ----------
@@ -268,6 +273,7 @@
     acc.dataset.open = open ? 'true' : 'false';
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
     body.hidden = !open;
+    if (open) resizeTextareas(body);
   }
   function initAccordion() {
     document.querySelectorAll('[data-acc-toggle]').forEach((head) => {
@@ -2335,11 +2341,10 @@
       head.append(nameInp, removeBtn);
 
       const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, placeholder: field.placeholder || '' });
-      body.addEventListener('input', () => resizeTa(body));
+      bindTextarea(body);
 
       block.append(head, body);
       list.appendChild(block);
-      resizeTa(body);
       if (focus) nameInp.focus();
       return block;
     }
@@ -2472,11 +2477,12 @@
     if (!list) return;
     const row = el('div', 'list-row');
     const num = el('span', 'list-num');
-    const inp = el('input', 'finput list-input', {
-      type: 'text',
+    const inp = el('textarea', 'finput list-input', {
+      rows: '1',
       'data-field': list.dataset.fieldKey || 'outcomes',
       placeholder: list.dataset.placeholder || '',
     });
+    bindTextarea(inp);
     const removeBtn = el('button', 'list-remove', { type: 'button' });
     removeBtn.textContent = '✕';
     removeBtn.addEventListener('click', () => {
@@ -2652,7 +2658,7 @@
       const inp = isGrowable
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
-      if (isGrowable) inp.addEventListener('input', () => resizeTa(inp));
+      if (isGrowable) bindTextarea(inp);
       if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
@@ -2673,7 +2679,6 @@
       });
       row.append(num, inp, removeBtn);
       list.appendChild(row);
-      if (isGrowable) resizeTa(inp);
       renumber();
       if (field.key === 'researchQuestions') {
         addOutcomeRow();
@@ -4068,11 +4073,8 @@
       const input = doc.querySelector('[data-field="' + key + '"]');
       const acc = input && input.closest('.acc');
       if (!acc) return;
-      acc.dataset.open = 'true';
       const head = acc.querySelector('.acc-head');
-      const body = acc.querySelector('.acc-body');
-      if (head) head.setAttribute('aria-expanded', 'true');
-      if (body) body.hidden = false;
+      if (head) setAccOpen(head, true);
     });
   }
 
