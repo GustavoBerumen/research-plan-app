@@ -21,7 +21,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .mf-compact .mlabel{font-size:10px}
 .mf-compact .minput{padding:2px 0;font-size:12px;max-width:130px}
 .sup-label{font-size:11px;font-weight:700;letter-spacing:.02em;color:#c4bfb8;margin-bottom:8px}
-.title-inp{width:100%;font-family:inherit;font-size:27px;font-weight:700;color:#111;background:none;border:none;border-bottom:2px solid transparent;padding:4px 0 7px;outline:none;transition:border-color .2s;resize:none;overflow:hidden;line-height:1.3}
+.title-inp{width:100%;font-family:inherit;font-size:27px;font-weight:700;color:#111;background:none;border:none;border-bottom:2px solid transparent;padding:4px 0 7px;outline:none;transition:border-color .2s;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.3}
 .title-inp:focus{border-bottom-color:#6366f1}
 .title-inp::placeholder{color:#d4d0cb}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 36px;margin-top:28px}
@@ -82,7 +82,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f0ede8;color:#1a1a1a;m
 .finput{font-family:inherit;font-size:14px;color:#1f2937;border:1px solid #e8e4de;border-radius:7px;padding:10px 13px;outline:none;transition:border-color .18s,box-shadow .18s;background:#faf8f6;resize:none;line-height:1.65;width:100%}
 .finput:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.09);background:#fff}
 .finput::placeholder{color:#c9c5be}
-textarea.finput{min-height:72px;overflow:hidden}
+textarea.finput{min-height:72px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 
 /* Ungrouped (no research questions yet) stays a single full-width column;
    grouped switches to three equal tracks. The tracks are declared rather
@@ -320,10 +320,9 @@ textarea.finput{min-height:72px;overflow:hidden}
   .doc{box-shadow:none!important;border-radius:0!important;max-width:100%!important;padding:24px 36px!important;margin:0!important}
   .doc-header{border-bottom-color:#ccc!important}
   .finput{border-color:#ccc!important;box-shadow:none!important;background:#fff!important}
-  /* overflow:visible only, deliberately no height:auto here: resizeTa()
-     already sets an accurate inline height as soon as each textarea is
-     created (both the initial render and every dynamically-added Research
-     Questions row), so print just inherits that height — a
+  /* overflow:visible only, deliberately no height:auto here: the shared
+     autosizer maintains an accurate inline height and recalculates before
+     printing, so print just inherits that height — a
      height:auto!important would instead win over that plain inline style
      and collapse textareas back to their native ~3-row size, clipping
      their content. overflow:visible stays only as a safety net against
