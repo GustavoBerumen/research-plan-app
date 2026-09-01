@@ -3,6 +3,18 @@
 Design and UX research that informs the app — what we read, what we concluded,
 and why the product looks the way it does.
 
+## Reading list
+
+The reading list for the app redesign — form design and form-filling UX — lives
+in a Google Doc:
+
+**[Resources Form Design (Doc)](https://docs.google.com/document/d/1mrg7-h9IM3f1sLxdEX2cKrQ_b0xytqf2NsOmx9_yUOk/edit)**
+
+The Doc is **authoritative** and is edited in place as reading progresses. It is
+deliberately not mirrored into this repo — a copy here would fork from it within
+a week. This holds until we decide otherwise, at which point this note changes
+with it.
+
 ## Research library (Google Drive)
 
 Collected source material — papers, PDFs, book chapters, screenshot sets, and
@@ -18,7 +30,7 @@ and one of us will approve it.
 | | Lives in Drive | Lives in this repo |
 |---|---|---|
 | **What** | Things we *collected* | Things we *wrote* |
-| **Examples** | PDFs, paywalled reports, book chapters, large screenshot sets, saved links | Synthesis notes, decision records, audits, reading list |
+| **Examples** | PDFs, book chapters, large screenshot sets, saved links, the reading list | Synthesis notes, decision records, audits |
 | **Why** | Bulky or copyrighted; no value in version history | Diffable, reviewable in a PR, versioned next to the code it justifies |
 
 This repository is **public**, so copyrighted source files stay in Drive. Links
