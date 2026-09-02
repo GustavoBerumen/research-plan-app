@@ -1036,14 +1036,26 @@
       const name = document.createElement('div');
       name.className = 'eval-mname';
       name.textContent = m.name;
+      // The score has to survive without colour: empty dots are outlined
+      // rather than pale-filled (a shape difference, and a 3:1 edge), the
+      // number is shown as text, and the group announces itself to screen
+      // readers — the dots alone were silent.
       const dots = document.createElement('div');
       dots.className = 'eval-dots';
+      dots.setAttribute('role', 'img');
+      dots.setAttribute('aria-label', 'Scored ' + m.score + ' out of 3');
       for (let i = 0; i < 3; i++) {
         const dot = document.createElement('span');
-        dot.className = 'eval-dot';
-        dot.style.background = i < m.score ? data.color : '#e5e7eb';
+        const filled = i < m.score;
+        dot.className = 'eval-dot ' + (filled ? 'eval-dot-on' : 'eval-dot-off');
+        if (filled) dot.style.background = data.color;
         dots.appendChild(dot);
       }
+      const score = document.createElement('span');
+      score.className = 'eval-score';
+      score.setAttribute('aria-hidden', 'true');   // the group label already says it
+      score.textContent = m.score + ' of 3';
+      dots.appendChild(score);
       const desc = document.createElement('div');
       desc.className = 'eval-mdesc';
       desc.textContent = m.desc;
