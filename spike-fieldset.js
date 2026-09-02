@@ -50,6 +50,7 @@
     .v3-label{display:block;font-size:19px;line-height:1.32;margin-bottom:5px;color:${GDS_INK};
       font-weight:400;letter-spacing:normal;text-transform:none}
     .v3-hint{display:block;font-size:19px;line-height:1.32;color:#505a5f;margin-bottom:5px}
+    .v3-hint-example{display:block}
     .v3-fieldset .minput{font-family:inherit;font-size:19px;line-height:1.32;width:100%;
       max-width:20em;height:40px;padding:5px;border:2px solid ${GDS_INK};border-radius:0;
       background:#fff;color:${GDS_INK};appearance:none;box-shadow:none}
@@ -90,15 +91,6 @@
        just draws a second box inside the accordion's own border. */
     .tbl-wrap.v3-bare{border:0;border-radius:0}
 
-    /* --- Details (progressive disclosure), Alignment only --- */
-    .v3-details{display:block;margin:0 0 15px;font-size:19px;line-height:1.32}
-    .v3-details>summary{display:list-item;width:fit-content;cursor:pointer;
-      color:#1d70b8;text-decoration:underline;text-underline-offset:.1em}
-    .v3-details>summary:hover{color:#003078}
-    .v3-details>summary:focus{outline:3px solid ${GDS_FOCUS};background:${GDS_FOCUS};
-      color:${GDS_INK};text-decoration:none;box-shadow:0 -2px ${GDS_FOCUS},0 4px ${GDS_INK}}
-    .v3-details__text{padding:15px;border-left:5px solid #b1b4b6;margin-top:5px}
-
     /* --- Title, as GOV.UK's "label as page heading" --- */
     .v3-title-wrap{margin:0 0 5px;font-family:Arial,Helvetica,sans-serif}
     .v3-page-heading{font-size:36px;font-weight:700;line-height:1.09;color:${GDS_INK};margin:0 0 8px}
@@ -130,22 +122,109 @@
     .acc-chevron{width:18px;height:18px;color:#505a5f}
     .acc-body{padding:0 0 32px}
 
-    @media print{.v3-flag{display:none!important}
-      .v3-details__text{display:block!important}}
+    /* --- Sign-off: a declaration, not a typed signature --- */
+    .v3-signoff-state{font-size:16px;line-height:1.4;color:#505a5f;margin:0 0 10px}
+    .v3-signoff-state.is-signed{color:${GDS_INK}}
+    .v3-initials{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.32;
+      width:5.5em;height:40px;padding:5px;border:2px solid ${GDS_INK};border-radius:0;
+      background:#fff;color:${GDS_INK};text-transform:uppercase;box-shadow:none}
+    .v3-initials:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK}}
+    .v3-initials-label{display:block;font-size:19px;line-height:1.32;margin-bottom:5px}
+    .v3-check{display:flex;align-items:center;gap:12px;margin-top:16px}
+    .v3-check input[type="checkbox"]{appearance:none;-webkit-appearance:none;flex:0 0 auto;
+      width:40px;height:40px;margin:0;border:2px solid ${GDS_INK};background:#fff;
+      cursor:pointer;position:relative;border-radius:0}
+    .v3-check input[type="checkbox"]:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:0 0 0 4px ${GDS_INK}}
+    .v3-check input[type="checkbox"]:checked::after{content:"";position:absolute;top:9px;left:8px;
+      width:20px;height:9px;border:solid ${GDS_INK};border-width:0 0 4px 4px;
+      transform:rotate(-45deg);background:transparent}
+    .v3-check label{font-size:19px;line-height:1.32;cursor:pointer}
+
+    /* --- Project Context: textarea, hint, and secondary button --- */
+    .v3-pc .field{margin-bottom:30px}
+    .v3-pc .flabel{display:block;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:400;letter-spacing:normal;line-height:1.32;color:${GDS_INK};margin-bottom:5px}
+    .v3-pc .finput{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.32;
+      color:${GDS_INK};width:100%;min-height:140px;padding:5px;border:2px solid ${GDS_INK};
+      border-radius:0;background:#fff;box-shadow:none;resize:none}
+    .v3-pc .finput:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK};background:#fff}
+    /* GOV.UK secondary button — Evaluate is an optional aside, not the
+       primary action, so it should not compete with one. */
+    .v3-pc .eval-btn{position:relative;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      line-height:1.32;font-weight:400;background:#f3f2f1;color:${GDS_INK};
+      border:2px solid transparent;border-radius:0;box-shadow:0 2px 0 #929191;
+      padding:8px 10px;margin-top:8px;cursor:pointer}
+    .v3-pc .eval-btn:hover{background:#dbdad9}
+    .v3-pc .eval-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK};outline:3px solid transparent}
+    .v3-pc .eval-btn:active{top:2px;box-shadow:none}
+
+    /* --- Evaluation results as a GOV.UK notification banner ---
+       app.js sets the panel, badge and dot colours inline
+       (panel.style.background, badge.style.background, dot.style.background),
+       so these need !important to win. A real implementation would move that
+       colouring into classes instead. Tone is only exposed as a class on the
+       result button, so :has() reaches the panel from it. */
+    .v3-pc .eval-panel{background:#fff!important;border:0!important;border-radius:0!important;
+      padding:0!important;margin-top:15px;border-top:5px solid #1d70b8!important}
+    .v3-pc .eval-head{background:#1d70b8;margin:0;padding:10px 20px;gap:10px}
+    .v3-pc .eval-badge{background:transparent!important;color:#fff!important;font-size:19px;
+      font-weight:700;letter-spacing:normal;padding:0;border-radius:0}
+    .v3-pc .eval-hl{color:#fff;font-size:19px;font-weight:700;letter-spacing:normal}
+    .v3-pc .eval-x{color:#fff;font-size:19px;border-radius:0}
+    .v3-pc .eval-x:hover{background:rgba(255,255,255,.2);color:#fff}
+
+    .v3-pc .eval-controls:has(.eval-result-success) .eval-panel{border-top-color:#00703c!important}
+    .v3-pc .eval-controls:has(.eval-result-success) .eval-head{background:#00703c}
+    .v3-pc .eval-controls:has(.eval-result-warning) .eval-panel{border-top-color:#8f4b0a!important}
+    .v3-pc .eval-controls:has(.eval-result-warning) .eval-head{background:#8f4b0a}
+    .v3-pc .eval-controls:has(.eval-result-problem) .eval-panel{border-top-color:#d4351d!important}
+    .v3-pc .eval-controls:has(.eval-result-problem) .eval-head{background:#d4351d}
+
+    .v3-pc .eval-metrics{padding:20px 20px 0;margin:0;border-bottom:0;gap:20px;
+      grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+    .v3-pc .eval-mname{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:700;
+      letter-spacing:normal;line-height:1.32;color:${GDS_INK}}
+    .v3-pc .eval-mdesc{font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.4;
+      color:#505a5f}
+    .v3-pc .eval-dots{gap:5px;margin:5px 0}
+    .v3-pc .eval-dot{width:14px;height:14px;border-radius:0}
+    .v3-pc .eval-rlabel{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:700;
+      letter-spacing:normal;color:${GDS_INK};padding:0 20px;margin:24px 0 10px}
+    .v3-pc .eval-recs{display:block;padding:0 20px 0 40px;margin:0;list-style:disc}
+    .v3-pc .eval-rec{display:list-item;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      line-height:1.32;color:${GDS_INK};padding-left:0;margin-bottom:10px}
+    .v3-pc .eval-rec::before{content:none}
+    .v3-pc .eval-actions{padding:16px 20px 20px;margin:0}
+    .v3-pc .eval-reevaluate-btn{position:relative;font-family:Arial,Helvetica,sans-serif;
+      font-size:19px;font-weight:400;line-height:1.32;color:${GDS_INK};background:#f3f2f1;
+      border:2px solid transparent;border-radius:0;box-shadow:0 2px 0 #929191;padding:8px 10px}
+    .v3-pc .eval-reevaluate-btn:hover{background:#dbdad9;color:${GDS_INK}}
+    .v3-pc .eval-reevaluate-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK}}
+    .v3-pc .eval-reevaluate-btn:active{top:2px;box-shadow:none}
+    .v3-pc .eval-fb-btn{width:40px;height:40px;border:2px solid ${GDS_INK};border-radius:0;
+      background:#fff;font-size:16px}
+    .v3-pc .eval-fb-btn:hover{background:#f3f2f1}
+
+    @media print{.v3-flag{display:none!important}}
   `;
 
-  // GOV.UK Details — progressive disclosure for secondary guidance.
-  function buildDetails(text, summaryText) {
-    const details = document.createElement('details');
-    details.className = 'v3-details';
-    const summary = document.createElement('summary');
-    summary.textContent = summaryText;
-    const body = document.createElement('div');
-    body.className = 'v3-details__text';
-    body.textContent = text;
-    details.append(summary, body);
-    return details;
+  function formatLongDate(iso) {
+    const parsed = new Date(iso + 'T00:00:00');
+    if (isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   }
+
+  function todayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
 
   /*
    * Last Updated, as the GOV.UK date-input pattern: a fieldset asking one
@@ -168,12 +247,46 @@
   // GOV.UK date input is a pattern for asking someone for a date they know;
   // putting three entry boxes on a value the app maintains only invites people
   // to overwrite it. These two are genuinely user-entered deadlines.
+  /*
+   * Worked examples are derived from today rather than hardcoded, so they
+   * always model a plausible timeline: a decision a month out, and reporting a
+   * week before it. That week is not arbitrary — initDeadlineConstraints()
+   * warns when reporting lands less than a week before the decision, so the
+   * examples demonstrate the minimum buffer the app already asks for.
+   */
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function addMonths(date, months) {
+    const d = new Date(date.getTime());
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    // 31 Jan + 1 month would roll into March; clamp to the last day instead.
+    if (d.getDate() !== day) d.setDate(0);
+    return d;
+  }
+
+  function addDays(date, days) {
+    const d = new Date(date.getTime());
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+
+  function formatExampleDate(date) {
+    return String(date.getDate()).padStart(2, '0')
+      + ' ' + MONTH_NAMES[date.getMonth()]
+      + ' ' + date.getFullYear();
+  }
+
+  const DECISION_EXAMPLE = addMonths(new Date(), 1);
+  const REPORT_EXAMPLE = addDays(DECISION_EXAMPLE, -7);
+
   const DATE_FIELDS = [
-    ['projectDecision', 'When is the project decision due?'],
-    ['reportResearch', 'When will the research be reported?'],
+    ['projectDecision', 'When is the project decision due?', formatExampleDate(DECISION_EXAMPLE)],
+    ['reportResearch', 'When will the research be reported?', formatExampleDate(REPORT_EXAMPLE)],
   ];
 
-  function applyDateField(key, legendText) {
+  function applyDateField(key, legendText, exampleDate) {
     const native = document.querySelector('[data-field="' + key + '"]');
     if (!native) return;
     const control = native.closest('.date-control');
@@ -196,21 +309,25 @@
     legend.textContent = legendText;
     fieldset.appendChild(legend);
 
-    // The format example stays a visible hint — it is what someone needs while
-    // typing, so hiding it behind a disclosure would defeat the point. Only the
-    // longer "what is this field for" copy goes into Details.
+    // One visible hint: what the field is for, then a worked example of the
+    // format. Both matter while typing, so neither is hidden behind a
+    // disclosure.
     const describedBy = [];
+    const hint = document.createElement('span');
+    hint.className = 'v3-hint';
+    hint.id = 'v3-' + key + '-hint';
+    hint.textContent = hintText || '';
+    // Own line: the worked example is a different kind of guidance from the
+    // description, and runs together with it when they share a paragraph.
     const example = document.createElement('span');
-    example.className = 'v3-hint';
-    example.id = 'v3-' + key + '-hint';
-    example.textContent = 'For example, 27 Mar 2007.';
-    fieldset.appendChild(example);
-    describedBy.push(example.id);
+    example.className = 'v3-hint-example';
+    example.textContent = 'For example, ' + exampleDate + '.';
+    hint.appendChild(example);
+    fieldset.appendChild(hint);
+    describedBy.push(hint.id);
 
     if (errorEl && errorEl.id) describedBy.push(errorEl.id);
     fieldset.setAttribute('aria-describedby', describedBy.join(' '));
-
-    if (hintText) fieldset.appendChild(buildDetails(hintText, 'Help with this date'));
 
     const row = document.createElement('div');
     row.className = 'v3-date-row';
@@ -367,6 +484,203 @@
     setInterval(sync, 500);
   }
 
+  /*
+   * Sign-off, as a declaration rather than a typed signature.
+   *
+   * The old control asked for initials and appended today's date to the same
+   * text box, giving one free-text field holding two facts, with the stamped
+   * date editable and formatted DD/MM/YYYY — ambiguous, and the same
+   * ambiguity RPA-27 removed everywhere else by showing "Sep".
+   *
+   * More fundamentally, initials in a text box assert approval without
+   * establishing it: anyone at the keyboard can type anyone's initials, and
+   * there is one form and one autosave. So this claims only what it can
+   * deliver — someone confirmed approval, and when. Building real identity
+   * would need accounts, which a prototype does not need.
+   *
+   * Who signed is read from the Researcher / Project Owner names already in
+   * the plan rather than typed again.
+   *
+   * NOT done here: moving sign-off into the review step, where it belongs —
+   * you should confirm after reading what you are approving, not halfway up an
+   * editable form. That needs the review mode from the RPA-44 spike, not a DOM
+   * restyle.
+   */
+  const SIGN_OFF_FIELDS = [
+    { key: 'signOffProjectOwner', label: 'Project Owner', nameField: 'projectOwner' },
+    { key: 'signOffResearcher', label: 'Researcher', nameField: 'researcher' },
+  ];
+
+  // Stored as "Approved — YYYY-MM-DD". Older drafts hold "JNB — DD/MM/YYYY",
+  // which is read as approved on that date so existing plans keep their state.
+  function readSignOff(value) {
+    const raw = (value || '').trim();
+    if (!raw) return null;
+    const iso = raw.match(/^(.*?)\s*—\s*(\d{4})-(\d{2})-(\d{2})\s*$/);
+    if (iso) {
+      // "Approved" is what the short-lived checkbox version wrote, and is not
+      // somebody's initials.
+      const who = iso[1].trim();
+      return {
+        iso: iso[2] + '-' + iso[3] + '-' + iso[4],
+        who: who && who.toLowerCase() !== 'approved' ? who : null,
+      };
+    }
+    const legacy = raw.match(/^(.*?)\s*—\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/);
+    if (legacy) {
+      return { iso: legacy[4] + '-' + legacy[3] + '-' + legacy[2], who: legacy[1].trim() || null };
+    }
+    return { iso: null, who: raw };
+  }
+
+  function applySignOff() {
+    SIGN_OFF_FIELDS.forEach(({ key, label, nameField }) => {
+      const input = document.querySelector('[data-field="' + key + '"]');
+      const group = input && input.closest('.v3-group');
+      if (!input || !group || group.querySelector('.v3-initials')) return;
+
+      input.classList.add('v3-hidden');
+
+      const fieldLabel = group.querySelector('.v3-label');
+      if (fieldLabel) fieldLabel.textContent = label;   // was "Sign off: Project Owner"
+
+      // The stored help text still described the old control ("type initials
+      // and the date is added automatically"), so rewrite it.
+      const hint = group.querySelector('.v3-hint');
+      if (hint) {
+        hint.textContent = 'Enter your initials and tick to confirm you approve this plan. '
+          + 'The date is recorded automatically. This records that approval was given.';
+      }
+
+      const state = document.createElement('p');
+      state.className = 'v3-signoff-state';
+
+      const row = document.createElement('div');
+      const box = document.createElement('input');
+      box.type = 'text';
+      box.className = 'v3-initials';
+      box.id = 'v3-initials-' + key;
+      box.maxLength = 5;
+      box.autocomplete = 'off';
+      const boxLabel = document.createElement('label');
+      boxLabel.className = 'v3-initials-label';
+      boxLabel.setAttribute('for', box.id);
+      boxLabel.textContent = 'Your initials';
+      row.append(boxLabel, box);
+
+      // The initials say who; ticking is the act of approving. A plan counts
+      // as signed only once the box is ticked, so typing initials alone never
+      // records an approval nobody made.
+      const check = document.createElement('div');
+      check.className = 'v3-check';
+      const tick = document.createElement('input');
+      tick.type = 'checkbox';
+      tick.id = 'v3-approve-' + key;
+      const tickLabel = document.createElement('label');
+      tickLabel.setAttribute('for', tick.id);
+      tickLabel.textContent = 'I approve this research plan';
+      check.append(tick, tickLabel);
+      row.appendChild(check);
+
+      // Falls back to the name already in the plan when a draft was signed
+      // without initials.
+      function planName() {
+        const named = document.querySelector('[data-field="' + nameField + '"]');
+        const value = named ? named.value.trim() : '';
+        return value || null;
+      }
+
+      function render() {
+        const stored = readSignOff(input.value);
+        if (document.activeElement !== box && stored && stored.who) box.value = stored.who;
+        tick.checked = !!stored;
+        if (!stored) {
+          state.textContent = 'Not yet signed';
+          state.classList.remove('is-signed');
+          return;
+        }
+        const who = stored.who || planName();
+        const when = stored.iso ? formatLongDate(stored.iso) : null;
+        state.textContent = 'Approved'
+          + (who ? ' by ' + who : '')
+          + (when ? ' on ' + when : '');
+        state.classList.add('is-signed');
+      }
+
+      function store() {
+        if (!tick.checked) {
+          input.value = '';
+        } else {
+          // Keep the original date once signed, so correcting initials never
+          // silently re-dates an approval.
+          const existing = readSignOff(input.value);
+          const iso = existing && existing.iso ? existing.iso : todayIso();
+          input.value = box.value.trim().toUpperCase() + ' — ' + iso;
+        }
+        // app.js autosaves off input events, so tell it something changed.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        render();
+      }
+
+      box.addEventListener('input', store);
+      tick.addEventListener('change', store);
+
+      group.insertBefore(state, input);
+      group.insertBefore(row, input);
+      render();
+    });
+
+    const legend = Array.from(document.querySelectorAll('.v3-legend'))
+      .find((l) => /signed this off/i.test(l.textContent));
+    if (legend) legend.textContent = 'Sign-off';
+  }
+
+  /*
+   * Project Context: the same treatment as the header and Alignment, applied
+   * to the long-form fields.
+   *
+   * Scoped to this one section because that is what was asked for. Every
+   * accordion section uses the same .field / .flabel / .finput markup, so
+   * widening it is a matter of changing the selector below.
+   *
+   * The label fix matters beyond the styling: .flabel is a <label> element but
+   * carries no "for" and does not wrap its input, so it was associated with
+   * nothing — the same defect the label-association ticket covers.
+   */
+  const CONTEXT_SECTION = 'body-project-context';
+
+  function applyProjectContext() {
+    const body = document.getElementById(CONTEXT_SECTION);
+    if (!body || body.classList.contains('v3-pc')) return;
+    body.classList.add('v3-pc');
+
+    body.querySelectorAll('.field').forEach((field) => {
+      const input = field.querySelector('.finput');
+      const label = field.querySelector('.flabel');
+      if (!input || !label) return;
+
+      const key = input.getAttribute('data-field');
+      const tip = label.querySelector('.info-tip');
+      const hintText = tip ? tip.getAttribute('aria-label') : '';
+
+      const id = 'v3-pc-' + key;
+      input.id = id;
+      label.setAttribute('for', id);
+      label.textContent = label.textContent.replace(/\s*\?\s*$/, '').trim();
+
+      if (!PLACEHOLDER_IS_LOAD_BEARING.has(key)) input.removeAttribute('placeholder');
+
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'v3-hint';
+        hint.id = id + '-hint';
+        hint.textContent = hintText;
+        label.insertAdjacentElement('afterend', hint);
+        input.setAttribute('aria-describedby', hint.id);
+      }
+    });
+  }
+
   const PLACEHOLDER_IS_LOAD_BEARING = new Set(['jiraProject']);
 
   function buildStackGroup(key) {
@@ -404,10 +718,16 @@
     label.textContent = labelText;
     group.appendChild(label);
 
-    // Details rather than a visible hint, so this section can be compared
-    // against the header fields, which keep their hints.
+    // Visible hint, matching the header fields. Details was tried here and
+    // measured worse: it saved no vertical space (the disclosure link costs
+    // what the hint did) while hiding guidance behind an extra click.
     if (hintText) {
-      group.appendChild(buildDetails(hintText, 'Help with ' + labelText.toLowerCase()));
+      const hint = document.createElement('span');
+      hint.className = 'v3-hint';
+      hint.id = id + '-hint';
+      hint.textContent = hintText;
+      group.appendChild(hint);
+      input.setAttribute('aria-describedby', hint.id);
     }
 
     group.appendChild(input);
@@ -514,8 +834,10 @@
 
     applyTitle();
     applyLastUpdatedDateline();   // needs the title wrap and heading to exist
-    DATE_FIELDS.forEach(([key, legend]) => applyDateField(key, legend));
+    DATE_FIELDS.forEach(([key, legend, example]) => applyDateField(key, legend, example));
     applyAlignmentStack();   // must run after the dates, so it can move them
+    applySignOff();          // needs the stack's .v3-group wrappers to exist
+    applyProjectContext();
     applyNameFields();
 
     const flag = document.createElement('div');
