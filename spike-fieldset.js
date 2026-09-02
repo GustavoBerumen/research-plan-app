@@ -210,6 +210,35 @@
       background:#fff;font-size:16px}
     .v3-pc .eval-fb-btn:hover{background:#f3f2f1}
 
+    /* --- Repeating lists, GOV.UK "add another" --- */
+    .v3-pc .v3-list-fieldset{border:0;margin:0;padding:0;min-width:0}
+    .v3-pc .list-rows{display:block}
+    .v3-pc .list-row{display:block;position:relative;margin-bottom:22px}
+    .v3-pc .list-num{display:none}
+    .v3-pc .v3-item-label{display:block;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      line-height:1.32;color:${GDS_INK};margin-bottom:5px}
+    .v3-pc .list-input{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.32;
+      color:${GDS_INK};width:100%;min-height:80px;padding:5px;border:2px solid ${GDS_INK};
+      border-radius:0;background:#fff;box-shadow:none}
+    .v3-pc .list-input:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK};background:#fff}
+    /* GOV.UK removes items with a link, not an icon. */
+    .v3-pc .list-remove{font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.32;
+      background:none;border:0;padding:0;margin-top:6px;width:auto;height:auto;color:#d4351d;
+      text-decoration:underline;cursor:pointer}
+    .v3-pc .list-remove:hover{color:#942514}
+    .v3-pc .list-remove:focus{outline:3px solid ${GDS_FOCUS};background:${GDS_FOCUS};
+      color:${GDS_INK};text-decoration:none;box-shadow:0 -2px ${GDS_FOCUS},0 4px ${GDS_INK}}
+    .v3-pc .list-remove[disabled],.v3-pc .list-remove-spacer{display:none}
+    .v3-pc .add-btn{position:relative;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:400;line-height:1.32;color:${GDS_INK};background:#f3f2f1;
+      border:2px solid transparent;border-radius:0;box-shadow:0 2px 0 #929191;
+      padding:8px 10px;width:auto;cursor:pointer}
+    .v3-pc .add-btn:hover{background:#dbdad9}
+    .v3-pc .add-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK}}
+    .v3-pc .add-btn:active{top:2px;box-shadow:none}
+
     @media print{.v3-flag{display:none!important}}
   `;
 
@@ -647,14 +676,98 @@
    * carries no "for" and does not wrap its input, so it was associated with
    * nothing — the same defect the label-association ticket covers.
    */
-  const CONTEXT_SECTION = 'body-project-context';
+  /*
+   * Repeating lists (Research Questions, Outcomes), following GOV.UK's "add
+   * another" pattern: the group becomes a fieldset with the field name as its
+   * legend, and every row gets a real label — "Research question 1" — instead
+   * of the bare "1." span, which was decorative and left each input with no
+   * accessible name at all.
+   *
+   * Rows are added and removed by app.js at runtime and renumbered by its own
+   * code, so a MutationObserver re-labels after every change rather than
+   * decorating once.
+   */
+  function singularFor(field, label) {
+    const add = field.querySelector('.add-btn');
+    if (add) {
+      const derived = add.textContent.replace(/^\s*\+\s*Add\s+/i, '').trim();
+      if (derived) return derived.charAt(0).toUpperCase() + derived.slice(1);
+    }
+    return label.replace(/s$/i, '');   // "Outcomes" has no add button of its own
+  }
 
-  function applyProjectContext() {
-    const body = document.getElementById(CONTEXT_SECTION);
+  function decorateListRows(list, singular) {
+    Array.from(list.querySelectorAll('.list-row')).forEach((row, i) => {
+      const input = row.querySelector('.list-input');
+      if (!input) return;
+      const id = 'v3-' + (input.getAttribute('data-field') || 'item') + '-' + i;
+      input.id = id;
+
+      let label = row.querySelector('.v3-item-label');
+      if (!label) {
+        label = document.createElement('label');
+        label.className = 'v3-item-label';
+        row.insertBefore(label, row.firstChild);
+      }
+      label.setAttribute('for', id);
+      label.textContent = singular + ' ' + (i + 1);
+
+      // "✕" carries no accessible name; say what it removes.
+      const remove = row.querySelector('.list-remove');
+      if (remove) {
+        remove.textContent = 'Remove';
+        remove.setAttribute('aria-label', 'Remove ' + singular.toLowerCase() + ' ' + (i + 1));
+      }
+    });
+  }
+
+  function applyListField(field, list) {
+    const label = field.querySelector('.flabel');
+    if (!label) return;
+    const tip = label.querySelector('.info-tip');
+    const hintText = tip ? tip.getAttribute('aria-label') : '';
+    const labelText = label.textContent.replace(/\s*\?\s*$/, '').trim();
+    const singular = singularFor(field, labelText);
+
+    const legend = document.createElement('legend');
+    legend.className = 'v3-legend v3-legend-s';
+    legend.textContent = labelText;
+
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'v3-fieldset v3-list-fieldset';
+    label.replaceWith(fieldset);
+    fieldset.appendChild(legend);
+
+    if (hintText) {
+      const hint = document.createElement('span');
+      hint.className = 'v3-hint';
+      hint.textContent = hintText;
+      fieldset.appendChild(hint);
+    }
+    // Move the rows and the add button inside the fieldset so the legend
+    // actually scopes them.
+    Array.from(field.children).forEach((child) => {
+      if (child !== fieldset && !child.classList.contains('eval-controls')) {
+        fieldset.appendChild(child);
+      }
+    });
+
+    decorateListRows(list, singular);
+    new MutationObserver(() => decorateListRows(list, singular))
+      .observe(list, { childList: true });
+  }
+
+  const GOVUK_SECTIONS = ['body-project-context', 'body-research'];
+
+  function applyGovukSection(sectionId) {
+    const body = document.getElementById(sectionId);
     if (!body || body.classList.contains('v3-pc')) return;
     body.classList.add('v3-pc');
 
     body.querySelectorAll('.field').forEach((field) => {
+      const list = field.querySelector('.list-rows');
+      if (list) { applyListField(field, list); return; }
+
       const input = field.querySelector('.finput');
       const label = field.querySelector('.flabel');
       if (!input || !label) return;
@@ -666,7 +779,10 @@
       const id = 'v3-pc-' + key;
       input.id = id;
       label.setAttribute('for', id);
-      label.textContent = label.textContent.replace(/\s*\?\s*$/, '').trim();
+      // Drop the tip element before reading the text: its "?" is not always
+      // trailing — "Hypothesis ? (optional)" leaves it stranded mid-label.
+      if (tip) tip.remove();
+      label.textContent = label.textContent.replace(/\s+/g, ' ').trim();
 
       if (!PLACEHOLDER_IS_LOAD_BEARING.has(key)) input.removeAttribute('placeholder');
 
@@ -837,7 +953,7 @@
     DATE_FIELDS.forEach(([key, legend, example]) => applyDateField(key, legend, example));
     applyAlignmentStack();   // must run after the dates, so it can move them
     applySignOff();          // needs the stack's .v3-group wrappers to exist
-    applyProjectContext();
+    GOVUK_SECTIONS.forEach(applyGovukSection);
     applyNameFields();
 
     const flag = document.createElement('div');
