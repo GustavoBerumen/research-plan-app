@@ -2819,8 +2819,8 @@
     lastUpdated: 'The date this plan was last edited.',
     project: 'The product or business initiative this research plan supports.',
     jiraProject: 'Links this plan to its tracking ticket in Jira.',
-    projectDecision: 'The date the product or business decision this research needs to inform will be made.',
-    reportResearch: 'The date you plan to share findings — ideally at least a week before the Project Decision date.',
+    projectDecision: 'Date for the product decision based on this research.',
+    reportResearch: 'Date you will share findings—allow at least a week before the Project Decision date.',
     signOffProjectOwner: 'Project Owner approval — type initials and the date is added automatically.',
     signOffResearcher: 'Researcher approval — type initials and the date is added automatically.',
   };
