@@ -99,6 +99,37 @@
       color:${GDS_INK};text-decoration:none;box-shadow:0 -2px ${GDS_FOCUS},0 4px ${GDS_INK}}
     .v3-details__text{padding:15px;border-left:5px solid #b1b4b6;margin-top:5px}
 
+    /* --- Title, as GOV.UK's "label as page heading" --- */
+    .v3-title-wrap{margin:0 0 5px;font-family:Arial,Helvetica,sans-serif}
+    .v3-page-heading{font-size:36px;font-weight:700;line-height:1.09;color:${GDS_INK};margin:0 0 8px}
+    .v3-dateline{font-size:16px;line-height:1.4;color:#505a5f;margin:0 0 28px}
+    .v3-hidden{display:none!important}
+    .v3-title-input{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.32;
+      font-weight:400;color:${GDS_INK};width:100%;max-width:30em;min-height:40px;padding:5px;
+      border:2px solid ${GDS_INK};border-radius:0;background:#fff;box-shadow:none;
+      resize:none;overflow:hidden}
+    .v3-title-input:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK};background:#fff;border-bottom-color:${GDS_INK}}
+
+    /* --- Sections: a heading and a rule, not a card (option B) ---
+       These override style.css rather than !important-ing past it: every
+       target is a single-class selector, and this <style> is appended after
+       the linked stylesheet, so equal specificity wins on order. The markup
+       already does the right thing — .acc-head is a <button> with
+       aria-expanded — so this is purely presentational. */
+    .acc{margin-bottom:0;border:0;border-top:1px solid #b1b4b6;border-radius:0;overflow:visible}
+    .acc:last-of-type{border-bottom:1px solid #b1b4b6}
+    .acc-head{background:none;padding:24px 0 16px}
+    .acc-head:hover{background:none}
+    .acc-head:hover .acc-title{color:#003078}
+    .acc-head:focus{outline:3px solid ${GDS_FOCUS};background:${GDS_FOCUS};
+      box-shadow:0 -2px ${GDS_FOCUS},0 4px ${GDS_INK}}
+    .acc-title{font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;
+      letter-spacing:normal;line-height:1.09;color:${GDS_INK}}
+    .acc-count{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#505a5f}
+    .acc-chevron{width:18px;height:18px;color:#505a5f}
+    .acc-body{padding:0 0 32px}
+
     @media print{.v3-flag{display:none!important}
       .v3-details__text{display:block!important}}
   `;
@@ -233,6 +264,108 @@
     { legend: null, fields: ['projectDecision', 'reportResearch'] },
     { legend: 'Who has signed this off?', fields: ['signOffProjectOwner', 'signOffResearcher'] },
   ];
+
+  /*
+   * Title, following GOV.UK's "label as page heading" guidance from the text
+   * input component: when a page asks one question, the label is wrapped in an
+   * <h1> so the question is the heading.
+   *
+   * Note the inversion this causes. Today the title *input* is the heading —
+   * 27px bold, and the plan's name reads as the document's title. This pattern
+   * makes the *question* the heading and the answer ordinary input text. That
+   * is right for a form and arguable for a document, which is what we decided
+   * this app is. Applied here so the trade can be judged rather than guessed.
+   */
+  function applyTitle() {
+    const input = document.querySelector('[data-field="title"]');
+    if (!input || input.id) return;
+    const header = input.parentElement;
+    if (!header) return;
+
+    const id = 'v3-title';
+    input.id = id;
+    input.removeAttribute('placeholder');
+    input.classList.add('v3-title-input');
+
+    const wrap = document.createElement('div');
+    wrap.className = 'v3-title-wrap';
+
+    // GOV.UK's "label as page heading" only applies when a page asks a single
+    // question. This page is a whole document, so the heading names the
+    // document and the field keeps an ordinary label.
+    const h1 = document.createElement('h1');
+    h1.className = 'v3-page-heading';
+    h1.textContent = 'Research Plan';
+    wrap.appendChild(h1);
+
+    // The eyebrow above the title said "Research Plan" too. The heading does
+    // that job properly now, so the decorative duplicate goes.
+    const sup = document.querySelector('.sup-label');
+    if (sup && sup.textContent.trim().toLowerCase() === 'research plan') sup.remove();
+
+    const label = document.createElement('label');
+    label.className = 'v3-label';
+    label.setAttribute('for', id);
+    // "Title" matches what research-plan-template.md calls this field.
+    label.textContent = 'Title';
+    wrap.appendChild(label);
+
+    const hint = document.createElement('span');
+    hint.className = 'v3-hint';
+    hint.id = id + '-hint';
+    hint.textContent = 'For example, "Mobile checkout abandonment among new shoppers".';
+    wrap.appendChild(hint);
+    input.setAttribute('aria-describedby', hint.id);
+
+    header.insertBefore(wrap, input);
+  }
+
+  /*
+   * Last Updated, moved below the heading and rendered as a dateline rather
+   * than a date control.
+   *
+   * It is a computed value — setLastUpdatedToday() stamps it and
+   * draftContentSignature() excludes it — so presenting it as an editable date
+   * control invited people to overwrite something the app maintains. Above the
+   * <h1> it also read as more important than the document's own title, and a
+   * screen reader announced the date before saying what the document was.
+   *
+   * The original input stays in the DOM, hidden, so app.js can keep writing to
+   * it. setDateInputValue() writes the value without dispatching an event, so
+   * the display is polled rather than driven by a listener — cheap, and honest
+   * about being spike code.
+   */
+  function applyLastUpdatedDateline() {
+    const native = document.querySelector('[data-field="lastUpdated"]');
+    const wrap = document.querySelector('.v3-title-wrap');
+    const heading = wrap && wrap.querySelector('.v3-page-heading');
+    if (!native || !heading) return;
+
+    const block = native.closest('.mf');
+    if (block) block.classList.add('v3-hidden');
+
+    const line = document.createElement('p');
+    line.className = 'v3-dateline';
+    heading.insertAdjacentElement('afterend', line);
+
+    function format(iso) {
+      if (!iso) return 'Not saved yet';
+      const parsed = new Date(iso + 'T00:00:00');
+      if (isNaN(parsed.getTime())) return 'Not saved yet';
+      return 'Last updated ' + parsed.toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      });
+    }
+
+    let shown = null;
+    function sync() {
+      if (native.value === shown) return;
+      shown = native.value;
+      line.textContent = format(native.value);
+    }
+    sync();
+    setInterval(sync, 500);
+  }
 
   const PLACEHOLDER_IS_LOAD_BEARING = new Set(['jiraProject']);
 
@@ -379,6 +512,8 @@
     style.textContent = CSS;
     document.head.appendChild(style);
 
+    applyTitle();
+    applyLastUpdatedDateline();   // needs the title wrap and heading to exist
     DATE_FIELDS.forEach(([key, legend]) => applyDateField(key, legend));
     applyAlignmentStack();   // must run after the dates, so it can move them
     applyNameFields();
