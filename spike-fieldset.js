@@ -239,6 +239,175 @@
       box-shadow:0 2px 0 ${GDS_INK}}
     .v3-pc .add-btn:active{top:2px;box-shadow:none}
 
+    /* --- Methodology: sub-group, grouped methods, select --- */
+    /* The Participants box is another card inside the section's own frame —
+       same call as .tbl-wrap in Alignment. */
+    .v3-pc .field-group{border:0;border-radius:0;background:none;padding:0;gap:0}
+    .v3-pc .field-group-title{font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:700;letter-spacing:normal;text-transform:none;color:${GDS_INK};
+      margin:10px 0 15px}
+    .v3-pc .methods-group-q{font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:700;line-height:1.32;color:${GDS_INK};border-left:0;padding-left:0;
+      margin:0 0 10px}
+    .v3-pc .methods-groups.methods-grouped{gap:28px}
+    .v3-pc select{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.32;
+      height:40px;max-width:20em;width:100%;padding:5px;border:2px solid ${GDS_INK};
+      border-radius:0;background:#fff;color:${GDS_INK};box-shadow:none}
+    .v3-pc select:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK}}
+
+    /* --- Suggestion panels (framework, methods) ---
+       Both share .eval-panel, so they already pick up the notification-banner
+       header above. .fw-body is their content wrapper and carried no padding
+       of its own — it inherited the panel's, which the banner rules removed. */
+    .v3-pc .fw-body{padding:20px;font-family:Arial,Helvetica,sans-serif}
+    .v3-pc .fw-rationale{font-size:19px;line-height:1.32;color:${GDS_INK};margin:0 0 15px}
+    .v3-pc .fw-category{font-size:16px;font-weight:700;letter-spacing:normal;color:#505a5f;
+      margin-bottom:8px}
+    /* GOV.UK inset text for the quoted entry. */
+    .v3-pc .fw-entry{font-size:16px;line-height:1.5;background:none;border:0;
+      border-left:5px solid #b1b4b6;border-radius:0;padding:10px 15px}
+    .v3-pc .fw-ref{font-size:16px;line-height:1.4;color:#505a5f;border-top:1px solid #b1b4b6;
+      padding-top:15px;margin-top:15px}
+
+    .v3-pc .ms-group{margin-bottom:28px}
+    .v3-pc .ms-question{font-size:19px;font-weight:700;line-height:1.32;color:${GDS_INK};
+      margin-bottom:12px}
+    .v3-pc .ms-none{font-size:16px;font-style:normal;color:#505a5f}
+    /* Each suggestion is a toggle with a hint — GOV.UK draws that as a
+       checkbox. The button semantics (aria-pressed) are already right, so this
+       only changes how it looks. */
+    .v3-pc .ms-method{position:relative;display:block;width:100%;text-align:left;
+      background:none;border:0;border-radius:0;box-shadow:none;
+      padding:6px 0 14px 52px;margin-bottom:4px}
+    .v3-pc .ms-method:hover{background:none}
+    .v3-pc .ms-method::before{content:"";position:absolute;left:0;top:2px;width:40px;height:40px;
+      border:2px solid ${GDS_INK};background:#fff}
+    .v3-pc .ms-method::after{content:"";position:absolute;left:9px;top:12px;width:20px;height:9px;
+      border:solid ${GDS_INK};border-width:0 0 4px 4px;transform:rotate(-45deg);opacity:0}
+    .v3-pc .ms-method[aria-pressed="true"]{background:none;box-shadow:none}
+    .v3-pc .ms-method[aria-pressed="true"]::after{opacity:1}
+    .v3-pc .ms-method:focus-visible{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:0 0 0 4px ${GDS_INK}}
+    .v3-pc .ms-method-tick{display:none}
+    .v3-pc .ms-method-name{font-size:19px;font-weight:400;line-height:1.32;color:${GDS_INK}}
+    .v3-pc .ms-method-reason{font-size:16px;line-height:1.4;color:#505a5f;margin-top:2px}
+    .v3-pc .ms-method-source{font-size:16px;font-style:normal;color:#505a5f;margin-top:4px}
+    /* GOV.UK blue tag. */
+    .v3-pc .ms-search-tag{font-size:14px;font-weight:700;letter-spacing:normal;color:#0c2d4a;
+      background:#d2e2f1;border-radius:0;padding:2px 8px;margin-left:8px}
+
+    /* --- Execution: GOV.UK table styling --- */
+    .v3-pc .v3-table-title{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:700;
+      line-height:1.32;color:${GDS_INK};margin:0 0 5px}
+    .v3-pc .tbl-wrap{border:0;border-radius:0;background:none;overflow-x:auto}
+    .v3-pc table.dtbl{font-family:Arial,Helvetica,sans-serif;font-size:19px;width:100%;
+      border-collapse:collapse;border-spacing:0;margin-top:10px}
+    /* GOV.UK tables rule off below each row and use no vertical lines. */
+    .v3-pc table.dtbl th,.v3-pc table.dtbl td{border:0;border-bottom:1px solid #b1b4b6;
+      padding:10px 20px 10px 0;text-align:left;vertical-align:top;background:none}
+    .v3-pc table.dtbl th{font-size:19px;font-weight:700;line-height:1.32;color:${GDS_INK};
+      letter-spacing:normal;text-transform:none}
+    .v3-pc table.dtbl tbody tr:last-child td{border-bottom:0}
+    .v3-pc .dtbl .cinput,.v3-pc .dtbl .th-input{font-family:Arial,Helvetica,sans-serif;
+      font-size:19px;line-height:1.32;color:${GDS_INK};width:100%;min-height:40px;padding:5px;
+      border:2px solid ${GDS_INK};border-radius:0;background:#fff;box-shadow:none}
+    .v3-pc .dtbl .th-input{font-weight:700}
+    .v3-pc .dtbl .cinput:focus,.v3-pc .dtbl .th-input:focus{outline:3px solid ${GDS_FOCUS};
+      outline-offset:0;box-shadow:inset 0 0 0 2px ${GDS_INK};background:#fff}
+    /* A cell is too narrow for the full Day/Month/Year treatment, so the
+       segmented control keeps its inline shape and only takes the styling. */
+    .v3-pc .dtbl .date-control{border:2px solid ${GDS_INK};border-radius:0;background:#fff;
+      padding:2px 5px;min-height:40px;box-shadow:none}
+    .v3-pc .dtbl .date-control:focus-within{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK}}
+    .v3-pc .dtbl .date-segment{font-family:Arial,Helvetica,sans-serif;font-size:17px;
+      color:${GDS_INK};background:none;border:0}
+    .v3-pc .dtbl .row-remove,.v3-pc .dtbl .row-remove-cell button{font-family:Arial,Helvetica,sans-serif;
+      font-size:16px;color:#d4351d;background:none;border:0;text-decoration:underline;cursor:pointer}
+    .v3-pc .dtbl .row-remove:hover{color:#942514}
+
+    /* --- Timeline visualisation --- */
+    .v3-pc .timeline-viz-btn{position:relative;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:400;line-height:1.32;color:${GDS_INK};background:#f3f2f1;width:auto;
+      border:2px solid transparent;border-radius:0;box-shadow:0 2px 0 #929191;padding:8px 10px;
+      margin-top:15px;cursor:pointer}
+    .v3-pc .timeline-viz-btn:hover{background:#dbdad9}
+    .v3-pc .timeline-viz-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK}}
+    .v3-pc .timeline-viz-btn:active{top:2px;box-shadow:none}
+    /* Another rounded card inside the section frame. */
+    .v3-pc .timeline-chart{border:0;border-radius:0;background:none;padding:20px 0 0;margin-top:15px;
+      font-family:Arial,Helvetica,sans-serif}
+    .v3-pc .timeline-axis{border-bottom:1px solid #b1b4b6;padding-bottom:10px;margin-bottom:12px}
+    .v3-pc .timeline-axis-date{font-size:16px;font-weight:400;letter-spacing:normal;color:#505a5f}
+    .v3-pc .timeline-week-mark{border-left:1px solid #b1b4b6;font-size:14px;font-weight:400;
+      color:#505a5f;line-height:14px}
+    .v3-pc .timeline-weeks-grid{height:14px}
+    .v3-pc .timeline-label{font-size:19px;line-height:1.32;color:${GDS_INK};width:150px}
+    .v3-pc .timeline-dates{font-size:16px;color:#505a5f;width:auto;padding-left:10px}
+    .v3-pc .timeline-row-grid{height:20px}
+    /* Empty cells sat at #e5e7eb — about 1.2:1 on white, so the schedule was
+       barely perceptible. #b1b4b6 clears 3:1. Filled cells are coloured inline
+       by app.js, hence the !important. */
+    .v3-pc .timeline-bar-cell{border-radius:0;background:#b1b4b6}
+    .v3-pc .timeline-bar-cell[style]{background:#1d70b8!important}
+    .v3-pc .timeline-empty{font-size:16px;color:#505a5f;text-align:left}
+
+    /* --- Resources: file upload and custom sections --- */
+    .v3-visually-hidden{position:absolute!important;width:1px;height:1px;margin:0;padding:0;
+      overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);border:0;white-space:nowrap}
+    .v3-pc .file-add-btn{font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1;
+      color:${GDS_INK};background:#f3f2f1;border:2px solid transparent;border-radius:0;
+      box-shadow:0 2px 0 #929191;min-width:40px;height:40px;cursor:pointer}
+    .v3-pc .file-add-btn:hover{background:#dbdad9}
+    .v3-pc .file-add-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK}}
+    .v3-pc .file-menu{border:2px solid ${GDS_INK};border-radius:0;background:#fff;box-shadow:none}
+    .v3-pc .file-menu-item{font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      color:${GDS_INK};padding:8px 12px;background:none;border:0;width:100%;text-align:left;
+      cursor:pointer}
+    .v3-pc .file-menu-item:hover{background:#f3f2f1}
+
+    .v3-pc .custom-field-block{border:0;border-radius:0;background:none;padding:0;
+      margin-bottom:28px}
+    .v3-pc .custom-field-head{margin-bottom:8px;gap:12px}
+    .v3-pc .custom-field-name{font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:700;line-height:1.32;color:${GDS_INK};height:40px;padding:5px;
+      border:2px solid ${GDS_INK};border-radius:0;background:#fff;box-shadow:none}
+    .v3-pc .custom-field-name:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK}}
+    .v3-pc .custom-field-body{font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      line-height:1.32;color:${GDS_INK};width:100%;min-height:120px;padding:5px;
+      border:2px solid ${GDS_INK};border-radius:0;background:#fff;box-shadow:none}
+    .v3-pc .custom-field-body:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
+      box-shadow:inset 0 0 0 2px ${GDS_INK}}
+    .v3-pc .custom-field-head .list-remove{font-family:Arial,Helvetica,sans-serif;font-size:16px;
+      color:#d4351d;background:none;border:0;text-decoration:underline;width:auto;height:auto;
+      cursor:pointer}
+    .v3-pc .custom-field-head .list-remove:hover{color:#942514}
+
+    /* --- Toolbar --- */
+    .toolbar{border-bottom:1px solid #b1b4b6;padding:12px 24px}
+    .tb-badge{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:700;
+      letter-spacing:normal;text-transform:none;color:${GDS_INK}}
+    .tb-dot{background:#1d70b8;opacity:1;border-radius:0;width:8px;height:8px}
+    .toolbar .btn{position:relative;font-family:Arial,Helvetica,sans-serif;font-size:19px;
+      font-weight:400;line-height:1.32;border:2px solid transparent;border-radius:0;
+      padding:8px 10px;cursor:pointer}
+    .toolbar .btn:active{top:2px;box-shadow:none}
+    .toolbar .btn:focus{background:${GDS_FOCUS};color:${GDS_INK};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK};outline:3px solid transparent}
+    /* Print is the primary action here. */
+    .toolbar .btn-dark{background:#00703c;color:#fff;box-shadow:0 2px 0 #002d18}
+    .toolbar .btn-dark:hover{background:#005a30;color:#fff}
+    /* Clear Form is destructive, but it already confirms with "This cannot be
+       undone", and GOV.UK reserves the red warning button for cases where the
+       severity would otherwise be a surprise. A permanently visible red button
+       in a sticky toolbar just gets tuned out. */
+    .toolbar .btn-ghost{background:#f3f2f1;color:${GDS_INK};box-shadow:0 2px 0 #929191}
+    .toolbar .btn-ghost:hover{background:#dbdad9;color:${GDS_INK}}
+
     @media print{.v3-flag{display:none!important}}
   `;
 
@@ -710,12 +879,16 @@
         row.insertBefore(label, row.firstChild);
       }
       label.setAttribute('for', id);
-      label.textContent = singular + ' ' + (i + 1);
+      // Only write when the text actually changes: assigning textContent
+      // replaces child nodes, which any observer watching this subtree would
+      // see as a mutation and react to.
+      const labelText = singular + ' ' + (i + 1);
+      if (label.textContent !== labelText) label.textContent = labelText;
 
       // "✕" carries no accessible name; say what it removes.
       const remove = row.querySelector('.list-remove');
       if (remove) {
-        remove.textContent = 'Remove';
+        if (remove.textContent !== 'Remove') remove.textContent = 'Remove';
         remove.setAttribute('aria-label', 'Remove ' + singular.toLowerCase() + ' ' + (i + 1));
       }
     });
@@ -757,22 +930,186 @@
       .observe(list, { childList: true });
   }
 
-  const GOVUK_SECTIONS = ['body-project-context', 'body-research'];
+  /*
+   * Methods is a list, but not a flat one: RPA-13 groups it by research
+   * question, so each .methods-group holds its own .list-rows under a
+   * .methods-group-q heading. Rather than restructure that into fieldsets and
+   * fight a layout that already works, this labels the rows inside each group
+   * and styles the existing heading — the missing accessible names are the
+   * real defect, not the grouping.
+   */
+  function applyMethodsField(field, groups) {
+    const label = field.querySelector('.flabel');
+    if (label) {
+      const tip = label.querySelector('.info-tip');
+      const hintText = tip ? tip.getAttribute('aria-label') : '';
+      if (tip) tip.remove();
+      label.textContent = label.textContent.replace(/\s+/g, ' ').trim();
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'v3-hint';
+        hint.textContent = hintText;
+        label.insertAdjacentElement('afterend', hint);
+      }
+    }
+
+    function decorateAllGroups() {
+      groups.querySelectorAll('.list-rows').forEach((list) => {
+        decorateListRows(list, 'Method');
+        if (!list.dataset.v3Observed) {
+          list.dataset.v3Observed = '1';
+          new MutationObserver(() => decorateListRows(list, 'Method'))
+            .observe(list, { childList: true });
+        }
+      });
+    }
+    decorateAllGroups();
+    // Groups themselves come and go as research questions change. Deliberately
+    // NOT subtree:true — decorateAllGroups writes labels inside this element,
+    // which would retrigger the observer endlessly.
+    new MutationObserver(decorateAllGroups).observe(groups, { childList: true });
+  }
+
+  /*
+   * Editable tables (Requirements, Stage Timeline, Action Points).
+   *
+   * GOV.UK has a table component, but it is for presenting data — they have no
+   * editable-table pattern, and would model repeating structured input as
+   * "add another" with a fieldset per row. That would be a rewrite, and a
+   * questionable one for a document people print, so this styles the table as
+   * theirs and leaves the structure alone.
+   *
+   * The field label is turned into a heading rather than kept as a <label>: a
+   * table has no single control to point at, so a label element there is
+   * announced as labelling nothing. A <caption> would be the fuller fix.
+   */
+  function applyTableField(field, table) {
+    const label = field.querySelector('.flabel');
+    if (label) {
+      const tip = label.querySelector('.info-tip');
+      const hintText = tip ? tip.getAttribute('aria-label') : '';
+      if (tip) tip.remove();
+
+      const heading = document.createElement('div');
+      heading.className = 'v3-table-title';
+      heading.textContent = label.textContent.replace(/\s+/g, ' ').trim();
+      label.replaceWith(heading);
+
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'v3-hint';
+        hint.textContent = hintText;
+        heading.insertAdjacentElement('afterend', hint);
+      }
+    }
+
+    // Row removal is a bare "✕" with nothing to announce.
+    function nameRemoveButtons() {
+      Array.from(table.querySelectorAll('tbody tr')).forEach((tr, i) => {
+        const btn = tr.querySelector('.row-remove, .row-remove-cell button');
+        if (btn && !btn.getAttribute('aria-label')) {
+          btn.setAttribute('aria-label', 'Remove row ' + (i + 1));
+        }
+      });
+    }
+    nameRemoveButtons();
+    const tbody = table.querySelector('tbody');
+    if (tbody) new MutationObserver(nameRemoveButtons).observe(tbody, { childList: true });
+  }
+
+  /*
+   * Custom "additional section" blocks: a renamable title input, a remove
+   * button, and a body textarea.
+   *
+   * None of the three had an accessible name — the title input had only a
+   * "Label" placeholder, the textarea only "Add details...", and the remove
+   * control was a bare "✕". The labels here are visually hidden rather than
+   * shown: the title input is self-evidently the heading, and a visible
+   * "Section name" above every block would be noise. GOV.UK uses the same
+   * technique where a visible label would be redundant.
+   */
+  function decorateCustomBlocks(list) {
+    Array.from(list.querySelectorAll('.custom-field-block')).forEach((block, i) => {
+      const name = block.querySelector('.custom-field-name');
+      const bodyEl = block.querySelector('.custom-field-body');
+      const remove = block.querySelector('.list-remove');
+      const title = name && name.value.trim();
+
+      if (name && !name.id) {
+        name.id = 'v3-cf-name-' + i;
+        const l = document.createElement('label');
+        l.className = 'v3-visually-hidden';
+        l.setAttribute('for', name.id);
+        l.textContent = 'Section name';
+        block.insertBefore(l, block.firstChild);
+      }
+      if (bodyEl && !bodyEl.id) {
+        bodyEl.id = 'v3-cf-body-' + i;
+        const l = document.createElement('label');
+        l.className = 'v3-visually-hidden';
+        l.setAttribute('for', bodyEl.id);
+        l.textContent = 'Details';
+        bodyEl.insertAdjacentElement('beforebegin', l);
+      }
+      if (remove) {
+        if (remove.textContent !== 'Remove') remove.textContent = 'Remove';
+        remove.setAttribute('aria-label',
+          title ? 'Remove section ' + title : 'Remove section ' + (i + 1));
+      }
+    });
+  }
+
+  function applyCustomFields(field, list) {
+    decorateCustomBlocks(list);
+    new MutationObserver(() => decorateCustomBlocks(list))
+      .observe(list, { childList: true });
+    // Keep the remove label in step with a renamed section.
+    list.addEventListener('input', (e) => {
+      if (e.target.classList.contains('custom-field-name')) decorateCustomBlocks(list);
+    });
+  }
+
+  // The file "+" button relies on a title attribute, which is unreliable for
+  // screen readers and invisible on touch.
+  function nameFileButtons(root) {
+    root.querySelectorAll('.file-add-btn').forEach((btn) => {
+      if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', 'Add a file');
+      btn.setAttribute('aria-haspopup', 'menu');
+    });
+  }
+
+  const GOVUK_SECTIONS = ['body-project-context', 'body-research', 'body-methodology',
+    'body-execution', 'body-resources'];
 
   function applyGovukSection(sectionId) {
     const body = document.getElementById(sectionId);
     if (!body || body.classList.contains('v3-pc')) return;
     body.classList.add('v3-pc');
+    nameFileButtons(body);
 
     body.querySelectorAll('.field').forEach((field) => {
+      const custom = field.querySelector('.custom-fields-list');
+      if (custom) { applyCustomFields(field, custom); return; }
+
+      const table = field.querySelector('table.dtbl');
+      if (table) { applyTableField(field, table); return; }
+
+      const groups = field.querySelector('.methods-groups');
+      if (groups) { applyMethodsField(field, groups); return; }
+
       const list = field.querySelector('.list-rows');
       if (list) { applyListField(field, list); return; }
 
-      const input = field.querySelector('.finput');
+      // Sample Size is a <select>. Check for it first: the field also holds a
+      // hidden .select-other-input for the "Other…" branch, which would
+      // otherwise match .finput and take the label.
+      const input = field.querySelector('select')
+        || field.querySelector('.finput:not(.select-other-input)');
       const label = field.querySelector('.flabel');
       if (!input || !label) return;
 
-      const key = input.getAttribute('data-field');
+      const key = input.getAttribute('data-field')
+        || (label.textContent || 'field').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const tip = label.querySelector('.info-tip');
       const hintText = tip ? tip.getAttribute('aria-label') : '';
 
