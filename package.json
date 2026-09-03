@@ -5,7 +5,7 @@
   "description": "Research plan form with LLM-based rubric evaluation",
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "test": "node --test test/score-classification.test.js test/textarea-autosize.test.js test/rpa-33-integration.test.js test/app-characterization.test.js test/rpa-38-paired-outcome-deletion.test.js"
+    "test": "node --test test/score-classification.test.js test/textarea-autosize.test.js test/rpa-33-integration.test.js test/app-characterization.test.js test/rpa-38-paired-outcome-deletion.test.js test/rpa-48-prose-wrapping.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0"
