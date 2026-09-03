@@ -94,7 +94,10 @@ async function bootApp(options = {}) {
     const assetName = url.pathname.replace(/^\//, '');
 
     if (url.origin === window.location.origin && REAL_TEXT_ASSETS.has(assetName)) {
-      return response(fs.readFileSync(path.join(ROOT, assetName), 'utf8'));
+      const override = options.textAssets && options.textAssets[assetName];
+      return response(override === undefined
+        ? fs.readFileSync(path.join(ROOT, assetName), 'utf8')
+        : override);
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/config') {

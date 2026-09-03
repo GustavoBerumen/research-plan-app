@@ -1148,6 +1148,15 @@
     const resultStatus = el('span', 'visually-hidden');
     resultBtn.append(resultChevron, resultStatus);
 
+    const resultSummary = el('div', 'eval-result-summary');
+    resultSummary.hidden = true;
+    const staleStatus = el('span', 'eval-stale-status', { role: 'status' });
+    staleStatus.textContent = 'Results out of date';
+    staleStatus.hidden = true;
+    const quickReevaluateBtn = el('button', 'eval-reevaluate-btn eval-quick-reevaluate-btn', { type: 'button' });
+    quickReevaluateBtn.textContent = 'Evaluate again';
+    resultSummary.append(resultBtn, staleStatus, quickReevaluateBtn);
+
     const error = el('div', 'eval-error', { role: 'alert' });
     error.hidden = true;
 
@@ -1183,20 +1192,32 @@
     const actions = el('div', 'eval-actions');
     actions.append(reevaluateBtn, likeBtn, dislikeBtn, saveBtn);
     panel.append(head, metrics, rlabel, recs, actions);
-    controls.append(btn, resultBtn, error, panel);
+    controls.append(btn, resultSummary, error, panel);
 
     let lastResult = null;
+    let resultIsStale = false;
+
+    function updateResultPresentation() {
+      if (!lastResult) return;
+      const action = panel.hidden ? 'Show' : 'Hide';
+      const staleText = resultIsStale ? ' Results out of date.' : '';
+      resultBtn.classList.toggle('eval-result-stale', resultIsStale);
+      resultStatus.textContent = field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText;
+      resultBtn.title = lastResult.data.label + (resultIsStale ? ' — results out of date' : '') +
+        ' — ' + action.toLowerCase() + ' evaluation details';
+      resultBtn.setAttribute(
+        'aria-label',
+        field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText + ' ' + action + ' details.'
+      );
+      staleStatus.hidden = !resultIsStale;
+      quickReevaluateBtn.textContent = resultIsStale ? 'Update evaluation' : 'Evaluate again';
+    }
 
     function setExpanded(expanded) {
       panel.hidden = !expanded;
       resultBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      if (!lastResult) return;
-      const action = expanded ? 'Hide' : 'Show';
-      resultBtn.title = lastResult.data.label + ' — ' + action.toLowerCase() + ' evaluation details';
-      resultBtn.setAttribute(
-        'aria-label',
-        field.label + ' evaluation: ' + lastResult.data.label + '. ' + action + ' details.'
-      );
+      quickReevaluateBtn.hidden = expanded;
+      updateResultPresentation();
     }
 
     function resetFeedbackActions() {
@@ -1211,9 +1232,22 @@
       dislikeBtn.title = 'Dislike';
     }
 
+    function disableFeedbackActions() {
+      saveBtn.disabled = true;
+      likeBtn.disabled = true;
+      dislikeBtn.disabled = true;
+    }
+
+    function markResultStale() {
+      if (!lastResult) return;
+      resultIsStale = true;
+      updateResultPresentation();
+      disableFeedbackActions();
+    }
+
     function showResult(data) {
       resultBtn.className = 'eval-result-btn eval-result-' + data.tone;
-      resultStatus.textContent = field.label + ' evaluation: ' + data.label;
+      resultSummary.hidden = false;
       resultBtn.hidden = false;
       btn.hidden = true;
       setExpanded(false);
@@ -1227,35 +1261,54 @@
         alert('Please enter a value to evaluate.');
         return;
       }
-      lastResult = null;
-      setExpanded(false);
-      resultBtn.hidden = true;
+      const hadResult = !!lastResult;
+      const feedbackDisabledBeforeRun = hadResult
+        ? [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled]
+        : null;
+      if (!hadResult) {
+        setExpanded(false);
+        resultSummary.hidden = true;
+        resetFeedbackActions();
+        btn.hidden = false;
+        btn.focus();
+      } else {
+        disableFeedbackActions();
+      }
       error.hidden = true;
       error.textContent = '';
-      resetFeedbackActions();
-      btn.hidden = false;
-      btn.focus();
       btn.disabled = true;
       btn.setAttribute('aria-busy', 'true');
       btn.classList.add('loading');
       txt.textContent = 'Evaluating…';
       reevaluateBtn.disabled = true;
+      quickReevaluateBtn.disabled = true;
+      quickReevaluateBtn.setAttribute('aria-busy', 'true');
       evaluateField(value, field).then((data) => {
         renderEvalResult(panel, data);
         lastResult = { text, data };
+        resultIsStale = evaluationValueToText(getValue()) !== text;
         showResult(data);
-        saveBtn.disabled = false;
-        likeBtn.disabled = false;
-        dislikeBtn.disabled = false;
+        resetFeedbackActions();
+        if (!resultIsStale) {
+          saveBtn.disabled = false;
+          likeBtn.disabled = false;
+          dislikeBtn.disabled = false;
+        }
+        updateResultPresentation();
       }).catch((err) => {
         error.textContent = 'Evaluation failed: ' + err.message;
         error.hidden = false;
+        if (lastResult && !resultIsStale && feedbackDisabledBeforeRun) {
+          [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled] = feedbackDisabledBeforeRun;
+        }
       }).finally(() => {
         btn.disabled = false;
         btn.setAttribute('aria-busy', 'false');
         btn.classList.remove('loading');
         txt.textContent = 'Evaluate ' + field.label;
         reevaluateBtn.disabled = false;
+        quickReevaluateBtn.disabled = false;
+        quickReevaluateBtn.setAttribute('aria-busy', 'false');
       });
     }
 
@@ -1268,9 +1321,10 @@
       resultBtn.focus();
     });
     reevaluateBtn.addEventListener('click', runEvaluation);
+    quickReevaluateBtn.addEventListener('click', runEvaluation);
 
     saveBtn.addEventListener('click', () => {
-      if (!lastResult) return;
+      if (!lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1280,15 +1334,17 @@
         saveBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
-        saveBtn.disabled = false;
-        likeBtn.disabled = false;
-        dislikeBtn.disabled = false;
+        if (!resultIsStale) {
+          saveBtn.disabled = false;
+          likeBtn.disabled = false;
+          dislikeBtn.disabled = false;
+        }
         saveBtn.title = 'Save';
       });
     });
 
     likeBtn.addEventListener('click', () => {
-      if (!lastResult) return;
+      if (!lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1298,15 +1354,17 @@
         likeBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
-        saveBtn.disabled = false;
-        likeBtn.disabled = false;
-        dislikeBtn.disabled = false;
+        if (!resultIsStale) {
+          saveBtn.disabled = false;
+          likeBtn.disabled = false;
+          dislikeBtn.disabled = false;
+        }
         likeBtn.title = 'Like';
       });
     });
 
     dislikeBtn.addEventListener('click', () => {
-      if (!lastResult) return;
+      if (!lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1316,34 +1374,56 @@
         dislikeBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
-        saveBtn.disabled = false;
-        likeBtn.disabled = false;
-        dislikeBtn.disabled = false;
+        if (!resultIsStale) {
+          saveBtn.disabled = false;
+          likeBtn.disabled = false;
+          dislikeBtn.disabled = false;
+        }
         dislikeBtn.title = 'Dislike';
       });
     });
 
     controls._resetEvaluation = () => {
       lastResult = null;
+      resultIsStale = false;
       btn.hidden = false;
       btn.disabled = false;
       btn.setAttribute('aria-busy', 'false');
       btn.classList.remove('loading');
       txt.textContent = 'Evaluate ' + field.label;
+      resultSummary.hidden = true;
       resultBtn.hidden = true;
       resultBtn.className = 'eval-result-btn';
       resultBtn.removeAttribute('aria-label');
       resultBtn.removeAttribute('title');
       resultBtn.setAttribute('aria-expanded', 'false');
       resultStatus.textContent = '';
+      staleStatus.hidden = true;
       error.hidden = true;
       error.textContent = '';
       panel.hidden = true;
       reevaluateBtn.disabled = false;
+      quickReevaluateBtn.hidden = false;
+      quickReevaluateBtn.disabled = false;
+      quickReevaluateBtn.setAttribute('aria-busy', 'false');
+      quickReevaluateBtn.textContent = 'Evaluate again';
       resetFeedbackActions();
     };
+    controls._markEvaluationStale = markResultStale;
 
     return [controls];
+  }
+
+  function bindEvaluationStaleness(fieldWrap, controls) {
+    const markStale = () => {
+      if (typeof controls._markEvaluationStale === 'function') controls._markEvaluationStale();
+    };
+    fieldWrap.addEventListener('input', markStale);
+    fieldWrap.addEventListener('change', markStale);
+    fieldWrap.addEventListener('click', (event) => {
+      const contentAction = event.target.closest('.add-btn, .list-remove, .ms-method, .ms-add-all');
+      if (contentAction && !contentAction.closest('.eval-controls')) markStale();
+    });
   }
 
   // ---------- theoretical framework suggestion (Theory field) ----------
@@ -2708,11 +2788,14 @@
       if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
-      removeBtn.addEventListener('click', () => {
+      removeBtn.addEventListener('click', (event) => {
         if (removeBtn.disabled) return;
         if (field.key === 'researchQuestions') {
           const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
-          if (!confirmQuestionRemoval(index)) return;
+          if (!confirmQuestionRemoval(index)) {
+            event.stopPropagation();
+            return;
+          }
           removeOutcomeRowAt(index);
           removeMethodsGroupAt(index);
         }
@@ -2747,7 +2830,11 @@
     wrap.appendChild(addBtnRow);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => collectNumberedListValues(list)));
+    if (field.eval) {
+      const controls = renderEvalControls(field, () => collectNumberedListValues(list))[0];
+      wrap.appendChild(controls);
+      bindEvaluationStaleness(wrap, controls);
+    }
 
     return wrap;
   }
@@ -2777,7 +2864,11 @@
     wrap.appendChild(addBtn);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => collectNumberedListValues(list)));
+    if (field.eval) {
+      const controls = renderEvalControls(field, () => collectNumberedListValues(list))[0];
+      wrap.appendChild(controls);
+      bindEvaluationStaleness(wrap, controls);
+    }
 
     return wrap;
   }
@@ -2804,7 +2895,11 @@
     wrap.appendChild(container);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => methodsAllValues().join('\n')));
+    if (field.eval) {
+      const controls = renderEvalControls(field, () => methodsAllValues().join('\n'))[0];
+      wrap.appendChild(controls);
+      bindEvaluationStaleness(wrap, controls);
+    }
     wrap.append(...renderMethodsSuggest());
 
     return wrap;
@@ -2963,6 +3058,7 @@
           e.preventDefault();
           input.value = m;
           closeMenu();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
         });
         if (i === activeIndex) activeEl = item;
         menu.appendChild(item);
@@ -3038,6 +3134,7 @@
           e.preventDefault();
           input.value = matches[activeIndex];
           closeMenu();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
         }
       } else if (e.key === 'Escape') {
         closeMenu();
@@ -3373,7 +3470,11 @@
     if (hint) wrap.appendChild(hint);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
-    if (field.eval) wrap.append(...renderEvalControls(field, () => input.value));
+    if (field.eval) {
+      const controls = renderEvalControls(field, () => input.value)[0];
+      wrap.appendChild(controls);
+      bindEvaluationStaleness(wrap, controls);
+    }
     if (field.key === 'theory') wrap.append(...renderFrameworkSuggest());
 
     return wrap;

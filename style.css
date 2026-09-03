@@ -217,12 +217,16 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 @keyframes espin{to{transform:rotate(360deg)}}
 .eval-btn.loading .eval-spinner{display:inline-block}
 .eval-controls{width:100%}
+.eval-result-summary{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.eval-result-summary[hidden],.eval-stale-status[hidden],.eval-quick-reevaluate-btn[hidden]{display:none}
 .eval-result-btn{width:34px;height:34px;padding:0;margin-top:10px;border:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
 .eval-result-btn:hover{transform:translateY(-1px);box-shadow:0 3px 7px rgba(0,0,0,.18)}
 .eval-result-btn:focus-visible{outline:3px solid #111827;outline-offset:3px}
 .eval-result-problem{background:#dc2626}
 .eval-result-warning{background:#ea580c}
 .eval-result-success{background:#16a34a}
+.eval-result-btn.eval-result-stale{background:#6b7280;box-shadow:0 0 0 2px #fff,0 0 0 4px #9ca3af}
+.eval-stale-status{font-size:12px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:999px;padding:4px 9px;margin-top:10px}
 .eval-result-chevron{font-size:17px;font-weight:700;line-height:1;transition:transform .15s}
 .eval-result-btn[aria-expanded="true"] .eval-result-chevron{transform:rotate(180deg)}
 .eval-btn[hidden],.eval-result-btn[hidden],.eval-error[hidden]{display:none}
@@ -249,6 +253,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .eval-rec::before{content:'•';position:absolute;left:5px;color:#9ca3af;font-size:15px;top:-1px}
 .eval-actions{display:flex;gap:8px;align-items:center;margin-top:16px}
 .eval-reevaluate-btn{font-family:inherit;font-size:12px;font-weight:600;color:#4b5563;background:rgba(255,255,255,.55);border:1px solid #d1d5db;border-radius:7px;padding:8px 11px;cursor:pointer;margin-right:auto;transition:all .15s}
+.eval-quick-reevaluate-btn{margin-top:10px;margin-right:0;background:#fff}
 .eval-reevaluate-btn:hover{background:#fff;color:#111827}
 .eval-reevaluate-btn:disabled{opacity:.5;cursor:not-allowed}
 .eval-fb-btn{font-family:inherit;font-size:14px;line-height:1;color:#6b7280;background:none;border:1px solid #d1d5db;border-radius:7px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
@@ -308,7 +313,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
-  .toolbar,.add-btn,.eval-btn,.eval-result-btn,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* Two columns, not three. The printed content box is roughly 600px wide
      (7in of page inside 0.75in margins, less .doc's own padding), so three
      tracks would leave each method input about 130px — and an <input>
