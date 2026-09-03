@@ -14,14 +14,16 @@ Types:
               option list, e.g. "Small (1–5),Medium (6–12)". Same dropdown
               styling as a table's "status"/"select" columns, just for a
               single top-level field instead of a table cell.
-  list      — dynamic stack of single-line inputs, one per item, with its
-              own "+ Add …" button (like table rows, but one column).
+  list      — dynamic stack of inputs, one per item, with its own "+ Add …"
+              button (like table rows, but one column). Add the `prose` flag
+              when list items should wrap and auto-expand vertically.
               Exception: "Outcomes" is special-cased in code to be a linked
               list with no controls of its own — its rows track Research
               Questions 1:1 by position instead.
   table     — repeatable rows. Placeholder text instead describes columns as
               "ColLabel:coltype=placeholder | ColLabel:coltype=placeholder"
-              coltype is one of: text, date, person, status (fixed dropdown),
+              coltype is one of: text, prose (wrapping auto-expanding text),
+              date, person, status (fixed dropdown),
               select (dropdown with custom options — placeholder becomes a
               comma-separated option list, e.g. "Stage:select=A,B,C"),
               url, file (click to attach, 15MB max)
@@ -40,6 +42,8 @@ Flags (comma-separated inside the parentheses):
                        directly in the UI. Off by default — other table
                        fields (Stage Timeline, Action Points) keep fixed
                        headers unless they also set this flag.
+  prose             — list fields only: rows render as wrapping,
+                       auto-expanding textareas instead of compact inputs.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -74,7 +78,7 @@ Last Updated (date):
 
 # Alignment {grid}
 
-Project (text): Initiative
+Project (textarea): Initiative
 <!-- Area (text): Department -->
 Jira Project (text): Ticket reference
 <!-- Jira Research (text): Ticket reference -->
@@ -102,20 +106,20 @@ Methods (list): Search or type a method
 
 ## Participants
 
-Characteristics (list): e.g. Frequent mobile shoppers
-User Groups (list): e.g. New customers
+Characteristics (list, prose): e.g. Frequent mobile shoppers
+User Groups (list, prose): e.g. New customers
 Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
 
 # Execution
 
-Requirements (table, editable-headers): Physical | Digital | Approvals
+Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose
 <!-- Timeframe (textarea): Scheduled duration for each research phase -->
 Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
-Action Points (table): Action:text=Task description | Responsible:person | Status:status
+Action Points (table): Action:prose=Task description | Responsible:prose | Status:status
 
 # Resources
 
-Previous Knowledge (table): Name:text=e.g. Q3 Checkout Usability Study | File:file
+Previous Knowledge (table): Name:prose=e.g. Q3 Checkout Usability Study | File:file
 <!-- Documentation (textarea): Reference materials required to understand and execute the study -->
 Additional Resources (custom-fields): Add details...
 

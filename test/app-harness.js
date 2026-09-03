@@ -72,6 +72,14 @@ async function bootApp(options = {}) {
   if (!window.HTMLElement.prototype.scrollIntoView) {
     window.HTMLElement.prototype.scrollIntoView = () => {};
   }
+  if (typeof options.textareaScrollHeight === 'function') {
+    Object.defineProperty(window.HTMLTextAreaElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return options.textareaScrollHeight(this);
+      },
+    });
+  }
 
   if (options.draft) {
     window.localStorage.setItem(

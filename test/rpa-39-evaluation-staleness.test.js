@@ -147,6 +147,34 @@ test('Research Question edits, additions, and removals make the aggregate stale'
   assertStale(controls);
 });
 
+test('cancelling a populated Question removal does not stale an unchanged evaluation', async (t) => {
+  const app = await bootApp({
+    confirm: () => false,
+    evaluate: () => evaluationResult('Question metric'),
+  });
+  t.after(() => app.close());
+  const { document, window } = app;
+  const list = document.querySelector('.list-rows[data-list-key="researchQuestions"]');
+  const field = list.closest('.field');
+  const controls = controlsForField(document, 'researchQuestions');
+
+  setValue(window, listInputs(document, 'researchQuestions')[0], 'Question one');
+  field.querySelector('.add-btn').click();
+  setValue(window, listInputs(document, 'researchQuestions')[1], 'Question two');
+  setValue(window, listInputs(document, 'outcomes')[1], 'Populated linked outcome');
+  await runEvaluation(app, controls);
+
+  listInputs(document, 'researchQuestions')[1]
+    .closest('.list-row').querySelector('.list-remove').click();
+
+  assert.equal(listInputs(document, 'researchQuestions').length, 2);
+  assert.equal(controls.querySelector('.eval-result-btn').classList.contains('eval-result-stale'), false);
+  assert.equal(controls.querySelector('.eval-stale-status').hidden, true);
+  assert.equal(controls.querySelector('.eval-like-btn').disabled, false);
+  assert.equal(controls.querySelector('.eval-dislike-btn').disabled, false);
+  assert.equal(controls.querySelector('.eval-save-btn').disabled, false);
+});
+
 test('Outcome edits, additions, and removals make the aggregate stale', async (t) => {
   const app = await bootApp({ evaluate: () => evaluationResult('Outcome metric') });
   t.after(() => app.close());
