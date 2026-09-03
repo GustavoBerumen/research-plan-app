@@ -150,6 +150,84 @@ Hypothesis, Research Questions, Outcomes, Theory, Methods, Sample Size — is
 squarely the researcher's own expertise. Eleven fields where the filler is
 unambiguously the knower. Whatever this audit cuts, it is unlikely to be here.
 
+## Recommendations (provisional)
+
+Drawn from the question-2 pass, the RPA-54 prototype findings, and ADR 001.
+**Questions 1 and 3 are not done, and question 3 is where cuts usually come from**
+— so this list leans towards *move*, *source* and *optional* rather than deletion.
+Treat it as the opening argument, not the conclusion.
+
+Ordered by how much each changes the form.
+
+### 1. Stop retyping Project Context — source it
+
+Background, Goal and Problem Statement are all owned by the project side. A Jira
+connector already exists on the Jira Project field (`server.js`, `/api/jira/search`).
+Pull these three from the linked issue instead of asking a researcher to paraphrase
+them. Failing that, change the hints to say "paste from the project brief" — an
+honest transcription task beats a question that only looks like one.
+
+*Constraint:* the proxy currently calls `issue/picker`, which returns key and
+summary only. Prefilling descriptions needs a second endpoint.
+
+### 2. Take live state out of a signed document
+
+- **Action Points → Status: cut.** The plan holds the action and its owner; status
+  belongs in Jira. A signed, printed document that claims to know status is wrong
+  the day after it is signed.
+- **Requirements → split Approvals out.** Physical and Digital are the researcher's.
+  Approvals is legal/privacy — a different answerer, a different timeline, and
+  usually the thing that actually blocks a study. It is currently hiding as a third
+  column of a table about equipment.
+
+### 3. Fix the opening sequence
+
+The first two sections, Alignment and Project Context, are the ones the researcher
+is least able to complete alone. The sections they own outright start at number
+three. The ordering principle is to open with what people can answer; this form
+does the opposite. Consider opening with Research, and letting the admin and
+project-context fields follow or arrive prefilled per #1.
+
+### 4. Give Previous Knowledge a source, or make it optional
+
+Nobody owns "what research already exists". `research/README.md` already points at
+a shared Drive research library — either link the field to it, or accept the field
+is aspirational and mark it optional.
+
+### 5. Apply the optionality convention properly
+
+Only 3 of 28 fields are marked optional today (Hypothesis, Theory, Comments). On a
+28-field form completed by one person that is almost certainly understated. Marking
+what is genuinely optional is the cheapest way to make the form feel shorter
+without cutting anything — which is precisely the ADR 001 hypothesis.
+
+### 6. Decide who reads Comments
+
+The one field with no defined reader. Either name its audience in the hint, or cut
+it. Note the RPA-54 prototype has just gained coverage for it, so there is fresh
+work riding on the answer.
+
+### 7. Sign-off pair and Last Updated
+
+Already decided in RPA-55; listed for completeness. Sign-off moves to a review step
+at the end; Last Updated becomes a dateline, done in the prototype.
+
+### 8. Small and unambiguous
+
+**Sample Size has no hint text** — its placeholder slot is consumed by the dropdown
+options. Every other field explains itself; this one does not.
+
+### Expected shape of the finished sheet
+
+Two cuts (Action Points/Status, possibly Comments), three or four moves, several
+made optional, and the great majority *keep*. If that disappoints, ADR 001 already
+argued why: the problem was probably orientation, not scope.
+
+### Decision needed before verdicts go in
+
+Is one row per field the right unit? Recommendations 2a and 2b are both *column*-level
+verdicts on table fields, and the sheet as it stands cannot express them.
+
 ## Already dormant
 
 Commented out in the template — the form has been trimmed before. Worth reading
