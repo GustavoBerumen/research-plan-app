@@ -59,7 +59,7 @@ async function bootApp(options = {}) {
   const dom = new JSDOM(INDEX_HTML, {
     pretendToBeVisual: true,
     runScripts: 'outside-only',
-    url: 'https://research-plan.test/',
+    url: options.url || 'https://research-plan.test/',
     virtualConsole,
   });
   const { window } = dom;
@@ -71,6 +71,14 @@ async function bootApp(options = {}) {
   window.print = () => {};
   if (!window.HTMLElement.prototype.scrollIntoView) {
     window.HTMLElement.prototype.scrollIntoView = () => {};
+  }
+  if (typeof options.textareaScrollHeight === 'function') {
+    Object.defineProperty(window.HTMLTextAreaElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return options.textareaScrollHeight(this);
+      },
+    });
   }
 
   if (options.draft) {
@@ -86,7 +94,10 @@ async function bootApp(options = {}) {
     const assetName = url.pathname.replace(/^\//, '');
 
     if (url.origin === window.location.origin && REAL_TEXT_ASSETS.has(assetName)) {
-      return response(fs.readFileSync(path.join(ROOT, assetName), 'utf8'));
+      const override = options.textAssets && options.textAssets[assetName];
+      return response(override === undefined
+        ? fs.readFileSync(path.join(ROOT, assetName), 'utf8')
+        : override);
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/config') {
