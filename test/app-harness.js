@@ -59,7 +59,7 @@ async function bootApp(options = {}) {
   const dom = new JSDOM(INDEX_HTML, {
     pretendToBeVisual: true,
     runScripts: 'outside-only',
-    url: 'https://research-plan.test/',
+    url: options.url || 'https://research-plan.test/',
     virtualConsole,
   });
   const { window } = dom;
