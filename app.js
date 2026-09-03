@@ -1929,8 +1929,8 @@
       container.appendChild(buildMethodsGroup(placeholder));
       groups = methodsGroupEls();
     }
-    // Trailing groups only go when they're empty — same priority as
-    // removeOutcomeRowAt, where preserving typed content beats tidiness.
+    // Incidental sync only trims empty trailing groups. Deliberate Question
+    // deletion confirms linked content and removes the exact indexed group.
     while (groups.length > targetCount) {
       const last = groups[groups.length - 1];
       if (methodsGroupValues(last).length) break;
@@ -1960,14 +1960,12 @@
     refreshMethodsSuggestSelection();
   }
 
-  // Mirrors removeOutcomeRowAt: only drops the paired group when nothing has
-  // been typed into it, so removing a question never silently deletes
-  // methods. Whatever survives is re-labelled by the syncMethodsGroups call
-  // that follows the removal.
+  // Question removal confirms any populated linked content before it mutates
+  // the DOM. Removing the exact group here keeps later groups attached to the
+  // same positional Questions instead of silently re-labelling them.
   function removeMethodsGroupAt(index) {
     const group = methodsGroupAt(index);
     if (!group) return;
-    if (methodsGroupValues(group).length) return;
     if (methodsGroupEls().length <= 1) return;
     group.remove();
   }
@@ -2522,17 +2520,35 @@
     if (focus) inp.focus();
   }
 
-  // Only removes the paired Outcome row if it's still empty — preserving
-  // anything the user typed takes priority over keeping the pairing tidy.
+  // Question removal owns the warning for populated linked content, so once
+  // it reaches this helper the exact paired Outcome can be removed without
+  // shifting a later Outcome into the deleted Question's position.
   function removeOutcomeRowAt(index) {
     const list = outcomesListEl();
     if (!list) return;
     const row = list.querySelectorAll('.list-row')[index];
     if (!row) return;
-    const input = row.querySelector('.list-input');
-    if (input && input.value.trim()) return;
     row.remove();
     renumberOutcomes();
+  }
+
+  function confirmQuestionRemoval(index) {
+    const number = index + 1;
+    const outcomeList = outcomesListEl();
+    const outcomeRow = outcomeList && outcomeList.querySelectorAll('.list-row')[index];
+    const outcomeInput = outcomeRow && outcomeRow.querySelector('.list-input');
+    const hasOutcome = !!(outcomeInput && outcomeInput.value.trim());
+    const methodsGroup = methodsGroupAt(index);
+    const hasMethods = !!(methodsGroup && methodsGroupValues(methodsGroup).length);
+
+    if (!hasOutcome && !hasMethods) return true;
+    const linkedContent = [];
+    if (hasOutcome) linkedContent.push('Outcome ' + number);
+    if (hasMethods) linkedContent.push('Methods RQ' + number);
+    return window.confirm(
+      'Deleting Research Question ' + number + ' will also delete:\n\n' +
+      linkedContent.map((item) => '- ' + item).join('\n')
+    );
   }
 
   // ---------- dynamic placeholders (Characteristics / User Groups) ----------
@@ -2696,6 +2712,7 @@
         if (removeBtn.disabled) return;
         if (field.key === 'researchQuestions') {
           const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
+          if (!confirmQuestionRemoval(index)) return;
           removeOutcomeRowAt(index);
           removeMethodsGroupAt(index);
         }
