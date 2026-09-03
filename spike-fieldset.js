@@ -408,6 +408,16 @@
     .toolbar .btn-ghost{background:#f3f2f1;color:${GDS_INK};box-shadow:0 2px 0 #929191}
     .toolbar .btn-ghost:hover{background:#dbdad9;color:${GDS_INK}}
 
+    /* --- Comment blocks --- */
+    .v3-pc.comments-block{margin-top:20px}
+    .v3-pc .comments-label-row{align-items:baseline;margin-bottom:5px}
+    .v3-pc .fopt{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-style:normal;
+      color:#505a5f}
+    .v3-pc .comments-label-row .list-remove{font-family:Arial,Helvetica,sans-serif;font-size:16px;
+      color:#d4351d;background:none;border:0;width:auto;height:auto;text-decoration:underline;
+      cursor:pointer}
+    .v3-pc .comments-label-row .list-remove:hover{color:#942514}
+
     @media print{.v3-flag{display:none!important}}
   `;
 
@@ -1069,6 +1079,57 @@
     });
   }
 
+  /*
+   * Comment blocks sit outside the six accordion sections, so the section loop
+   * never reached them. Tagging each block .v3-pc reuses the whole section
+   * stylesheet rather than duplicating it.
+   *
+   * The label keeps its "(optional)" span — that marker is GOV.UK's own
+   * convention (mark what is optional, never what is required), so the tip is
+   * removed around it rather than the label being rewritten wholesale.
+   */
+  function applyCommentsBlocks() {
+    document.querySelectorAll('.comments-block').forEach((block, i) => {
+      if (block.classList.contains('v3-pc')) return;
+      block.classList.add('v3-pc');
+
+      const remove = block.querySelector('.list-remove');
+      if (remove) {
+        if (remove.textContent !== 'Remove') remove.textContent = 'Remove';
+        if (!remove.getAttribute('aria-label')) {
+          remove.setAttribute('aria-label', remove.getAttribute('title') || 'Remove comment');
+        }
+      }
+
+      const input = block.querySelector('.finput');
+      const label = block.querySelector('.flabel');
+      if (!input || !label) return;
+
+      const tip = label.querySelector('.info-tip');
+      const hintText = tip ? tip.getAttribute('aria-label') : '';
+      if (tip) tip.remove();
+      // Tidy the whitespace the tip left behind without touching .fopt.
+      Array.from(label.childNodes).forEach((n) => {
+        if (n.nodeType === 3) n.textContent = n.textContent.replace(/\s+/g, ' ');
+      });
+
+      const id = 'v3-comments-' + i;
+      input.id = id;
+      label.setAttribute('for', id);
+      input.removeAttribute('placeholder');
+
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'v3-hint';
+        hint.id = id + '-hint';
+        hint.textContent = hintText;
+        const row = block.querySelector('.comments-label-row') || label;
+        row.insertAdjacentElement('afterend', hint);
+        input.setAttribute('aria-describedby', hint.id);
+      }
+    });
+  }
+
   // The file "+" button relies on a title attribute, which is unreliable for
   // screen readers and invisible on touch.
   function nameFileButtons(root) {
@@ -1291,6 +1352,7 @@
     applyAlignmentStack();   // must run after the dates, so it can move them
     applySignOff();          // needs the stack's .v3-group wrappers to exist
     GOVUK_SECTIONS.forEach(applyGovukSection);
+    applyCommentsBlocks();   // these live outside the sections
     applyNameFields();
 
     const flag = document.createElement('div');
