@@ -91,6 +91,7 @@
       optional: typeParts.includes('optional'),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
+      prose: typeParts.includes('prose'),
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
@@ -927,6 +928,14 @@
         const inp = dateControl.input;
         if (col.key === 'startDate') startDateInput = inp;
         if (col.key === 'completionDate') completionDateInput = inp;
+      } else if (col.type === 'prose') {
+        const inp = el('textarea', 'cinput prose-input', {
+          rows: '1',
+          placeholder: col.placeholder || '',
+        });
+        bindTextarea(inp);
+        td.classList.add('prose-cell');
+        td.appendChild(inp);
       } else {
         const inp = document.createElement('input');
         inp.type = col.type === 'url' ? 'url' : 'text';
@@ -2322,7 +2331,12 @@
       });
 
       const dates = el('div', 'timeline-dates');
-      dates.textContent = startLabel + ' – ' + endLabel;
+      dates.setAttribute('aria-label', startLabel + ' to ' + endLabel);
+      const startDate = el('span', 'timeline-date-value', { 'aria-hidden': 'true' });
+      const endDate = el('span', 'timeline-date-value', { 'aria-hidden': 'true' });
+      startDate.textContent = startLabel;
+      endDate.textContent = endLabel;
+      dates.append(startDate, endDate);
       row.append(label, grid, dates);
       container.appendChild(row);
     });
@@ -2643,7 +2657,7 @@
 
     // Research Questions rows grow taller as their text wraps, instead of
     // scrolling horizontally like a normal single-line list input.
-    const isGrowable = field.key === 'researchQuestions';
+    const isGrowable = field.key === 'researchQuestions' || field.prose;
 
     // Soft nudge, not a hard cap: past 3 questions a study tends to get
     // unfocused, so flag it on the 4th row and keep flagging however many
@@ -2670,6 +2684,7 @@
       const inp = isGrowable
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
+      if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
       if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
       // Each question's Methods group is labelled with its text, so the label
@@ -3398,6 +3413,14 @@
           const dateControl = buildDateControl('cinput', { 'data-field': f.key }, f.label);
           inp = dateControl.input;
           control = dateControl.element;
+        } else if (f.type === 'textarea') {
+          inp = el('textarea', 'cinput prose-input', {
+            rows: '1',
+            'data-field': f.key,
+            placeholder: f.placeholder || '',
+          });
+          control = inp;
+          td.classList.add('prose-cell');
         } else {
           inp = el('input', 'cinput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
           control = inp;
@@ -3627,7 +3650,7 @@
     if (plainSel) return { t: 'sel', v: plainSel.value };
     const dateInput = td.querySelector('input[type="date"]');
     if (dateInput) return { t: 'date', v: dateInput.value };
-    const input = td.querySelector('input');
+    const input = td.querySelector('input, textarea');
     return { t: 'text', v: input ? input.value : '' };
   }
 
@@ -3672,8 +3695,13 @@
       if (dateInput) setDateInputValue(dateInput, snap.v || '');
       return;
     }
-    const input = td.querySelector('input');
-    if (input) input.value = snap.v || '';
+    const input = td.querySelector('input, textarea');
+    if (input) {
+      input.value = snap.v || '';
+      if (input.tagName === 'TEXTAREA') {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
   }
 
   // Scalar fields are every [data-field] that isn't part of a repeating
