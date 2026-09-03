@@ -1008,13 +1008,16 @@
       });
     }).then((data) => {
       const metrics = Array.isArray(data.metrics) ? data.metrics : [];
-      const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
       if (metrics.length === 0 || metrics.some((m) => !Number.isFinite(m.score))) {
         throw new Error('The evaluator returned an unexpected result — please try again');
       }
-      if (recs.length === 0) {
-        throw new Error('The evaluator returned incomplete recommendations — please try again');
+      if (!Array.isArray(data.recommendations) || data.recommendations.length > 2 ||
+          data.recommendations.some((recommendation) =>
+            typeof recommendation !== 'string' || !recommendation.trim()
+          )) {
+        throw new Error('The evaluator returned unexpected recommendations — please try again');
       }
+      const recs = data.recommendations.map((recommendation) => recommendation.trim());
       const avg = metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length;
       return { ...styleForScore(avg), metrics, recs };
     });
@@ -1065,6 +1068,9 @@
 
     const recsEl = panel.querySelector('.eval-recs');
     recsEl.innerHTML = '';
+    const hasRecommendations = data.recs.length > 0;
+    panel.querySelector('.eval-rlabel').hidden = !hasRecommendations;
+    recsEl.hidden = !hasRecommendations;
     data.recs.forEach((r) => {
       const li = document.createElement('li');
       li.className = 'eval-rec';

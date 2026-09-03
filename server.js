@@ -103,10 +103,17 @@ const EVAL_TOOL = {
       },
       recommendations: {
         type: 'array',
-        minItems: 2,
+        minItems: 0,
         maxItems: 2,
-        description: 'Exactly 2 concrete, specific recommendations, each tied to a specific criterion that scored low.',
-        items: { type: 'string', maxLength: 100, description: 'One sentence (15 words max).' },
+        description: 'Zero to two concrete recommendations. Return an empty array when no lower-scoring criterion supports an improvement.',
+        items: {
+          type: 'object',
+          properties: {
+            criterionName: { type: 'string', description: 'Exact name of a criterion that scored 1 or 2.' },
+            text: { type: 'string', maxLength: 100, description: 'One concrete sentence (15 words max).' },
+          },
+          required: ['criterionName', 'text'],
+        },
       },
     },
     required: ['metrics', 'recommendations'],
@@ -160,16 +167,17 @@ const RESEARCH_QUESTIONS_EVAL_TOOL = {
       },
       recommendations: {
         type: 'array',
-        minItems: 2,
+        minItems: 0,
         maxItems: 2,
-        description: 'Exactly two improvements. Use questionNumber=0 for a set-level recommendation.',
+        description: 'Zero to two improvements supported by a criterion scoring 1 or 2. Use questionNumber=0 for a set-level recommendation.',
         items: {
           type: 'object',
           properties: {
             questionNumber: { type: 'integer', minimum: 0 },
+            criterionName: { type: 'string', description: 'Exact name of a lower-scoring criterion for this question or the question set.' },
             text: { type: 'string', maxLength: 110, description: 'One concrete sentence (15 words max).' },
           },
-          required: ['questionNumber', 'text'],
+          required: ['questionNumber', 'criterionName', 'text'],
         },
       },
     },
@@ -177,18 +185,52 @@ const RESEARCH_QUESTIONS_EVAL_TOOL = {
   },
 };
 
-function researchQuestionsEvalTool(entryCount) {
-  const hasQuestionSet = entryCount > 1;
-  const setMetricCount = hasQuestionSet ? QUESTION_SET_CRITERIA.length : 0;
-  const setMetrics = RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties.setMetrics;
-  const recommendations = RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties.recommendations;
+function toolWithRecommendationCriteria(tool, criterionNames) {
+  const recommendations = tool.input_schema.properties.recommendations;
   const recommendationItem = recommendations.items;
   return {
-    ...RESEARCH_QUESTIONS_EVAL_TOOL,
+    ...tool,
     input_schema: {
-      ...RESEARCH_QUESTIONS_EVAL_TOOL.input_schema,
+      ...tool.input_schema,
       properties: {
-        ...RESEARCH_QUESTIONS_EVAL_TOOL.input_schema.properties,
+        ...tool.input_schema.properties,
+        recommendations: {
+          ...recommendations,
+          items: {
+            ...recommendationItem,
+            properties: {
+              ...recommendationItem.properties,
+              criterionName: {
+                ...recommendationItem.properties.criterionName,
+                enum: [...new Set(criterionNames)],
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+function scalarEvalTool(rubric) {
+  return toolWithRecommendationCriteria(EVAL_TOOL, rubric.map((criterion) => criterion.name));
+}
+
+function researchQuestionsEvalTool(entryCount, rubric) {
+  const hasQuestionSet = entryCount > 1;
+  const setMetricCount = hasQuestionSet ? QUESTION_SET_CRITERIA.length : 0;
+  const criteria = rubric.map((criterion) => criterion.name);
+  if (hasQuestionSet) criteria.push(...QUESTION_SET_CRITERIA.map((criterion) => criterion.name));
+  const tool = toolWithRecommendationCriteria(RESEARCH_QUESTIONS_EVAL_TOOL, criteria);
+  const setMetrics = tool.input_schema.properties.setMetrics;
+  const recommendations = tool.input_schema.properties.recommendations;
+  const recommendationItem = recommendations.items;
+  return {
+    ...tool,
+    input_schema: {
+      ...tool.input_schema,
+      properties: {
+        ...tool.input_schema.properties,
         setMetrics: {
           ...setMetrics,
           minItems: setMetricCount,
@@ -238,22 +280,27 @@ const OUTCOMES_EVAL_TOOL = {
       },
       recommendations: {
         type: 'array',
-        minItems: 2,
+        minItems: 0,
         maxItems: 2,
-        description: 'Exactly two improvements, each assigned to a supplied outcome number.',
+        description: 'Zero to two improvements supported by a lower-scoring criterion and assigned to a supplied outcome number.',
         items: {
           type: 'object',
           properties: {
             outcomeNumber: { type: 'integer', minimum: 1 },
+            criterionName: { type: 'string', description: 'Exact name of a lower-scoring criterion for this outcome.' },
             text: { type: 'string', maxLength: 110, description: 'One concrete sentence (15 words max).' },
           },
-          required: ['outcomeNumber', 'text'],
+          required: ['outcomeNumber', 'criterionName', 'text'],
         },
       },
     },
     required: ['entryEvaluations', 'recommendations'],
   },
 };
+
+function outcomesEvalTool(rubric) {
+  return toolWithRecommendationCriteria(OUTCOMES_EVAL_TOOL, rubric.map((criterion) => criterion.name));
+}
 
 const QUESTION_SET_CRITERIA = [
   { name: 'Duplication', desc: 'Questions make distinct contributions without materially repeating one another.' },
@@ -290,9 +337,11 @@ function buildPrompt(fieldLabel, text, rubric) {
     `Statement:\n"""\n${text}\n"""\n\n` +
     `Score it against exactly these criteria (return one metric per criterion, same order, same name):\n${rubricList}\n\n` +
     `For each criterion, give an integer score from 1-3 and a short justification (10 words max) grounded in the ` +
-    `actual statement (reference specifics from it, don't just restate the rubric). Then give exactly 2 concrete ` +
-    `recommendations (one sentence each, 15 words max) for improving the statement, each tied to whichever criteria ` +
-    `scored lowest. Use British English spelling throughout (e.g. "prioritise", "colour", "analyse").`;
+    `actual statement (reference specifics from it, don't just restate the rubric). Return zero, one, or two concrete ` +
+    `recommendations (one sentence each, 15 words max). Every recommendation must name criterionName exactly and ` +
+    `address a material issue in that criterion, which must have scored 1 or 2. Return an empty recommendations array ` +
+    `when every criterion scores 3 or no material issue supports advice; never invent advice to fill a quota. Use ` +
+    `British English spelling throughout (e.g. "prioritise", "colour", "analyse").`;
 }
 
 function parseNumberedEntries(value) {
@@ -333,7 +382,10 @@ function buildResearchQuestionsPrompt(entries, rubric, objective) {
     `Evaluate EACH question independently against every criterion below, preserving its supplied number:\n${rubricList}\n\n` +
     setInstructions +
     'For every metric, give an integer score from 1-3 and a short justification grounded in the relevant question or ' +
-    'set. Give exactly two concrete recommendations ' + recommendationTarget +
+    'set. Return zero, one, or two concrete recommendations ' + recommendationTarget +
+    'Every recommendation must name criterionName exactly and address a material issue in that criterion for its target, ' +
+    'which must have scored 1 or 2. Return an empty recommendations array when all applicable criteria score 3 or no ' +
+    'material issue supports advice; never invent advice to fill a quota. ' +
     'Distinct questions are a problem only when they are duplicative, incoherent, misaligned, or ' +
     'collectively too broad. Use British English spelling throughout.';
 }
@@ -356,8 +408,11 @@ function buildOutcomesPrompt(entries, researchQuestions, rubric, objective) {
     `Outcome-question pairs:\n"""\n${pairs}\n"""\n\n` +
     `Rubric criteria, in the order required for every outcome:\n${rubricList}\n\n` +
     'For every metric, give an integer score from 1-3 and a short justification grounded in that numbered outcome and, ' +
-    'where relevant, its same-numbered question. Give exactly two concrete recommendations, each assigned to a supplied ' +
-    'outcome number. Use British English spelling throughout.';
+    'where relevant, its same-numbered question. Return zero, one, or two concrete recommendations, each assigned to a ' +
+    'supplied outcome number. Every recommendation must name criterionName exactly and address a material issue in that ' +
+    'criterion for its target, which must have scored 1 or 2. Return an empty recommendations array when all applicable ' +
+    'criteria score 3 or no material issue supports advice; never invent advice to fill a quota. Use British English ' +
+    'spelling throughout.';
 }
 
 async function requestEvaluation(tool, prompt, maxTokens) {
@@ -373,20 +428,85 @@ async function requestEvaluation(tool, prompt, maxTokens) {
   return toolUse.input;
 }
 
-function flattenEntryMetrics(input, entries, rubric, label) {
-  const evaluations = Array.isArray(input.entryEvaluations) ? input.entryEvaluations : [];
-  if (evaluations.length !== entries.length) {
-    throw new Error('Model returned an unexpected evaluation shape — please try again');
+const UNEXPECTED_EVALUATION_SHAPE = 'Model returned an unexpected evaluation shape — please try again';
+
+function unexpectedEvaluationShape() {
+  return new Error(UNEXPECTED_EVALUATION_SHAPE);
+}
+
+function validateMetrics(metrics, rubric) {
+  if (!Array.isArray(metrics) || metrics.length !== rubric.length) {
+    throw unexpectedEvaluationShape();
   }
-  const byNumber = new Map(evaluations.map((entry) => [entry.number, entry]));
+  rubric.forEach((criterion, index) => {
+    const metric = metrics[index];
+    if (!metric || typeof metric !== 'object' || metric.name !== criterion.name ||
+        !Number.isInteger(metric.score) || metric.score < 1 || metric.score > 3 ||
+        typeof metric.desc !== 'string' || !metric.desc.trim()) {
+      throw unexpectedEvaluationShape();
+    }
+  });
+  return metrics;
+}
+
+function lowerScoringCriteria(metrics, rubric) {
+  return new Set(rubric
+    .filter((criterion, index) => metrics[index].score < 3)
+    .map((criterion) => criterion.name));
+}
+
+function validateRecommendations(recommendations, validateRecommendation) {
+  if (!Array.isArray(recommendations) || recommendations.length > 2) {
+    throw unexpectedEvaluationShape();
+  }
+  return recommendations.map((recommendation) => {
+    if (!recommendation || typeof recommendation !== 'object' ||
+        typeof recommendation.criterionName !== 'string' ||
+        typeof recommendation.text !== 'string' || !recommendation.text.trim() ||
+        !validateRecommendation(recommendation)) {
+      throw unexpectedEvaluationShape();
+    }
+    return { ...recommendation, text: recommendation.text.trim() };
+  });
+}
+
+function formatScalarResult(input, rubric) {
+  const metrics = validateMetrics(input.metrics, rubric);
+  const lowerCriteria = lowerScoringCriteria(metrics, rubric);
+  const recommendations = validateRecommendations(
+    input.recommendations,
+    (recommendation) => lowerCriteria.has(recommendation.criterionName)
+  );
+  return {
+    metrics,
+    recommendations: recommendations.map((recommendation) =>
+      `${recommendation.criterionName}: ${recommendation.text}`
+    ),
+  };
+}
+
+function entryEvaluationsByNumber(input, entries, rubric) {
+  if (!Array.isArray(input.entryEvaluations) || input.entryEvaluations.length !== entries.length) {
+    throw unexpectedEvaluationShape();
+  }
+  const validNumbers = new Set(entries.map((entry) => entry.number));
+  const byNumber = new Map();
+  input.entryEvaluations.forEach((evaluation) => {
+    if (!evaluation || typeof evaluation !== 'object' ||
+        !validNumbers.has(evaluation.number) || byNumber.has(evaluation.number)) {
+      throw unexpectedEvaluationShape();
+    }
+    validateMetrics(evaluation.metrics, rubric);
+    byNumber.set(evaluation.number, evaluation);
+  });
+  return byNumber;
+}
+
+function flattenEntryMetrics(entries, rubric, label, byNumber) {
   return entries.flatMap((entry) => {
     const evaluation = byNumber.get(entry.number);
-    const metrics = evaluation && Array.isArray(evaluation.metrics) ? evaluation.metrics : [];
-    if (metrics.length !== rubric.length) {
-      throw new Error('Model returned an unexpected evaluation shape — please try again');
-    }
     return rubric.map((criterion, index) => {
-      const metric = metrics[index];
+      const metric = evaluation.metrics[index];
       const isOutcomeAlignment = label === 'Outcome' && criterion.name.toLowerCase() === 'alignment';
       return {
         name: isOutcomeAlignment
@@ -400,13 +520,11 @@ function flattenEntryMetrics(input, entries, rubric, label) {
 }
 
 function formatResearchQuestionResult(input, entries, rubric) {
-  const metrics = flattenEntryMetrics(input, entries, rubric, 'Question');
-  const setMetrics = Array.isArray(input.setMetrics) ? input.setMetrics : [];
+  const byNumber = entryEvaluationsByNumber(input, entries, rubric);
+  const metrics = flattenEntryMetrics(entries, rubric, 'Question', byNumber);
   const hasQuestionSet = entries.length > 1;
-  const expectedSetMetricCount = hasQuestionSet ? QUESTION_SET_CRITERIA.length : 0;
-  if (setMetrics.length !== expectedSetMetricCount) {
-    throw new Error('Model returned an unexpected evaluation shape — please try again');
-  }
+  const setRubric = hasQuestionSet ? QUESTION_SET_CRITERIA : [];
+  const setMetrics = validateMetrics(input.setMetrics, setRubric);
   if (hasQuestionSet) {
     QUESTION_SET_CRITERIA.forEach((criterion, index) => {
       metrics.push({
@@ -418,31 +536,40 @@ function formatResearchQuestionResult(input, entries, rubric) {
   }
 
   const validNumbers = new Set(entries.map((entry) => entry.number));
-  const recommendations = Array.isArray(input.recommendations) ? input.recommendations : [];
-  if (recommendations.length !== 2 || recommendations.some((rec) =>
-    (!hasQuestionSet && rec.questionNumber === 0) ||
-    (rec.questionNumber !== 0 && !validNumbers.has(rec.questionNumber))
-  )) {
-    throw new Error('Model returned an unexpected evaluation shape — please try again');
-  }
+  if (hasQuestionSet) validNumbers.add(0);
+  const recommendations = validateRecommendations(input.recommendations, (recommendation) => {
+    if (!Number.isInteger(recommendation.questionNumber) ||
+        !validNumbers.has(recommendation.questionNumber)) return false;
+    const targetMetrics = recommendation.questionNumber === 0
+      ? setMetrics
+      : byNumber.get(recommendation.questionNumber).metrics;
+    const targetRubric = recommendation.questionNumber === 0 ? QUESTION_SET_CRITERIA : rubric;
+    return lowerScoringCriteria(targetMetrics, targetRubric).has(recommendation.criterionName);
+  });
   return {
     metrics,
-    recommendations: recommendations.map((rec) =>
-      `${rec.questionNumber === 0 ? 'Question set' : 'Question ' + rec.questionNumber}: ${rec.text}`
+    recommendations: recommendations.map((recommendation) =>
+      `${recommendation.questionNumber === 0 ? 'Question set' : 'Question ' + recommendation.questionNumber}` +
+      ` — ${recommendation.criterionName}: ${recommendation.text}`
     ),
   };
 }
 
 function formatOutcomesResult(input, entries, rubric) {
-  const metrics = flattenEntryMetrics(input, entries, rubric, 'Outcome');
+  const byNumber = entryEvaluationsByNumber(input, entries, rubric);
+  const metrics = flattenEntryMetrics(entries, rubric, 'Outcome', byNumber);
   const validNumbers = new Set(entries.map((entry) => entry.number));
-  const recommendations = Array.isArray(input.recommendations) ? input.recommendations : [];
-  if (recommendations.length !== 2 || recommendations.some((rec) => !validNumbers.has(rec.outcomeNumber))) {
-    throw new Error('Model returned an unexpected evaluation shape — please try again');
-  }
+  const recommendations = validateRecommendations(input.recommendations, (recommendation) => {
+    if (!Number.isInteger(recommendation.outcomeNumber) ||
+        !validNumbers.has(recommendation.outcomeNumber)) return false;
+    const targetMetrics = byNumber.get(recommendation.outcomeNumber).metrics;
+    return lowerScoringCriteria(targetMetrics, rubric).has(recommendation.criterionName);
+  });
   return {
     metrics,
-    recommendations: recommendations.map((rec) => `Outcome ${rec.outcomeNumber}: ${rec.text}`),
+    recommendations: recommendations.map((recommendation) =>
+      `Outcome ${recommendation.outcomeNumber} — ${recommendation.criterionName}: ${recommendation.text}`
+    ),
   };
 }
 
@@ -480,7 +607,7 @@ async function handleEvaluate(req, res) {
   try {
     if (fieldKey === 'researchQuestions') {
       const input = await requestEvaluation(
-        researchQuestionsEvalTool(entries.length),
+        researchQuestionsEvalTool(entries.length, rubric),
         buildResearchQuestionsPrompt(entries, rubric, objective),
         2048
       );
@@ -492,7 +619,7 @@ async function handleEvaluate(req, res) {
 
     if (fieldKey === 'outcomes') {
       const input = await requestEvaluation(
-        OUTCOMES_EVAL_TOOL,
+        outcomesEvalTool(rubric),
         buildOutcomesPrompt(entries, researchQuestions, rubric, objective),
         2048
       );
@@ -502,13 +629,11 @@ async function handleEvaluate(req, res) {
       return;
     }
 
-    const input = await requestEvaluation(EVAL_TOOL, buildPrompt(fieldLabel, text, rubric), 1024);
-    if (!Array.isArray(input.metrics) || input.metrics.length === 0) {
-      throw new Error('Model returned an unexpected evaluation shape — please try again');
-    }
+    const input = await requestEvaluation(scalarEvalTool(rubric), buildPrompt(fieldLabel, text, rubric), 1024);
+    const result = formatScalarResult(input, rubric);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(input));
+    res.end(JSON.stringify(result));
   } catch (err) {
     console.error('Evaluation request failed:', err);
     res.writeHead(502, { 'Content-Type': 'application/json' });
@@ -1298,6 +1423,24 @@ const server = http.createServer((req, res) => {
   res.end('Not found');
 });
 
-server.listen(PORT, () => {
-  console.log(`Research Plan app running at http://localhost:${PORT}/  (model: ${MODEL})`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Research Plan app running at http://localhost:${PORT}/  (model: ${MODEL})`);
+  });
+}
+
+module.exports = {
+  EVAL_TOOL,
+  OUTCOMES_EVAL_TOOL,
+  QUESTION_SET_CRITERIA,
+  RESEARCH_QUESTIONS_EVAL_TOOL,
+  buildOutcomesPrompt,
+  buildPrompt,
+  buildResearchQuestionsPrompt,
+  formatOutcomesResult,
+  formatResearchQuestionResult,
+  formatScalarResult,
+  outcomesEvalTool,
+  researchQuestionsEvalTool,
+  scalarEvalTool,
+};
