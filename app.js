@@ -3732,13 +3732,12 @@
       return mf;
     }
 
-    // "Last Updated" sits in the top-right corner, next to "Research Plan"
-    // (bottom-aligned with it via align-items:flex-end on the row) instead
-    // of down in the regular meta grid with the other header fields.
+    // "Last Updated" sits in the top-right corner rather than down in the
+    // regular meta grid with the other header fields. It is the row's only
+    // child, so the row right-aligns it (justify-content:flex-end); there
+    // used to be a "Research Plan" caption on the left, dropped because the
+    // toolbar, the browser tab and the Title label all say it already.
     const topRow = el('div', 'doc-header-top');
-    const supLabel = el('div', 'sup-label');
-    supLabel.textContent = 'Research Plan';
-    topRow.appendChild(supLabel);
 
     const metaGrid = el('div', 'meta-grid');
     header.meta.forEach((f) => {
@@ -3752,18 +3751,23 @@
     });
     wrap.appendChild(topRow);
 
-    // The title is its own heading, so its label stays visually hidden — but
-    // a placeholder alone is not an accessible name.
+    // Label and hint outside the control, like every other field: GOV.UK
+    // guidance is that placeholder text is not guidance. It vanishes as soon
+    // as anyone types, is too low-contrast to read comfortably, and gets
+    // mistaken for a value already filled in.
     const titleId = fieldControlId(header.title.key);
-    const titleLabel = el('label', 'visually-hidden', { for: titleId });
+    const titleLabel = el('label', 'flabel', { for: titleId, id: titleId + '-label' });
     titleLabel.textContent = header.title.label || 'Title';
+    const titleHint = renderFieldHint(header.title, titleId + '-hint');
     const titleInput = el('textarea', 'title-inp field-ta', {
       rows: '1',
       id: titleId,
       'data-field': header.title.key,
-      placeholder: header.title.placeholder || 'Title for your research plan',
     });
-    wrap.append(titleLabel, titleInput);
+    describeControl(titleInput, titleHint);
+    wrap.appendChild(titleLabel);
+    if (titleHint) wrap.appendChild(titleHint);
+    wrap.appendChild(titleInput);
     wrap.appendChild(metaGrid);
 
     return wrap;

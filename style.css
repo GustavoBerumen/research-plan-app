@@ -90,11 +90,12 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .page-wrap{padding:36px 24px 80px}
 .doc{max-width:860px;margin:0 auto;background:#fff;padding:32px 64px 52px}
 @media screen and (max-width:600px){.page-wrap{padding:16px 8px 48px}.doc{padding:20px 12px 36px}.acc-body{padding:18px 0 22px}.field-group{padding:14px 0}}
-.doc-header{margin-bottom:36px;padding-bottom:30px;border-bottom:1px solid var(--border)}
-.doc-header-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:8px}
-.doc-header-top .sup-label{margin-bottom:0}
-.sup-label{font-size:var(--text);font-weight:700;color:var(--text-2);margin-bottom:8px}
-.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:none;border:none;border-bottom:2px solid var(--border);padding:6px 0 8px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+/* No border-bottom here: the first section's own border-top already closes
+   the header, and drawing both put two grey rules 36px apart with nothing
+   between them. Every later boundary has one rule, so this matches. */
+.doc-header{margin-bottom:36px;padding-bottom:30px}
+.doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
+.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:none;border:none;border-bottom:2px solid var(--ink);padding:6px 0 8px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .title-inp:focus{border-bottom-color:var(--ink);box-shadow:none;outline:3px solid var(--focus);outline-offset:0}
 .title-inp::placeholder{color:var(--text-2)}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:24px}

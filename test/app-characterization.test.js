@@ -64,7 +64,17 @@ test('renders the complete form from the real index, template, rubric, and metho
   ]);
   assert.equal(document.querySelector('.doc-loading'), null);
   assert.equal(document.querySelectorAll('.doc-header').length, 1);
-  assert.equal(document.querySelector('[data-field="title"]').placeholder, 'Title for your research plan');
+  // RPA-55: the title's guidance is a hint outside the control, not a
+  // placeholder inside it.
+  assert.equal(document.querySelector('[data-field="title"]').hasAttribute('placeholder'), false);
+  assert.equal(
+    document.querySelector('#field-title-hint').textContent,
+    'Name it so a colleague can tell what the study covers without opening it.'
+  );
+  assert.equal(
+    document.querySelector('[data-field="title"]').getAttribute('aria-describedby'),
+    'field-title-hint'
+  );
 
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
@@ -79,7 +89,8 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
+      'Last Updated', 'Title',
+      'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
