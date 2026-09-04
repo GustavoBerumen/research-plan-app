@@ -205,12 +205,18 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 
 /* ---------- Date control ---------- */
 .date-control{display:flex;align-items:center;gap:3px;width:100%;min-width:0;flex-wrap:wrap;border:2px solid var(--ink);background:#fff;padding:5px;min-height:var(--control-h)}
-.date-segment{font:inherit;color:inherit;line-height:inherit;text-align:center;border:none;outline:none;background:transparent;padding:0;min-width:0}
+.date-segment{font:inherit;color:inherit;line-height:inherit;text-align:center;border:none;outline:none;background:transparent;padding:0;flex:0 0 auto}
 .date-segment:focus{background:var(--focus);color:var(--ink)}
 .date-segment::placeholder{color:var(--text-2);text-transform:uppercase}
-.date-day{width:2.3ch}
-.date-month{width:3.6ch}
-.date-year{width:4.8ch}
+/* Each segment is sized to the widest string it ever has to show: the
+   placeholder for day and year (DD, YYYY), the value for month (May is wider
+   than MM, and wider than Sep). Sized in em, not ch -- ch is the width of "0",
+   and D, M and Y are all wider than a digit, so ch-based widths clipped the
+   placeholders. Segments also refuse to shrink (flex above): in a tight cell
+   the control wraps to a second line rather than cutting the text off. */
+.date-day{width:1.7em}
+.date-month{width:2.2em}
+.date-year{width:3.1em}
 .date-separator{flex-shrink:0;color:var(--text-2);line-height:1}
 .date-control[aria-invalid="true"]{border-color:var(--red)}
 .date-picker-native{flex:0 0 24px;width:24px;min-width:24px;height:24px;color:transparent;background:transparent;border:none;outline:none;padding:0;cursor:pointer;margin-left:auto}
