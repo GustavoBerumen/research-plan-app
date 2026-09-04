@@ -256,6 +256,28 @@
     .v3-pc select:focus{outline:3px solid ${GDS_FOCUS};outline-offset:0;
       box-shadow:inset 0 0 0 2px ${GDS_INK}}
 
+    /* --- Evaluation staleness (RPA-39) ---
+       Added to app.js after this spike was written, so these four classes
+       rendered unstyled inside an otherwise GOV.UK panel. "Results out of
+       date" is a state, not an error, so it takes GOV.UK's yellow tag rather
+       than the red error treatment — the work is not wrong, just superseded. */
+    .v3-pc .eval-result-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .v3-pc .eval-stale-status{font-family:Arial,Helvetica,sans-serif;font-size:16px;
+      font-weight:700;letter-spacing:normal;color:#594d00;background:#fff7bf;
+      border:0;border-radius:0;padding:2px 8px;margin-top:0}
+    /* The stale pill keeps its tone colour but loses saturation, so a stale
+       "Good" still reads as good — just no longer current. */
+    .v3-pc .eval-result-btn.eval-result-stale{background:#505a5f;
+      box-shadow:0 0 0 2px #fff,0 0 0 4px #b1b4b6}
+    .v3-pc .eval-quick-reevaluate-btn{position:relative;font-family:Arial,Helvetica,sans-serif;
+      font-size:16px;line-height:1.32;font-weight:400;color:${GDS_INK};background:#f3f2f1;
+      border:2px solid transparent;border-radius:0;box-shadow:0 2px 0 #929191;padding:5px 8px;
+      cursor:pointer}
+    .v3-pc .eval-quick-reevaluate-btn:hover{background:#dbdad9}
+    .v3-pc .eval-quick-reevaluate-btn:focus{background:${GDS_FOCUS};border-color:${GDS_INK};
+      box-shadow:0 2px 0 ${GDS_INK}}
+    .v3-pc .eval-quick-reevaluate-btn:active{top:2px;box-shadow:none}
+
     /* --- Suggestion panels (framework, methods) ---
        Both share .eval-panel, so they already pick up the notification-banner
        header above. .fw-body is their content wrapper and carried no padding
