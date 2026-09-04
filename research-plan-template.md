@@ -75,14 +75,14 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Title (text): Title for your research plan
 
 Researcher (text): Name
-  Hint: The person leading and accountable for executing this research study.
+  Hint: The person leading this research.
 Project Owner (text): Name
-  Hint: The person accountable for this initiative on the product or business side.
+  Hint: The person accountable for this initiative.
 <!-- The two deadlines live up here, not in Alignment: they are constraints on
      the whole plan, and people should know them before choosing a method or
      building a timeline (RPA-55). -->
 Project Decision (date):
-  Hint: Date for the product decision based on this research.
+  Hint: Product decision informed by this research.
 Report Research (date):
   Hint: Date you will share findings—allow at least a week before the Project Decision date.
 <!-- Research Team (text): Team members -->
