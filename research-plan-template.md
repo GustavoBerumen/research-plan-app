@@ -72,11 +72,12 @@ title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
-# Title (text): Title for your research plan
+# Title (text):
+  Hint: Name it so a colleague can tell what the study covers without opening it.
 
-Lead researcher (text): Name
+Lead researcher (text):
   Hint: Name of the person leading this research.
-Project requester (text): Name
+Project requester (text):
   Hint: Name of the person requesting this work.
 Project decision (date):
   Hint: Date of the decision informed by this research.
