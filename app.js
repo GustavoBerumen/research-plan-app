@@ -3843,7 +3843,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 4;
+  const DRAFT_VERSION = 5;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -4112,6 +4112,18 @@
     // readout. Same situation as v3: the key follows the label through
     // toCamelKey, so a draft saved before the rename holds keys no live field
     // answers to, and applyDraft would drop those values without a word.
+    // v5: RPA-55 renamed Title to Research title, and Last Updated to Last
+    // updated (label only — that key was already lastUpdated).
+    if (version < 5) {
+      migrated.fields = Object.assign({}, migrated.fields);
+      const renamedInV5 = { title: 'researchTitle' };
+      Object.keys(renamedInV5).forEach((oldKey) => {
+        const newKey = renamedInV5[oldKey];
+        if (!Object.prototype.hasOwnProperty.call(migrated.fields, oldKey)) return;
+        if (!migrated.fields[newKey]) migrated.fields[newKey] = migrated.fields[oldKey];
+        delete migrated.fields[oldKey];
+      });
+    }
     if (version < 4) {
       migrated.fields = Object.assign({}, migrated.fields);
       const renamedInV4 = {

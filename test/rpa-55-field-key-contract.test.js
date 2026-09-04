@@ -100,7 +100,7 @@ test('a draft saved before the RPA-55 header renames restores into the new field
       version: 3,
       savedAt: '2026-09-01T09:00:00.000Z',
       fields: {
-        title: 'Checkout study',
+        title: 'Checkout study',  // renamed to researchTitle in v5
         researcher: 'Ada Lovelace',
         projectOwner: 'Grace Hopper',
         reportResearch: '2026-09-18',
@@ -122,8 +122,8 @@ test('a draft saved before the RPA-55 header renames restores into the new field
   assert.equal(valueOf('projectRequester'), 'Grace Hopper');
   assert.equal(valueOf('researchReadout'), '2026-09-18');
 
-  // Untouched by the rename, and proof the migration copies rather than moves
-  // everything it sees.
-  assert.equal(valueOf('title'), 'Checkout study');
+  assert.equal(valueOf('researchTitle'), 'Checkout study');
+
+  // Untouched by any rename, and proof the migration moves only what it names.
   assert.equal(valueOf('projectDecision'), '2026-09-25');
 });

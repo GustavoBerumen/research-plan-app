@@ -72,8 +72,8 @@ title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
-# Title (text):
-  Hint: Name it so a colleague can tell what the study covers without opening it.
+# Research title (text):
+  Hint: Describe what this research covers, for example, ‘Usability testing of the application submission flow’.
 
 Lead researcher (text):
   Hint: Name of the person leading this research.
@@ -83,7 +83,7 @@ Project decision (date):
   Hint: Date of the decision informed by this research.
 Research readout (date):
   Hint: Date findings are shared with the team.
-Last Updated (date):
+Last updated (date):
   Hint: The date this plan was last edited.
 
 # Project Context {open}

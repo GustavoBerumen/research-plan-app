@@ -100,10 +100,10 @@ high effort* is where the genuine cuts live.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Title**<br><sub>asks: Title for your research plan</sub> | `text` | Identifies the plan everywhere it is listed, shared or printed. | Researcher — naming their own plan. | Able, but usually **last**. You name a plan once you know what it is; this is asked first. | **move** — later. Named once the plan exists, not before it. |
+| **Research title** | `text` | Identifies the plan everywhere it is listed, shared or printed. | Researcher — naming their own plan. | Able, but usually **last**. You name a plan once you know what it is; this is asked first. | **move** — later. Named once the plan exists, not before it. |
 | **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** |
 | **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** |
-| **Last Updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — done. Computed value, now a dateline. |
+| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — done. Computed value, now a dateline. |
 | **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced or optional.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. Pull it from the linked Jira issue, or let people proceed without it. Blocking on a date someone else has not set is how forms get abandoned. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
 | **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
 
@@ -328,3 +328,29 @@ long" was probably an orientation problem rather than a scope problem. If that
 holds, the win here comes from **sequencing and optionality** rather than deletion,
 and a verdict sheet full of *keep* is a legitimate outcome — provided the order
 changed. Worth holding open rather than treating a low cut-count as failure.
+
+## Open question this audit created
+
+**Field keys are derived from labels, so renaming a question can silently break
+code.** `toCamelKey` turns a label into the key the app stores and queries by, so
+"Report Research" was `reportResearch` and "Research readout" is `researchReadout`.
+Most of the app never notices, because it reaches fields through the schema — but a
+few features query a key by name, and those fail quietly. Renaming that field during
+this audit killed the one-week buffer warning and the ceiling on the readout date,
+with no error and a form that still rendered perfectly. Two tests went red, and
+neither was about the feature that broke.
+
+This matters here specifically: **an audit about rewording and removing questions is
+the most likely thing to trigger it.** Every rename ahead of us is another chance.
+
+Mitigated, not solved. `test/rpa-55-field-key-contract.test.js` scans app.js for
+every key looked up by name and asserts each one renders, so the failure is now loud
+and immediate, and it catches keys this audit has not touched yet. Drafts saved under
+an old key are carried over by a migration in `migrateDraft`, as they were for the
+Problem → Problem Statement rename.
+
+The real fix is to let a field declare its key in the template, independent of its
+label, so copy and code stop being coupled. Deliberately deferred: it changes the
+schema format, and this audit may still cut some of the fields involved, so doing it
+now risks doing it twice. **If a rename breaks something a second time, stop
+mitigating and do it.**

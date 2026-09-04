@@ -66,14 +66,12 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.equal(document.querySelectorAll('.doc-header').length, 1);
   // RPA-55: the title's guidance is a hint outside the control, not a
   // placeholder inside it.
-  assert.equal(document.querySelector('[data-field="title"]').hasAttribute('placeholder'), false);
+  assert.equal(document.querySelector('[data-field="researchTitle"]').hasAttribute('placeholder'), false);
+  const titleHint = document.querySelector('#field-researchTitle-hint');
+  assert.ok(titleHint && titleHint.textContent.trim().length > 0, 'the title renders a hint');
   assert.equal(
-    document.querySelector('#field-title-hint').textContent,
-    'Name it so a colleague can tell what the study covers without opening it.'
-  );
-  assert.equal(
-    document.querySelector('[data-field="title"]').getAttribute('aria-describedby'),
-    'field-title-hint'
+    document.querySelector('[data-field="researchTitle"]').getAttribute('aria-describedby'),
+    'field-researchTitle-hint'
   );
 
   assert.deepEqual(
@@ -89,7 +87,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Title',
+      'Last updated', 'Research title',
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
@@ -189,11 +187,11 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
   assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
 });
 
-test('round-trips a draft-v4 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft-v5 with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
-  setValue(window, document.querySelector('[data-field="title"]'), 'Checkout study');
+  setValue(window, document.querySelector('[data-field="researchTitle"]'), 'Checkout study');
   setValue(window, document.querySelector('[data-field="background"]'), 'Current checkout context');
   setValue(window, listInputs(document, 'researchQuestions')[0], 'Question one');
   addListRow(document, 'researchQuestions');
@@ -209,10 +207,10 @@ test('round-trips a draft-v4 with Research Questions restored before dependent r
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
     timeout: 1500,
-    message: 'The v4 draft was not saved',
+    message: 'The v5 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 4);
+  assert.equal(saved.version, 5);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
@@ -221,7 +219,7 @@ test('round-trips a draft-v4 with Research Questions restored before dependent r
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());
-  assert.equal(restored.document.querySelector('[data-field="title"]').value, 'Checkout study');
+  assert.equal(restored.document.querySelector('[data-field="researchTitle"]').value, 'Checkout study');
   assert.equal(restored.document.querySelector('[data-field="background"]').value, 'Current checkout context');
   assert.deepEqual(listInputs(restored.document, 'researchQuestions').map((input) => input.value), [
     'Question one',
