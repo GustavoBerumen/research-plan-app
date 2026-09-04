@@ -522,12 +522,29 @@
   // only one row is left, its button reserves its space but goes invisible
   // and inert (same visibility trick as the list-field remove buttons) so a
   // table can never be emptied to zero rows.
+  // Each cell control is named by its column and row — "Action, row 2" — so a
+  // screen reader outside table-navigation mode never meets a nameless input.
+  // Runs from updateRowRemoveButtons, i.e. on every add and remove, and again
+  // when an editable column header is renamed.
+  function nameRowCells(tr, columns, rowNumber) {
+    Array.from(tr.querySelectorAll('td')).forEach((td, j) => {
+      const col = columns[j];
+      if (!col) return;
+      const control = td.querySelector('.date-control, select, textarea, input.cinput:not(.select-other-input)');
+      if (control) control.setAttribute('aria-label', col.label + ', row ' + rowNumber);
+    });
+  }
+
   function updateRowRemoveButtons(tbody) {
     const rows = tbody.querySelectorAll('tr');
     const onlyOneLeft = rows.length <= 1;
-    rows.forEach((tr) => {
+    const table = tbody.closest('table');
+    const meta = table && tables.find((t) => t.id === table.id);
+    rows.forEach((tr, i) => {
+      if (meta) nameRowCells(tr, meta.columns, i + 1);
       const btn = tr.querySelector('.row-remove');
       if (!btn) return;
+      btn.setAttribute('aria-label', 'Remove row ' + (i + 1));
       btn.disabled = onlyOneLeft;
       btn.classList.toggle('list-remove-spacer', onlyOneLeft);
     });
@@ -897,6 +914,7 @@
         const otherInput = el('input', 'cinput select-other-input', {
           type: 'text',
           placeholder: 'Type a custom value…',
+          'aria-label': col.label,
         });
         const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead' });
         backBtn.textContent = '▾';
@@ -1033,12 +1051,13 @@
   }
 
   function renderEvalResult(panel, data) {
-    panel.style.background = data.bg;
-    panel.style.borderColor = data.border;
+    // Tone is carried as a class so the stylesheet owns every colour; the
+    // bg/border/color fields on SCORE_STYLES are no longer read here.
+    panel.classList.remove('eval-tone-problem', 'eval-tone-warning', 'eval-tone-success');
+    panel.classList.add('eval-tone-' + data.tone);
 
     const badge = panel.querySelector('.eval-badge');
     badge.textContent = data.label;
-    badge.style.background = data.color;
 
     const metricsEl = panel.querySelector('.eval-metrics');
     metricsEl.innerHTML = '';
@@ -1060,7 +1079,6 @@
         const dot = document.createElement('span');
         const filled = i < m.score;
         dot.className = 'eval-dot ' + (filled ? 'eval-dot-on' : 'eval-dot-off');
-        if (filled) dot.style.background = data.color;
         dots.appendChild(dot);
       }
       const score = document.createElement('span');
@@ -1562,9 +1580,8 @@
 
     function renderMatched(data) {
       badge.textContent = 'MATCH FOUND';
-      badge.style.background = '#2563eb';
-      panel.style.background = '#eff6ff';
-      panel.style.borderColor = '#bfdbfe';
+      panel.classList.remove('fw-draft');
+      panel.classList.add('fw-match');
       body.innerHTML = '';
 
       const summary = el('p', 'fw-rationale');
@@ -1584,9 +1601,8 @@
     function renderDraft(data) {
       const d = data.draft;
       badge.textContent = 'NEW DRAFT';
-      badge.style.background = '#d97706';
-      panel.style.background = '#fffbeb';
-      panel.style.borderColor = '#fde68a';
+      panel.classList.remove('fw-match');
+      panel.classList.add('fw-draft');
       body.innerHTML = '';
 
       const note = el('p', 'fw-rationale');
@@ -1706,8 +1722,10 @@
     if (!list) return;
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
+      row.querySelector('.list-input').setAttribute('aria-label', 'Method ' + (i + 1));
       const removeBtn = row.querySelector('.list-remove');
       if (!removeBtn) return;
+      removeBtn.setAttribute('aria-label', 'Remove method ' + (i + 1));
       // Same "keep at least one row" pattern as renderListField: row 0's
       // button reserves its space but goes invisible and inert.
       removeBtn.classList.toggle('list-remove-spacer', i === 0);
@@ -2082,7 +2100,6 @@
     const head = el('div', 'eval-head');
     const badge = el('span', 'eval-badge');
     badge.textContent = 'SUGGESTED METHODS';
-    badge.style.background = '#6366f1';
     const hl = el('span', 'eval-hl');
     hl.textContent = 'Methods Suggestion';
     const dismiss = el('button', 'eval-x', { type: 'button' });
@@ -2090,8 +2107,7 @@
     head.append(badge, hl, dismiss);
     const body = el('div', 'fw-body');
     panel.append(head, body);
-    panel.style.background = '#eef2ff';
-    panel.style.borderColor = '#c7d2fe';
+    panel.classList.add('ms-panel');
 
     dismiss.addEventListener('click', () => { panel.hidden = true; });
 
@@ -2406,6 +2422,10 @@
         const covered = r.start.getTime() <= cellEnd && r.end.getTime() >= cellStart;
         const cell = el('div', 'timeline-bar-cell');
         if (covered) {
+          // The stage palette is data — one colour per stage row so rows
+          // stay distinguishable — so it stays inline; the class carries
+          // everything that is styling.
+          cell.classList.add('timeline-bar-cell-on');
           cell.style.background = color;
           cell.title = name + ': ' + startLabel + ' – ' + endLabel;
         } else {
@@ -2438,22 +2458,39 @@
   function renderCustomFieldsField(field) {
     const wrap = el('div', 'field');
     const list = el('div', 'custom-fields-list');
+    let blockSeq = 0;
     list.dataset.listKey = field.key;
     wrap.appendChild(list);
 
     function addBlock(focus) {
       const block = el('div', 'custom-field-block');
       const head = el('div', 'custom-field-head');
-      const nameInp = el('input', 'th-input custom-field-name', { type: 'text', placeholder: 'Label' });
-      const removeBtn = el('button', 'list-remove', { type: 'button' });
+      // Neither input had an accessible name — only placeholders, which vanish
+      // on typing and are unreliable for screen readers. The labels are
+      // visually hidden: the title input is self-evidently the heading, and a
+      // visible "Section name" above every block would be noise.
+      const seq = ++blockSeq;
+      const nameId = fieldControlId(field.key) + '-name-' + seq;
+      const bodyId = fieldControlId(field.key) + '-body-' + seq;
+      const nameLabel = el('label', 'visually-hidden', { for: nameId });
+      nameLabel.textContent = 'Section name';
+      const nameInp = el('input', 'th-input custom-field-name', { type: 'text', placeholder: 'Label', id: nameId });
+      const removeBtn = el('button', 'list-remove', { type: 'button', 'aria-label': 'Remove section' });
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', () => block.remove());
-      head.append(nameInp, removeBtn);
+      // Say which section the button removes once it has a name.
+      nameInp.addEventListener('input', () => {
+        const name = nameInp.value.trim();
+        removeBtn.setAttribute('aria-label', name ? 'Remove section ' + name : 'Remove section');
+      });
+      head.append(nameLabel, nameInp, removeBtn);
 
-      const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, placeholder: field.placeholder || '' });
+      const bodyLabel = el('label', 'visually-hidden', { for: bodyId });
+      bodyLabel.textContent = 'Details';
+      const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, placeholder: field.placeholder || '', id: bodyId });
       bindTextarea(body);
 
-      block.append(head, body);
+      block.append(head, bodyLabel, body);
       list.appendChild(block);
       if (focus) nameInp.focus();
       return block;
@@ -2468,21 +2505,28 @@
   }
 
   function renderTableField(field) {
-    const wrap = el('div', 'field');
-    const label = el('label', 'flabel');
+    // A table of inputs has no single control to label; the group carries
+    // the name and each cell is named by its column header.
+    const wrap = el('div', 'field', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    appendInfoTip(label, field.key);
+    wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
+    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const tblWrap = el('div', 'tbl-wrap');
     const table = el('table', 'dtbl', { id: field.key + '-table' });
     const thead = el('thead');
     const headRow = el('tr');
-    field.columns.forEach((c) => {
+    field.columns.forEach((c, ci) => {
       const th = document.createElement('th');
       if (field.editableHeaders) {
-        const headInp = el('input', 'th-input', { type: 'text', value: c.label });
-        headInp.addEventListener('input', () => { c.label = headInp.value; });
+        // The value is the heading text; the name says what the input is for.
+        const headInp = el('input', 'th-input', { type: 'text', value: c.label, 'aria-label': 'Column ' + (ci + 1) + ' heading' });
+        // Cells are named after their column, so a renamed header renames them.
+        headInp.addEventListener('input', () => { c.label = headInp.value; updateRowRemoveButtons(tbody); });
         th.appendChild(headInp);
       } else {
         th.textContent = c.label;
@@ -2494,13 +2538,15 @@
     headRow.appendChild(removeTh);
     thead.appendChild(headRow);
     const tbody = el('tbody');
+    // Attach and register the table before its first row is named:
+    // nameRowCells finds the columns via tbody.closest('table') and the
+    // tables registry, so both have to exist by the time it runs.
+    table.append(thead, tbody);
+    tables.push({ id: table.id, columns: field.columns, cols: field.columns.map((c) => c.key) });
     tbody.appendChild(buildRow(field.columns));
     updateRowRemoveButtons(tbody);
-    table.append(thead, tbody);
     tblWrap.appendChild(table);
     wrap.appendChild(tblWrap);
-
-    tables.push({ id: table.id, columns: field.columns, cols: field.columns.map((c) => c.key) });
 
     const addBtn = el('button', 'add-btn', { type: 'button' });
     const singular = field.label.replace(/s$/i, '').toLowerCase();
@@ -2573,8 +2619,10 @@
     if (!list) return;
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
+      row.querySelector('.list-input').setAttribute('aria-label', 'Outcome ' + (i + 1));
       const removeBtn = row.querySelector('.list-remove');
       if (!removeBtn) return;
+      removeBtn.setAttribute('aria-label', 'Remove outcome ' + (i + 1));
       // Same "keep at least one row" pattern as renderListField: row 0's
       // button reserves its space but goes invisible and inert.
       removeBtn.classList.toggle('list-remove-spacer', i === 0);
@@ -2729,16 +2777,23 @@
   }
 
   function renderListField(field) {
-    const wrap = el('div', 'field');
-    const label = el('label', 'flabel');
+    // A list has no single control for a <label> to point at, so the group
+    // is named by its heading and each row's input names itself ("Research
+    // Question 2") — the visible "2." alone is decorative.
+    const wrap = el('div', 'field', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    appendInfoTip(label, field.key);
     if (field.optional) {
       const opt = el('span', 'fopt');
       opt.textContent = '(optional)';
       label.append(' ', opt);
     }
+    wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
+    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
+    const rowName = field.label.replace(/s$/i, '');
 
     const list = el('div', 'list-rows');
     list.dataset.listKey = field.key;
@@ -2748,7 +2803,9 @@
       const rows = list.querySelectorAll('.list-row');
       rows.forEach((row, i) => {
         row.querySelector('.list-num').textContent = (i + 1) + '.';
+        row.querySelector('.list-input').setAttribute('aria-label', rowName + ' ' + (i + 1));
         const removeBtn = row.querySelector('.list-remove');
+        removeBtn.setAttribute('aria-label', 'Remove ' + rowName.toLowerCase() + ' ' + (i + 1));
         // Keep the button's space reserved (visibility, not display:none) so
         // every row's input stays the same width regardless of which row is
         // first — only actually hiding it would make row 1 stretch wider.
@@ -2852,11 +2909,14 @@
   // count. Starts empty; initOutcomesSync() seeds it to match once the whole
   // form (and Research Questions) has actually rendered.
   function renderLinkedOutcomesField(field) {
-    const wrap = el('div', 'field');
-    const label = el('label', 'flabel');
+    const wrap = el('div', 'field', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    appendInfoTip(label, field.key);
+    wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
+    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const list = el('div', 'list-rows');
     list.dataset.listKey = field.key;
@@ -2884,16 +2944,19 @@
   // and labelled by syncMethodsGroups, which runs whenever a Research
   // Question is added, removed or edited, and once from the wire-up below.
   function renderGroupedMethodsField(field) {
-    const wrap = el('div', 'field');
-    const label = el('label', 'flabel');
+    const wrap = el('div', 'field', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    appendInfoTip(label, field.key);
     if (field.optional) {
       const opt = el('span', 'fopt');
       opt.textContent = '(optional)';
       label.append(' ', opt);
     }
+    wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
+    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const container = el('div', 'methods-groups');
     container.dataset.placeholder = field.placeholder || '';
@@ -3011,9 +3074,27 @@
     return tip;
   }
 
-  function appendInfoTip(label, key) {
+  // Field guidance as visible hint text, GOV.UK style, in place of the "?"
+  // tooltip: a tooltip needs a hover to find, which touch devices cannot do,
+  // and a screen reader only meets it if it happens to land on the icon. The
+  // hint is a sibling of the label rather than a child, so it describes the
+  // control (aria-describedby) without bloating the control's name.
+  function renderFieldHint(key, id) {
     const text = FIELD_INFO_TIPS[key];
-    if (text) label.append(' ', renderInfoTip(text));
+    if (!text) return null;
+    const hint = el('div', 'field-hint-text', { id: id });
+    hint.textContent = text;
+    return hint;
+  }
+
+  // Stable, unique id for a field's control so a real <label for> can point
+  // at it. Ids also unblock aria-describedby for the hint above.
+  function fieldControlId(key) {
+    return 'field-' + key;
+  }
+
+  function describeControl(control, hint) {
+    if (control && hint) control.setAttribute('aria-describedby', hint.id);
   }
 
   // ---------- Methods combobox (search suggestions, still free text) ----------
@@ -3391,15 +3472,17 @@
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
 
     const wrap = el('div', 'field');
-    const label = el('label', 'flabel');
+    const controlId = fieldControlId(field.key);
+    const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
     label.textContent = field.label;
-    appendInfoTip(label, field.key);
     if (field.optional) {
       const opt = el('span', 'fopt');
       opt.textContent = '(optional)';
       label.append(' ', opt);
     }
     wrap.appendChild(label);
+    const guidance = renderFieldHint(field.key, controlId + '-hint');
+    if (guidance) wrap.appendChild(guidance);
 
     // Reuses the same .ssel dropdown + "Other…" escape hatch as a table's
     // "select" columns (see buildRow's select branch for Stage Timeline)
@@ -3413,6 +3496,8 @@
       const sel = document.createElement('select');
       sel.className = 'ssel ss-ns';
       sel.setAttribute('data-field', field.key);
+      sel.id = controlId;
+      describeControl(sel, guidance);
       (field.options || []).forEach((opt) => {
         const o = document.createElement('option');
         o.value = opt;
@@ -3440,6 +3525,10 @@
           sel.removeAttribute('data-field');
           otherRow.hidden = false;
           otherInput.setAttribute('data-field', field.key);
+          // The <label for> points at the now-hidden select, so the free-text
+          // replacement names itself.
+          otherInput.setAttribute('aria-label', field.label);
+          describeControl(otherInput, guidance);
           otherInput.focus();
         }
       });
@@ -3460,6 +3549,11 @@
 
     if (field.type === 'date') {
       const dateControl = buildDateControl('finput', { 'data-field': field.key }, field.label);
+      // A date control is a labelled group of its own, not a single input, so
+      // it takes the heading via aria-labelledby rather than <label for>.
+      label.removeAttribute('for');
+      dateControl.element.setAttribute('aria-labelledby', label.id);
+      describeControl(dateControl.element, guidance);
       wrap.appendChild(dateControl.element);
       return wrap;
     }
@@ -3470,6 +3564,8 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    input.id = controlId;
+    describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
     const hint = signOffHint(field.key);
@@ -3528,9 +3624,12 @@
 
       function buildGridCell(f) {
         const td = document.createElement('td');
-        const lbl = el('div', 'clbl');
+        const controlId = fieldControlId(f.key);
+        // A date control is a labelled group of its own, so its heading
+        // attaches via aria-labelledby; a text field gets a real <label for>.
+        const lbl = el(f.type === 'date' ? 'div' : 'label', 'clbl', { id: controlId + '-label' });
         lbl.textContent = f.label;
-        appendInfoTip(lbl, f.key);
+        const guidance = renderFieldHint(f.key, controlId + '-hint');
         let inp;
         let control;
         if (f.type === 'date') {
@@ -3551,7 +3650,15 @@
         }
         attachSignOffStamp(inp, f.key);
         if (f.key === 'jiraProject') attachJiraCombobox(inp);
+        if (f.type === 'date') {
+          control.setAttribute('aria-labelledby', lbl.id);
+        } else {
+          inp.id = controlId;
+          lbl.setAttribute('for', controlId);
+        }
+        describeControl(control, guidance);
         td.append(lbl, control);
+        if (guidance) lbl.insertAdjacentElement('afterend', guidance);
         const hint = signOffHint(f.key);
         if (hint) td.appendChild(hint);
         return td;
@@ -3615,9 +3722,12 @@
 
     function buildMetaField(f) {
       const mf = el('div', 'mf');
-      const label = el('div', 'mlabel');
+      const controlId = fieldControlId(f.key);
+      const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
-      appendInfoTip(label, f.key);
+      // Last Updated sits in a compact corner slot with no room for guidance,
+      // and it is a computed value nobody is asked to fill in.
+      const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f.key, controlId + '-hint');
       let input;
       let control;
       if (f.type === 'date') {
@@ -3629,7 +3739,15 @@
         control = input;
       }
       if (f.key === 'lastUpdated') setDateInputValue(input, todayIso());
+      if (f.type === 'date') {
+        control.setAttribute('aria-labelledby', label.id);
+      } else {
+        input.id = controlId;
+        label.setAttribute('for', controlId);
+      }
+      describeControl(control, guidance);
       mf.append(label, control);
+      if (guidance) label.insertAdjacentElement('afterend', guidance);
       return mf;
     }
 
@@ -3653,12 +3771,18 @@
     });
     wrap.appendChild(topRow);
 
+    // The title is its own heading, so its label stays visually hidden — but
+    // a placeholder alone is not an accessible name.
+    const titleId = fieldControlId(header.title.key);
+    const titleLabel = el('label', 'visually-hidden', { for: titleId });
+    titleLabel.textContent = header.title.label || 'Title';
     const titleInput = el('textarea', 'title-inp field-ta', {
       rows: '1',
+      id: titleId,
       'data-field': header.title.key,
       placeholder: header.title.placeholder || 'Title for your research plan',
     });
-    wrap.appendChild(titleInput);
+    wrap.append(titleLabel, titleInput);
     wrap.appendChild(metaGrid);
 
     return wrap;
@@ -3688,7 +3812,7 @@
     const labelEl = fieldEl.querySelector('.flabel');
     const labelRow = el('div', 'comments-label-row');
     labelEl.replaceWith(labelRow);
-    const removeBtn = el('button', 'list-remove', { type: 'button', title: 'Remove comment' });
+    const removeBtn = el('button', 'list-remove', { type: 'button', title: 'Remove comment', 'aria-label': 'Remove comment' });
     removeBtn.textContent = '✕';
     labelRow.append(labelEl, removeBtn);
 
