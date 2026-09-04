@@ -64,27 +64,38 @@ test('renders the complete form from the real index, template, rubric, and metho
   ]);
   assert.equal(document.querySelector('.doc-loading'), null);
   assert.equal(document.querySelectorAll('.doc-header').length, 1);
-  assert.equal(document.querySelector('[data-field="title"]').placeholder, 'Title for your research plan');
+  // RPA-55: the title's guidance is a hint outside the control, not a
+  // placeholder inside it.
+  assert.equal(document.querySelector('[data-field="researchTitle"]').hasAttribute('placeholder'), false);
+  const titleHint = document.querySelector('#field-researchTitle-hint');
+  assert.ok(titleHint && titleHint.textContent.trim().length > 0, 'the title renders a hint');
+  assert.equal(
+    document.querySelector('[data-field="researchTitle"]').getAttribute('aria-describedby'),
+    'field-researchTitle-hint'
+  );
 
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
-    ['Alignment', 'Project Context', 'Research', 'Methodology', 'Execution', 'Resources']
+    // RPA-55: opens with what a researcher can write; Alignment (identifiers
+    // and sign-off) closes; the two deadlines moved up into the header.
+    ['Project Context', 'Research', 'Methodology', 'Execution', 'Resources', 'Alignment']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['6 fields', '3 fields', '4 fields', '5 fields', '3 fields', '2 fields']
+    ['3 fields', '4 fields', '5 fields', '3 fields', '2 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Researcher', 'Project Owner',
-      'Project', 'Jira Project', 'Project Decision', 'Report Research',
-      'Sign off: Project Owner', 'Sign off: Researcher',
+      'Last updated', 'Research title',
+      'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
       'Requirements', 'Stage Timeline', 'Action Points',
-      'Previous Knowledge', 'Comments',
+      'Previous Knowledge',
+      'Project', 'Jira Project', 'Sign off: Project Owner', 'Sign off: Researcher',
+      'Comments',
     ]
   );
   assert.deepEqual(
@@ -176,11 +187,11 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
   assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
 });
 
-test('round-trips a draft-v3 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft-v5 with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
-  setValue(window, document.querySelector('[data-field="title"]'), 'Checkout study');
+  setValue(window, document.querySelector('[data-field="researchTitle"]'), 'Checkout study');
   setValue(window, document.querySelector('[data-field="background"]'), 'Current checkout context');
   setValue(window, listInputs(document, 'researchQuestions')[0], 'Question one');
   addListRow(document, 'researchQuestions');
@@ -196,10 +207,10 @@ test('round-trips a draft-v3 with Research Questions restored before dependent r
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
     timeout: 1500,
-    message: 'The v3 draft was not saved',
+    message: 'The v5 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 3);
+  assert.equal(saved.version, 5);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
@@ -208,7 +219,7 @@ test('round-trips a draft-v3 with Research Questions restored before dependent r
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());
-  assert.equal(restored.document.querySelector('[data-field="title"]').value, 'Checkout study');
+  assert.equal(restored.document.querySelector('[data-field="researchTitle"]').value, 'Checkout study');
   assert.equal(restored.document.querySelector('[data-field="background"]').value, 'Current checkout context');
   assert.deepEqual(listInputs(restored.document, 'researchQuestions').map((input) => input.value), [
     'Question one',

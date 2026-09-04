@@ -79,22 +79,68 @@ This makes evaluation effectively required for anyone who wants a plan marked
 complete, which is intended: someone who never evaluates has used the app as a
 text editor.
 
+### Stale evaluations still count (settled under RPA-55)
+
+RPA-39 made evaluation three-state — unevaluated, evaluated, evaluated-but-stale
+— which the rule above did not anticipate. Settled as follows:
+
+**A stale evaluation still counts towards a completed section. Currency is
+tracked separately, not folded into completion.**
+
+The original rule conflated two different things. *Completion* asks whether the
+work was done and the feedback engaged with. *Currency* asks whether the
+feedback still describes the text. They are orthogonal, and treating staleness
+as an incompletion was the error.
+
+Reverting a section to incomplete because someone fixed a typo would punish
+revision — and revision is the whole premise of calling this an application
+rather than a form. It would also teach people not to edit after evaluating,
+which is precisely backwards. This is the same reasoning that rejected a hard
+forward-lock: a rule that penalises honest work produces avoidance, not quality.
+
+But "complete" must not claim more than it can. So the outline carries the
+staleness marker alongside the completion state rather than instead of it — a
+section reads as done, with its evaluation flagged as out of date. That follows
+the precedent RPA-39 set in the panel itself: keep the result, label it, do not
+erase it.
+
+**Where currency does bite is sign-off.** RPA-55 moves sign-off into the review
+step, and that is the point at which stale evaluations should be surfaced —
+approving a plan whose feedback describes text that has since changed is exactly
+the case worth catching. Surfaced, not blocked: consistent with evaluation never
+gating progress.
+
 ## Consequences
 
-- The `spike/rpa-44-section-at-a-time` prototype was built around back/next
-  progression. It needs reworking toward free navigation with a persistent
-  outline before it can be tested as a real candidate.
+- The RPA-44 prototype was built around back/next progression, which this
+  decision replaces with free navigation and a persistent outline. The branch
+  has been closed rather than reworked — it was exploration, and its job was to
+  inform this record. Preserved at tag `spike/rpa-44-section-at-a-time-final`
+  if the code is ever wanted again.
 - Most GOV.UK form patterns become less applicable, since they assume one-time
   transactional completion. Their task list and "check your answers" patterns
   remain relevant; their one-thing-per-page material does not.
 - Returning to an existing draft must not replay the sequence.
+## Resolved since: evaluation staleness (RPA-39)
+
+This record originally left open what happens when a section is evaluated and
+then edited. **RPA-39 answered it in code**, and took the third option this
+record anticipated: an evaluated-then-edited state, rather than leaving the
+result standing or reverting it to unevaluated.
+
+Editing a field marks its evaluation stale instead of clearing it. The result
+is kept and labelled: a "Results out of date" status in a `role="status"`
+region, a `.eval-result-stale` class on the result pill, and the action
+relabelled from "Evaluate again" to "Update evaluation". The like / dislike /
+save controls are disabled while stale — you cannot endorse feedback about text
+that no longer exists.
+
+The un-stale path re-compares rather than simply clearing the flag, so a result
+that arrives while the user is still typing is correctly marked stale on
+arrival.
+
 ## Open questions
 
-- If a section is evaluated and then edited, is it still complete? The
-  evaluation now describes text that no longer exists. Leaving it complete
-  lies; reverting it to in-progress is punitive for a typo fix. A third state
-  ("evaluated, then edited") is probably right. RPA-42 set the precedent that
-  this class of staleness matters.
 - Does the section become the unit of AI evaluation, replacing field-by-field
   scoring? This would also address the multi-question feedback problem noted on
   11 August.

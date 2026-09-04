@@ -72,33 +72,19 @@ title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
-# Title (text): Title for your research plan
+# Research title (text):
+  Hint: Describe what this research covers, for example, ‘Usability testing of the application submission flow’.
 
-Researcher (text): Name
-  Hint: The person leading and accountable for executing this research study.
-Project Owner (text): Name
-  Hint: The person accountable for this initiative on the product or business side.
-<!-- Research Team (text): Team members -->
-<!-- Hint: Everyone contributing to this study beyond the two owners above. -->
-Last Updated (date):
+Lead researcher (text):
+  Hint: Name of the person leading this research.
+Project requester (text):
+  Hint: Name of the person requesting this work.
+Project decision (date):
+  Hint: Date of the decision informed by this research.
+Research readout (date):
+  Hint: Date findings are shared with the team.
+Last updated (date):
   Hint: The date this plan was last edited.
-
-# Alignment {grid}
-
-Project (textarea): Initiative
-  Hint: The product or business initiative this research plan supports.
-<!-- Area (text): Department -->
-Jira Project (text): Ticket reference
-  Hint: Links this plan to its tracking ticket in Jira.
-<!-- Jira Research (text): Ticket reference -->
-Project Decision (date):
-  Hint: Date for the product decision based on this research.
-Report Research (date):
-  Hint: Date you will share findings—allow at least a week before the Project Decision date.
-Sign off: Project Owner (text): Type initials
-  Hint: Project Owner approval — type initials and the date is added automatically.
-Sign off: Researcher (text): Type initials
-  Hint: Researcher approval — type initials and the date is added automatically.
 
 # Project Context {open}
 
@@ -151,6 +137,23 @@ Previous Knowledge (table): Name:prose=e.g. Q3 Checkout Usability Study | File:f
   Hint: Prior research or documentation relevant to this study, attached for reference.
 <!-- Documentation (textarea): Reference materials required to understand and execute the study -->
 Additional Resources (custom-fields): Add details...
+
+<!-- Alignment sits last. Project and Jira Project are identifiers, and the
+     sign-offs are headed for a review step at the end of the flow (RPA-55).
+     The form opens with Project Context and Research — the sections a
+     researcher can actually write — instead of paperwork. -->
+# Alignment {grid}
+
+Project (textarea): Initiative
+  Hint: The product or business initiative this research plan supports.
+<!-- Area (text): Department -->
+Jira Project (text): Ticket reference
+  Hint: Links this plan to its tracking ticket in Jira.
+<!-- Jira Research (text): Ticket reference -->
+Sign off: Project Owner (text): Type initials
+  Hint: Project Owner approval — type initials and the date is added automatically.
+Sign off: Researcher (text): Type initials
+  Hint: Researcher approval — type initials and the date is added automatically.
 
 # Additional Comments
 
