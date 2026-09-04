@@ -4,10 +4,12 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 2 and 3 drafted. No verdicts reached yet.** The field list,
-types and hint text are generated from the template; questions 2 and 3 are filled
-in below as a starting point to argue with. Question 1 — *why do we need it?* —
-and every verdict are still open.
+**Status: questions 1–3 drafted; 25 of 33 verdicts settled.** The field list,
+types and hint text are generated from the template. Question 1 is filled from
+what the app demonstrably consumes; questions 2 and 3 from the template, the
+field order and how the app behaves. The 8 rows still open all have
+**no in-app consumer** and need a reader, not a developer — see *For the readers*
+below.
 
 Question 1 is deliberately last. It asks what decision depends on each answer,
 which is the one thing that cannot be inferred from the form: it needs the people
@@ -56,16 +58,43 @@ Fill in as verdicts are reached.
 
 | Verdict | Count |
 |---|---|
-| keep | 8 |
+| keep | 17 |
 | cut | 1 |
 | merge | 0 |
 | optional | 3 |
 | move | 4 |
-| undecided | 17 |
+| undecided | 8 |
 | **total** | **33** |
 
 33 rather than 28: the three fixed-column tables are audited per column, per the
 unit rule above.
+
+## For the readers
+
+The rows below are the whole of what is still open. Every one of them passes
+question 2 (someone knows the answer) and fails question 1 in the only way the
+code can measure it: **nothing in the app consumes the value.** That is not a
+verdict. A field can matter to a human reader and be used by nothing in the
+tool — or the tool may be ignoring information it already collects. Both need
+a reader to settle.
+
+The question to put to whoever reads these plans, field by field:
+
+> **Nothing in the tool uses this. What do you use it for?**
+
+Anything with an answer is a *keep* (and possibly a feature request: feed it
+to the suggesters). Anything nobody can justify is the cut list. Several of
+these are also the hardest fields to answer (question 3) — *no consumer and
+high effort* is where the genuine cuts live.
+
+- Characteristics
+- User Groups
+- Requirements
+- Action Points → Action
+- Action Points → Responsible
+- Previous Knowledge → Name
+- Previous Knowledge → File
+- Comments
 
 ## Header (document meta)
 
@@ -82,8 +111,8 @@ unit rule above.
 |---|---|---|---|---|---|
 | **Project**<br><sub>asks: Initiative</sub> | `text` | Ties the plan to the initiative it serves. | Researcher, from the project side. Low risk. | Yes — to hand. | **keep** |
 | **Jira Project**<br><sub>asks: Ticket reference</sub> | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
-| **Project Decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. |  |
-| **Report Research** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked too early — a delivery commitment made before the method is chosen in section 5. |  |
+| **Project Decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced or optional.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. Pull it from the linked Jira issue, or let people proceed without it. Blocking on a date someone else has not set is how forms get abandoned. |
+| **Report Research** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked too early — a delivery commitment made before the method is chosen in section 5. | **keep** — the sequencing complaint is the form's order, not this field; noted for the reorder rather than a *move* here. |
 | **Sign off: Project Owner**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give, and nothing exists to approve at section 2. Already *move*. | **move** — to the review step. |
 | **Sign off: Researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
 
@@ -91,9 +120,9 @@ unit rule above.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester** and is scored by the rubric. Something does depend on it — which argues for sourcing it, not cutting it. | ⚠ Project side. The researcher transcribes it rather than knows it. | Able by transcription, and that is the problem: retyping a brief that already exists. Low willingness, and invites paraphrase drift. |  |
-| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. Same argument: source it rather than ask for it again. | ⚠ **Project Owner.** This is the project's goal, not the research's. | ⚠ Able only by copying. If the brief is vague the researcher invents the project's goal — worse than leaving it blank. |  |
-| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. | ⚠ Project side — usually the reason research was commissioned in the first place. | Usually findable, being the reason research was commissioned. Still transcription rather than authorship. |  |
+| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester** and is scored by the rubric. Something does depend on it — which argues for sourcing it, not cutting it. | ⚠ Project side. The researcher transcribes it rather than knows it. | Able by transcription, and that is the problem: retyping a brief that already exists. Low willingness, and invites paraphrase drift. | **keep — source it.** Feeds the framework suggester, so it is needed; but it is transcription. Prefill from the linked Jira issue (recommendation 1). The output is a follow-up ticket, not a cut. |
+| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. Same argument: source it rather than ask for it again. | ⚠ **Project Owner.** This is the project's goal, not the research's. | ⚠ Able only by copying. If the brief is vague the researcher invents the project's goal — worse than leaving it blank. | **keep — source it.** As Background. Bad transcription here degrades an AI feature's input, which makes sourcing a quality fix, not a convenience. |
+| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. | ⚠ Project side — usually the reason research was commissioned in the first place. | Usually findable, being the reason research was commissioned. Still transcription rather than authorship. | **keep — source it.** As Background. |
 
 ## Research
 
@@ -102,7 +131,7 @@ unit rule above.
 | **Objective**<br><sub>asks: Purpose and high-level goals of the research</sub> | `textarea`<br><sub>eval</sub> | **Feeds the methods suggester** and is scored by the rubric. | Researcher — core expertise. | Yes — this is what they came to write. | **keep** — the researcher's core contribution. |
 | **Hypothesis**<br><sub>asks: Baseline assumptions to be tested during the study</sub> | `textarea`<br><sub>optional, eval</sub> | Feeds the framework suggester; scored by the rubric. | Researcher. | Sometimes. Many studies have none; already optional, correctly. | **optional** — confirmed. Many studies have none. |
 | **Research Questions**<br><sub>asks: What do you want to understand?</sub> | `list`<br><sub>eval</sub> | **The load-bearing field.** Feeds the methods and framework suggesters, drives the Methods grouping, and pairs 1:1 with Outcomes. More depends on this than on anything else. | Researcher. | Yes — core expertise, and the reason they opened the form. | **keep** — core; the reason the form is opened. |
-| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> | Scored by the rubric, and paired 1:1 with Research Questions — the pairing is what makes each question answerable. | Researcher — tracks Research Questions 1:1. | Able, but asked before methods are chosen, so the deliverable is guessed and then revised. |  |
+| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> | Scored by the rubric, and paired 1:1 with Research Questions — the pairing is what makes each question answerable. | Researcher — tracks Research Questions 1:1. | Able, but asked before methods are chosen, so the deliverable is guessed and then revised. | **keep** — not *move*, deliberately: it is bound 1:1 to Research Questions, and moving it after Methods would break the pairing that gives it its value. The timing complaint is the form's order, handled by the reorder. |
 
 ## Methodology
 
@@ -119,9 +148,9 @@ unit rule above.
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
 | **Requirements**<br><sub>asks: Physical \| Digital \| Approvals</sub> | `table`<br><sub>editable-headers</sub> | ⚠ No in-app consumer. Operational: can the study actually run. Approvals is the part that blocks studies. | ⚠ **Split three ways.** Physical: researcher. Digital: IT. Approvals: legal/privacy. One field, three answerers. | ⚠ **Split.** Physical: yes. Digital: needs IT. Approvals: needs legal/privacy and is routinely unknown when planning. The danger is willingness without knowledge — a confident guess at approvals. |  |
-| **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. |  |
-| **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. |  |
-| **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. |  |
+| **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
+| **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. |
+| **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
 | **Action Points → Action** | `prose` | ⚠ No in-app consumer. Overlaps what Jira already tracks. | Researcher. | Yes. |  |
 | **Action Points → Responsible** | `prose` | ⚠ No in-app consumer. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. |  |
 | **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — live state in a signed document. Unanswerable when written, wrong the day after. |
