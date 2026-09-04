@@ -26,6 +26,25 @@ Verdicts: **keep** · **cut** · **merge** (into another field) · **optional** 
 A verdict of *move* is as valuable as *cut*. Per RPA-55, sequencing is half the
 problem — a field can be necessary and still be asked at the wrong moment.
 
+### One row per question, not per field
+
+Settled: **a table column is a question, so it gets its own row** — with one
+exception.
+
+`Requirements` is declared `editable-headers` in the template, so Physical,
+Digital and Approvals are *default labels the user can rename*, not questions
+the form asks. There is nothing to cut: a column someone can retitle is not a
+fixed question. It stays a single row, and its verdict is about the defaults.
+
+`Stage Timeline`, `Action Points` and `Previous Knowledge` have fixed columns.
+Every one of them is a question asked of every user, every time, so each is
+audited on its own line.
+
+This is what lets the sheet express the two column-level recommendations below.
+It also sharpens them: *Action Points → Status* is a straightforward column cut,
+whereas *Requirements → Approvals* is not a cut at all but a proposal to promote
+a renameable default into a field of its own.
+
 ## Scoreboard
 
 Fill in as verdicts are reached.
@@ -37,8 +56,11 @@ Fill in as verdicts are reached.
 | merge | 0 |
 | optional | 0 |
 | move | 0 |
-| undecided | 28 |
-| **total** | **28** |
+| undecided | 33 |
+| **total** | **33** |
+
+33 rather than 28: the three fixed-column tables are audited per column, per the
+unit rule above.
 
 ## Header (document meta)
 
@@ -92,14 +114,19 @@ Fill in as verdicts are reached.
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
 | **Requirements**<br><sub>asks: Physical \| Digital \| Approvals</sub> | `table`<br><sub>editable-headers</sub> |  | ⚠ **Split three ways.** Physical: researcher. Digital: IT. Approvals: legal/privacy. One field, three answerers. |  |  |
-| **Stage Timeline**<br><sub>asks: Stage:select=Planning,Recruitment,Data Collection,Analysis,Reportin…</sub> | `table` |  | Researcher plans it; recruitment controls whether the dates hold. |  |  |
-| **Action Points**<br><sub>asks: Action:text=Task description \| Responsible:person \| Status:status</sub> | `table` |  | ⚠ *Responsible* names other people; *Status* is nobody's answer at authoring time — it changes afterwards. |  |  |
+| **Stage Timeline → Stage** | `select` |  | Researcher — their own plan. |  |  |
+| **Stage Timeline → Start Date** | `date` |  | ⚠ Researcher proposes; recruitment decides whether it holds. |  |  |
+| **Stage Timeline → Completion Date** | `date` |  | ⚠ As above — a forecast, not a fact. |  |  |
+| **Action Points → Action** | `prose` |  | Researcher. |  |  |
+| **Action Points → Responsible** | `prose` |  | ⚠ Names other people. Commits someone who is not in the room. |  |  |
+| **Action Points → Status** | `status` |  | ⚠ Nobody, at authoring time. It changes after the plan is written. |  |  |
 
 ## Resources
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Previous Knowledge**<br><sub>asks: Name:text=e.g. Q3 Checkout Usability Study \| File:file</sub> | `table` |  | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. |  |  |
+| **Previous Knowledge → Name** | `prose` |  | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. |  |  |
+| **Previous Knowledge → File** | `file` |  | ⚠ Harder than the name: needs the artefact to hand, not just its title. |  |  |
 | **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` |  | Researcher — open-ended by definition. |  |  |
 
 ## Additional Comments
@@ -223,10 +250,13 @@ Two cuts (Action Points/Status, possibly Comments), three or four moves, several
 made optional, and the great majority *keep*. If that disappoints, ADR 001 already
 argued why: the problem was probably orientation, not scope.
 
-### Decision needed before verdicts go in
+### Decision needed before verdicts go in — settled
 
-Is one row per field the right unit? Recommendations 2a and 2b are both *column*-level
-verdicts on table fields, and the sheet as it stands cannot express them.
+One row per *question*, not per field: fixed table columns are audited
+individually, and `Requirements` stays whole because its headers are editable.
+See "One row per question, not per field" above. The sheet can now express both
+column-level recommendations, and the distinction sharpened them — 2a is a
+column cut, 2b is a promotion rather than a cut at all.
 
 ## Already dormant
 

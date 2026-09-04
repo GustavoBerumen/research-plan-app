@@ -78,6 +78,23 @@ def parse_template(path=TEMPLATE):
     return sections, dormant
 
 
+def audited_labels(label, spec, hint):
+    """The rows a field should occupy: one per question, not one per field.
+
+    A fixed table column is a question the form asks of every user, every time,
+    so it is audited on its own line -- that is what lets the sheet carry a
+    verdict like "Action Points -> Status: cut".
+
+    The exception is a table declared editable-headers: its column names are
+    defaults the user can rename, not questions the form asks, so there is
+    nothing to cut per column. Those stay a single row.
+    """
+    if "table" not in spec or "editable-headers" in spec:
+        return [label]
+    columns = [c.split(":")[0].strip() for c in hint.split("|") if c.strip()]
+    return [f"{label} → {c}" for c in columns] or [label]
+
+
 def audit_labels(path=AUDIT):
     """Field labels currently present as rows in the audit table."""
     if not os.path.exists(path):
@@ -88,7 +105,10 @@ def audit_labels(path=AUDIT):
 
 def check():
     sections, _ = parse_template()
-    in_template = {label for _, fields in sections for label, *_ in fields}
+    in_template = {row
+                   for _, fields in sections
+                   for label, spec, hint, _grp in fields
+                   for row in audited_labels(label, spec, hint)}
     in_audit = audit_labels()
     if in_audit is None:
         print(f"{AUDIT} does not exist -- run with --write to create it.")
@@ -111,7 +131,8 @@ def check():
 
 def scaffold():
     sections, dormant = parse_template()
-    total = sum(len(f) for _, f in sections)
+    total = sum(len(audited_labels(l, s, h))
+                for _, fields in sections for l, s, h, _ in fields)
     out = []
     w = out.append
     w("# Field audit — RPA-55")
@@ -133,6 +154,13 @@ def scaffold():
           "Able and willing? | Verdict |")
         w("|---|---|---|---|---|---|")
         for label, spec, hint, grp in fields:
+            rows = audited_labels(label, spec, hint)
+            if rows != [label]:
+                # Fixed table columns: one row each, typed from the column spec.
+                for row, col in zip(rows, [c.strip() for c in hint.split("|") if c.strip()]):
+                    ctype = col.split(":", 1)[1].split("=")[0].strip() if ":" in col else "text"
+                    w(f"| **{row}** | `{ctype}` |  |  |  |  |")
+                continue
             parts = [p.strip() for p in spec.split(",")]
             flags = ", ".join(parts[1:])
             tcell = f"`{parts[0]}`" + (f"<br><sub>{flags}</sub>" if flags else "")
