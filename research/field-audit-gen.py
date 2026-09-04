@@ -50,6 +50,12 @@ def parse_template(path=TEMPLATE):
         line = raw.rstrip()
         if not line.strip():
             continue
+        # Indented lines belong to the field above them -- "Hint:", "Good:",
+        # "Bad:" -- and are never fields. Skip them outright rather than
+        # relying on FIELD failing to match: a hint containing "):" would
+        # otherwise be mistaken for a field line.
+        if raw[:1].isspace():
+            continue
         m = COMMENTED.match(line.strip())
         if m:
             fm = FIELD.match(m.group(1))
