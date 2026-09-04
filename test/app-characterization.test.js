@@ -68,23 +68,25 @@ test('renders the complete form from the real index, template, rubric, and metho
 
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
-    ['Alignment', 'Project Context', 'Research', 'Methodology', 'Execution', 'Resources']
+    // RPA-55: opens with what a researcher can write; Alignment (identifiers
+    // and sign-off) closes; the two deadlines moved up into the header.
+    ['Project Context', 'Research', 'Methodology', 'Execution', 'Resources', 'Alignment']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['6 fields', '3 fields', '4 fields', '5 fields', '3 fields', '2 fields']
+    ['3 fields', '4 fields', '5 fields', '3 fields', '2 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Researcher', 'Project Owner',
-      'Project', 'Jira Project', 'Project Decision', 'Report Research',
-      'Sign off: Project Owner', 'Sign off: Researcher',
+      'Last Updated', 'Researcher', 'Project Owner', 'Project Decision', 'Report Research',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
       'Requirements', 'Stage Timeline', 'Action Points',
-      'Previous Knowledge', 'Comments',
+      'Previous Knowledge',
+      'Project', 'Jira Project', 'Sign off: Project Owner', 'Sign off: Researcher',
+      'Comments',
     ]
   );
   assert.deepEqual(

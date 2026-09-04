@@ -6,7 +6,7 @@ The app takes a standard research plan document and turns it into a guided form:
 
 ## Features
 
-- Digital version of the team's Research Plan Template, organised into collapsible sections (Alignment, Project Context, Research, Methodology, Execution, Resources)
+- Digital version of the team's Research Plan Template, organised into collapsible sections (Project Context, Research, Methodology, Execution, Resources, Alignment)
 - AI-assisted evaluation — the "Evaluate" button scores a field against a rubric using the Claude API and returns specific, actionable feedback
 - Research Questions and Outcomes as paired dynamic lists — add a question, get a matching outcome slot
 - Methods field with a searchable dropdown of 125 standard research methods, plus free text for anything not on the list
