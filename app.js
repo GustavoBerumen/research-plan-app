@@ -149,6 +149,15 @@
         return;
       }
 
+      // An indented "Hint:" line is the field's visible guidance — the same
+      // follow-on shape as the Good/Bad example lines below, so every word a
+      // reader sees lives in the template rather than in code.
+      const hintMatch = raw.match(/^\s+Hint:\s*(.*)$/i);
+      if (hintMatch && currentField) {
+        currentField.hint = hintMatch[1].trim();
+        return;
+      }
+
       const exMatch = raw.match(/^\s+(Good|Bad):\s*(.*)$/i);
       if (exMatch && currentField) {
         currentField.examples = currentField.examples || {};
@@ -2513,7 +2522,7 @@
     label.textContent = field.label;
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
-    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    const guidance = renderFieldHint(field, labelId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const tblWrap = el('div', 'tbl-wrap');
@@ -2791,7 +2800,7 @@
     }
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
-    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    const guidance = renderFieldHint(field, labelId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
     const rowName = field.label.replace(/s$/i, '');
 
@@ -2915,7 +2924,7 @@
     label.textContent = field.label;
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
-    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    const guidance = renderFieldHint(field, labelId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const list = el('div', 'list-rows');
@@ -2955,7 +2964,7 @@
     }
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
-    const guidance = renderFieldHint(field.key, labelId + '-hint');
+    const guidance = renderFieldHint(field, labelId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const container = el('div', 'methods-groups');
@@ -2989,38 +2998,10 @@
   }
 
   // ---------- info tooltip (reusable hover/focus hint icon) ----------
-  // Keyed by field.key, same lookup pattern as attachSignOffStamp below.
-  // Add an entry here to put a "?" icon on any other field's label later.
-  const FIELD_INFO_TIPS = {
-    researchQuestions: 'Defines an inquiry that translates your objective into a clear and discoverable topic.',
-    background: 'Provides sufficient context for the study, defines essential terms used across sections, and stays focused without unnecessary clutter.',
-    goal: 'Focus on the target state of the product or user experience: What build, feature, or business metric will change if this project succeeds?',
-    problemStatement: 'Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.',
-    objective: 'Focus on deep understanding rather than proving a bias, connects to an upcoming decision, and remains realistic in scope.',
-    hypothesis: 'An educated idea about user behaviour or product performance that your study will directly test. Rather than guessing, connects past knowledge to an upcoming product decision.',
-    outcomes: 'Ties each deliverable to a specific research question and a concrete product or business decision.',
-    theory: "An academic theory or framework that can help ground this study's design or analysis.",
-    methods: "The research methods you'll use to answer your research questions.",
-    characteristics: 'Traits or behaviours that define who you need to recruit for this study.',
-    userGroups: 'The distinct user segments you want represented among participants.',
-    sampleSize: 'How many participants you plan to recruit for this study.',
-    requirements: "What you'll need to run this study — physical items, digital tools, and approvals.",
-    stageTimeline: 'The planned schedule for each stage of this research, from planning through reporting.',
-    actionPoints: 'Tasks needed to move this research forward, and who owns each one.',
-    previousKnowledge: 'Prior research or documentation relevant to this study, attached for reference.',
-    comments: "Anything else worth noting that didn't fit elsewhere in this plan.",
-    projectOwner: 'The person accountable for this initiative on the product or business side.',
-    researcher: 'The person leading and accountable for executing this research study.',
-    researchTeam: 'Everyone contributing to this study beyond the two owners above.',
-    lastUpdated: 'The date this plan was last edited.',
-    project: 'The product or business initiative this research plan supports.',
-    jiraProject: 'Links this plan to its tracking ticket in Jira.',
-    projectDecision: 'Date for the product decision based on this research.',
-    reportResearch: 'Date you will share findings—allow at least a week before the Project Decision date.',
-    signOffProjectOwner: 'Project Owner approval — type initials and the date is added automatically.',
-    signOffResearcher: 'Researcher approval — type initials and the date is added automatically.',
-  };
-
+  // Field guidance itself lives in research-plan-template.md as an indented
+  // "Hint:" line under each field (see parseSchema). This icon is only used
+  // for the two button-row tips that are not tied to a field.
+  //
   // The bubble is reparented to <body> with position:fixed while shown —
   // same trick as .combo-menu — so it always escapes any ancestor's
   // overflow:hidden (e.g. the accordion box) regardless of which field it's
@@ -3079,8 +3060,8 @@
   // and a screen reader only meets it if it happens to land on the icon. The
   // hint is a sibling of the label rather than a child, so it describes the
   // control (aria-describedby) without bloating the control's name.
-  function renderFieldHint(key, id) {
-    const text = FIELD_INFO_TIPS[key];
+  function renderFieldHint(field, id) {
+    const text = field && field.hint;
     if (!text) return null;
     const hint = el('div', 'field-hint-text', { id: id });
     hint.textContent = text;
@@ -3481,7 +3462,7 @@
       label.append(' ', opt);
     }
     wrap.appendChild(label);
-    const guidance = renderFieldHint(field.key, controlId + '-hint');
+    const guidance = renderFieldHint(field, controlId + '-hint');
     if (guidance) wrap.appendChild(guidance);
 
     // Reuses the same .ssel dropdown + "Other…" escape hatch as a table's
@@ -3629,7 +3610,7 @@
         // attaches via aria-labelledby; a text field gets a real <label for>.
         const lbl = el(f.type === 'date' ? 'div' : 'label', 'clbl', { id: controlId + '-label' });
         lbl.textContent = f.label;
-        const guidance = renderFieldHint(f.key, controlId + '-hint');
+        const guidance = renderFieldHint(f, controlId + '-hint');
         let inp;
         let control;
         if (f.type === 'date') {
@@ -3727,7 +3708,7 @@
       label.textContent = f.label;
       // Last Updated sits in a compact corner slot with no room for guidance,
       // and it is a computed value nobody is asked to fill in.
-      const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f.key, controlId + '-hint');
+      const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f, controlId + '-hint');
       let input;
       let control;
       if (f.type === 'date') {
