@@ -4,10 +4,15 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: first pass done on question 2 only.** No verdicts reached yet. The field
-list, types and hint text are generated from the template. Question 2 is filled in
-below as a starting point to argue with — questions 1 and 3, and every verdict,
-are still open.
+**Status: questions 2 and 3 drafted. No verdicts reached yet.** The field list,
+types and hint text are generated from the template; questions 2 and 3 are filled
+in below as a starting point to argue with. Question 1 — *why do we need it?* —
+and every verdict are still open.
+
+Question 1 is deliberately last. It asks what decision depends on each answer,
+which is the one thing that cannot be inferred from the form: it needs the people
+who read these plans. Questions 2 and 3 could be reasoned out from the template,
+the field order and how the app behaves.
 
 ## How to use this
 
@@ -66,74 +71,74 @@ unit rule above.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Title**<br><sub>asks: Title for your research plan</sub> | `text` |  | Researcher — naming their own plan. |  |  |
-| **Researcher**<br><sub>asks: Name</sub> | `text` |  | Researcher (self). |  |  |
-| **Project Owner**<br><sub>asks: Name</sub> | `text` |  | Researcher knows the name. |  |  |
-| **Last Updated** | `date` |  | Nobody — computed. Already *move*. |  |  |
+| **Title**<br><sub>asks: Title for your research plan</sub> | `text` |  | Researcher — naming their own plan. | Able, but usually **last**. You name a plan once you know what it is; this is asked first. |  |
+| **Researcher**<br><sub>asks: Name</sub> | `text` |  | Researcher (self). | Yes — zero effort. |  |
+| **Project Owner**<br><sub>asks: Name</sub> | `text` |  | Researcher knows the name. | Yes — zero effort. |  |
+| **Last Updated** | `date` |  | Nobody — computed. Already *move*. | N/A — computed, never asked. |  |
 
 ## Alignment
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Project**<br><sub>asks: Initiative</sub> | `text` |  | Researcher, from the project side. Low risk. |  |  |
-| **Jira Project**<br><sub>asks: Ticket reference</sub> | `text` |  | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. |  |  |
-| **Project Decision** | `date` |  | ⚠ **Project Owner.** A delivery date the researcher does not set. |  |  |
-| **Report Research** | `date` |  | Researcher — their own commitment. |  |  |
-| **Sign off: Project Owner**<br><sub>asks: Type initials</sub> | `text` |  | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. |  |  |
-| **Sign off: Researcher**<br><sub>asks: Type initials</sub> | `text` |  | Researcher (self) — but see timing. |  |  |
+| **Project**<br><sub>asks: Initiative</sub> | `text` |  | Researcher, from the project side. Low risk. | Yes — to hand. |  |
+| **Jira Project**<br><sub>asks: Ticket reference</sub> | `text` |  | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. |  |
+| **Project Decision** | `date` |  | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. |  |
+| **Report Research** | `date` |  | Researcher — their own commitment. | ⚠ Able, but asked too early — a delivery commitment made before the method is chosen in section 5. |  |
+| **Sign off: Project Owner**<br><sub>asks: Type initials</sub> | `text` |  | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give, and nothing exists to approve at section 2. Already *move*. |  |
+| **Sign off: Researcher**<br><sub>asks: Type initials</sub> | `text` |  | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. |  |
 
 ## Project Context
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ Project side. The researcher transcribes it rather than knows it. |  |  |
-| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ **Project Owner.** This is the project's goal, not the research's. |  |  |
-| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ Project side — usually the reason research was commissioned in the first place. |  |  |
+| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ Project side. The researcher transcribes it rather than knows it. | Able by transcription, and that is the problem: retyping a brief that already exists. Low willingness, and invites paraphrase drift. |  |
+| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ **Project Owner.** This is the project's goal, not the research's. | ⚠ Able only by copying. If the brief is vague the researcher invents the project's goal — worse than leaving it blank. |  |
+| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> |  | ⚠ Project side — usually the reason research was commissioned in the first place. | Usually findable, being the reason research was commissioned. Still transcription rather than authorship. |  |
 
 ## Research
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Objective**<br><sub>asks: Purpose and high-level goals of the research</sub> | `textarea`<br><sub>eval</sub> |  | Researcher — core expertise. |  |  |
-| **Hypothesis**<br><sub>asks: Baseline assumptions to be tested during the study</sub> | `textarea`<br><sub>optional, eval</sub> |  | Researcher. |  |  |
-| **Research Questions**<br><sub>asks: What do you want to understand?</sub> | `list`<br><sub>eval</sub> |  | Researcher. |  |  |
-| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> |  | Researcher — tracks Research Questions 1:1. |  |  |
+| **Objective**<br><sub>asks: Purpose and high-level goals of the research</sub> | `textarea`<br><sub>eval</sub> |  | Researcher — core expertise. | Yes — this is what they came to write. |  |
+| **Hypothesis**<br><sub>asks: Baseline assumptions to be tested during the study</sub> | `textarea`<br><sub>optional, eval</sub> |  | Researcher. | Sometimes. Many studies have none; already optional, correctly. |  |
+| **Research Questions**<br><sub>asks: What do you want to understand?</sub> | `list`<br><sub>eval</sub> |  | Researcher. | Yes — core expertise, and the reason they opened the form. |  |
+| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> |  | Researcher — tracks Research Questions 1:1. | Able, but asked before methods are chosen, so the deliverable is guessed and then revised. |  |
 
 ## Methodology
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> |  | Researcher. |  |  |
-| **Methods**<br><sub>asks: Search or type a method</sub> | `list` |  | Researcher — core expertise. |  |  |
-| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: e.g. Frequent mobile shoppers</sub> | `list` |  | Researcher; recruitment/ops may hold the real numbers. |  |  |
-| **User Groups**<br><sub>in *Participants*</sub><br><sub>asks: e.g. New customers</sub> | `list` |  | Researcher, though segment names may be owned by product. |  |  |
-| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `select` |  | Researcher. |  |  |
+| **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> |  | Researcher. | Often not to hand. Already optional, and the suggester exists precisely because recall is unreliable here. |  |
+| **Methods**<br><sub>asks: Search or type a method</sub> | `list` |  | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. |  |
+| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: e.g. Frequent mobile shoppers</sub> | `list` |  | Researcher; recruitment/ops may hold the real numbers. | Roughly, yes. Precise figures usually sit with recruitment. |  |
+| **User Groups**<br><sub>in *Participants*</sub><br><sub>asks: e.g. New customers</sub> | `list` |  | Researcher, though segment names may be owned by product. | Yes, though segment names may need product to confirm. |  |
+| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `select` |  | Researcher. | Yes — a four-option dropdown, near-zero cost. |  |
 
 ## Execution
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Requirements**<br><sub>asks: Physical \| Digital \| Approvals</sub> | `table`<br><sub>editable-headers</sub> |  | ⚠ **Split three ways.** Physical: researcher. Digital: IT. Approvals: legal/privacy. One field, three answerers. |  |  |
-| **Stage Timeline → Stage** | `select` |  | Researcher — their own plan. |  |  |
-| **Stage Timeline → Start Date** | `date` |  | ⚠ Researcher proposes; recruitment decides whether it holds. |  |  |
-| **Stage Timeline → Completion Date** | `date` |  | ⚠ As above — a forecast, not a fact. |  |  |
-| **Action Points → Action** | `prose` |  | Researcher. |  |  |
-| **Action Points → Responsible** | `prose` |  | ⚠ Names other people. Commits someone who is not in the room. |  |  |
-| **Action Points → Status** | `status` |  | ⚠ Nobody, at authoring time. It changes after the plan is written. |  |  |
+| **Requirements**<br><sub>asks: Physical \| Digital \| Approvals</sub> | `table`<br><sub>editable-headers</sub> |  | ⚠ **Split three ways.** Physical: researcher. Digital: IT. Approvals: legal/privacy. One field, three answerers. | ⚠ **Split.** Physical: yes. Digital: needs IT. Approvals: needs legal/privacy and is routinely unknown when planning. The danger is willingness without knowledge — a confident guess at approvals. |  |
+| **Stage Timeline → Stage** | `select` |  | Researcher — their own plan. | Yes — a five-option dropdown. |  |
+| **Stage Timeline → Start Date** | `date` |  | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. |  |
+| **Stage Timeline → Completion Date** | `date` |  | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. |  |
+| **Action Points → Action** | `prose` |  | Researcher. | Yes. |  |
+| **Action Points → Responsible** | `prose` |  | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. |  |
+| **Action Points → Status** | `status` |  | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. |  |
 
 ## Resources
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Previous Knowledge → Name** | `prose` |  | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. |  |  |
-| **Previous Knowledge → File** | `file` |  | ⚠ Harder than the name: needs the artefact to hand, not just its title. |  |  |
-| **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` |  | Researcher — open-ended by definition. |  |  |
+| **Previous Knowledge → Name** | `prose` |  | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. |  |
+| **Previous Knowledge → File** | `file` |  | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. |  |
+| **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` |  | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. |  |
 
 ## Additional Comments
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Comments**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> |  | Whoever is filling it — but no defined reader. |  |  |
+| **Comments**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> |  | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. |  |
 
 ## First pass: who has the answer?
 
