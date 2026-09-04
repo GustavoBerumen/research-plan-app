@@ -79,6 +79,10 @@ This makes evaluation effectively required for anyone who wants a plan marked
 complete, which is intended: someone who never evaluates has used the app as a
 text editor.
 
+> **Superseded in part by RPA-39.** This rule assumes evaluation is binary. It
+> is now three-state — unevaluated, evaluated, evaluated-but-stale — so what a
+> stale evaluation counts for is unresolved. See Open questions.
+
 ## Consequences
 
 - The `spike/rpa-44-section-at-a-time` prototype was built around back/next
@@ -88,13 +92,32 @@ text editor.
   transactional completion. Their task list and "check your answers" patterns
   remain relevant; their one-thing-per-page material does not.
 - Returning to an existing draft must not replay the sequence.
+## Resolved since: evaluation staleness (RPA-39)
+
+This record originally left open what happens when a section is evaluated and
+then edited. **RPA-39 answered it in code**, and took the third option this
+record anticipated: an evaluated-then-edited state, rather than leaving the
+result standing or reverting it to unevaluated.
+
+Editing a field marks its evaluation stale instead of clearing it. The result
+is kept and labelled: a "Results out of date" status in a `role="status"`
+region, a `.eval-result-stale` class on the result pill, and the action
+relabelled from "Evaluate again" to "Update evaluation". The like / dislike /
+save controls are disabled while stale — you cannot endorse feedback about text
+that no longer exists.
+
+The un-stale path re-compares rather than simply clearing the flag, so a result
+that arrives while the user is still typing is correctly marked stale on
+arrival.
+
 ## Open questions
 
-- If a section is evaluated and then edited, is it still complete? The
-  evaluation now describes text that no longer exists. Leaving it complete
-  lies; reverting it to in-progress is punitive for a typo fix. A third state
-  ("evaluated, then edited") is probably right. RPA-42 set the precedent that
-  this class of staleness matters.
+- **Does a stale evaluation count towards a completed section?** The completion
+  rule above assumes two states, evaluated or not. RPA-39 created a third.
+  Leaving it as "complete" means a section can be marked done on the strength of
+  feedback about text that has since changed — and the code already treats a
+  stale result as untrustworthy enough to disable feedback on, which argues it
+  should not count. Needs settling as part of RPA-55.
 - Does the section become the unit of AI evaluation, replacing field-by-field
   scoring? This would also address the multi-question feedback problem noted on
   11 August.
