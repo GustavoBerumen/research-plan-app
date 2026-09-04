@@ -20,7 +20,7 @@ The app takes a standard research plan document and turns it into a guided form:
 - **Frontend:** plain HTML, CSS, and JavaScript — no framework, no build step
 - **Backend:** a small Node.js server (`server.js`, no framework) that talks to the Claude API for evaluation/calibration and handles file uploads
 - **Content as data:** the form's fields, rubric, and methods list live in plain Markdown files rather than being hardcoded, so the document structure can change without touching app code:
-  - `research-plan-template.md` — fields, sections, and placeholder/example text
+  - `research-plan-template.md` — fields, sections, hint text, and placeholder/example text
   - `research-plan-rubric.md` — scoring criteria used by the Evaluate step
   - `research-methods.md` — the methods dropdown list
 
