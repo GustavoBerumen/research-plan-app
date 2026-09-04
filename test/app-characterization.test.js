@@ -79,7 +79,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Researcher', 'Project Owner', 'Project Decision', 'Report Research',
+      'Last Updated', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
@@ -178,7 +178,7 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
   assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
 });
 
-test('round-trips a draft-v3 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft-v4 with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
@@ -198,10 +198,10 @@ test('round-trips a draft-v3 with Research Questions restored before dependent r
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
     timeout: 1500,
-    message: 'The v3 draft was not saved',
+    message: 'The v4 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 3);
+  assert.equal(saved.version, 4);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;

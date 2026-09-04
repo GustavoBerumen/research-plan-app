@@ -59,7 +59,7 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(document.querySelector('[data-field="signOffProjectOwner"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffResearcher"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="projectDecision"]').type, 'date');
-  assert.equal(document.querySelector('[data-field="reportResearch"]').type, 'date');
+  assert.equal(document.querySelector('[data-field="researchReadout"]').type, 'date');
 
   for (const key of ['characteristics', 'userGroups']) {
     const input = listInputs(document, key)[0];

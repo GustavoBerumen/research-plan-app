@@ -3397,16 +3397,16 @@
     return hint;
   }
 
-  // Warns when Report Research lands less than a week before Project
-  // Decision, so there's no buffer for setbacks. The controls keep their
+  // Warns when Research readout lands less than a week before Project
+  // decision, so there's no buffer for setbacks. The controls keep their
   // canonical values as ISO YYYY-MM-DD even though the segmented editor is
   // displayed as DD-MMM-YYYY.
   function initDeadlineConstraints() {
     const decisionInput = doc.querySelector('[data-field="projectDecision"]');
-    const researchInput = doc.querySelector('[data-field="reportResearch"]');
+    const researchInput = doc.querySelector('[data-field="researchReadout"]');
     if (!decisionInput || !researchInput) return;
 
-    // Report Research can't land after Project Decision — hard-blocked via
+    // Research readout can't land after Project decision — hard-blocked via
     // max= (constrains the native picker itself) plus a clamp-on-change
     // fallback, same approach as attachDateRangeConstraint for Stage
     // Timeline's start/completion pair (just the ceiling flipped).
@@ -3420,7 +3420,7 @@
     researchInput.addEventListener('change', clampResearch);
     clampResearch();
 
-    // Softer, complementary check: even a Report Research date that's
+    // Softer, complementary check: even a Research readout date that's
     // technically before the decision might not leave enough buffer.
     const warning = el('div', 'field-warning');
     warning.textContent = 'Allow a one-week buffer before the decision date.';
@@ -3839,7 +3839,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 3;
+  const DRAFT_VERSION = 4;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -4102,6 +4102,25 @@
         }
         delete migrated.fields.problem;
       }
+    }
+    // v4: RPA-55 renamed three header fields — Researcher, Project Owner and
+    // Report Research became Lead researcher, Project requester and Research
+    // readout. Same situation as v3: the key follows the label through
+    // toCamelKey, so a draft saved before the rename holds keys no live field
+    // answers to, and applyDraft would drop those values without a word.
+    if (version < 4) {
+      migrated.fields = Object.assign({}, migrated.fields);
+      const renamedInV4 = {
+        researcher: 'leadResearcher',
+        projectOwner: 'projectRequester',
+        reportResearch: 'researchReadout',
+      };
+      Object.keys(renamedInV4).forEach((oldKey) => {
+        const newKey = renamedInV4[oldKey];
+        if (!Object.prototype.hasOwnProperty.call(migrated.fields, oldKey)) return;
+        if (!migrated.fields[newKey]) migrated.fields[newKey] = migrated.fields[oldKey];
+        delete migrated.fields[oldKey];
+      });
     }
     return migrated;
   }
