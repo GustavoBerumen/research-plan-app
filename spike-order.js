@@ -39,11 +39,16 @@
     .v4-flag{position:fixed;top:8px;right:8px;z-index:99;
       font:600 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
       color:#1e40af;background:#dbeafe;border:1px solid #bfdbfe;padding:5px 8px;border-radius:3px}
-    .v4-keydates{margin:0 0 14px;padding:16px 18px;border:1px solid #eeebe6;border-radius:10px}
-    .v4-keydates-title{font-size:12px;font-weight:700;letter-spacing:.02em;color:#57534e;
+    /* Deliberately the same grid as .meta-grid — 1fr 1fr, 36px gap, no
+       padding of its own — so the two dates line up exactly with Researcher
+       and Project Owner above. A table cannot reproduce that: cell padding
+       comes out of the percentage, so equal-width cells still yield unequal
+       controls. No card either, matching the sections on main. */
+    .v4-keydates{margin:0 0 28px;padding:0;border:0}
+    .v4-keydates-title{font-size:var(--text,16px);font-weight:700;color:var(--ink,#0b0c0c);
       margin-bottom:14px}
-    .v4-keydates table{width:100%;border-collapse:separate;border-spacing:0 0}
-    .v4-keydates td{padding:0 36px 0 0;vertical-align:top}
+    .v4-keydates-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 36px}
+    .v4-keydates-cell{display:flex;flex-direction:column;min-width:0}
     @media print{.v4-flag{display:none!important}}
   `;
 
@@ -58,28 +63,38 @@
 
   /*
    * Project Decision and Report Research are the whole of the Alignment
-   * table's second row, so the <tr> moves intact — the date controls, their
-   * range constraint and the deadline check all come with it untouched.
+   * table's second row. Each cell's contents — label, hint and date control —
+   * are moved into a grid cell, so the controls themselves are never rebuilt:
+   * the segmented editor, the start-before-completion constraint and the
+   * deadline check all come across untouched, along with the label
+   * associations the redesign added.
    */
   function liftKeyDates(doc, header) {
     const anchor = doc.querySelector('[data-field="projectDecision"]');
     const row = anchor && anchor.closest('tr');
     if (!row) return null;
 
-    const others = Array.from(row.querySelectorAll('[data-field]'))
+    const fields = Array.from(row.querySelectorAll('[data-field]'))
       .map((el) => el.getAttribute('data-field'));
-    if (!others.includes('reportResearch')) return null;   // not the row we expect
+    if (!fields.includes('reportResearch')) return null;   // not the row we expect
 
     const block = document.createElement('div');
     block.className = 'v4-keydates';
     const title = document.createElement('div');
     title.className = 'v4-keydates-title';
-    title.textContent = 'KEY DATES';
-    const table = document.createElement('table');
-    const tbody = document.createElement('tbody');
-    tbody.appendChild(row);              // moves it out of the Alignment table
-    table.appendChild(tbody);
-    block.append(title, table);
+    title.textContent = 'Key dates';
+    const grid = document.createElement('div');
+    grid.className = 'v4-keydates-grid';
+
+    Array.from(row.children).forEach((td) => {
+      const cell = document.createElement('div');
+      cell.className = 'v4-keydates-cell';
+      while (td.firstChild) cell.appendChild(td.firstChild);
+      grid.appendChild(cell);
+    });
+    row.remove();                        // the emptied row leaves Alignment
+
+    block.append(title, grid);
     header.insertAdjacentElement('afterend', block);
     return block;
   }
