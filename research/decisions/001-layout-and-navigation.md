@@ -112,9 +112,11 @@ gating progress.
 
 ## Consequences
 
-- The `spike/rpa-44-section-at-a-time` prototype was built around back/next
-  progression. It needs reworking toward free navigation with a persistent
-  outline before it can be tested as a real candidate.
+- The RPA-44 prototype was built around back/next progression, which this
+  decision replaces with free navigation and a persistent outline. The branch
+  has been closed rather than reworked — it was exploration, and its job was to
+  inform this record. Preserved at tag `spike/rpa-44-section-at-a-time-final`
+  if the code is ever wanted again.
 - Most GOV.UK form patterns become less applicable, since they assume one-time
   transactional completion. Their task list and "check your answers" patterns
   remain relevant; their one-thing-per-page material does not.
