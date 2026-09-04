@@ -95,8 +95,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    between them. Every later boundary has one rule, so this matches. */
 .doc-header{margin-bottom:36px;padding-bottom:30px}
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
-.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:none;border:none;border-bottom:2px solid var(--ink);padding:6px 0 8px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
-.title-inp:focus{border-bottom-color:var(--ink);box-shadow:none;outline:3px solid var(--focus);outline-offset:0}
+.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .title-inp::placeholder{color:var(--text-2)}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:24px}
 .mf{display:flex;flex-direction:column;gap:5px}
@@ -426,7 +425,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   body,html{background:#fff!important}
   .page-wrap{padding:0!important}
   .doc{box-shadow:none!important;max-width:100%!important;padding:24px 36px!important;margin:0!important}
-  .finput,.cinput,.minput,.date-control,.ssel,.th-input{border-color:#999!important;box-shadow:none!important;background:#fff!important}
+  .finput,.cinput,.minput,.date-control,.ssel,.th-input,.title-inp{border-color:#999!important;box-shadow:none!important;background:#fff!important}
   /* overflow:visible only, deliberately no height:auto: the autosizer
      maintains an accurate inline height and recalculates before printing. */
   textarea.finput,textarea.prose-input{overflow:visible!important}
