@@ -82,19 +82,19 @@ test('renders the complete form from the real index, template, rubric, and metho
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '4 fields', '4 fields', '3 fields']
+    ['3 fields', '4 fields', '4 fields', '4 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last updated', 'Research title',
+      'Last updated', 'Research title', 'Jira Project',
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'Sample Size',
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
-      'Jira Project', 'Sign off: Lead researcher', 'Sign off: Project requester',
+      'Sign off: Lead researcher', 'Sign off: Project requester',
       'Feedback',
     ]
   );

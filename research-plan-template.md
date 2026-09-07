@@ -78,6 +78,8 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Research title (text, key=researchTitle):
   Hint: Describe what this research covers, for example, ‘Usability testing of checkout flow’.
 
+Jira Project (text, key=jiraProject): Ticket reference
+  Hint: Product initiative this research support, add Jira ticket
 Lead researcher (text, key=leadResearcher):
   Hint: Name of the person leading this research.
 Project requester (text, key=projectRequester):
@@ -153,8 +155,6 @@ Additional Resources (custom-fields, key=additionalResources): Add details...
 <!-- Project (textarea, key=project): Initiative -->
 <!-- Hint: The product or business initiative this research plan supports. -->
 <!-- Area (text, key=area): Department -->
-Jira Project (text, key=jiraProject): Ticket reference
-  Hint: Product initiative this research support, add Jira ticket
 <!-- Jira Research (text, key=jiraResearch): Ticket reference -->
 <!-- The two sign-offs name the same two people as the header, in the same
      order, so a reader is not left wondering whether "Project Owner" and

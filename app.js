@@ -3220,6 +3220,9 @@
   // but results come from the network instead of a static list, so matches
   // are debounced and stamped with a request id to discard stale responses.
   function attachJiraCombobox(input) {
+    // Marks the control for the "KEY — summary" chip styling, so the
+    // stylesheet does not have to name the field key itself.
+    input.classList.add('jira-input');
     const menu = el('div', 'combo-menu', { role: 'listbox' });
     menu.hidden = true;
     input.setAttribute('role', 'combobox');
@@ -3713,22 +3716,14 @@
         return td;
       }
 
-      // Jira Project gets its own full-width row (more room for the ticket
-      // combobox and its "KEY — summary" pill) instead of the usual
-      // 2-per-row pairing. Whatever field would have shared a row with it
-      // also gets bumped to its own full-width row rather than left paired
-      // with an empty cell.
+      // Two cells per row. Jira Project used to take a full-width row of its
+      // own here; it lives in the header now, so that exception is gone.
       let i = 0;
       while (i < section.fields.length) {
         const f = section.fields[i];
         const next = section.fields[i + 1];
         const tr = el('tr');
-        if (f.key === 'jiraProject' || (next && next.key === 'jiraProject')) {
-          const td = buildGridCell(f);
-          td.colSpan = 2;
-          tr.appendChild(td);
-          i += 1;
-        } else {
+        {
           tr.appendChild(buildGridCell(f));
           if (next) tr.appendChild(buildGridCell(next));
           i += 2;
@@ -3787,6 +3782,7 @@
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         control = input;
       }
+      if (f.key === 'jiraProject') attachJiraCombobox(input);
       if (f.key === 'lastUpdated') {
         setDateInputValue(input, todayIso());
         // A draft restore replays saved values through this same event, and
@@ -3812,11 +3808,18 @@
     // sitting in the grid of questions people are asked to answer.
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
+    let identifier = null;
     header.meta.forEach((f) => {
       const mf = buildMetaField(f);
       if (f.key === 'lastUpdated') {
         mf.classList.add('mf-compact');
         topRow.appendChild(mf);
+      } else if (f.key === 'jiraProject') {
+        // Directly under the title, on its own. It identifies the plan rather
+        // than asking one of the paired questions in the grid below, and the
+        // ticket combobox wants room for its "KEY — summary" result.
+        mf.classList.add('mf-identifier');
+        identifier = mf;
       } else {
         metaGrid.appendChild(mf);
       }
@@ -3840,6 +3843,7 @@
     wrap.appendChild(titleLabel);
     if (titleHint) wrap.appendChild(titleHint);
     wrap.appendChild(titleInput);
+    if (identifier) wrap.appendChild(identifier);
     wrap.appendChild(metaGrid);
 
     return wrap;

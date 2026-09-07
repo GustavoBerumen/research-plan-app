@@ -103,6 +103,9 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .minput::placeholder{color:var(--text-2)}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
+/* The ticket reference sits under the title on its own row; it does not
+   need the full width of the document. */
+.mf-identifier{max-width:340px;margin-top:20px}
 .mf-compact{gap:2px;flex-shrink:0}
 .mf-compact .mlabel{font-size:var(--text-sm)}
 .mf-compact .minput{font-size:var(--text-sm);min-height:34px;padding:3px 5px;max-width:190px}
@@ -253,7 +256,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .ss-block{background:var(--tag-red-bg)}
 /* A filled Jira reference renders as a tag. Note this keys off
    :placeholder-shown, so the field's placeholder is load-bearing (RPA-54). */
-.cinput[data-field="jiraProject"]:not(:placeholder-shown){display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
+.jira-input:not(:placeholder-shown){display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
 .select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 /* Radios, GOV.UK shape: a real input, a generous hit area that includes the
    label, and the focus ring on the control rather than the row. */
