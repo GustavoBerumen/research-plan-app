@@ -53,9 +53,9 @@ test('classifies prose controls without changing genuinely compact controls', as
   t.after(() => app.close());
   const { document } = app;
 
-  const project = document.querySelector('[data-field="project"]');
-  assert.equal(project.tagName, 'TEXTAREA');
-  assert.ok(project.classList.contains('prose-input'));
+  // Project is dormant, so the Alignment grid holds only compact inputs now.
+  // The grid's prose path keeps its coverage in the last test in this file.
+  assert.equal(document.querySelectorAll('.atbl textarea.prose-input').length, 0);
   assert.equal(document.querySelector('[data-field="jiraProject"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffProjectOwner"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffResearcher"]').tagName, 'INPUT');
@@ -104,13 +104,13 @@ test('prose rows grow independently after typing or pasting and shrink after del
   t.after(() => app.close());
   const { document, window } = app;
 
-  const project = document.querySelector('[data-field="project"]');
-  const initialProjectHeight = heightOf(project);
-  pasteValue(window, project, LONG_PROSE);
-  const longProjectHeight = heightOf(project);
+  const background = document.querySelector('[data-field="background"]');
+  const initialProjectHeight = heightOf(background);
+  pasteValue(window, background, LONG_PROSE);
+  const longProjectHeight = heightOf(background);
   assert.ok(longProjectHeight > initialProjectHeight);
-  setValue(window, project, SHORT_PROSE);
-  assert.ok(heightOf(project) < longProjectHeight);
+  setValue(window, background, SHORT_PROSE);
+  assert.ok(heightOf(background) < longProjectHeight);
 
   const characteristicsList = document.querySelector('.list-rows[data-list-key="characteristics"]');
   characteristicsList.closest('.field').querySelector('.add-btn').click();
@@ -195,7 +195,7 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
 
   const draft = {
     version: 3,
-    fields: { project: LONG_PROSE },
+    fields: { background: LONG_PROSE },
     selects: {},
     lists: {
       characteristics: [LONG_PROSE, SHORT_PROSE],
@@ -220,9 +220,9 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   t.after(() => restored.close());
   const { document } = restored;
 
-  const project = document.querySelector('[data-field="project"]');
-  assert.equal(project.value, LONG_PROSE);
-  assert.ok(heightOf(project) > 44);
+  const background = document.querySelector('[data-field="background"]');
+  assert.equal(background.value, LONG_PROSE);
+  assert.ok(heightOf(background) > 44);
 
   const characteristics = listInputs(document, 'characteristics');
   assert.deepEqual(characteristics.map((input) => input.value), [LONG_PROSE, SHORT_PROSE]);
@@ -294,4 +294,33 @@ test('an editable-headers table renders prose cells under renameable headings', 
   pasteValue(window, cells[0], LONG_PROSE);
   setValue(window, cells[1], SHORT_PROSE);
   assert.ok(heightOf(cells[0]) > heightOf(cells[1]));
+});
+
+// Project was the only textarea in the Alignment grid, and it is dormant now,
+// so no live field exercises buildGridCell's prose path. Same treatment as the
+// editable-headers table above: render the template with Project restored, so
+// the path keeps its coverage whether or not the form happens to use it.
+test('a grid cell renders prose that grows, when a grid field is a textarea', async (t) => {
+  const real = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8');
+  const restored = withFieldUncommented(real, 'project');
+  assert.notEqual(restored, real, 'the dormant Project lines were not found to restore');
+
+  const app = await bootApp({
+    textareaScrollHeight,
+    textAssets: { 'research-plan-template.md': restored },
+  });
+  t.after(() => app.close());
+  const { document, window } = app;
+
+  const project = document.querySelector('[data-field="project"]');
+  assert.ok(project, 'the restored template renders Project');
+  assert.equal(project.tagName, 'TEXTAREA');
+  assert.ok(project.classList.contains('prose-input'), 'a grid textarea is classified as prose');
+  assert.ok(project.closest('.atbl'), 'and it is inside the Alignment grid');
+
+  const before = heightOf(project);
+  pasteValue(window, project, LONG_PROSE);
+  assert.ok(heightOf(project) > before, 'it grows with its content');
+  setValue(window, project, SHORT_PROSE);
+  assert.ok(heightOf(project) < heightOf(document.querySelector('[data-field="background"]')) + 200);
 });

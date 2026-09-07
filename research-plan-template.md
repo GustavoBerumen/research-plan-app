@@ -150,11 +150,11 @@ Additional Resources (custom-fields, key=additionalResources): Add details...
      researcher can actually write — instead of paperwork. -->
 # Alignment {grid}
 
-Project (textarea, key=project): Initiative
-  Hint: The product or business initiative this research plan supports.
+<!-- Project (textarea, key=project): Initiative -->
+<!-- Hint: The product or business initiative this research plan supports. -->
 <!-- Area (text, key=area): Department -->
 Jira Project (text, key=jiraProject): Ticket reference
-  Hint: Links this plan to its tracking ticket in Jira.
+  Hint: Product initiative this research support, add Jira ticket
 <!-- Jira Research (text, key=jiraResearch): Ticket reference -->
 <!-- The two sign-offs name the same two people as the header, in the same
      order, so a reader is not left wondering whether "Project Owner" and

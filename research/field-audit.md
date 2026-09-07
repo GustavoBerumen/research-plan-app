@@ -4,7 +4,7 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 26 of 31 verdicts settled.** The field list,
+**Status: questions 1–3 drafted; 25 of 30 verdicts settled.** The field list,
 types and hint text are generated from the template. Question 1 is filled from
 what the app demonstrably consumes; questions 2 and 3 from the template, the
 field order and how the app behaves. The 8 rows still open all have
@@ -58,15 +58,15 @@ Fill in as verdicts are reached.
 
 | Verdict | Count |
 |---|---|
-| keep | 17 |
+| keep | 16 |
 | cut | 1 |
 | merge | 1 |
 | optional | 3 |
 | move | 4 |
 | undecided | 5 |
-| **total** | **31** |
+| **total** | **30** |
 
-31 rather than 26: the three fixed-column tables are audited per column, per the
+30 rather than 25: the three fixed-column tables are audited per column, per the
 unit rule above. Requirements left the sheet when it was made dormant — hidden,
 not decided; its reasoning is under *Already dormant*.
 
@@ -116,7 +116,6 @@ high effort* is where the genuine cuts live.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Project**<br><sub>asks: Initiative</sub> | `text` | Ties the plan to the initiative it serves. | Researcher, from the project side. Low risk. | Yes — to hand. | **keep** |
 | **Jira Project**<br><sub>asks: Ticket reference</sub> | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
 | **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
 | **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — to the review step. |
@@ -304,6 +303,11 @@ Commented out in the template — the form has been trimmed before. Worth readin
 before cutting more: if one of these was removed for a reason, that reason
 probably applies to its neighbours too.
 
+**Project was cut, against its verdict (RPA-55).** Its row said *keep* — ties the plan
+to the initiative it serves, low effort, answer to hand. It went anyway because Jira
+Project covers the same ground: the ticket identifies the initiative, and its hint now
+says so. A verdict is evidence, not a veto.
+
 **Requirements was hidden, not decided (RPA-55).** Its verdict was still open:
 no in-app consumer, and the question splits three ways — Physical is the
 researcher's, Digital needs IT, Approvals needs legal or privacy and is
@@ -313,6 +317,7 @@ the problem to solve, and splitting Approvals out was the proposal.
 
 | Field | Type | Was in |
 |---|---|---|
+| Project | `textarea` | Alignment |
 | Requirements | `table` | Execution |
 | Research Team | `text` | Header (document meta) |
 | Area | `text` | Alignment |
