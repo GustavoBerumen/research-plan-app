@@ -113,7 +113,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // hint about how much answer its question expects. Autosize grows it from
   // there; a field that declares nothing keeps the shared default.
   assert.deepEqual(
-    ['background', 'goal', 'problemStatement', 'objective'].map((key) => {
+    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'theory'].map((key) => {
       const ta = document.querySelector(`[data-field="${key}"]`);
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
@@ -121,7 +121,11 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['background', 3, true],
       ['goal', 2, true],
       ['problemStatement', 2, true],
-      ['objective', 2, false],
+      ['objective', 2, true],
+      ['hypothesis', 1, true],
+      // Declares nothing, so it keeps the shared default. 2 is the browser's
+      // own default for a textarea with no rows attribute, not a declared one.
+      ['theory', 2, false],
     ]
   );
   assert.equal(document.querySelector('.field-group-title').textContent, 'Participants');

@@ -99,9 +99,9 @@ Problem Statement (textarea, eval, rows=2):
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
-Objective (textarea, eval): 
+Objective (textarea, eval, rows=2): 
   Hint: Defines the purpose of the study, specifying what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval): 
+Hypothesis (textarea, optional, eval, rows=1): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval): What do you want to understand?
   Hint: Defines an inquiry that translates your objective into a clear and discoverable topic.
