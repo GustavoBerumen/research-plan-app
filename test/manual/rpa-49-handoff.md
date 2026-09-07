@@ -111,7 +111,7 @@ and after a code fix:
 - No new synthetic scroll regression was added: jsdom does not perform layout,
   and seeding an arbitrary retained offset would assume a defect not reproduced
   in the browser. Add focused confirmation/cancellation regressions only if the
-  remaining Chrome check demonstrates an actual retaining element.
+  a future browser check demonstrates an actual retaining element.
 - Initial dependency installation hit Windows EACCES; the authorized elevated
   retry installed the lockfile successfully. The task-created npm cache was
   removed afterward.
