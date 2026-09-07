@@ -60,7 +60,7 @@ for (const key of Object.keys(rubrics)) {
     listInputs(app.document, 'researchQuestions').forEach((input, i) => setValue(app.window, input, novice[i]));
     if (key === 'outcomes') listInputs(app.document, key).forEach((input, i) => setValue(app.window, input, ['A report about checkout.', 'Ideas to make checkout better.'][i]));
     const controls = app.document.querySelector(`[data-list-key="${key}"]`).closest('.field').querySelector('.eval-controls');
-    controls.querySelector('.eval-btn').click();
+    controls.closest('.acc').querySelector('.section-eval-btn').click();
     await waitFor(() => controls.querySelector('.eval-badge').textContent === 'Developing');
     assert.ok(controls.querySelector('.eval-panel').classList.contains('eval-tone-warning'));
     assert.ok(controls.querySelector('.eval-result-btn').classList.contains('eval-result-warning'));
@@ -86,7 +86,7 @@ for (const key of Object.keys(rubrics)) {
     assert.deepEqual(listInputs(restored.document, key).map(n => n.value), listInputs(app.document, key).map(n => n.value));
     const restoredControls = restored.document.querySelector(`[data-list-key="${key}"]`).closest('.field').querySelector('.eval-controls');
     assert.equal(restoredControls.querySelector('.eval-result-btn').hidden, true);
-    restoredControls.querySelector('.eval-btn').click();
+    restoredControls.closest('.acc').querySelector('.section-eval-btn').click();
     await waitFor(() => restoredControls.querySelector('.eval-badge').textContent === 'Developing');
     setValue(app.window, listInputs(app.document, key)[0], 'Revised entry');
     assert.ok(controls.querySelector('.eval-result-btn').classList.contains('eval-result-stale'));

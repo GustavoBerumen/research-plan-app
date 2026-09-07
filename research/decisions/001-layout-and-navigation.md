@@ -139,9 +139,20 @@ The un-stale path re-compares rather than simply clearing the flag, so a result
 that arrives while the user is still typing is correctly marked stale on
 arrival.
 
+## Resolved since: section evaluation actions (RPA-34)
+
+**7 September 2026 — approved by Max:** two section-level actions replace
+the seven initial per-field Evaluate buttons. “Evaluate context” follows
+Problem Statement; “Evaluate research” follows Outcomes. Both use the existing
+grey secondary-button style and left alignment.
+
+Each action evaluates only populated evaluable fields in its section, including
+partially filled sections. Empty fields, including optional Hypothesis, are
+skipped. Scalar fields keep independent evaluations; Research Questions and
+Outcomes retain structured numbering, positional pairing and relevant context.
+Existing detailed results, feedback controls, individual updates and retries
+remain. Section actions change how requests start, not the unit of scoring.
+
 ## Open questions
 
-- Does the section become the unit of AI evaluation, replacing field-by-field
-  scoring? This would also address the multi-question feedback problem noted on
-  11 August.
 - How are the soft dependency nudges worded so they coach rather than nag?

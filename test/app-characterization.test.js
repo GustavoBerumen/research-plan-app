@@ -36,10 +36,14 @@ function evaluationResult() {
 }
 
 async function runEvaluation(app, container) {
-  const requestCount = app.evaluationRequests.length;
-  const button = container.querySelector('.eval-btn');
+  const controls = container.matches('.eval-controls') ? container : container.querySelector('.eval-controls');
+  const initial = controls.querySelector('.eval-btn');
+  const hasResult = !controls.querySelector('.eval-result-summary').hidden;
+  const button = hasResult ? controls.querySelector('.eval-quick-reevaluate-btn')
+    : !initial.hidden ? initial : controls.closest('.acc').querySelector('.section-eval-btn');
+  const count = app.evaluationRequests.length;
   button.click();
-  await waitFor(() => app.evaluationRequests.length === requestCount + 1);
+  await waitFor(() => app.evaluationRequests.length > count);
   await waitFor(() => !button.disabled);
 }
 
@@ -290,12 +294,8 @@ test('sends current payload shapes for Research Questions, Outcomes, and a scala
   const researchQuestionsField = document
     .querySelector('.list-rows[data-list-key="researchQuestions"]')
     .closest('.field');
-  const outcomesField = document
-    .querySelector('.list-rows[data-list-key="outcomes"]')
-    .closest('.field');
   const backgroundField = document.querySelector('[data-field="background"]').closest('.field');
   await runEvaluation(app, researchQuestionsField);
-  await runEvaluation(app, outcomesField);
   await runEvaluation(app, backgroundField);
 
   const payloads = app.evaluationRequests.map((request) => request.body);
@@ -307,6 +307,7 @@ test('sends current payload shapes for Research Questions, Outcomes, and a scala
     });
   });
   assert.deepEqual(payloads.map(({ rubric, ...payload }) => payload), [
+    { fieldKey: 'objective', fieldLabel: 'Objective', text: 'Choose the checkout direction' },
     {
       fieldKey: 'researchQuestions',
       fieldLabel: 'Research Questions',
@@ -360,9 +361,9 @@ test('Clear Form resets evaluation state', async (t) => {
   document.getElementById('clear-btn').click();
 
   assert.equal(background.value, '');
-  assert.equal(evaluateButton.hidden, false);
+  assert.equal(evaluateButton.hidden, true);
   assert.equal(evaluateButton.disabled, false);
-  assert.equal(evaluateButton.textContent.trim(), 'Evaluate Background');
+  assert.equal(evaluateButton.textContent.trim(), 'Retry Background');
   assert.equal(resultButton.hidden, true);
   assert.equal(resultButton.getAttribute('aria-expanded'), 'false');
   assert.equal(resultButton.hasAttribute('aria-label'), false);

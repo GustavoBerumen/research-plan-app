@@ -1059,7 +1059,7 @@
     return { objective: objective ? objective.value.trim() : '' };
   }
 
-  function evaluateField(value, field) {
+  function evaluationRequest(value, field) {
     const body = {
       fieldKey: field.key,
       fieldLabel: field.label,
@@ -1076,7 +1076,12 @@
       body.text = evaluationValueToText(value);
     }
 
+    return body;
+  }
+
+  function evaluateField(body, signal) {
     return fetch('/api/evaluate', {
+      signal,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1097,7 +1102,7 @@
         throw new Error('The evaluator returned unexpected recommendations — please try again');
       }
       const recs = data.recommendations.map((recommendation) => recommendation.trim());
-      return { ...classifyEvaluation(field.key, metrics), metrics, recs };
+      return { ...classifyEvaluation(body.fieldKey, metrics), metrics, recs };
     });
   }
 
@@ -1209,6 +1214,99 @@
     });
   }
 
+  // Share the limit across both sections and individual updates/retries.
+  const evaluationSections = {
+    context: ['background', 'goal', 'problemStatement'],
+    research: ['objective', 'hypothesis', 'researchQuestions', 'outcomes'],
+  };
+  const evaluationFields = new Map();
+  const evaluationBatches = new Map();
+  let evaluationEpoch = 0;
+  let activeEvaluations = 0;
+  const evaluationQueue = [];
+  const evaluationControllers = new Set();
+
+  function drainEvaluations() {
+    while (activeEvaluations < 2 && evaluationQueue.length) {
+      const job = evaluationQueue.shift();
+      if (job.epoch !== evaluationEpoch) { job.resolve('cancelled'); continue; }
+      activeEvaluations++;
+      Promise.resolve().then(job.run).then(job.resolve, job.reject).finally(() => {
+        activeEvaluations--;
+        drainEvaluations();
+      });
+    }
+  }
+
+  function queueEvaluation(run) {
+    return new Promise((resolve, reject) => {
+      evaluationQueue.push({ run, resolve, reject, epoch: evaluationEpoch });
+      drainEvaluations();
+    });
+  }
+
+  function resetEvaluationWork() {
+    evaluationEpoch++;
+    evaluationQueue.splice(0).forEach(job => job.resolve('cancelled'));
+    evaluationControllers.forEach(controller => controller.abort());
+    evaluationBatches.forEach(batch => batch.reset());
+  }
+
+  function renderSectionEvaluation(key) {
+    const wrap = el('div', 'section-evaluation');
+    const button = el('button', 'eval-btn section-eval-btn', { type: 'button', 'data-evaluate-section': key });
+    button.textContent = 'Evaluate ' + key;
+    const status = el('div', 'section-eval-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', id: 'evaluation-progress-' + key });
+    button.setAttribute('aria-describedby', status.id);
+    wrap.append(button, status);
+    let running = false;
+    let refreshSummary = () => {};
+    evaluationBatches.set(key, { refresh() {
+      refreshSummary();
+    }, reset() {
+      running = false;
+      refreshSummary = () => {};
+      button.disabled = false;
+      button.setAttribute('aria-busy', 'false');
+      status.textContent = '';
+    } });
+    button.addEventListener('click', async () => {
+      if (running) return;
+      const fields = evaluationSections[key].map(name => evaluationFields.get(name)).filter(field => field && field.populated());
+      if (!fields.length) {
+        status.textContent = 'Add content to at least one field in ' + key + ' before evaluating.';
+        return;
+      }
+      running = true;
+      const epoch = evaluationEpoch;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      let completed = 0;
+      const progress = () => {
+        const failed = fields.filter(field => field.state() === 'failed').length;
+        const skipped = fields.filter(field => field.state() === 'skipped').length;
+        const pending = fields.filter(field => field.state() === 'pending').length;
+        status.textContent = completed + ' of ' + fields.length + ' fields finished.' +
+          (pending ? ' ' + pending + ' request' + (pending === 1 ? '' : 's') + ' pending.' : '') +
+          (failed ? ' ' + failed + ' request' + (failed === 1 ? '' : 's') + ' failed; retry at the affected field.' : '') +
+          (skipped ? ' ' + skipped + ' empty field' + (skipped === 1 ? '' : 's') + ' skipped.' : '');
+      };
+      refreshSummary = progress;
+      progress();
+      await Promise.all(fields.map(async field => {
+        await field.run();
+        if (epoch !== evaluationEpoch) return;
+        completed++;
+        progress();
+      }));
+      if (epoch !== evaluationEpoch) return;
+      running = false;
+      button.disabled = false;
+      button.setAttribute('aria-busy', 'false');
+    });
+    return wrap;
+  }
+
   let evaluationControlCount = 0;
 
   function renderEvalControls(field, getValue) {
@@ -1216,7 +1314,9 @@
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
-    txt.textContent = 'Evaluate ' + field.label;
+    const sectionField = Object.values(evaluationSections).some(keys => keys.includes(field.key));
+    txt.textContent = sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
+    btn.hidden = sectionField;
     btn.append(spinner, txt);
 
     const detailsId = 'evaluation-details-' + (++evaluationControlCount);
@@ -1275,7 +1375,12 @@
     const actions = el('div', 'eval-actions');
     actions.append(reevaluateBtn, likeBtn, dislikeBtn, saveBtn);
     panel.append(head, metrics, rlabel, recs, actions);
-    controls.append(btn, resultSummary, error, panel);
+    const progress = el('div', 'field-eval-progress', { role: 'status', 'aria-live': 'polite' });
+    controls.append(resultSummary, progress, error, btn, panel);
+    let pending = null;
+    let requestState = 'idle';
+    let revision = 0;
+    const fingerprint = () => JSON.stringify(evaluationRequest(getValue(), field));
 
     let lastResult = null;
     let resultIsStale = false;
@@ -1294,6 +1399,7 @@
       );
       staleStatus.hidden = !resultIsStale;
       quickReevaluateBtn.textContent = resultIsStale ? 'Update evaluation' : 'Evaluate again';
+      reevaluateBtn.textContent = quickReevaluateBtn.textContent;
     }
 
     function setExpanded(expanded) {
@@ -1322,6 +1428,7 @@
     }
 
     function markResultStale() {
+      revision++;
       if (!lastResult) return;
       resultIsStale = true;
       updateResultPresentation();
@@ -1334,65 +1441,113 @@
       resultBtn.hidden = false;
       btn.hidden = true;
       setExpanded(false);
-      resultBtn.focus();
     }
 
     function runEvaluation() {
-      const value = getValue();
-      const text = evaluationValueToText(value);
-      if (!text.trim()) {
-        alert('Please enter a value to evaluate.');
-        return;
+      if (pending) return pending;
+      const sectionKey = Object.keys(evaluationSections).find(key => evaluationSections[key].includes(field.key));
+      const refreshSection = () => {
+        if (sectionKey) evaluationBatches.get(sectionKey).refresh();
+      };
+      if (!evaluationValueToText(getValue()).trim()) {
+        requestState = 'skipped';
+        refreshSection();
+        error.textContent = 'Add content to ' + field.label + ' before evaluating.';
+        error.hidden = false;
+        return Promise.resolve('skipped');
       }
-      const hadResult = !!lastResult;
-      const feedbackDisabledBeforeRun = hadResult
-        ? [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled]
-        : null;
-      if (!hadResult) {
-        setExpanded(false);
-        resultSummary.hidden = true;
-        resetFeedbackActions();
-        btn.hidden = false;
-        btn.focus();
-      } else {
-        disableFeedbackActions();
-      }
+      const epoch = evaluationEpoch;
+      requestState = 'pending';
+      refreshSection();
+      const feedbackDisabledBeforeRun = lastResult
+        ? [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled] : null;
+      disableFeedbackActions();
       error.hidden = true;
       error.textContent = '';
+      progress.textContent = field.label + ': queued.';
       btn.disabled = true;
       btn.setAttribute('aria-busy', 'true');
-      btn.classList.add('loading');
-      txt.textContent = 'Evaluating…';
       reevaluateBtn.disabled = true;
       quickReevaluateBtn.disabled = true;
       quickReevaluateBtn.setAttribute('aria-busy', 'true');
-      evaluateField(value, field).then((data) => {
-        renderEvalResult(panel, data);
-        lastResult = { text, data };
-        resultIsStale = evaluationValueToText(getValue()) !== text;
-        showResult(data);
-        resetFeedbackActions();
-        if (!resultIsStale) {
-          saveBtn.disabled = false;
-          likeBtn.disabled = false;
-          dislikeBtn.disabled = false;
+      pending = queueEvaluation(async () => {
+        if (epoch !== evaluationEpoch) return 'cancelled';
+        const value = getValue();
+        const text = evaluationValueToText(value);
+        if (!text.trim()) {
+          requestState = 'skipped';
+          progress.textContent = field.label + ': empty; skipped.';
+          return 'skipped';
         }
-        updateResultPresentation();
-      }).catch((err) => {
-        error.textContent = 'Evaluation failed: ' + err.message;
-        error.hidden = false;
-        if (lastResult && !resultIsStale && feedbackDisabledBeforeRun) {
-          [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled] = feedbackDisabledBeforeRun;
+        const body = evaluationRequest(value, field);
+        const signature = JSON.stringify(body);
+        const requestRevision = revision;
+        const controller = new AbortController();
+        evaluationControllers.add(controller);
+        progress.textContent = field.label + ': evaluating…';
+        try {
+          const data = await evaluateField(body, controller.signal);
+          if (epoch !== evaluationEpoch) return 'cancelled';
+          renderEvalResult(panel, data);
+          lastResult = { text, data, signature };
+          resultIsStale = revision !== requestRevision || fingerprint() !== signature;
+          showResult(data);
+          resetFeedbackActions();
+          if (!resultIsStale) {
+            saveBtn.disabled = false;
+            likeBtn.disabled = false;
+            dislikeBtn.disabled = false;
+          }
+          updateResultPresentation();
+          requestState = 'success';
+          progress.textContent = field.label + ': evaluation complete.' + (resultIsStale ? ' Results out of date.' : '');
+          return 'success';
+        } catch (err) {
+          if (epoch !== evaluationEpoch) return 'cancelled';
+          requestState = 'failed';
+          error.textContent = 'Evaluation request failed: ' + err.message + ' Retry ' + field.label + ' below.';
+          error.hidden = false;
+          btn.hidden = false;
+          txt.textContent = 'Retry ' + field.label;
+          progress.textContent = '';
+          if (lastResult && !resultIsStale && feedbackDisabledBeforeRun) {
+            [saveBtn.disabled, likeBtn.disabled, dislikeBtn.disabled] = feedbackDisabledBeforeRun;
+          }
+          return 'failed';
+        } finally {
+          evaluationControllers.delete(controller);
         }
       }).finally(() => {
+        if (epoch !== evaluationEpoch) return;
+        pending = null;
         btn.disabled = false;
         btn.setAttribute('aria-busy', 'false');
-        btn.classList.remove('loading');
-        txt.textContent = 'Evaluate ' + field.label;
         reevaluateBtn.disabled = false;
         quickReevaluateBtn.disabled = false;
         quickReevaluateBtn.setAttribute('aria-busy', 'false');
+        refreshSection();
       });
+      return pending;
+    }
+
+    evaluationFields.set(field.key, {
+      run: runEvaluation,
+      populated: () => !!evaluationValueToText(getValue()).trim(),
+      state: () => requestState,
+    });
+    // Structured feedback includes Objective and, for Outcomes, paired Questions.
+    if (field.key === 'researchQuestions' || field.key === 'outcomes') {
+      const checkContext = (event) => {
+        const objectiveEdit = event.target.matches('[data-field="objective"]');
+        const questionEdit = field.key === 'outcomes' &&
+          event.target.closest('.field')?.querySelector('[data-list-key="researchQuestions"]');
+        if (!objectiveEdit && !questionEdit) return;
+        if (event.type === 'click' && !event.target.closest('.add-btn, .list-remove')) return;
+        if (lastResult && fingerprint() !== lastResult.signature) markResultStale();
+      };
+      doc.addEventListener('input', checkContext);
+      doc.addEventListener('change', checkContext);
+      doc.addEventListener('click', checkContext);
     }
 
     btn.addEventListener('click', runEvaluation);
@@ -1467,13 +1622,17 @@
     });
 
     controls._resetEvaluation = () => {
+      pending = null;
+      requestState = 'idle';
+      revision++;
+      progress.textContent = '';
       lastResult = null;
       resultIsStale = false;
-      btn.hidden = false;
+      btn.hidden = sectionField;
       btn.disabled = false;
       btn.setAttribute('aria-busy', 'false');
       btn.classList.remove('loading');
-      txt.textContent = 'Evaluate ' + field.label;
+      txt.textContent = sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
       resultSummary.hidden = true;
       resultBtn.hidden = true;
       resultBtn.className = 'eval-result-btn';
@@ -3780,6 +3939,7 @@
           fieldsWrap.appendChild(renderField(f));
         }
       });
+      if (evaluationSections[section.slug]) fieldsWrap.appendChild(renderSectionEvaluation(section.slug));
       body.appendChild(fieldsWrap);
     }
 
@@ -4467,6 +4627,7 @@
 
   function clearForm() {
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
+    resetEvaluationWork();
     clearDraft();
     lastSavedSignature = null;
     lastUpdatedManual = false;
@@ -4589,6 +4750,7 @@
     const profile = profiles[profileKey];
     if (!profile) throw new Error('Unknown test profile "' + profileKey + '"');
 
+    resetEvaluationWork();
     Object.entries(profile.fields).forEach(([key, value]) => {
       if (Array.isArray(value)) {
         applyTestProfileList(key, value);

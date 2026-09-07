@@ -144,6 +144,9 @@ async function bootApp(options = {}) {
 
     if (url.origin === window.location.origin && url.pathname === '/api/evaluate') {
       const request = {
+        // Record cancellation without settling the mock automatically: tests
+        // can still deliver a late response to verify obsolete-result guards.
+        signal: init.signal,
         method: init.method || 'GET',
         headers: init.headers || {},
         body: JSON.parse(init.body || '{}'),

@@ -346,6 +346,9 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 @keyframes espin{to{transform:rotate(360deg)}}
 .eval-btn.loading .eval-spinner{display:inline-block}
 .eval-controls{width:100%}
+.section-evaluation{text-align:left}
+.section-eval-status,.field-eval-progress{font-size:var(--text-sm);margin-top:8px}
+.section-eval-status:empty,.field-eval-progress:empty{display:none}
 .eval-result-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 .eval-result-summary[hidden],.eval-stale-status[hidden],.eval-quick-reevaluate-btn[hidden]{display:none}
 .eval-result-btn{width:var(--control-h);height:var(--control-h);padding:0;border:0;display:inline-flex;align-items:center;justify-content:center;color:#fff;cursor:pointer}
@@ -451,7 +454,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}
   .timeline-chart,.eval-head,.eval-panel{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}

@@ -36,13 +36,15 @@ function controlsForField(document, key) {
   return field.querySelector('.eval-controls');
 }
 
-async function runEvaluation(app, controls) {
-  const requestCount = app.evaluationRequests.length;
-  const initialButton = controls.querySelector('.eval-btn');
-  const quickButton = controls.querySelector('.eval-quick-reevaluate-btn');
-  const button = initialButton.hidden ? quickButton : initialButton;
+async function runEvaluation(app, container) {
+  const controls = container.matches('.eval-controls') ? container : container.querySelector('.eval-controls');
+  const initial = controls.querySelector('.eval-btn');
+  const hasResult = !controls.querySelector('.eval-result-summary').hidden;
+  const button = hasResult ? controls.querySelector('.eval-quick-reevaluate-btn')
+    : !initial.hidden ? initial : controls.closest('.acc').querySelector('.section-eval-btn');
+  const count = app.evaluationRequests.length;
   button.click();
-  await waitFor(() => app.evaluationRequests.length === requestCount + 1);
+  await waitFor(() => app.evaluationRequests.length > count);
   await waitFor(() => !button.disabled);
 }
 
@@ -57,9 +59,9 @@ function assertStale(controls) {
 }
 
 function assertReset(controls, label) {
-  assert.equal(controls.querySelector('.eval-btn').hidden, false);
+  assert.equal(controls.querySelector('.eval-btn').hidden, true);
   assert.equal(controls.querySelector('.eval-btn').disabled, false);
-  assert.equal(controls.querySelector('.eval-btn').textContent.trim(), 'Evaluate ' + label);
+  assert.equal(controls.querySelector('.eval-btn').textContent.trim(), 'Retry ' + label);
   assert.equal(controls.querySelector('.eval-result-summary').hidden, true);
   assert.equal(controls.querySelector('.eval-result-btn').getAttribute('aria-expanded'), 'false');
   assert.equal(controls.querySelector('.eval-result-btn').hasAttribute('aria-label'), false);
