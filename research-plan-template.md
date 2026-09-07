@@ -76,10 +76,10 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
 # Research title (text, key=researchTitle):
-  Hint: Describe what this research covers, for example, ‘Usability testing of checkout flow’.
+  Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
 
 Jira Project (text, key=jiraProject): Ticket reference
-  Hint: Product initiative this research support, add Jira ticket
+  Hint: Jira ticket for the initiative this research supports.
 Lead researcher (text, key=leadResearcher):
   Hint: Name of the person leading this research.
 Project requester (text, key=projectRequester):
@@ -94,21 +94,21 @@ Last updated (date, key=lastUpdated):
 # Context {open}
 
 Background (textarea, eval, rows=3, key=background):
-  Hint: Provides relevant context and essential terms needed to understand the project.
+  Hint: Relevant context and essential terms needed to understand the project.
 Goal (textarea, eval, rows=2, key=goal): 
-  Hint: State what you are trying to achieve and define the expected changes in the product as a result.
+  Hint: The outcome you are trying to achieve, and the expected changes in the product.
 Problem Statement (textarea, eval, rows=2, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
 Objective (textarea, eval, rows=2, key=objective): 
-  Hint: Defines the purpose of the study, specifying what must be learned to guide product decisions.
+  Hint: The purpose of the study: what must be learned to guide product decisions.
 Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover.
 Outcomes (list, eval, key=outcomes): 
-  Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map. 
+  Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
 
 # Methodology
 
