@@ -67,6 +67,9 @@ toggle panel under the field:
   Good: an example of a strong answer
   Bad: an example of a weak answer
 
+Wrap words in *asterisks* inside a Hint to italicise them, e.g.
+  Hint: structured as *If we do this, then this will happen.*
+
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
@@ -96,10 +99,10 @@ Problem Statement (textarea, eval, rows=2):
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
-Objective (textarea, eval): Purpose and high-level goals of the research
-  Hint: Focus on deep understanding rather than proving a bias, connects to an upcoming decision, and remains realistic in scope.
-Hypothesis (textarea, optional, eval): Baseline assumptions to be tested during the study
-  Hint: An educated idea about user behaviour or product performance that your study will directly test. Rather than guessing, connects past knowledge to an upcoming product decision.
+Objective (textarea, eval): 
+  Hint: Defines the purpose of the study, specifying what must be learned to guide product decisions.
+Hypothesis (textarea, optional, eval): 
+  Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval): What do you want to understand?
   Hint: Defines an inquiry that translates your objective into a clear and discoverable topic.
 Outcomes (list, eval): Deliverable for this question
