@@ -73,7 +73,7 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
 # Research title (text):
-  Hint: Describe what this research covers, for example, ‘Usability testing of the application submission flow’.
+  Hint: Describe what this research covers, for example, ‘Usability testing of checkout flow’.
 
 Lead researcher (text):
   Hint: Name of the person leading this research.
@@ -88,12 +88,12 @@ Last updated (date):
 
 # Project Context {open}
 
-Background (textarea, eval): Relevant information to understand the project
-  Hint: Provides sufficient context for the study, defines essential terms used across sections, and stays focused without unnecessary clutter.
-Goal (textarea, eval): Aim of the project and the outcomes you are trying to achieve
-  Hint: Focus on the target state of the product or user experience: What build, feature, or business metric will change if this project succeeds?
-Problem Statement (textarea, eval): Issues requiring attention that could prevent the project achieving its goal
-  Hint: Identify the user segment(s) and the context within the issue occurs. Include a measurable metric, and keep the scope tight.
+Background (textarea, eval, rows=3):
+  Hint: Provides relevant context and essential terms needed to understand the project.
+Goal (textarea, eval, rows=2): 
+  Hint: State what you are trying to achieve and define the expected changes in the product as a result.
+Problem Statement (textarea, eval, rows=2): 
+  Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
 Objective (textarea, eval): Purpose and high-level goals of the research

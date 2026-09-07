@@ -140,6 +140,9 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .field-warning::before{content:'⚠ '}
 .finput{font-family:inherit;font-size:var(--text);line-height:var(--lh);color:var(--ink);border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;background:#fff;resize:none;width:100%;min-height:var(--control-h)}
 .finput::placeholder{color:var(--text-2)}
+/* A textarea that states its own rows sizes from that instead of the shared
+   floor below. Autosize still grows it the moment anyone types. */
+textarea.finput.finput-rows{min-height:0}
 textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 

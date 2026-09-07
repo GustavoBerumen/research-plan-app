@@ -108,6 +108,22 @@ test('renders the complete form from the real index, template, rubric, and metho
     '+ Add additional section'
   );
   assert.equal(document.querySelectorAll('.eval-controls').length, 7);
+
+  // RPA-55: a textarea can declare how tall it starts, in the template, as a
+  // hint about how much answer its question expects. Autosize grows it from
+  // there; a field that declares nothing keeps the shared default.
+  assert.deepEqual(
+    ['background', 'goal', 'problemStatement', 'objective'].map((key) => {
+      const ta = document.querySelector(`[data-field="${key}"]`);
+      return [key, ta.rows, ta.classList.contains('finput-rows')];
+    }),
+    [
+      ['background', 3, true],
+      ['goal', 2, true],
+      ['problemStatement', 2, true],
+      ['objective', 2, false],
+    ]
+  );
   assert.equal(document.querySelector('.field-group-title').textContent, 'Participants');
 
   const methodInput = document.querySelector('.methods-group .list-input');

@@ -106,6 +106,14 @@
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       prose: typeParts.includes('prose'),
+      // "rows=N" sets how tall a textarea starts — a hint about how much
+      // answer the question expects, so it belongs with the question. Not a
+      // stylesheet rule keyed on the field key: keys follow labels, and a
+      // rename would silently drop the styling with nothing to catch it.
+      rows: (() => {
+        const part = typeParts.find((p) => /^rows=\d+$/.test(p));
+        return part ? Number(part.slice(5)) : null;
+      })(),
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
@@ -3559,6 +3567,10 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    if (isTextarea && field.rows) {
+      input.rows = field.rows;
+      input.classList.add('finput-rows');
+    }
     input.id = controlId;
     describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
