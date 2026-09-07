@@ -78,11 +78,11 @@ test('renders the complete form from the real index, template, rubric, and metho
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
     // RPA-55: opens with what a researcher can write; Alignment (identifiers
     // and sign-off) closes; the two deadlines moved up into the header.
-    ['Context', 'Research', 'Methodology', 'Execution', 'Resources', 'Alignment']
+    ['Context', 'Research', 'Methodology', 'Execution', 'Alignment']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '5 fields', '3 fields', '2 fields', '4 fields']
+    ['3 fields', '4 fields', '5 fields', '5 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),

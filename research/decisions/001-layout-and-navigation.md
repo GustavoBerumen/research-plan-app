@@ -65,7 +65,7 @@ continue.
 
 Evaluation currently only exists in two sections — Context (Background,
 Goal, Problem Statement) and Research (Objective, Hypothesis, Research
-Questions, Outcomes). Alignment, Methodology, Execution, Resources and
+Questions, Outcomes). Alignment, Methodology, Execution and
 Additional Comments have no evaluable fields, and mostly should not: dates,
 tables and links are not coachable prose. So the rule degrades gracefully
 rather than requiring evaluation to be bolted onto sections that do not warrant

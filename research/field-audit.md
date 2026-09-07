@@ -157,13 +157,12 @@ high effort* is where the genuine cuts live.
 | **Action Points → Responsible** | `prose` | ⚠ No in-app consumer. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. |  |
 | **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — live state in a signed document. Unanswerable when written, wrong the day after. |
 
-## Resources
-
-| Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
-|---|---|---|---|---|---|
 | **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. |  |
 | **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. |  |
 | **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` | Escape hatch for anything the template did not anticipate. | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. | **optional** — confirmed. Appears on demand. |
+
+*The Resources section was folded into Execution (RPA-55): two fields did not
+earn a section of their own.*
 
 ## Additional Comments
 
@@ -306,7 +305,7 @@ probably applies to its neighbours too.
 | Area | `text` | Alignment |
 | Jira Research | `text` | Alignment |
 | Timeframe | `textarea` | Execution |
-| Documentation | `textarea` | Resources |
+| Documentation | `textarea` | Execution |
 
 ## Known before we start
 

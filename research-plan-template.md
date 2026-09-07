@@ -133,9 +133,10 @@ Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analys
   Hint: The planned schedule for each stage of this research, from planning through reporting.
 Action Points (table): Action:prose=Task description | Responsible:prose | Status:status
   Hint: Tasks needed to move this research forward, and who owns each one.
-
-# Resources
-
+<!-- Previous Knowledge and Additional Resources used to be a Resources
+     section of their own. Two fields did not earn a section: what you already
+     know and what you still need are part of executing the study, not a
+     separate stage of it (RPA-55). -->
 Previous Knowledge (table): Name:prose=e.g. Q3 Checkout Usability Study | File:file
   Hint: Prior research or documentation relevant to this study, attached for reference.
 <!-- Documentation (textarea): Reference materials required to understand and execute the study -->
