@@ -336,6 +336,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .eval-tone-problem{border-top-color:var(--red)} .eval-tone-problem .eval-head{background:var(--red)}
 .eval-tone-warning{border-top-color:#8f4b0a} .eval-tone-warning .eval-head{background:#8f4b0a}
 .eval-tone-success{border-top-color:var(--green)} .eval-tone-success .eval-head{background:var(--green)}
+.eval-explanation{padding:16px 20px 0;margin:0;color:var(--ink)}
 .eval-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px;padding:20px 20px 0;margin:0;border:0}
 .eval-metric{display:flex;flex-direction:column;gap:5px}
 .eval-mname{font-size:var(--text);font-weight:700;color:var(--ink)}

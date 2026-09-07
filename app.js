@@ -1004,7 +1004,7 @@
   }
 
   // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
-  const { styleForScore } = window.RPA_SCORE_CLASSIFICATION;
+  const { classifyEvaluation } = window.RPA_SCORE_CLASSIFICATION;
 
   function evaluationValueToText(value) {
     if (!Array.isArray(value)) return typeof value === 'string' ? value : '';
@@ -1054,8 +1054,7 @@
         throw new Error('The evaluator returned unexpected recommendations — please try again');
       }
       const recs = data.recommendations.map((recommendation) => recommendation.trim());
-      const avg = metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length;
-      return { ...styleForScore(avg), metrics, recs };
+      return { ...classifyEvaluation(field.key, metrics), metrics, recs };
     });
   }
 
@@ -1067,6 +1066,14 @@
 
     const badge = panel.querySelector('.eval-badge');
     badge.textContent = data.label;
+
+    let explanation = panel.querySelector('.eval-explanation');
+    if (!explanation) {
+      explanation = el('p', 'eval-explanation');
+      badge.closest('.eval-head').after(explanation);
+    }
+    explanation.textContent = data.explanation;
+    explanation.hidden = !data.explanation;
 
     const metricsEl = panel.querySelector('.eval-metrics');
     metricsEl.innerHTML = '';
