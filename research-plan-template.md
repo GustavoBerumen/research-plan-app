@@ -112,13 +112,13 @@ Outcomes (list, eval):
 
 Theory (textarea, optional, rows=2): 
   Hint: A framework to help ground the study design and analysis.
-Methods (list): Search or type a method
-  Hint: The research methods you'll use to answer your research questions.
+Methods (list):
+  Hint: A technique to study user behaviors, needs, and experiences that helps answer a research question.
 
 ## Participants
 
-Characteristics (list, prose): e.g. Frequent mobile shoppers
-  Hint: Traits or behaviours that define who you need to recruit for this study.
+Characteristics (list, prose): 
+  Hint: Specific criteria, behaviours, or background that qualify people to participate in the study.
 User Groups (list, prose): e.g. New customers
   Hint: The distinct user segments you want represented among participants.
 Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
