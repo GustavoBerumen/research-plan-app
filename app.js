@@ -3082,11 +3082,28 @@
   // and a screen reader only meets it if it happens to land on the icon. The
   // hint is a sibling of the label rather than a child, so it describes the
   // control (aria-describedby) without bloating the control's name.
+  // *Emphasis* in a hint becomes a real <em>. Built as nodes rather than
+  // assigned as innerHTML, so a hint can never inject markup, and an unpaired
+  // asterisk is left alone as literal text rather than swallowing the rest of
+  // the line.
+  function appendHintText(target, text) {
+    text.split(/(\*[^*\n]+\*)/).forEach((part) => {
+      if (!part) return;
+      if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+        const em = document.createElement('em');
+        em.textContent = part.slice(1, -1);
+        target.appendChild(em);
+      } else {
+        target.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
     const hint = el('div', 'field-hint-text', { id: id });
-    hint.textContent = text;
+    appendHintText(hint, text);
     return hint;
   }
 
