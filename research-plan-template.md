@@ -110,7 +110,7 @@ Outcomes (list, eval):
 
 # Methodology
 
-Theory (textarea, optional): Any useful framework that can guide our research
+Theory (textarea, optional, rows=2): Any useful framework that can guide our research
   Hint: An academic theory or framework that can help ground this study's design or analysis.
 Methods (list): Search or type a method
   Hint: The research methods you'll use to answer your research questions.

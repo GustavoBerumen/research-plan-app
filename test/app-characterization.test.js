@@ -113,7 +113,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // hint about how much answer its question expects. Autosize grows it from
   // there; a field that declares nothing keeps the shared default.
   assert.deepEqual(
-    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'theory'].map((key) => {
+    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'theory', 'comments'].map((key) => {
       const ta = document.querySelector(`[data-field="${key}"]`);
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
@@ -123,9 +123,13 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['problemStatement', 2, true],
       ['objective', 2, true],
       ['hypothesis', 1, true],
+      ['theory', 2, true],
       // Declares nothing, so it keeps the shared default. 2 is the browser's
-      // own default for a textarea with no rows attribute, not a declared one.
-      ['theory', 2, false],
+      // own default for a textarea with no rows attribute, not a declared one,
+      // which is why the class matters more than the number here. Comments is
+      // the control rather than Project: Project is a grid cell, built by
+      // buildGridCell, which sets rows itself.
+      ['comments', 2, false],
     ]
   );
   assert.equal(document.querySelector('.field-group-title').textContent, 'Participants');
