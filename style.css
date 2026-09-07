@@ -322,6 +322,10 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .combo-note{cursor:default;color:var(--text-2);font-style:italic}
 .combo-note:hover{background:none}
 
+/* Jira feedback stays in normal flow inside its field, outside the listbox. */
+.jira-status{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:var(--text-sm);color:var(--text-2);line-height:1.5}
+.jira-status:not(:empty){margin-top:8px}
+
 /* ---------- Custom sections and comments ---------- */
 .custom-fields-list{display:flex;flex-direction:column;gap:24px}
 .custom-fields-list:not(:empty){margin-bottom:16px}
@@ -371,6 +375,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .eval-tone-problem{border-top-color:var(--red)} .eval-tone-problem .eval-head{background:var(--red)}
 .eval-tone-warning{border-top-color:#8f4b0a} .eval-tone-warning .eval-head{background:#8f4b0a}
 .eval-tone-success{border-top-color:var(--green)} .eval-tone-success .eval-head{background:var(--green)}
+.eval-explanation{padding:16px 20px 0;margin:0;color:var(--ink)}
 .eval-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px;padding:20px 20px 0;margin:0;border:0}
 .eval-metric{display:flex;flex-direction:column;gap:5px}
 .eval-mname{font-size:var(--text);font-weight:700;color:var(--ink)}
@@ -441,6 +446,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 
 /* ---------- Print ---------- */
 @media print{
+  .jira-status{display:none!important}
   /* @page margins apply per physical page, so every page gets consistent
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}

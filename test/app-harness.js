@@ -134,7 +134,12 @@ async function bootApp(options = {}) {
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/config') {
-      return response({ googleClientId: '', googleApiKey: '', jiraEnabled: false });
+      return response({ googleClientId: '', googleApiKey: '', jiraEnabled: !!options.jiraEnabled });
+    }
+
+    if (url.origin === window.location.origin && url.pathname === '/api/jira/search') {
+      if (!options.jiraSearch) throw new Error('No Jira search mock was configured');
+      return options.jiraSearch(url.searchParams.get('q'));
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/evaluate') {

@@ -130,3 +130,44 @@ test('Clear Form does not resurrect the plan it just cleared', async (t) => {
   assert.equal(saved.fields.project, undefined, 'the cleared plan does not come back');
   assert.equal((saved.tables || {})['requirements-table'], undefined);
 });
+
+test('older plan survives repeated edits and reloads, then resets without reviving dormant data', async (t) => {
+  const initial = olderDraft();
+  initial.fields.background = 'Clear this visible value';
+  initial.selects.sampleSize = { v: '__other__', o: 'Two cohorts' };
+  let app = await bootApp({ draft: initial });
+  t.after(() => app.close());
+  setValue(app.window, app.document.querySelector('[data-field="background"]'), '');
+  setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), 'First edit');
+  await waitFor(() => storedDraft(app.window).fields.researchTitle === 'First edit');
+  for (const title of ['Second edit', 'Third edit']) {
+    const saved = storedDraft(app.window);
+    assert.deepEqual(saved.tables['requirements-table'], initial.tables['requirements-table']);
+    assert.equal(saved.fields.project, initial.fields.project);
+    app.close();
+    app = await bootApp({ draft: saved });
+    assert.equal(app.document.querySelector('[data-field="background"]').value, '');
+    setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), title);
+    await waitFor(() => storedDraft(app.window).fields.researchTitle === title);
+  }
+  assert.equal(app.document.querySelector('.radio-input[value="__other__"]').checked, true);
+  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, false);
+  app.document.getElementById('clear-btn').click();
+  assert.equal(app.document.querySelectorAll('.radio-input:checked').length, 0);
+  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, true);
+  setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), 'New plan');
+  await waitFor(() => storedDraft(app.window)?.fields.researchTitle === 'New plan');
+  const reset = storedDraft(app.window);
+  assert.equal(reset.fields.project, undefined);
+  assert.equal(reset.tables['requirements-table'], undefined);
+  app.close();
+  app = await bootApp({ draft: reset });
+  assert.equal(app.document.querySelector('[data-field="researchTitle"]').value, 'New plan');
+  assert.equal(app.document.querySelectorAll('.radio-input:checked').length, 0);
+  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, true);
+  setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), 'New plan edited');
+  await waitFor(() => storedDraft(app.window).fields.researchTitle === 'New plan edited');
+  assert.equal(storedDraft(app.window).fields.project, undefined);
+  assert.equal(storedDraft(app.window).tables['requirements-table'], undefined);
+  assert.deepEqual(app.jsdomErrors, []);
+});
