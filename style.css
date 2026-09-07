@@ -94,7 +94,6 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    the header, and drawing both put two grey rules 36px apart with nothing
    between them. Every later boundary has one rule, so this matches. */
 .doc-header{margin-bottom:36px;padding-bottom:30px}
-.doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
 .title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .title-inp::placeholder{color:var(--text-2)}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:24px}
@@ -103,6 +102,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
 .minput::placeholder{color:var(--text-2)}
 /* Last Updated is a computed corner value, kept compact. */
+.doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
 .mf-compact{gap:2px;flex-shrink:0}
 .mf-compact .mlabel{font-size:var(--text-sm)}
 .mf-compact .minput{font-size:var(--text-sm);min-height:34px;padding:3px 5px;max-width:190px}
@@ -204,6 +204,9 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .row-remove-cell{text-align:center;white-space:nowrap;vertical-align:middle}
 
 /* ---------- Date control ---------- */
+/* display:flex below outranks the browser's [hidden]{display:none}, so the
+   attribute alone does not hide a date control. */
+.date-control[hidden]{display:none}
 .date-control{display:flex;align-items:center;gap:3px;width:100%;min-width:0;flex-wrap:wrap;border:2px solid var(--ink);background:#fff;padding:5px;min-height:var(--control-h)}
 .date-segment{font:inherit;color:inherit;line-height:inherit;text-align:center;border:none;outline:none;background:transparent;padding:0;flex:0 0 auto}
 .date-segment:focus{background:var(--focus);color:var(--ink)}

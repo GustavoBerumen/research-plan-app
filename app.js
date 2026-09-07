@@ -40,9 +40,23 @@
     return now.getFullYear() + '-' + mm + '-' + dd;
   }
 
+  // Last updated re-stamps itself whenever the plan's content changes. Once
+  // someone sets it by hand that stops, because an edit you can make and then
+  // lose on your next unrelated keystroke is worse than no edit at all. The
+  // choice is remembered in the draft, so it survives a reload; Clear Form
+  // resets it, since a cleared plan is a new plan.
+  let lastUpdatedManual = false;
+  let stampingLastUpdated = false;
+
   function setLastUpdatedToday() {
     const input = doc.querySelector('[data-field="lastUpdated"]');
-    if (input) setDateInputValue(input, todayIso());
+    if (!input) return;
+    stampingLastUpdated = true;
+    try {
+      setDateInputValue(input, todayIso());
+    } finally {
+      stampingLastUpdated = false;
+    }
   }
 
   // ---------- schema parsing (research-plan-template.md) ----------
@@ -3706,8 +3720,8 @@
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
-      // Last Updated sits in a compact corner slot with no room for guidance,
-      // and it is a computed value nobody is asked to fill in.
+      // The compact corner slot has no room for guidance, and this is a
+      // computed value nobody is asked to fill in.
       const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f, controlId + '-hint');
       let input;
       let control;
@@ -3719,7 +3733,15 @@
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         control = input;
       }
-      if (f.key === 'lastUpdated') setDateInputValue(input, todayIso());
+      if (f.key === 'lastUpdated') {
+        setDateInputValue(input, todayIso());
+        // A draft restore replays saved values through this same event, and
+        // the stamp writes the value itself; neither is a person choosing a
+        // date, and only a person should switch the stamping off.
+        input.addEventListener('change', () => {
+          if (!stampingLastUpdated && !draftRestoring) lastUpdatedManual = true;
+        });
+      }
       if (f.type === 'date') {
         control.setAttribute('aria-labelledby', label.id);
       } else {
@@ -3732,13 +3754,9 @@
       return mf;
     }
 
-    // "Last Updated" sits in the top-right corner rather than down in the
-    // regular meta grid with the other header fields. It is the row's only
-    // child, so the row right-aligns it (justify-content:flex-end); there
-    // used to be a "Research Plan" caption on the left, dropped because the
-    // toolbar, the browser tab and the Title label all say it already.
+    // "Last updated" keeps its compact top-right corner slot rather than
+    // sitting in the grid of questions people are asked to answer.
     const topRow = el('div', 'doc-header-top');
-
     const metaGrid = el('div', 'meta-grid');
     header.meta.forEach((f) => {
       const mf = buildMetaField(f);
@@ -4004,7 +4022,7 @@
       }));
     });
 
-    return { fields, selects, lists, methods, tables: tableData, custom };
+    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual };
   }
 
   // Everything about the plan except the stamp itself, so that re-dating the
@@ -4024,7 +4042,7 @@
       // scheduled by clicks that change nothing (opening a section, focusing
       // a field), and merely looking at a plan is not editing it.
       const signature = draftContentSignature(draft);
-      if (lastSavedSignature !== null && signature !== lastSavedSignature) {
+      if (lastSavedSignature !== null && signature !== lastSavedSignature && !lastUpdatedManual) {
         setLastUpdatedToday();
         draft = collectDraft();
       }
@@ -4149,6 +4167,7 @@
   }
 
   function applyDraft(draft) {
+    lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     // Lists first — Research Questions drives both Outcomes rows and Methods
     // groups, so its rows must exist before either is restored.
     const orderedListKeys = Object.keys(draft.lists || {})
@@ -4298,6 +4317,7 @@
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     clearDraft();
     lastSavedSignature = null;
+    lastUpdatedManual = false;
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
