@@ -928,7 +928,8 @@ async function handleAddFramework(req, res) {
 const METHODS_FILE = path.join(ROOT, 'research-methods.md');
 
 function parseMethodsList(text) {
-  return text.replace(/<!--[\s\S]*?-->/g, '')
+  // CRLF-safe: the same normalisation the client parsers do.
+  return text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '')
     .split('\n')
     .map((line) => line.match(/^-\s*(.+?)\s*$/))
     .filter(Boolean)
@@ -1341,6 +1342,7 @@ module.exports = {
   formatResearchQuestionResult,
   formatScalarResult,
   outcomesEvalTool,
+  parseMethodsList,
   researchQuestionsEvalTool,
   scalarEvalTool,
 };

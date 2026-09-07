@@ -133,7 +133,14 @@
   }
 
   function parseSchema(text) {
-    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    // Normalise line endings before anything else. A template saved on
+    // Windows arrives with CRLF, and the Hint/Good/Bad matchers below run
+    // against the raw line rather than the trimmed one, because they need to
+    // see its indentation. In a JavaScript regex "." excludes line
+    // terminators and \r is one, so "(.*)$" could not reach the end of a
+    // CRLF line and the match failed outright: every field rendered and not
+    // one hint did, with nothing reported.
+    text = text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
     const lines = text.split('\n');
     const header = { title: null, meta: [] };
     const sections = [];
@@ -207,6 +214,7 @@
     text = text.replace(/<!--[\s\S]*?-->/g, '');
     const rubrics = {};
     let currentKey = null;
+    text = text.replace(/\r\n?/g, '\n');
     text.split('\n').forEach((raw) => {
       const line = raw.replace(/\s+$/, '');
       if (!line.trim()) return;
@@ -236,7 +244,7 @@
 
   // ---------- methods list (research-methods.md) ----------
   function parseMethodsList(text) {
-    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    text = text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
     return text.split('\n')
       .map((line) => line.match(/^-\s*(.+?)\s*$/))
       .filter(Boolean)
