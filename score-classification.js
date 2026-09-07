@@ -23,5 +23,20 @@
     return SCORE_STYLES.find((style) => average <= style.maxInclusive);
   }
 
-  return { SCORE_STYLES, styleForScore };
+  function classifyEvaluation(fieldKey, metrics) {
+    const average = metrics.reduce((sum, metric) => sum + metric.score, 0) / metrics.length;
+    const structured = fieldKey === 'researchQuestions' || fieldKey === 'outcomes';
+    const criticalEntry = structured && metrics.some((metric) =>
+      metric.scope === 'entry-quality' && metric.score === 1
+    );
+    // Cap only the aggregate status, never the underlying scores or justifications.
+    return {
+      ...styleForScore(criticalEntry ? Math.min(average, 2) : average),
+      explanation: criticalEntry
+        ? 'An individual entry has a quality score of 1 of 3. Resolve critical entry weaknesses before this evaluation can be Good or Ready.'
+        : '',
+    };
+  }
+
+  return { SCORE_STYLES, styleForScore, classifyEvaluation };
 });

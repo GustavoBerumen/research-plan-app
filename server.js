@@ -512,6 +512,7 @@ function flattenEntryMetrics(entries, rubric, label, byNumber) {
         name: isOutcomeAlignment
           ? `Outcome ${entry.number} ↔ Question ${entry.number} — ${criterion.name}`
           : `${label} ${entry.number} — ${criterion.name}`,
+        scope: isOutcomeAlignment ? 'alignment' : 'entry-quality',
         score: metric.score,
         desc: metric.desc,
       };
@@ -529,6 +530,7 @@ function formatResearchQuestionResult(input, entries, rubric) {
     QUESTION_SET_CRITERIA.forEach((criterion, index) => {
       metrics.push({
         name: `Question set — ${criterion.name}`,
+        scope: criterion.name === 'Alignment' ? 'alignment' : 'set-quality',
         score: setMetrics[index].score,
         desc: setMetrics[index].desc,
       });
