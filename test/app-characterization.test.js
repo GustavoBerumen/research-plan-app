@@ -128,7 +128,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
     [
-      ['background', 3, true],
+      ['background', 2, true],
       ['goal', 2, true],
       ['problemStatement', 2, true],
       ['objective', 2, true],

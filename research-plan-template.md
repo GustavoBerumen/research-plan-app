@@ -93,7 +93,7 @@ Last updated (date, key=lastUpdated):
 
 # Context {open}
 
-Background (textarea, eval, rows=3, key=background):
+Background (textarea, eval, rows=2, key=background):
   Hint: Relevant context and essential terms needed to understand the project.
 Goal (textarea, eval, rows=2, key=goal): 
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
