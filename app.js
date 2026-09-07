@@ -3241,7 +3241,13 @@
     // see sizeInputToContent(). 26 = the pill's 11px horizontal padding on
     // each side, plus a small buffer.
     function updateWidth() {
-      if (input.value.trim()) sizeInputToContent(input, 26);
+      const filled = Boolean(input.value.trim());
+      // Drives the tag styling. This used to be :placeholder-shown in CSS,
+      // which made the placeholder load-bearing: emptying it turned every
+      // blank field into a tag, because a field with no placeholder text is
+      // never "showing" one. A class says what is actually meant.
+      input.classList.toggle('jira-filled', filled);
+      if (filled) sizeInputToContent(input, 26);
       else input.style.width = '';
     }
 

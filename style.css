@@ -255,9 +255,10 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .ss-ip{background:var(--tag-blue-bg)}
 .ss-done{background:var(--tag-green-bg)}
 .ss-block{background:var(--tag-red-bg)}
-/* A filled Jira reference renders as a tag. Note this keys off
-   :placeholder-shown, so the field's placeholder is load-bearing (RPA-54). */
-.jira-input:not(:placeholder-shown){display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
+/* A filled Jira reference renders as a tag. Driven by a class the combobox
+   sets, not by :placeholder-shown — that made the placeholder load-bearing,
+   so removing it would have styled every empty field as a tag. */
+.jira-input.jira-filled{display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
 .select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 /* Radios, GOV.UK shape: a real input, a generous hit area that includes the
    label, and the focus ring on the control rather than the row. */

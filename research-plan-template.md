@@ -78,7 +78,7 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
 
-Jira Project (text, key=jiraProject): Ticket reference
+Jira Project (text, key=jiraProject):
   Hint: Jira ticket for the initiative this research supports.
 Lead researcher (text, key=leadResearcher):
   Hint: Name of the person leading this research.
