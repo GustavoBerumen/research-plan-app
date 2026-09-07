@@ -2509,7 +2509,7 @@
   function getCellValue(td) {
     const select = td.querySelector('select');
     if (select) {
-      if (select.value === '__other__') {
+      if (select.hidden || select.value === '__other__') {
         const other = td.querySelector('.select-other-input');
         return other ? other.value : '';
       }
@@ -2560,11 +2560,119 @@
   // use the same gray as an unfilled eval-dot ("0 contributions" look).
   const TIMELINE_STAGE_COLORS = ['#6366f1', '#16a34a', '#2563eb', '#dc2626', '#ea580c', '#a16207'];
 
-  // One row per stage (table order), label + dates either side of the track,
-  // same as the original bar chart — the only change is that each row's bar
-  // is textured into small connected day/week squares (GitHub-contributions
-  // style) instead of one solid rectangle. Position/width of that textured
-  // region within the track is still proportional to the overall plan span.
+  // Calendar-day coordinates avoid treating a local DST day as 24 hours.
+  const timelineDay = (date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+  function timelineDate(day) {
+    const utc = new Date(day * 86400000);
+    return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+  }
+
+  // Longer plans use one continuous bar per stage, with weekly or monthly
+  // boundaries behind it. Grid intervals never round a stage's duration up.
+  function renderLongTimeline(valid, minStart, maxEnd, scale, colorFor, container) {
+    const first = timelineDate(minStart);
+    const periods = [];
+    if (scale === 'weeks') {
+      for (let day = minStart; day <= maxEnd; day += 7) {
+        periods.push({ start: day, end: day + 7, label: String(periods.length + 1) });
+      }
+    } else {
+      // Whole containing months provide room for labels even when the plan
+      // includes only one day of its first/last month. Padding is empty time.
+      let month = new Date(first.getFullYear(), first.getMonth(), 1);
+      while (timelineDay(month) <= maxEnd) {
+        const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+        periods.push({ start: timelineDay(month), end: timelineDay(next),
+          label: MONTH_ABBREVIATIONS[month.getMonth()], year: month.getFullYear() });
+        month = next;
+      }
+    }
+    const bandSize = scale === 'months' ? 6 : periods.length;
+    let maxBandDays = 0;
+    for (let offset = 0; offset < periods.length; offset += bandSize) {
+      maxBandDays = Math.max(maxBandDays,
+        periods[Math.min(offset + bandSize, periods.length) - 1].end - periods[offset].start);
+    }
+    const caption = el('div', 'timeline-scale-caption');
+    caption.textContent = (scale === 'months' ? 'Monthly' : 'Weekly') + ' timeline · '
+      + formatTimelineDate(first) + ' – ' + formatTimelineDate(timelineDate(maxEnd));
+    container.appendChild(caption);
+    if (periods.length > bandSize) {
+      const note = el('p', 'timeline-band-note');
+      note.textContent = 'Continued in six-month bands. Dates beside each bar show the full stage.';
+      container.appendChild(note);
+    }
+    for (let offset = 0; offset < periods.length; offset += bandSize) {
+      const bandPeriods = periods.slice(offset, offset + bandSize);
+      const bandStart = bandPeriods[0].start;
+      const bandEnd = bandPeriods[bandPeriods.length - 1].end;
+      const bandDays = bandEnd - bandStart;
+      const band = el('div', 'timeline-band');
+      // Use the same pixels per calendar day in every band. In particular,
+      // do not stretch a final two-month band to look six months long.
+      band.style.setProperty('--timeline-band-width', (bandDays / maxBandDays * 100) + '%');
+      const header = el('div', 'timeline-periods');
+      const heading = el('div', 'timeline-label');
+      heading.textContent = scale === 'weeks' ? 'Week' : 'Month';
+      const ruler = el('div', 'timeline-period-grid');
+      ruler.classList.add('timeline-period-grid-' + scale);
+      if (scale === 'weeks' && periods.length > 14) ruler.classList.add('timeline-period-grid-dense');
+      const gridColumns = bandPeriods.map(p => (p.end - p.start) + 'fr').join(' ');
+      ruler.style.gridTemplateColumns = gridColumns;
+      bandPeriods.forEach(p => {
+        const mark = el('div', 'timeline-period-mark');
+        mark.title = (scale === 'weeks' ? 'Week ' : '') + p.label + ': '
+          + formatTimelineDate(timelineDate(p.start)) + ' – ' + formatTimelineDate(timelineDate(p.end - 1));
+        const name = el('span', 'timeline-period-name');
+        name.textContent = p.label;
+        mark.appendChild(name);
+        if (scale === 'months') {
+          const year = el('span', 'timeline-period-year');
+          year.textContent = p.year;
+          mark.appendChild(year);
+        }
+        ruler.appendChild(mark);
+      });
+      header.append(heading, ruler, el('div', 'timeline-dates'));
+      band.appendChild(header);
+      valid.forEach(r => {
+        const start = Math.max(r.startDay, bandStart);
+        const end = Math.min(r.endDay + 1, bandEnd);
+        if (start >= end) return;
+        const name = r.stage || '(untitled stage)';
+        const startLabel = formatTimelineDate(r.start);
+        const endLabel = formatTimelineDate(r.end);
+        const duration = r.endDay - r.startDay + 1;
+        const description = name + ': ' + startLabel + ' to ' + endLabel
+          + ' (' + duration + (duration === 1 ? ' calendar day)' : ' calendar days)');
+        const row = el('div', 'timeline-row');
+        const label = el('div', 'timeline-label');
+        label.textContent = name;
+        label.title = name;
+        const track = el('div', 'timeline-continuous-track');
+        track.style.gridTemplateColumns = gridColumns;
+        // Decorative background: one element per period, never per day.
+        bandPeriods.forEach(() => track.appendChild(el('div', 'timeline-period-cell', { 'aria-hidden': 'true' })));
+        const bar = el('div', 'timeline-stage-bar', { role: 'img', 'aria-label': description });
+        bar.style.left = ((start - bandStart) / bandDays * 100) + '%';
+        bar.style.width = ((end - start) / bandDays * 100) + '%';
+        bar.style.background = colorFor(name);
+        bar.title = description;
+        track.appendChild(bar);
+        const dates = el('div', 'timeline-dates');
+        [startLabel, endLabel].forEach(value => {
+          const date = el('span', 'timeline-date-value');
+          date.textContent = value;
+          dates.appendChild(date);
+        });
+        row.append(label, track, dates);
+        band.appendChild(row);
+      });
+      container.appendChild(band);
+    }
+  }
+
+  // Preserve the day-cell presentation through eight inclusive weeks.
   function renderTimelineChart(tableId, columns, container) {
     const stageIdx = columns.findIndex((c) => c.key === 'stage');
     const startIdx = columns.findIndex((c) => c.key === 'startDate');
@@ -2581,6 +2689,7 @@
     const valid = rows.filter((r) => r.start && r.end && r.start <= r.end);
 
     container.innerHTML = '';
+    delete container.dataset.scale;
     if (valid.length === 0) {
       const msg = el('div', 'timeline-empty');
       msg.textContent = 'Add stages with start and completion dates to see a timeline.';
@@ -2596,19 +2705,30 @@
     });
     const colorFor = (name) => TIMELINE_STAGE_COLORS[stageNames.indexOf(name) % TIMELINE_STAGE_COLORS.length];
 
-    const dayMs = 86400000;
-    const minStart = Math.min(...valid.map((r) => r.start.getTime()));
-    const maxEnd = Math.max(...valid.map((r) => r.end.getTime()));
-    const totalDays = Math.round((maxEnd - minStart) / dayMs) + 1;
-    const useWeeks = totalDays > 90;
-    const unitDays = useWeeks ? 7 : 1;
+    valid.forEach(r => { r.startDay = timelineDay(r.start); r.endDay = timelineDay(r.end); });
+    const minStart = Math.min(...valid.map(r => r.startDay));
+    const maxEnd = Math.max(...valid.map(r => r.endDay));
+    const totalDays = maxEnd - minStart + 1;
+    const first = timelineDate(minStart);
+    const sixMonthsLater = new Date(first.getFullYear(), first.getMonth() + 6, 1);
+    // Clamp only this display threshold's anniversary (e.g. Aug 31 -> Feb 28),
+    // never the authored dates. The anniversary itself begins month seven.
+    const lastDay = new Date(first.getFullYear(), first.getMonth() + 7, 0).getDate();
+    sixMonthsLater.setDate(Math.min(first.getDate(), lastDay));
+    const scale = totalDays <= 56 ? 'days' : maxEnd < timelineDay(sixMonthsLater) ? 'weeks' : 'months';
+    container.dataset.scale = scale;
+    if (scale !== 'days') {
+      renderLongTimeline(valid, minStart, maxEnd, scale, colorFor, container);
+      return;
+    }
+    const unitDays = 1;
 
     // Week 1 begins on the plan's own earliest start date. In daily mode,
     // extend the grid to a whole number of plan-relative weeks so the final
     // week is displayed completely without using calendar-week boundaries.
     const week1 = minStart;
     const gridEnd = unitDays === 1
-      ? minStart + (Math.ceil(totalDays / 7) * 7 - 1) * dayMs
+      ? minStart + (Math.ceil(totalDays / 7) * 7 - 1)
       : maxEnd;
 
     // One shared grid, with the same column count and sizing, is reused by
@@ -2616,7 +2736,7 @@
     // start date and continue through its final plan-relative week, so later
     // stage starts receive real empty cells before them rather than a gap.
     const cellStarts = [];
-    for (let t = week1; t <= gridEnd; t += unitDays * dayMs) cellStarts.push(t);
+    for (let t = week1; t <= gridEnd; t += unitDays) cellStarts.push(t);
     const cellCount = cellStarts.length;
     const cellsPerWeek = 7 / unitDays;
 
@@ -2624,9 +2744,9 @@
     const axisSpacer = el('div', 'timeline-label');
     const axisTrack = el('div', 'timeline-axis-track');
     const axisStart = el('span', 'timeline-axis-date');
-    axisStart.textContent = formatTimelineDate(new Date(minStart));
+    axisStart.textContent = formatTimelineDate(timelineDate(minStart));
     const axisEnd = el('span', 'timeline-axis-date');
-    axisEnd.textContent = formatTimelineDate(new Date(maxEnd));
+    axisEnd.textContent = formatTimelineDate(timelineDate(maxEnd));
     axisTrack.append(axisStart, axisEnd);
     axis.append(axisSpacer, axisTrack);
     container.appendChild(axis);
@@ -2661,8 +2781,8 @@
       grid.style.gridTemplateColumns = 'repeat(' + cellCount + ', 1fr)';
 
       cellStarts.forEach((cellStart) => {
-        const cellEnd = cellStart + (unitDays - 1) * dayMs;
-        const covered = r.start.getTime() <= cellEnd && r.end.getTime() >= cellStart;
+        const cellEnd = cellStart + (unitDays - 1);
+        const covered = r.startDay <= cellEnd && r.endDay >= cellStart;
         const cell = el('div', 'timeline-bar-cell');
         if (covered) {
           // The stage palette is data — one colour per stage row so rows
@@ -2672,7 +2792,7 @@
           cell.style.background = color;
           cell.title = name + ': ' + startLabel + ' – ' + endLabel;
         } else {
-          cell.title = formatTimelineDate(new Date(cellStart));
+          cell.title = formatTimelineDate(timelineDate(cellStart));
         }
         grid.appendChild(cell);
       });
@@ -2845,6 +2965,9 @@
       });
       table.addEventListener('input', () => { if (!chart.hidden) refreshTimeline(); });
       table.addEventListener('change', () => { if (!chart.hidden) refreshTimeline(); });
+      table.addEventListener('click', event => {
+        if (event.target.closest('.row-remove') && !chart.hidden) refreshTimeline();
+      });
 
       wrap.append(vizBtn, chart);
     }

@@ -297,6 +297,38 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .timeline-dates{width:130px;min-width:0;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:var(--text-sm);line-height:1.35;color:var(--text-2);text-align:right;white-space:nowrap}
 @media screen and (max-width:600px){.timeline-chart{padding:12px 0 0}.timeline-axis,.timeline-weeks,.timeline-row{gap:8px}.timeline-label{width:84px}.timeline-dates{width:96px;font-size:12px}}
 
+/* RPA-65: continuous stage bars on calendar-week/month grids. Short charts
+   retain their existing cells and print rules (RPA-66 owns their separation). */
+@media screen{
+  #stageTimeline-table{min-width:690px}
+  #stageTimeline-table .date-control{flex-wrap:nowrap}
+}
+.timeline-scale-caption{font-size:var(--text-sm);color:var(--text-2);margin-bottom:12px}
+.timeline-band-note{font-size:var(--text-sm);color:var(--text-2);margin:0 0 12px}
+.timeline-band + .timeline-band{margin-top:24px}
+.timeline-periods{align-items:center;gap:12px;margin-bottom:10px;break-after:avoid}
+.timeline-periods,.timeline-band .timeline-row{display:grid;grid-template-columns:150px minmax(0,1fr) 130px}
+.timeline-period-grid{display:grid;min-width:0;flex:1;container-type:inline-size}
+.timeline-period-mark{min-width:0;border-left:1px solid var(--border);font-size:12px;line-height:1.4;text-align:center;white-space:nowrap}
+.timeline-period-year{display:block;font-size:10px;color:var(--text-2)}
+.timeline-period-grid-dense .timeline-period-mark:nth-child(even) .timeline-period-name{visibility:hidden}
+.timeline-continuous-track{position:relative;display:grid;flex:1;min-width:0;height:20px;background:var(--canvas)}
+.timeline-period-grid,.timeline-continuous-track{width:var(--timeline-band-width)}
+.timeline-period-cell{border-left:1px solid var(--border);min-width:0}
+.timeline-period-cell:nth-last-child(2){border-right:1px solid var(--border)}
+.timeline-stage-bar{position:absolute;top:3px;height:14px;min-width:1px}
+.timeline-band .timeline-row{break-inside:avoid}
+@container (max-width:360px){.timeline-period-grid-weeks .timeline-period-mark:not(:nth-child(4n + 1)) .timeline-period-name{visibility:hidden}}
+@media screen and (max-width:600px){
+  .timeline-band .timeline-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;margin-bottom:16px}
+  .timeline-band .timeline-label{width:auto;min-width:0;white-space:normal;overflow-wrap:anywhere}
+  .timeline-band .timeline-dates{width:auto;grid-column:2;grid-row:1}
+  .timeline-continuous-track{grid-column:1 / -1}
+  .timeline-periods{display:block}
+  .timeline-periods > .timeline-label{margin-bottom:4px}
+  .timeline-periods > .timeline-dates{display:none}
+}
+
 /* ---------- Files ---------- */
 .file-cell{display:flex;align-items:center;gap:10px}
 .file-native{display:none}
