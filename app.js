@@ -3815,9 +3815,9 @@
         mf.classList.add('mf-compact');
         topRow.appendChild(mf);
       } else if (f.key === 'jiraProject') {
-        // Directly under the title, on its own. It identifies the plan rather
-        // than asking one of the paired questions in the grid below, and the
-        // ticket combobox wants room for its "KEY — summary" result.
+        // Directly under the title and the same width as it. It identifies
+        // the plan rather than asking one of the paired questions in the grid
+        // below, and the combobox wants room for its "KEY — summary" result.
         mf.classList.add('mf-identifier');
         identifier = mf;
       } else {

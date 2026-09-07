@@ -103,9 +103,10 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .minput::placeholder{color:var(--text-2)}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
-/* The ticket reference sits under the title on its own row; it does not
-   need the full width of the document. */
-.mf-identifier{max-width:340px;margin-top:20px}
+/* The ticket reference sits under the title on its own row, matching its
+   width. Narrower looked tidier in isolation but wrapped the hint onto two
+   lines and read as a different kind of thing from the title above it. */
+.mf-identifier{margin-top:20px}
 .mf-compact{gap:2px;flex-shrink:0}
 .mf-compact .mlabel{font-size:var(--text-sm)}
 .mf-compact .minput{font-size:var(--text-sm);min-height:34px;padding:3px 5px;max-width:190px}
