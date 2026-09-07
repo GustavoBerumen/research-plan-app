@@ -63,7 +63,7 @@ continue.
 
 **Information added, and evaluated where evaluation exists.**
 
-Evaluation currently only exists in two sections — Project Context (Background,
+Evaluation currently only exists in two sections — Context (Background,
 Goal, Problem Statement) and Research (Objective, Hypothesis, Research
 Questions, Outcomes). Alignment, Methodology, Execution, Resources and
 Additional Comments have no evaluable fields, and mostly should not: dates,

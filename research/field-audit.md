@@ -118,7 +118,7 @@ high effort* is where the genuine cuts live.
 | **Sign off: Project Owner**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — to the review step. |
 | **Sign off: Researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
 
-## Project Context
+## Context
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
@@ -183,7 +183,7 @@ is a point where the form asks a person to speak for someone not in the room.
 
 Three clusters, in descending order of how much they matter:
 
-1. **Project Context is the project's knowledge, not the researcher's.** All three
+1. **Context is the project's knowledge, not the researcher's.** All three
    fields — Background, Goal, Problem Statement — are owned by the project side.
    That is not an argument to cut them: a plan without them is unreadable. It is an
    argument that they are being *retyped* rather than *sourced*. If they already
@@ -222,7 +222,7 @@ Treat it as the opening argument, not the conclusion.
 
 Ordered by how much each changes the form.
 
-### 1. Stop retyping Project Context — source it
+### 1. Stop retyping Context — source it
 
 Background, Goal and Problem Statement are all owned by the project side. A Jira
 connector already exists on the Jira Project field (`server.js`, `/api/jira/search`).
@@ -245,7 +245,7 @@ summary only. Prefilling descriptions needs a second endpoint.
 
 ### 3. Fix the opening sequence
 
-The first two sections, Alignment and Project Context, are the ones the researcher
+The first two sections, Alignment and Context, are the ones the researcher
 is least able to complete alone. The sections they own outright start at number
 three. The ordering principle is to open with what people can answer; this form
 does the opposite. Consider opening with Research, and letting the admin and

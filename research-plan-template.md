@@ -86,7 +86,7 @@ Research readout (date):
 Last updated (date):
   Hint: The date this plan was last edited.
 
-# Project Context {open}
+# Context {open}
 
 Background (textarea, eval, rows=3):
   Hint: Provides relevant context and essential terms needed to understand the project.
@@ -140,7 +140,7 @@ Additional Resources (custom-fields): Add details...
 
 <!-- Alignment sits last. Project and Jira Project are identifiers, and the
      sign-offs are headed for a review step at the end of the flow (RPA-55).
-     The form opens with Project Context and Research — the sections a
+     The form opens with Context and Research — the sections a
      researcher can actually write — instead of paperwork. -->
 # Alignment {grid}
 
