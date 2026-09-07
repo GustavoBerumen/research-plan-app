@@ -67,9 +67,9 @@ async function evaluateOutcomes(app) {
   const field = app.document
     .querySelector('.list-rows[data-list-key="outcomes"]')
     .closest('.field');
-  const button = field.querySelector('.eval-btn');
+  const button = field.closest('.acc').querySelector('.section-eval-btn');
   button.click();
-  await waitFor(() => app.evaluationRequests.length === 1);
+  await waitFor(() => app.evaluationRequests.length === 2);
   await waitFor(() => !button.disabled);
 }
 
@@ -199,11 +199,11 @@ test('the confirmed structure saves, restores, and evaluates without re-pairing 
   removeQuestion(first.document, 1);
   await evaluateOutcomes(first);
 
-  assert.deepEqual(first.evaluationRequests[0].body.entries, [
+  assert.deepEqual(first.evaluationRequests.find(request => request.body.fieldKey === 'outcomes').body.entries, [
     { number: 1, text: 'Outcome one' },
     { number: 2, text: 'Outcome three' },
   ]);
-  assert.deepEqual(first.evaluationRequests[0].body.researchQuestions, [
+  assert.deepEqual(first.evaluationRequests.find(request => request.body.fieldKey === 'outcomes').body.researchQuestions, [
     { number: 1, text: 'Question one' },
     { number: 2, text: 'Question three' },
   ]);
@@ -250,5 +250,6 @@ test('test-profile loading still builds matching Question, Outcome, and Methods 
     Array.from(profile.fields.outcomes)
   );
   assert.equal(methodsGroups(app.document).length, profile.fields.researchQuestions.length);
-  assert.ok(Array.from(app.document.querySelectorAll('.eval-btn')).every((evalButton) => !evalButton.hidden));
+  assert.equal(app.document.querySelectorAll('.section-eval-btn').length, 2);
+  assert.ok(Array.from(app.document.querySelectorAll('.eval-controls > .eval-btn')).every(button => button.hidden));
 });

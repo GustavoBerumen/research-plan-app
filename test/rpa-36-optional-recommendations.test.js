@@ -53,10 +53,15 @@ function shapeError(fn) {
   assert.throws(fn, /unexpected evaluation shape/i);
 }
 
-async function runEvaluation(app, controls) {
-  const button = controls.querySelector('.eval-btn');
+async function runEvaluation(app, container) {
+  const controls = container.matches('.eval-controls') ? container : container.querySelector('.eval-controls');
+  const initial = controls.querySelector('.eval-btn');
+  const hasResult = !controls.querySelector('.eval-result-summary').hidden;
+  const button = hasResult ? controls.querySelector('.eval-quick-reevaluate-btn')
+    : !initial.hidden ? initial : controls.closest('.acc').querySelector('.section-eval-btn');
+  const count = app.evaluationRequests.length;
   button.click();
-  await waitFor(() => app.evaluationRequests.length === 1);
+  await waitFor(() => app.evaluationRequests.length > count);
   await waitFor(() => !button.disabled);
 }
 
