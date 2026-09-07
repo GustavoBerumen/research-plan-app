@@ -2980,8 +2980,9 @@
         // Keep the button's space reserved (visibility, not display:none) so
         // every row's input stays the same width regardless of which row is
         // first — only actually hiding it would make row 1 stretch wider.
-        removeBtn.classList.toggle('list-remove-spacer', i === 0);
-        removeBtn.disabled = i === 0;
+        const removalDisabled = field.key === 'researchQuestions' ? rows.length === 1 : i === 0;
+        removeBtn.classList.toggle('list-remove-spacer', removalDisabled);
+        removeBtn.disabled = removalDisabled;
       });
     }
 
@@ -3023,8 +3024,8 @@
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', (event) => {
         if (removeBtn.disabled) return;
+        const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
         if (field.key === 'researchQuestions') {
-          const index = Array.from(list.querySelectorAll('.list-row')).indexOf(row);
           if (!confirmQuestionRemoval(index)) {
             event.stopPropagation();
             return;
@@ -3035,7 +3036,15 @@
         row.remove();
         renumber();
         updateResearchQuestionsWarning();
-        if (field.key === 'researchQuestions') syncMethodsGroups();
+        if (field.key === 'researchQuestions') {
+          syncMethodsGroups();
+          const remaining = list.querySelectorAll('.list-input');
+          const nextInput = remaining[Math.min(index, remaining.length - 1)];
+          // The removed button is detached by the time its click bubbles.
+          // Notify dependent evaluations from a surviving Question instead.
+          nextInput.dispatchEvent(new Event('input', { bubbles: true }));
+          nextInput.focus();
+        }
       });
       row.append(num, inp, removeBtn);
       list.appendChild(row);
