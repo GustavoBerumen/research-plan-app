@@ -2738,89 +2738,6 @@
     );
   }
 
-  // ---------- dynamic placeholders (Characteristics) ----------
-  // Generated from Background/Goal/Objective/Research Questions, but only
-  // ever written to .placeholder — never .value — so this behaves exactly
-  // like a normal HTML placeholder: visible only while empty, gone the
-  // instant the user types, never submitted as real content.
-  function collectParticipantContextFields() {
-    const val = (key) => {
-      const input = doc.querySelector('[data-field="' + key + '"]');
-      return input ? input.value.trim() : '';
-    };
-    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    return {
-      background: val('background'),
-      goal: val('goal'),
-      objective: val('objective'),
-      researchQuestions: rqList ? collectListValues(rqList).join('\n') : '',
-    };
-  }
-
-  // Cheap pre-check so a near-empty form never even calls the endpoint —
-  // the server has the same check as a backstop, but the point is to avoid
-  // spending the API call in the first place when there's too little to
-  // work from.
-  function hasEnoughContextForPlaceholders(ctx) {
-    return (ctx.background + ctx.goal + ctx.objective + ctx.researchQuestions).trim().length >= 40;
-  }
-
-  function participantContextChanged(a, b) {
-    if (!b) return true;
-    return a.background !== b.background || a.goal !== b.goal || a.objective !== b.objective || a.researchQuestions !== b.researchQuestions;
-  }
-
-  let participantPlaceholderCache = null; // { inputs, characteristics }
-  let participantPlaceholderPromise = null; // in-flight request, de-duped across near-simultaneous focus events
-
-  function ensureParticipantPlaceholders() {
-    const ctx = collectParticipantContextFields();
-    if (!hasEnoughContextForPlaceholders(ctx)) return Promise.resolve(null);
-
-    if (participantPlaceholderCache && !participantContextChanged(ctx, participantPlaceholderCache.inputs)) {
-      return Promise.resolve(participantPlaceholderCache);
-    }
-    if (participantPlaceholderPromise) return participantPlaceholderPromise;
-
-    participantPlaceholderPromise = fetch('/api/suggest-participant-placeholders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ctx),
-    }).then((res) => {
-      return res.json().catch(() => ({})).then((data) => {
-        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-        return data;
-      });
-    }).then((data) => {
-      const result = { inputs: ctx, characteristics: data.characteristics };
-      participantPlaceholderCache = result;
-      return result;
-    }).catch((err) => {
-      console.warn('Dynamic placeholder generation failed, keeping static placeholder:', err);
-      return null;
-    }).finally(() => {
-      participantPlaceholderPromise = null;
-    });
-
-    return participantPlaceholderPromise;
-  }
-
-  // Applies to every currently-empty row, not just the one that was focused,
-  // so a row added later already has the fresh hint waiting.
-  function applyParticipantPlaceholders(result) {
-    if (!result || !result.characteristics) return;
-    doc.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input').forEach((inp) => {
-      if (!inp.value.trim()) inp.placeholder = result.characteristics;
-    });
-  }
-
-  function attachDynamicPlaceholder(inp) {
-    inp.addEventListener('focus', () => {
-      if (inp.value.trim()) return;
-      ensureParticipantPlaceholders().then(applyParticipantPlaceholders);
-    });
-  }
-
   function renderListField(field) {
     // A list has no single control for a <label> to point at, so the group
     // is named by its heading and each row's input names itself ("Research
@@ -2890,7 +2807,6 @@
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
-      if (field.key === 'characteristics') attachDynamicPlaceholder(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
       if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);

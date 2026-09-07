@@ -1144,95 +1144,6 @@ async function handleSuggestMethods(req, res) {
   }
 }
 
-// ---------- dynamic placeholder suggestion (Characteristics) ----------
-const PARTICIPANT_PLACEHOLDER_TOOL = {
-  name: 'submit_participant_placeholders',
-  description: 'Suggest a short example phrase for the Characteristics field, grounded in the research context provided.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      characteristics: {
-        type: 'string',
-        maxLength: 60,
-        description: 'A noun phrase describing a KIND OF PERSON to recruit for THIS specific research — an adjective/behaviour plus a plural noun for the people themselves (e.g. "Frequent mobile shoppers", "Budget-conscious first-time buyers"), not a description of the problem or event. Just the phrase itself — no "e.g." prefix, no trailing period, under 8 words.',
-      },
-    },
-    required: ['characteristics'],
-  },
-};
-
-function buildParticipantPlaceholderPrompt(ctx) {
-  const parts = [];
-  if (ctx.background) parts.push(`Background:\n"""\n${ctx.background}\n"""`);
-  if (ctx.goal) parts.push(`Goal:\n"""\n${ctx.goal}\n"""`);
-  if (ctx.objective) parts.push(`Objective:\n"""\n${ctx.objective}\n"""`);
-  if (ctx.researchQuestions) parts.push(`Research Questions:\n"""\n${ctx.researchQuestions}\n"""`);
-  return 'You are writing example placeholder text (grey hint text shown before the user types anything — not real ' +
-    'answers) for the "Characteristics" field in a UX research plan form: who the study needs to recruit, covering ' +
-    'both qualifying traits or behaviours and any distinct user segment.\n\n' +
-    parts.join('\n\n') + '\n\n' +
-    'Based on this context, write one short, concrete example for each field — specific to THIS research, not a ' +
-    'generic placeholder. Capitalise the first word. Use British English spelling throughout (e.g. "prioritise", ' +
-    '"colour", "analyse").';
-}
-
-function capitalizeFirst(s) {
-  return s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-}
-
-async function handleSuggestParticipantPlaceholders(req, res) {
-  let payload;
-  try {
-    payload = await readJsonBody(req);
-  } catch (e) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
-    return;
-  }
-
-  const ctx = {
-    background: typeof payload.background === 'string' ? payload.background.trim() : '',
-    goal: typeof payload.goal === 'string' ? payload.goal.trim() : '',
-    objective: typeof payload.objective === 'string' ? payload.objective.trim() : '',
-    researchQuestions: typeof payload.researchQuestions === 'string' ? payload.researchQuestions.trim() : '',
-  };
-
-  // The client already gates this behind a "does this look like enough to
-  // work from" check before ever calling this endpoint — this is just a
-  // defensive backstop against an empty/near-empty request slipping through.
-  if (!(ctx.background + ctx.goal + ctx.objective + ctx.researchQuestions).trim()) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not enough context to generate placeholders' }));
-    return;
-  }
-
-  try {
-    const message = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 256,
-      tools: [PARTICIPANT_PLACEHOLDER_TOOL],
-      tool_choice: { type: 'tool', name: 'submit_participant_placeholders' },
-      messages: [{ role: 'user', content: buildParticipantPlaceholderPrompt(ctx) }],
-    });
-    const toolUse = message.content.find((b) => b.type === 'tool_use');
-    if (!toolUse) throw new Error('Model did not return structured placeholders');
-
-    const characteristics = typeof toolUse.input.characteristics === 'string' ? toolUse.input.characteristics.trim() : '';
-    if (!characteristics) throw new Error('Model returned incomplete placeholders — please try again');
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    // "e.g. " prefix is added here, not trusted from the model, so the
-    // format always exactly matches the static placeholders it's replacing.
-    res.end(JSON.stringify({
-      characteristics: 'e.g. ' + capitalizeFirst(characteristics),
-    }));
-  } catch (err) {
-    console.error('Participant placeholder suggestion failed:', err);
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Placeholder generation failed: ' + err.message }));
-  }
-}
-
 const CALIBRATION_FILE = path.join(ROOT, 'calibration-data.jsonl');
 
 async function handleSaveCalibration(req, res) {
@@ -1390,10 +1301,6 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && req.url === '/api/suggest-methods') {
     handleSuggestMethods(req, res);
-    return;
-  }
-  if (req.method === 'POST' && req.url === '/api/suggest-participant-placeholders') {
-    handleSuggestParticipantPlaceholders(req, res);
     return;
   }
   if (req.method === 'POST' && req.url === '/api/upload') {
