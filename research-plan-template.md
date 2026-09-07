@@ -103,10 +103,10 @@ Objective (textarea, eval, rows=2):
   Hint: Defines the purpose of the study, specifying what must be learned to guide product decisions.
 Hypothesis (textarea, optional, eval, rows=1): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
-Research Questions (list, eval): What do you want to understand?
-  Hint: Defines an inquiry that translates your objective into a clear and discoverable topic.
-Outcomes (list, eval): Deliverable for this question
-  Hint: Ties each deliverable to a specific research question and a concrete product or business decision.
+Research Questions (list, eval): 
+  Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover.
+Outcomes (list, eval): 
+  Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map. 
 
 # Methodology
 
