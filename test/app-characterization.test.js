@@ -98,6 +98,16 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Comments',
     ]
   );
+  // Column keys and types are in the DOM so they can be checked and styled.
+  // The stylesheet sizes a column by what it holds — a status column is a short
+  // select — rather than by the table's id, which would tie CSS to a field key
+  // that no test scans for.
+  assert.deepEqual(
+    Array.from(document.querySelectorAll('#actionPoints-table thead th'))
+      .map((th) => [th.dataset.colKey, th.dataset.colType]),
+    [['action', 'prose'], ['responsible', 'prose'], ['status', 'status'], [undefined, undefined]]
+  );
+
   assert.deepEqual(
     Array.from(document.querySelectorAll('.dtbl')).map((table) => table.id),
     ['stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']

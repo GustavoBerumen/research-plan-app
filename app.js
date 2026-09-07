@@ -2605,6 +2605,10 @@
       // keys are derived from column labels, so a renamed column can break
       // them — but nothing could see a column key to test it until now.
       th.dataset.colKey = c.key;
+      // ...and its type, so stylesheets can size a column by what it holds
+      // rather than by the table's id. An id is derived from the field key,
+      // and no test scans CSS for key references.
+      th.dataset.colType = c.type;
       if (field.editableHeaders) {
         // The value is the heading text; the name says what the input is for.
         const headInp = el('input', 'th-input', { type: 'text', value: c.label, 'aria-label': 'Column ' + (ci + 1) + ' heading' });
