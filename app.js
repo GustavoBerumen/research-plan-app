@@ -4113,18 +4113,41 @@
     return JSON.stringify(Object.assign({}, draft, { fields }));
   }
 
+  // collectDraft can only report what the form currently renders, so making a
+  // field dormant used to delete anything already saved under it on the very
+  // next autosave — open an older plan, edit its title, and the Requirements
+  // table you filled in months ago is gone (found by Max reviewing PR #22).
+  //
+  // Anything the stored draft holds that this form cannot produce is carried
+  // forward untouched. A rendered-but-empty field still wins: collectDraft
+  // reports it as empty, and an empty answer is an answer. Clear Form removes
+  // the stored draft before resetting, so nothing is resurrected there.
+  function carryUnrendered(draft) {
+    const stored = readDraft();
+    if (!stored) return draft;
+    ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
+      const kept = stored[section];
+      if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return;
+      draft[section] = Object.assign({}, kept, draft[section] || {});
+    });
+    return draft;
+  }
+
   function saveDraft() {
     const store = draftStore();
     if (!store || draftRestoring) return;
     try {
-      let draft = collectDraft();
+      let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
       // scheduled by clicks that change nothing (opening a section, focusing
       // a field), and merely looking at a plan is not editing it.
       const signature = draftContentSignature(draft);
       if (lastSavedSignature !== null && signature !== lastSavedSignature && !lastUpdatedManual) {
         setLastUpdatedToday();
-        draft = collectDraft();
+        // Re-collected, so it has to be carried again — the merge above is on
+        // the discarded copy otherwise, which is exactly how the first
+        // attempt at this fix silently did nothing.
+        draft = carryUnrendered(collectDraft());
       }
       lastSavedSignature = signature;
       const payload = Object.assign(
@@ -4432,6 +4455,12 @@
       el.value = '';
       resizeTa(el);
     });
+    // Radios are neither text inputs nor textareas, so the loops above miss
+    // them: a Sample Size chosen before the reset stayed selected and was
+    // saved into the next plan (found by Max reviewing PR #22). Their "Other"
+    // reveal is closed with them.
+    doc.querySelectorAll('.radio-input').forEach((el) => { el.checked = false; });
+    doc.querySelectorAll('.radio-group .select-other-row').forEach((row) => { row.hidden = true; });
 
     tables.forEach(({ id }) => {
       const tbody = document.getElementById(id).querySelector('tbody');
