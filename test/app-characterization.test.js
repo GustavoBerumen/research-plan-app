@@ -82,7 +82,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '5 fields', '5 fields', '4 fields']
+    ['3 fields', '4 fields', '5 fields', '4 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -92,7 +92,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
-      'Requirements', 'Stage Timeline', 'Action Points',
+      'Stage Timeline', 'Action Points',
       'Previous Knowledge',
       'Project', 'Jira Project', 'Sign off: Project Owner', 'Sign off: Researcher',
       'Comments',
@@ -100,7 +100,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.dtbl')).map((table) => table.id),
-    ['requirements-table', 'stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']
+    ['stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']
   );
   assert.equal(
     document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')

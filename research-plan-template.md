@@ -126,8 +126,8 @@ Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (
 
 # Execution
 
-Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose
-  Hint: What you'll need to run this study — physical items, digital tools, and approvals.
+<!-- Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose -->
+<!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->
 <!-- Timeframe (textarea): Scheduled duration for each research phase -->
 Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
   Hint: The planned schedule for each stage of this research, from planning through reporting.

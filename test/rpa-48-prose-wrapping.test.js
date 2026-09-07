@@ -69,8 +69,11 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(listInputs(document, 'methods')[0].tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="sampleSize"]').tagName, 'SELECT');
 
-  assert.equal(document.querySelectorAll('#requirements-table tbody textarea.prose-input').length, 3);
-  assert.equal(document.querySelectorAll('#requirements-table thead input.th-input').length, 3);
+  // Requirements is dormant in the template, so no editable-headers table
+  // renders here. The feature keeps its coverage in the last test below,
+  // which supplies a template that still declares one.
+  assert.equal(document.querySelectorAll('.th-input').length, 0);
+  assert.equal(document.querySelectorAll('#previousKnowledge-table tbody textarea.prose-input').length, 1);
   assert.equal(document.querySelectorAll('#stageTimeline-table textarea').length, 0);
   assert.equal(document.querySelector('#stageTimeline-table tbody select').tagName, 'SELECT');
   assert.equal(document.querySelectorAll('#stageTimeline-table input[type="date"]').length, 2);
@@ -130,24 +133,24 @@ test('prose rows grow independently after typing or pasting and shrink after del
   listRemoveButtons[1].click();
   assert.equal(listInputs(document, 'characteristics').length, 1);
 
-  const requirements = document.getElementById('requirements-table');
-  requirements.closest('.field').querySelector('.add-btn').click();
-  const requirementRows = requirements.querySelectorAll('tbody tr');
-  const firstRequirement = requirementRows[0].querySelector('textarea');
-  const secondRequirement = requirementRows[1].querySelector('textarea');
-  pasteValue(window, firstRequirement, LONG_PROSE);
-  setValue(window, secondRequirement, SHORT_PROSE);
-  assert.ok(heightOf(firstRequirement) > heightOf(secondRequirement));
+  const knowledge = document.getElementById('previousKnowledge-table');
+  knowledge.closest('.field').querySelector('.add-btn').click();
+  const knowledgeRows = knowledge.querySelectorAll('tbody tr');
+  const firstKnowledge = knowledgeRows[0].querySelector('textarea');
+  const secondKnowledge = knowledgeRows[1].querySelector('textarea');
+  pasteValue(window, firstKnowledge, LONG_PROSE);
+  setValue(window, secondKnowledge, SHORT_PROSE);
+  assert.ok(heightOf(firstKnowledge) > heightOf(secondKnowledge));
 
-  const headerCellCount = requirements.querySelectorAll('thead th').length;
-  requirementRows.forEach((row) => {
+  const headerCellCount = knowledge.querySelectorAll('thead th').length;
+  knowledgeRows.forEach((row) => {
     assert.equal(row.querySelectorAll('td').length, headerCellCount);
   });
-  assert.equal(requirementRows[0].querySelector('.row-remove').disabled, false);
-  assert.equal(requirementRows[1].querySelector('.row-remove').disabled, false);
-  requirementRows[1].querySelector('.row-remove').click();
-  assert.equal(requirements.querySelectorAll('tbody tr').length, 1);
-  assert.equal(requirements.querySelector('.row-remove').disabled, true);
+  assert.equal(knowledgeRows[0].querySelector('.row-remove').disabled, false);
+  assert.equal(knowledgeRows[1].querySelector('.row-remove').disabled, false);
+  knowledgeRows[1].querySelector('.row-remove').click();
+  assert.equal(knowledge.querySelectorAll('tbody tr').length, 1);
+  assert.equal(knowledge.querySelector('.row-remove').disabled, true);
 
   const actionTextareas = document.querySelectorAll('#actionPoints-table tbody textarea');
   assert.equal(actionTextareas.length, 2);
@@ -201,21 +204,16 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
     },
     methods: [],
     tables: {
-      'requirements-table': [
-        [textSnapshot(LONG_PROSE), textSnapshot(SHORT_PROSE), textSnapshot(LONG_PROSE), textSnapshot('')],
-        [textSnapshot(SHORT_PROSE), textSnapshot(LONG_PROSE), textSnapshot(SHORT_PROSE), textSnapshot('')],
-      ],
       'actionPoints-table': [[
         textSnapshot(LONG_PROSE),
         textSnapshot(LONG_PROSE + ' The responsible owner coordinates all follow-up work.'),
         { t: 'sel', v: 'in-progress' },
         textSnapshot(''),
       ]],
-      'previousKnowledge-table': [[
-        textSnapshot(LONG_PROSE),
-        { t: 'file', v: '', n: 'No file chosen' },
-        textSnapshot(''),
-      ]],
+      'previousKnowledge-table': [
+        [textSnapshot(LONG_PROSE), { t: 'file', v: '', n: 'No file chosen' }, textSnapshot('')],
+        [textSnapshot(SHORT_PROSE), { t: 'file', v: '', n: 'No file chosen' }, textSnapshot('')],
+      ],
     },
     custom: {},
   };
@@ -233,12 +231,12 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   assert.ok(heightOf(characteristics[0]) > heightOf(characteristics[1]));
   assert.equal(listInputs(document, 'userGroups')[0].value, LONG_PROSE);
 
-  const requirementRows = document.querySelectorAll('#requirements-table tbody tr');
-  assert.equal(requirementRows.length, 2);
-  assert.equal(requirementRows[0].querySelector('textarea').value, LONG_PROSE);
+  const knowledgeRows = document.querySelectorAll('#previousKnowledge-table tbody tr');
+  assert.equal(knowledgeRows.length, 2);
+  assert.equal(knowledgeRows[0].querySelector('textarea').value, LONG_PROSE);
   assert.ok(
-    heightOf(requirementRows[0].querySelector('textarea')) >
-      heightOf(requirementRows[1].querySelector('textarea'))
+    heightOf(knowledgeRows[0].querySelector('textarea')) >
+      heightOf(knowledgeRows[1].querySelector('textarea'))
   );
 
   const actionTextareas = document.querySelectorAll('#actionPoints-table tbody textarea');
@@ -253,4 +251,52 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   assert.equal(previousKnowledge.value, LONG_PROSE);
   assert.ok(heightOf(previousKnowledge) > 44);
   assert.equal(document.querySelector('#previousKnowledge-table .file-name').textContent, 'No file chosen');
+});
+
+// Requirements is the only field that ever declared editable-headers, and it
+// is dormant in the template. Rather than let that feature lose its coverage
+// the moment nothing happens to use it, this renders the template with
+// Requirements uncommented — the form exactly as it was before RPA-55 hid it.
+// If it is brought back, this test already covers it; if the feature is ever
+// removed for real, this is the test that should be deleted with it.
+function templateWithRequirements() {
+  const real = fs.readFileSync(
+    path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
+  );
+  const restored = real
+    .replace('<!-- Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose -->',
+      'Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose')
+    .replace("<!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->",
+      "  Hint: What you'll need to run this study — physical items, digital tools, and approvals.");
+  assert.notEqual(restored, real, 'the dormant Requirements lines were not found to restore');
+  return restored;
+}
+
+test('an editable-headers table renders prose cells under renameable headings', async (t) => {
+  const app = await bootApp({
+    textareaScrollHeight,
+    textAssets: { 'research-plan-template.md': templateWithRequirements() },
+  });
+  t.after(() => app.close());
+  const { document, window } = app;
+
+  const table = document.getElementById('requirements-table');
+  assert.ok(table, 'the restored template renders the Requirements table');
+
+  // Three renameable headings, and prose cells beneath them.
+  const headers = table.querySelectorAll('thead input.th-input');
+  assert.equal(headers.length, 3);
+  assert.deepEqual(Array.from(headers).map((h) => h.value), ['Physical', 'Digital', 'Approvals']);
+  assert.equal(table.querySelectorAll('tbody textarea.prose-input').length, 3);
+
+  // Renaming a heading leaves the cells alone.
+  setValue(window, headers[2], 'Sign-offs');
+  assert.equal(headers[2].value, 'Sign-offs');
+  assert.equal(table.querySelectorAll('tbody textarea.prose-input').length, 3);
+
+  // And the prose cells still size themselves independently.
+  const cells = table.querySelectorAll('tbody textarea');
+  pasteValue(window, cells[0], LONG_PROSE);
+  setValue(window, cells[1], SHORT_PROSE);
+  assert.ok(heightOf(cells[0]) > heightOf(cells[1]));
 });

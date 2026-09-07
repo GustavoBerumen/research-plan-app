@@ -4,7 +4,7 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 25 of 33 verdicts settled.** The field list,
+**Status: questions 1–3 drafted; 25 of 32 verdicts settled.** The field list,
 types and hint text are generated from the template. Question 1 is filled from
 what the app demonstrably consumes; questions 2 and 3 from the template, the
 field order and how the app behaves. The 8 rows still open all have
@@ -63,11 +63,12 @@ Fill in as verdicts are reached.
 | merge | 0 |
 | optional | 3 |
 | move | 4 |
-| undecided | 8 |
-| **total** | **33** |
+| undecided | 7 |
+| **total** | **32** |
 
-33 rather than 28: the three fixed-column tables are audited per column, per the
-unit rule above.
+32 rather than 27: the three fixed-column tables are audited per column, per the
+unit rule above. Requirements left the sheet when it was made dormant — hidden,
+not decided; its reasoning is under *Already dormant*.
 
 ## For the readers
 
@@ -89,7 +90,6 @@ high effort* is where the genuine cuts live.
 
 - Characteristics
 - User Groups
-- Requirements
 - Action Points → Action
 - Action Points → Responsible
 - Previous Knowledge → Name
@@ -149,7 +149,6 @@ high effort* is where the genuine cuts live.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Requirements**<br><sub>asks: Physical \| Digital \| Approvals</sub> | `table`<br><sub>editable-headers</sub> | ⚠ No in-app consumer. Operational: can the study actually run. Approvals is the part that blocks studies. | ⚠ **Split three ways.** Physical: researcher. Digital: IT. Approvals: legal/privacy. One field, three answerers. | ⚠ **Split.** Physical: yes. Digital: needs IT. Approvals: needs legal/privacy and is routinely unknown when planning. The danger is willingness without knowledge — a confident guess at approvals. |  |
 | **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
 | **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. |
 | **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
@@ -299,8 +298,16 @@ Commented out in the template — the form has been trimmed before. Worth readin
 before cutting more: if one of these was removed for a reason, that reason
 probably applies to its neighbours too.
 
+**Requirements was hidden, not decided (RPA-55).** Its verdict was still open:
+no in-app consumer, and the question splits three ways — Physical is the
+researcher's, Digital needs IT, Approvals needs legal or privacy and is
+routinely unknown when planning. The risk flagged there was willingness
+without knowledge, a confident guess at approvals. If it comes back, that is
+the problem to solve, and splitting Approvals out was the proposal.
+
 | Field | Type | Was in |
 |---|---|---|
+| Requirements | `table` | Execution |
 | Research Team | `text` | Header (document meta) |
 | Area | `text` | Alignment |
 | Jira Research | `text` | Alignment |
