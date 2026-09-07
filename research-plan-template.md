@@ -75,44 +75,44 @@ title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
 -->
 
-# Research title (text):
+# Research title (text, key=researchTitle):
   Hint: Describe what this research covers, for example, ‘Usability testing of checkout flow’.
 
-Lead researcher (text):
+Lead researcher (text, key=leadResearcher):
   Hint: Name of the person leading this research.
-Project requester (text):
+Project requester (text, key=projectRequester):
   Hint: Name of the person requesting this work.
-Project decision (date):
+Project decision (date, key=projectDecision):
   Hint: Date of the decision informed by this research.
-Research readout (date):
+Research readout (date, key=researchReadout):
   Hint: Date findings are shared with the team.
-Last updated (date):
+Last updated (date, key=lastUpdated):
   Hint: The date this plan was last edited.
 
 # Context {open}
 
-Background (textarea, eval, rows=3):
+Background (textarea, eval, rows=3, key=background):
   Hint: Provides relevant context and essential terms needed to understand the project.
-Goal (textarea, eval, rows=2): 
+Goal (textarea, eval, rows=2, key=goal): 
   Hint: State what you are trying to achieve and define the expected changes in the product as a result.
-Problem Statement (textarea, eval, rows=2): 
+Problem Statement (textarea, eval, rows=2, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
-Objective (textarea, eval, rows=2): 
+Objective (textarea, eval, rows=2, key=objective): 
   Hint: Defines the purpose of the study, specifying what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval, rows=1): 
+Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
-Research Questions (list, eval): 
+Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover.
-Outcomes (list, eval): 
+Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map. 
 
 # Methodology
 
-Theory (textarea, optional, rows=2): 
+Theory (textarea, optional, rows=2, key=theory): 
   Hint: A framework to help ground the study design and analysis.
-Methods (list):
+Methods (list, key=methods):
   Hint: A technique to study user behaviors, needs, and experiences that helps answer a research question.
 
 ## Participants
@@ -121,28 +121,28 @@ Methods (list):
      the same thing in practice: both wanted a short noun phrase naming a kind
      of person, and "Frequent mobile shoppers" answered either. Merged rather
      than reworded, because nothing in the app consumed either value. -->
-Characteristics (list, prose): 
+Characteristics (list, prose, key=characteristics): 
   Hint: The criteria that qualify someone for this study, and any distinct segments you want represented.
-Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
+Sample Size (select, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
 
 # Execution
 
-<!-- Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose -->
+<!-- Requirements (table, editable-headers, key=requirements): Physical:prose | Digital:prose | Approvals:prose -->
 <!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->
-<!-- Timeframe (textarea): Scheduled duration for each research phase -->
-Stage Timeline (table): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
+<!-- Timeframe (textarea, key=timeframe): Scheduled duration for each research phase -->
+Stage Timeline (table, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
   Hint: The planned schedule for each stage of this research, from planning through reporting.
-Action Points (table): Action:prose=Task description | Responsible:prose | Status:status
+Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose | Status:status
   Hint: Tasks needed to move this research forward, and who owns each one.
 <!-- Previous Knowledge and Additional Resources used to be a Resources
      section of their own. Two fields did not earn a section: what you already
      know and what you still need are part of executing the study, not a
      separate stage of it (RPA-55). -->
-Previous Knowledge (table): Name:prose=e.g. Q3 Checkout Usability Study | File:file
+Previous Knowledge (table, key=previousKnowledge): Name:prose=e.g. Q3 Checkout Usability Study | File:file
   Hint: Prior research or documentation relevant to this study, attached for reference.
-<!-- Documentation (textarea): Reference materials required to understand and execute the study -->
-Additional Resources (custom-fields): Add details...
+<!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
+Additional Resources (custom-fields, key=additionalResources): Add details...
 
 <!-- Alignment sits last. Project and Jira Project are identifiers, and the
      sign-offs are headed for a review step at the end of the flow (RPA-55).
@@ -150,18 +150,18 @@ Additional Resources (custom-fields): Add details...
      researcher can actually write — instead of paperwork. -->
 # Alignment {grid}
 
-Project (textarea): Initiative
+Project (textarea, key=project): Initiative
   Hint: The product or business initiative this research plan supports.
-<!-- Area (text): Department -->
-Jira Project (text): Ticket reference
+<!-- Area (text, key=area): Department -->
+Jira Project (text, key=jiraProject): Ticket reference
   Hint: Links this plan to its tracking ticket in Jira.
-<!-- Jira Research (text): Ticket reference -->
-Sign off: Project Owner (text): Type initials
+<!-- Jira Research (text, key=jiraResearch): Ticket reference -->
+Sign off: Project Owner (text, key=signOffProjectOwner): Type initials
   Hint: Project Owner approval — type initials and the date is added automatically.
-Sign off: Researcher (text): Type initials
+Sign off: Researcher (text, key=signOffResearcher): Type initials
   Hint: Researcher approval — type initials and the date is added automatically.
 
 # Additional Comments
 
-Comments (textarea, optional): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
+Comments (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
   Hint: Anything else worth noting that didn't fit elsewhere in this plan.

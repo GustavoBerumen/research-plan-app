@@ -169,7 +169,8 @@ def scaffold():
                 continue
             parts = [p.strip() for p in spec.split(",")]
             # rows=N is layout, not a property of the question being asked.
-            flags = ", ".join(p for p in parts[1:] if not p.startswith("rows="))
+            flags = ", ".join(p for p in parts[1:]
+                              if not p.startswith("rows=") and not p.startswith("key="))
             tcell = f"`{parts[0]}`" + (f"<br><sub>{flags}</sub>" if flags else "")
             h = hint.replace("|", "\\|")
             if len(h) > 70:

@@ -357,8 +357,19 @@ and immediate, and it catches keys this audit has not touched yet. Drafts saved 
 an old key are carried over by a migration in `migrateDraft`, as they were for the
 Problem → Problem Statement rename.
 
-The real fix is to let a field declare its key in the template, independent of its
-label, so copy and code stop being coupled. Deliberately deferred: it changes the
-schema format, and this audit may still cut some of the fields involved, so doing it
-now risks doing it twice. **If a rename breaks something a second time, stop
-mitigating and do it.**
+The real fix was to let a field declare its key in the template, independent of its
+label. **Done.** Every field now carries `key=` in `research-plan-template.md`, so
+rewording a label cannot change a key. The deferral ran out exactly as written:
+reviewing PR #22, Max renamed *Research Questions* and found the form still opened
+while Outcomes rendered no rows and Methods stopped tracking — and the first version
+of the guard below did not catch it.
+
+Two gaps remain, both known rather than overlooked:
+
+- **Table columns still derive their keys from their labels.** There is no `key=` for
+  a column: the column spec is `Label:type=placeholder`, and threading a key through
+  it safely is a larger change than it looks. Renaming *Start Date* would still break
+  the timeline. The guard is the only protection there — column keys are exposed as
+  `data-col-key` and asserted against what the code reads.
+- **A guard is a test, not a constraint.** It fails loudly on the next run; it does
+  not prevent the mistake.

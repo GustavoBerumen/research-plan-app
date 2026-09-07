@@ -8,6 +8,7 @@ const {
   bootApp,
   listInputs,
   setValue,
+  withFieldUncommented,
 } = require('./app-harness');
 
 const LONG_PROSE =
@@ -255,11 +256,9 @@ function templateWithRequirements() {
   const real = fs.readFileSync(
     path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
   );
-  const restored = real
-    .replace('<!-- Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose -->',
-      'Requirements (table, editable-headers): Physical:prose | Digital:prose | Approvals:prose')
-    .replace("<!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->",
-      "  Hint: What you'll need to run this study — physical items, digital tools, and approvals.");
+  // Keyed on the field, not on its exact text, so a reworded hint or a new
+  // flag does not quietly turn this test into a no-op.
+  const restored = withFieldUncommented(real, 'requirements');
   assert.notEqual(restored, real, 'the dormant Requirements lines were not found to restore');
   return restored;
 }

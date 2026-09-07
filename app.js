@@ -98,9 +98,22 @@
     const label = m[1].trim();
     const typeParts = m[2].split(',').map((s) => s.trim().toLowerCase());
     const type = typeParts[0];
+    // "key=someKey" pins the field's key so it no longer follows the label.
+    // Read from the un-lowercased spec, because keys are camelCase and
+    // typeParts above has already flattened the case.
+    // Without this a copy edit renames the key, and every lookup by that name
+    // fails silently — it happened twice in one day (RPA-55): renaming Report
+    // Research killed the deadline warning, and renaming Title took out 26 of
+    // 45 tests. toCamelKey stays as the fallback so a field can still be added
+    // without thinking about keys.
+    const declaredKey = m[2].split(',')
+      .map((part) => part.trim())
+      .map((part) => /^key=([A-Za-z][A-Za-z0-9]*)$/.exec(part))
+      .filter(Boolean)
+      .map((match) => match[1])[0];
     const field = {
       label,
-      key: toCamelKey(label),
+      key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
       eval: typeParts.includes('eval'),
@@ -2579,10 +2592,19 @@
 
     const tblWrap = el('div', 'tbl-wrap');
     const table = el('table', 'dtbl', { id: field.key + '-table' });
+    // The field's own key, for the same reason as data-col-key above: code
+    // branches on field.key === 'stageTimeline', and a table renders no
+    // [data-field] anywhere, so nothing could verify that lookup.
+    table.dataset.fieldKey = field.key;
     const thead = el('thead');
     const headRow = el('tr');
     field.columns.forEach((c, ci) => {
       const th = document.createElement('th');
+      // The column's key, exposed so it can be checked. Code looks columns up
+      // by key (the timeline reads stage/startDate/completionDate), and those
+      // keys are derived from column labels, so a renamed column can break
+      // them — but nothing could see a column key to test it until now.
+      th.dataset.colKey = c.key;
       if (field.editableHeaders) {
         // The value is the heading text; the name says what the input is for.
         const headInp = el('input', 'th-input', { type: 'text', value: c.label, 'aria-label': 'Column ' + (ci + 1) + ' heading' });
