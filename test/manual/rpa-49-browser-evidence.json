@@ -1,0 +1,3606 @@
+{
+  "environment": "Codex in-app Chromium; standalone Windows Chrome unavailable; confirmation mocked",
+  "base": "50247941ca582dae1d2fa957155c5896a791147c",
+  "focusedDesktop": [
+    {
+      "ancestorOffsets": [],
+      "field": "field-jiraProject",
+      "left": 4193,
+      "width": 732
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "field-leadResearcher",
+      "left": 4873,
+      "width": 344
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "field-projectRequester",
+      "left": 4873,
+      "width": 344
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "field-signOffResearcher",
+      "left": 4891,
+      "width": 326
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "field-signOffProjectOwner",
+      "left": 4855,
+      "width": 362
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "Method 1",
+      "left": 4573,
+      "width": 644
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "Sample Size — other",
+      "left": 4901,
+      "width": 316
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "Stage",
+      "left": 5056,
+      "width": 161
+    },
+    {
+      "ancestorOffsets": [],
+      "field": "field-additionalResources-name-2",
+      "left": 4942,
+      "width": 678
+    }
+  ],
+  "focusedNarrow": [
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "field-jiraProject",
+      "left": 4590,
+      "width": 335
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "field-leadResearcher",
+      "left": 5071,
+      "width": 146
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "field-projectRequester",
+      "left": 5071,
+      "width": 146
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "field-signOffResearcher",
+      "left": 5089,
+      "width": 128
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "field-signOffProjectOwner",
+      "left": 5053,
+      "width": 164
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "BODY",
+          "width": 375
+        },
+        {
+          "class": "",
+          "id": "",
+          "left": 0,
+          "scrollWidth": 450,
+          "tag": "HTML",
+          "width": 375
+        }
+      ],
+      "field": "Method 1",
+      "left": 4969,
+      "width": 247
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 1
+        }
+      ],
+      "field": "Sample Size — other",
+      "left": 4900,
+      "width": 316
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 1
+        }
+      ],
+      "field": "Stage",
+      "left": 5188,
+      "width": 28
+    },
+    {
+      "ancestors": [
+        {
+          "class": "",
+          "id": "",
+          "left": 1
+        }
+      ],
+      "field": "field-additionalResources-name-1",
+      "left": 5339,
+      "width": 281
+    },
+    {
+      "field": "Project decision year",
+      "left": 0,
+      "width": 50
+    },
+    {
+      "field": "Research readout year",
+      "left": 0,
+      "width": 50
+    },
+    {
+      "field": "Start Date year",
+      "left": 0,
+      "width": 50
+    },
+    {
+      "field": "Completion Date year",
+      "left": 0,
+      "width": 50
+    }
+  ],
+  "desktopCancel": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "confirmation": "cancel",
+    "accepted": false,
+    "elements": [
+      {
+        "before": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "after": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "after": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 644,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 644,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 161,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 161,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 294,
+          "scrollWidth": 294,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 294,
+          "scrollWidth": 294,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 210,
+          "scrollWidth": 210,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 210,
+          "scrollWidth": 210,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 322,
+          "scrollWidth": 322,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 322,
+          "scrollWidth": 322,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-name-2",
+          "connected": true,
+          "left": 0,
+          "width": 678,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-additionalResources-name-2",
+          "connected": true,
+          "left": 0,
+          "width": 678,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-body-2",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-additionalResources-body-2",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 326,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 326,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 362,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 362,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      }
+    ]
+  },
+  "desktopConfirm": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "confirmation": "confirm",
+    "accepted": true,
+    "elements": [
+      {
+        "before": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "after": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "after": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 344,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 344,
+          "scrollWidth": 344,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Method 1",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 644,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 644,
+          "scrollWidth": 644,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 161,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 294,
+          "scrollWidth": 294,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 294,
+          "scrollWidth": 294,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 210,
+          "scrollWidth": 210,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 210,
+          "scrollWidth": 210,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 322,
+          "scrollWidth": 322,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 322,
+          "scrollWidth": 322,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-name-2",
+          "connected": true,
+          "left": 0,
+          "width": 678,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-additionalResources-name-2",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-body-2",
+          "connected": true,
+          "left": 0,
+          "width": 728,
+          "scrollWidth": 728,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-additionalResources-body-2",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 732,
+          "scrollWidth": 732,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 326,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 326,
+          "scrollWidth": 326,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 362,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 362,
+          "scrollWidth": 362,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      }
+    ]
+  },
+  "narrowCancel": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "viewport": [
+      390,
+      844
+    ],
+    "confirmation": "cancel",
+    "accepted": false,
+    "elements": [
+      {
+        "before": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "after": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "after": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 247,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 247,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 28,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 28,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 83,
+          "scrollWidth": 83,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 83,
+          "scrollWidth": 83,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 124,
+          "scrollWidth": 124,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 124,
+          "scrollWidth": 124,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-name-1",
+          "connected": true,
+          "left": 0,
+          "width": 281,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-additionalResources-name-1",
+          "connected": true,
+          "left": 0,
+          "width": 281,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-body-1",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-additionalResources-body-1",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 128,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 128,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 164,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 164,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "HTML",
+          "connected": true,
+          "left": 1,
+          "width": 375,
+          "scrollWidth": 450,
+          "valueLength": null
+        },
+        "after": {
+          "element": "HTML",
+          "connected": true,
+          "left": 1,
+          "width": 375,
+          "scrollWidth": 450,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      }
+    ]
+  },
+  "narrowConfirm": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "viewport": [
+      390,
+      844
+    ],
+    "confirmation": "confirm",
+    "accepted": true,
+    "elements": [
+      {
+        "before": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "after": {
+          "element": "Last updated day",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 2
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "after": {
+          "element": "Last updated month",
+          "connected": true,
+          "left": 0,
+          "width": 31,
+          "scrollWidth": 31,
+          "valueLength": 3
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Last updated year",
+          "connected": true,
+          "left": 0,
+          "width": 43,
+          "scrollWidth": 43,
+          "valueLength": 4
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-researchTitle",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 4925,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-jiraProject",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-leadResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 146,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-projectRequester",
+          "connected": true,
+          "left": 0,
+          "width": 146,
+          "scrollWidth": 146,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Project decision month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Project decision year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research readout month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Research readout year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-background",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-goal",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-problemStatement",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-objective",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-hypothesis",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Research Question 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Outcome 1",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-theory",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Method 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Method 1",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 247,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Characteristic 1",
+          "connected": true,
+          "left": 0,
+          "width": 247,
+          "scrollWidth": 247,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 316,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Sample Size — other",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 28,
+          "scrollWidth": 5217,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Stage",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Start Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Start Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date day",
+          "connected": true,
+          "left": 0,
+          "width": 27,
+          "scrollWidth": 27,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "Completion Date month",
+          "connected": true,
+          "left": 0,
+          "width": 35,
+          "scrollWidth": 35,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 4
+        },
+        "after": {
+          "element": "Completion Date year",
+          "connected": true,
+          "left": 0,
+          "width": 50,
+          "scrollWidth": 50,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Action, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 24,
+          "scrollWidth": 24,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 83,
+          "scrollWidth": 83,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Responsible, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 83,
+          "scrollWidth": 83,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 124,
+          "scrollWidth": 124,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "Name, row 1",
+          "connected": true,
+          "left": 0,
+          "width": 124,
+          "scrollWidth": 124,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-name-1",
+          "connected": true,
+          "left": 0,
+          "width": 281,
+          "scrollWidth": 5620,
+          "valueLength": 679
+        },
+        "after": {
+          "element": "field-additionalResources-name-1",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-additionalResources-body-1",
+          "connected": true,
+          "left": 0,
+          "width": 331,
+          "scrollWidth": 331,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-additionalResources-body-1",
+          "connected": false,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "after": {
+          "element": "tbl-wrap",
+          "connected": true,
+          "left": 0,
+          "width": 335,
+          "scrollWidth": 335,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 128,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffResearcher",
+          "connected": true,
+          "left": 0,
+          "width": 128,
+          "scrollWidth": 128,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 164,
+          "scrollWidth": 5322,
+          "valueLength": 692
+        },
+        "after": {
+          "element": "field-signOffProjectOwner",
+          "connected": true,
+          "left": 0,
+          "width": 164,
+          "scrollWidth": 164,
+          "valueLength": 0
+        },
+        "valueUnchanged": false
+      },
+      {
+        "before": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "after": {
+          "element": "field-comments",
+          "connected": true,
+          "left": 0,
+          "width": 0,
+          "scrollWidth": 0,
+          "valueLength": 0
+        },
+        "valueUnchanged": true
+      },
+      {
+        "before": {
+          "element": "HTML",
+          "connected": true,
+          "left": 1,
+          "width": 375,
+          "scrollWidth": 450,
+          "valueLength": null
+        },
+        "after": {
+          "element": "HTML",
+          "connected": true,
+          "left": 1,
+          "width": 375,
+          "scrollWidth": 450,
+          "valueLength": null
+        },
+        "valueUnchanged": true
+      }
+    ]
+  }
+}
