@@ -247,6 +247,16 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    :placeholder-shown, so the field's placeholder is load-bearing (RPA-54). */
 .cinput[data-field="jiraProject"]:not(:placeholder-shown){display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
 .select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+/* Radios, GOV.UK shape: a real input, a generous hit area that includes the
+   label, and the focus ring on the control rather than the row. */
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-item{display:flex;align-items:center;gap:12px;min-height:40px}
+.radio-input{width:24px;height:24px;margin:0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
+.radio-input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.radio-label{font-size:var(--text);color:var(--ink);cursor:pointer}
+/* The conditional reveal sits under the option it belongs to, indented so the
+   relationship is visible without a box around it. */
+.radio-other-row{margin-left:36px;max-width:320px}
 .select-other-row{display:flex;align-items:center;gap:6px;width:100%}
 .select-other-row[hidden]{display:none}
 .select-other-input{flex:1;min-width:0}

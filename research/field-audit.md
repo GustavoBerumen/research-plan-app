@@ -145,7 +145,7 @@ high effort* is where the genuine cuts live.
 | **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> | Grounds the design; the framework suggester writes into it. | Researcher. | Often not to hand. Already optional, and the suggester exists precisely because recall is unreliable here. | **optional** — confirmed. Rarely to hand. |
 | **Methods**<br><sub>asks: Search or type a method</sub> | `list` | The study design itself — what the plan exists to state. | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. | **keep** — core expertise, well supported. |
 | **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **merge** — done. User Groups asked the same question: both wanted a short noun phrase naming a kind of person, and "Frequent mobile shoppers" answered either. Whether the merged field earns its place is still open. |
-| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `select` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. |
+| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `radios` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. |
 
 ## Execution
 
@@ -277,8 +277,12 @@ at the end; Last Updated becomes a dateline, done in the prototype.
 
 ### 8. Small and unambiguous
 
-**Sample Size has no hint text** — its placeholder slot is consumed by the dropdown
-options. Every other field explains itself; this one does not.
+**Sample Size has no hint text** — its placeholder slot is consumed by the option
+list. Every other field explains itself; this one does not. **Fixed:** hints moved
+out of the placeholder slot into their own `Hint:` line (RPA-58), so it has one now
+— "The number of participants needed for this study." The field is also radios
+rather than a dropdown, since GOV.UK treats a select as a last resort and five
+options that form a scale read better all at once.
 
 ### Expected shape of the finished sheet
 

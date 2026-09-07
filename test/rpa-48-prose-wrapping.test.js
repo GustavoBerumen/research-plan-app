@@ -66,7 +66,11 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(characteristicsInput.tagName, 'TEXTAREA');
   assert.ok(characteristicsInput.classList.contains('prose-input'));
   assert.equal(listInputs(document, 'methods')[0].tagName, 'INPUT');
-  assert.equal(document.querySelector('[data-field="sampleSize"]').tagName, 'SELECT');
+  // Sample Size is radios now, not a dropdown: five short options that form a
+  // scale is the case GOV.UK says not to use a select for.
+  const sampleSize = document.querySelector('.radio-group[data-field-key="sampleSize"]');
+  assert.ok(sampleSize, 'Sample Size renders as a radio group');
+  assert.equal(sampleSize.querySelectorAll('.radio-input[type="radio"]').length, 5);
 
   // Requirements is dormant in the template, so no editable-headers table
   // renders here. The feature keeps its coverage in the last test below,

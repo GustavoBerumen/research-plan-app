@@ -130,7 +130,7 @@
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
-    } else if (type === 'select') {
+    } else if (type === 'select' || type === 'radios') {
       field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
     } else {
       field.placeholder = m[3].trim();
@@ -3470,6 +3470,67 @@
     // sel/otherInput carries data-field at a time — whichever is currently
     // showing — so a generic [data-field="key"] lookup elsewhere always
     // finds the field's actual current value, not a stale hidden one.
+    // GOV.UK treats a select as a last resort — people find them harder than
+    // other controls — and says to use radios below about 20 options. Five
+    // short, mutually exclusive options that form a scale is the case that
+    // guidance is written for: you can compare them without opening anything.
+    //
+    // The group keeps the .select-cell wrapper and its data-field-key on
+    // purpose. That is what collectDraft and applyDraft look for, and what
+    // scalarFieldEls skips, so a radio field saves and restores in exactly the
+    // { v, o } shape a select did — old drafts restore with no migration.
+    if (field.type === 'radios') {
+      const group = el('div', 'select-cell radio-group', {
+        role: 'radiogroup',
+        'aria-labelledby': label.id,
+      });
+      group.dataset.fieldKey = field.key;
+      describeControl(group, guidance);
+      // No single control to point at, so the heading names the group.
+      label.removeAttribute('for');
+
+      const otherRow = el('div', 'select-other-row radio-other-row');
+      const otherInput = el('input', 'finput select-other-input', {
+        type: 'text',
+        placeholder: 'Type your own value…',
+        'aria-label': field.label + ' — other',
+      });
+      otherRow.appendChild(otherInput);
+      otherRow.hidden = true;
+
+      const options = (field.options || []).concat(['__other__']);
+      options.forEach((value, i) => {
+        const item = el('div', 'radio-item');
+        const id = controlId + '-opt-' + i;
+        const radio = el('input', 'radio-input', {
+          type: 'radio',
+          id: id,
+          name: controlId,
+          value: value,
+        });
+        const optLabel = el('label', 'radio-label', { for: id });
+        optLabel.textContent = value === '__other__' ? 'Other' : value;
+        radio.addEventListener('change', () => {
+          if (!radio.checked) return;
+          const isOther = radio.value === '__other__';
+          otherRow.hidden = !isOther;
+          if (isOther) {
+            otherInput.focus();
+          } else {
+            otherInput.value = '';
+          }
+        });
+        item.append(radio, optLabel);
+        group.appendChild(item);
+        // The conditional reveal belongs directly under the option it belongs
+        // to, which is the last one.
+        if (value === '__other__') group.appendChild(otherRow);
+      });
+
+      wrap.appendChild(group);
+      return wrap;
+    }
+
     if (field.type === 'select') {
       const selectCell = el('div', 'select-cell');
       selectCell.dataset.fieldKey = field.key;
@@ -3964,8 +4025,18 @@
       if (cell.closest('table') || !cell.dataset.fieldKey) return;
       const sel = cell.querySelector('.ssel');
       const other = cell.querySelector('.select-other-input');
+      if (!sel) {
+        // Radio group: reports the same { v, o } a dropdown does, so the draft
+        // format does not fork and an old draft still restores.
+        const checked = cell.querySelector('.radio-input:checked');
+        selects[cell.dataset.fieldKey] = {
+          v: checked ? checked.value : '',
+          o: other ? other.value : '',
+        };
+        return;
+      }
       selects[cell.dataset.fieldKey] = {
-        v: sel && sel.hidden ? '__other__' : (sel ? sel.value : ''),
+        v: sel.hidden ? '__other__' : sel.value,
         o: other ? other.value : '',
       };
     });
@@ -4229,6 +4300,18 @@
       const sel = cell.querySelector('.ssel');
       const otherRow = cell.querySelector('.select-other-row');
       const other = cell.querySelector('.select-other-input');
+      if (!sel) {
+        // Radio group. A draft saved while this was a dropdown has the same
+        // shape, so it restores here with no migration.
+        const radios = Array.from(cell.querySelectorAll('.radio-input'));
+        radios.forEach((r) => { r.checked = false; });
+        const match = radios.find((r) => r.value === snap.v);
+        if (match) match.checked = true;
+        const wantsOther = snap.v === '__other__';
+        if (otherRow) otherRow.hidden = !wantsOther;
+        if (other) other.value = wantsOther ? (snap.o || '') : '';
+        return;
+      }
       if (snap.v === '__other__') {
         if (sel) {
           sel.hidden = true;

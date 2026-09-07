@@ -123,7 +123,7 @@ Methods (list, key=methods):
      than reworded, because nothing in the app consumed either value. -->
 Characteristics (list, prose, key=characteristics): 
   Hint: The criteria that qualify someone for this study, and any distinct segments you want represented.
-Sample Size (select, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
+Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
 
 # Execution
