@@ -225,7 +225,7 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
   assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
 });
 
-test('round-trips a draft-v6 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft-v7 with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
@@ -245,10 +245,10 @@ test('round-trips a draft-v6 with Research Questions restored before dependent r
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
     timeout: 1500,
-    message: 'The v6 draft was not saved',
+    message: 'The v7 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 6);
+  assert.equal(saved.version, 7);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
