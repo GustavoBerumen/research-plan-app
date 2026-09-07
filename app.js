@@ -1584,7 +1584,7 @@
     return `${authorLabel} (${year}). ${title}.` + (url ? ' ' + url : '');
   }
 
-  function renderFrameworkSuggest() {
+  function renderFrameworkSuggest(fieldInput) {
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
@@ -1622,11 +1622,34 @@
       body.appendChild(summary);
 
       const rawRef = extractFirstReference(data.entry);
-      if (rawRef) {
+      const reference = rawRef ? formatFrameworkReference(rawRef) : '';
+      if (reference) {
         const refBlock = el('p', 'fw-ref');
-        refBlock.textContent = 'For a starting point, see: ' + formatFrameworkReference(rawRef);
+        refBlock.textContent = 'For a starting point, see: ' + reference;
         body.appendChild(refBlock);
       }
+
+      // The whole reason this feature exists is that people cannot recall a
+      // framework on demand. Ending at "here is one, now type it out" wastes
+      // that, so the suggestion can be taken straight into the field.
+      if (!fieldInput) return;
+      const actions = el('div', 'eval-actions');
+      const useBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
+      useBtn.textContent = 'Use this framework';
+      actions.appendChild(useBtn);
+      body.appendChild(actions);
+
+      useBtn.addEventListener('click', () => {
+        const suggestion = reference ? data.name + '\n' + reference : data.name;
+        const existing = fieldInput.value.trim();
+        // Never replace what somebody already wrote — they may have typed a
+        // note before asking for a suggestion.
+        fieldInput.value = existing ? existing + '\n\n' + suggestion : suggestion;
+        dispatchFieldUpdate(fieldInput);
+        useBtn.disabled = true;
+        useBtn.textContent = 'Added ✓';
+        fieldInput.focus();
+      });
     }
 
     function renderDraft(data) {
@@ -3601,7 +3624,7 @@
       wrap.appendChild(controls);
       bindEvaluationStaleness(wrap, controls);
     }
-    if (field.key === 'theory') wrap.append(...renderFrameworkSuggest());
+    if (field.key === 'theory') wrap.append(...renderFrameworkSuggest(input));
 
     return wrap;
   }

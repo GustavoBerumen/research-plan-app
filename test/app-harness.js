@@ -54,6 +54,7 @@ async function bootApp(options = {}) {
   const jsdomErrors = [];
   const alerts = [];
   const evaluationRequests = [];
+  const frameworkRequests = [];
   virtualConsole.on('jsdomError', (error) => jsdomErrors.push(error));
 
   const dom = new JSDOM(INDEX_HTML, {
@@ -115,6 +116,17 @@ async function bootApp(options = {}) {
       return response(await options.evaluate(request.body, request));
     }
 
+    if (url.origin === window.location.origin && url.pathname === '/api/suggest-framework') {
+      const request = {
+        method: init.method || 'GET',
+        headers: init.headers || {},
+        body: JSON.parse(init.body || '{}'),
+      };
+      frameworkRequests.push(request);
+      if (!options.suggestFramework) throw new Error('No framework-suggestion mock was configured');
+      return response(await options.suggestFramework(request.body, request));
+    }
+
     throw new Error('Unexpected network request in characterization test: ' + url.href);
   };
 
@@ -150,6 +162,7 @@ async function bootApp(options = {}) {
     document,
     dom,
     evaluationRequests,
+    frameworkRequests,
     executedScripts,
     jsdomErrors,
     scriptSources,
