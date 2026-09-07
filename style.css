@@ -283,6 +283,10 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .combo-note{cursor:default;color:var(--text-2);font-style:italic}
 .combo-note:hover{background:none}
 
+/* Jira feedback stays in normal flow inside its field, outside the listbox. */
+.jira-status{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:var(--text-sm);color:var(--text-2);line-height:1.5}
+.jira-status:not(:empty){margin-top:8px}
+
 /* ---------- Custom sections and comments ---------- */
 .custom-fields-list{display:flex;flex-direction:column;gap:24px}
 .custom-fields-list:not(:empty){margin-bottom:16px}
@@ -402,6 +406,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 
 /* ---------- Print ---------- */
 @media print{
+  .jira-status{display:none!important}
   /* @page margins apply per physical page, so every page gets consistent
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}
