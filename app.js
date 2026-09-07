@@ -1047,7 +1047,7 @@
   }
 
   // ---------- evaluate (calls the local /api/evaluate backend, which calls Claude) ----------
-  const { styleForScore } = window.RPA_SCORE_CLASSIFICATION;
+  const { classifyEvaluation } = window.RPA_SCORE_CLASSIFICATION;
 
   function evaluationValueToText(value) {
     if (!Array.isArray(value)) return typeof value === 'string' ? value : '';
@@ -1097,8 +1097,7 @@
         throw new Error('The evaluator returned unexpected recommendations — please try again');
       }
       const recs = data.recommendations.map((recommendation) => recommendation.trim());
-      const avg = metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length;
-      return { ...styleForScore(avg), metrics, recs };
+      return { ...classifyEvaluation(field.key, metrics), metrics, recs };
     });
   }
 
@@ -1110,6 +1109,14 @@
 
     const badge = panel.querySelector('.eval-badge');
     badge.textContent = data.label;
+
+    let explanation = panel.querySelector('.eval-explanation');
+    if (!explanation) {
+      explanation = el('p', 'eval-explanation');
+      badge.closest('.eval-head').after(explanation);
+    }
+    explanation.textContent = data.explanation;
+    explanation.hidden = !data.explanation;
 
     const metricsEl = panel.querySelector('.eval-metrics');
     metricsEl.innerHTML = '';
@@ -3223,6 +3230,10 @@
     // Marks the control for the "KEY — summary" chip styling, so the
     // stylesheet does not have to name the field key itself.
     input.classList.add('jira-input');
+    const status = el('div', 'jira-status', { role: 'status', 'aria-atomic': 'true' });
+    const unavailableMessage = 'Jira suggestions are unavailable. You can still enter a ticket key manually, or ask your administrator to connect Jira.';
+    const failureMessage = 'Jira search is temporarily unavailable. You can still enter a ticket key manually.';
+    const emptyMessage = 'No matching Jira tickets. You can still enter a ticket key manually.';
     const menu = el('div', 'combo-menu', { role: 'listbox' });
     menu.hidden = true;
     input.setAttribute('role', 'combobox');
@@ -3263,14 +3274,23 @@
       if (menu.parentNode === document.body) menu.remove();
     }
 
-    function renderMatches(message) {
+    function showStatus(message) {
+      closeMenu();
+      matches = [];
+      menu.replaceChildren();
+      // One persistent live region; do not repeat an unchanged announcement.
+      if (status.textContent !== message) status.textContent = message;
+    }
+
+    function dismiss() {
+      ++requestId;
+      clearTimeout(debounceTimer);
+      showStatus('');
+    }
+
+    function renderMatches() {
+      status.textContent = '';
       menu.innerHTML = '';
-      if (message) {
-        const note = el('div', 'combo-item combo-note');
-        note.textContent = message;
-        menu.appendChild(note);
-        return;
-      }
       let activeEl = null;
       matches.forEach((m, i) => {
         const item = el('div', 'combo-item' + (i === activeIndex ? ' active' : ''), { role: 'option' });
@@ -3323,49 +3343,49 @@
       window.addEventListener('scroll', onScroll, true);
     }
 
-    function runSearch(q) {
-      const myId = ++requestId;
-      matches = [];
-      activeIndex = -1;
-      renderMatches('Searching…');
-      if (menu.hidden) openMenu(); else position();
-      fetch('/api/jira/search?q=' + encodeURIComponent(q))
-        .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
-        .then(({ ok, body }) => {
-          if (myId !== requestId) return; // a newer keystroke already superseded this request
-          if (!ok) { renderMatches(body.error || 'Jira search failed'); return; }
-          matches = body.issues || [];
-          activeIndex = -1;
-          if (matches.length === 0) { renderMatches('No matching tickets'); return; }
-          renderMatches();
-        })
-        .catch(() => {
-          if (myId !== requestId) return;
-          matches = [];
-          renderMatches('Jira search failed');
-        });
+    const configReady = getConfig().then(
+      (cfg) => { jiraEnabled = !!cfg.jiraEnabled; },
+      () => { jiraEnabled = null; }
+    );
+
+    async function runSearch(q, myId) {
+      await configReady;
+      if (myId !== requestId) return;
+      if (jiraEnabled === false) { showStatus(unavailableMessage); return; }
+      if (jiraEnabled === null) { showStatus(failureMessage); return; }
+      showStatus('Searching…');
+      try {
+        const res = await fetch('/api/jira/search?q=' + encodeURIComponent(q));
+        if (!res.ok) throw new Error('Search unavailable');
+        const body = await res.json();
+        if (myId !== requestId) return;
+        matches = body.issues || [];
+        activeIndex = -1;
+        if (matches.length === 0) { showStatus(emptyMessage); return; }
+        renderMatches();
+        openMenu();
+      } catch (_) {
+        if (myId !== requestId) return;
+        showStatus(failureMessage);
+      }
     }
 
     function updateMatches() {
       const q = input.value.trim();
+      const myId = ++requestId;
       clearTimeout(debounceTimer);
-      if (!q) { closeMenu(); return; }
-      if (jiraEnabled === false) {
-        matches = [];
-        renderMatches('Jira is not configured — add JIRA_BASE_URL/EMAIL/API_TOKEN to .env');
-        if (menu.hidden) openMenu(); else position();
-        return;
-      }
-      debounceTimer = setTimeout(() => runSearch(q), 250);
+      if (!q) { showStatus(''); return; }
+      if (jiraEnabled === false) { showStatus(unavailableMessage); return; }
+      showStatus('');
+      debounceTimer = setTimeout(() => runSearch(q, myId), 250);
     }
-
-    getConfig().then((cfg) => { jiraEnabled = !!cfg.jiraEnabled; });
 
     input.addEventListener('input', updateMatches);
     input.addEventListener('input', updateWidth);
     input.addEventListener('focus', () => { if (input.value.trim()) updateMatches(); });
-    input.addEventListener('blur', () => { setTimeout(closeMenu, 100); });
+    input.addEventListener('blur', () => { setTimeout(dismiss, 100); });
     input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { dismiss(); return; }
       if (menu.hidden) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -3382,10 +3402,9 @@
           updateWidth();
           closeMenu();
         }
-      } else if (e.key === 'Escape') {
-        closeMenu();
       }
     });
+    return status;
   }
 
   // Sign-off fields: type initials, blur, and today's date gets appended
@@ -3707,7 +3726,7 @@
           control = inp;
         }
         attachSignOffStamp(inp, f.key);
-        if (f.key === 'jiraProject') attachJiraCombobox(inp);
+        const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(inp) : null;
         if (f.type === 'date') {
           control.setAttribute('aria-labelledby', lbl.id);
         } else {
@@ -3716,6 +3735,7 @@
         }
         describeControl(control, guidance);
         td.append(lbl, control);
+        if (jiraStatus) td.appendChild(jiraStatus);
         if (guidance) lbl.insertAdjacentElement('afterend', guidance);
         const hint = signOffHint(f.key);
         if (hint) td.appendChild(hint);
@@ -3788,7 +3808,7 @@
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         control = input;
       }
-      if (f.key === 'jiraProject') attachJiraCombobox(input);
+      const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
       if (f.key === 'lastUpdated') {
         setDateInputValue(input, todayIso());
         // A draft restore replays saved values through this same event, and
@@ -3806,6 +3826,7 @@
       }
       describeControl(control, guidance);
       mf.append(label, control);
+      if (jiraStatus) mf.appendChild(jiraStatus);
       if (guidance) label.insertAdjacentElement('afterend', guidance);
       return mf;
     }
