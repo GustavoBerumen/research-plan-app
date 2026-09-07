@@ -124,7 +124,7 @@ Methods (list):
 Characteristics (list, prose): 
   Hint: The criteria that qualify someone for this study, and any distinct segments you want represented.
 Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
-  Hint: How many participants you plan to recruit for this study.
+  Hint: The number of participants needed for this study.
 
 # Execution
 
