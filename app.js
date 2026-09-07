@@ -21,6 +21,9 @@
   // column definitions (for building rows), and the column keys (for
   // reading/writing draft rows as plain objects).
   const tables = [];
+  // The user's draft choice is independent of temporary print visibility.
+  let timelineVisible = false;
+  let updateTimelineVisibility = null;
 
   // ---------- small DOM helper ----------
   function el(tag, className, attrs) {
@@ -2814,6 +2817,12 @@
       chart.hidden = true;
 
       const refreshTimeline = () => renderTimelineChart(table.id, field.columns, chart);
+      updateTimelineVisibility = () => {
+        chart.hidden = !timelineVisible;
+        vizBtn.textContent = timelineVisible ? 'Hide Timeline' : 'Visualize Timeline';
+        if (timelineVisible) refreshTimeline();
+        else chart.replaceChildren();
+      };
 
       // Always render the current timeline for printing, then restore the
       // user's previous on-screen visibility choice when printing finishes.
@@ -2830,9 +2839,9 @@
       });
 
       vizBtn.addEventListener('click', () => {
-        chart.hidden = !chart.hidden;
-        vizBtn.textContent = chart.hidden ? 'Visualize Timeline' : 'Hide Timeline';
-        if (!chart.hidden) refreshTimeline();
+        timelineVisible = !timelineVisible;
+        updateTimelineVisibility();
+        scheduleDraftSave();
       });
       table.addEventListener('input', () => { if (!chart.hidden) refreshTimeline(); });
       table.addEventListener('change', () => { if (!chart.hidden) refreshTimeline(); });
@@ -4112,7 +4121,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 6;
+  const DRAFT_VERSION = 7;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -4283,7 +4292,8 @@
       }));
     });
 
-    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual };
+    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual,
+      ui: { timelineVisible } };
   }
 
   // Everything about the plan except the stamp itself, so that re-dating the
@@ -4291,7 +4301,9 @@
   function draftContentSignature(draft) {
     const fields = Object.assign({}, draft.fields);
     delete fields.lastUpdated;
-    return JSON.stringify(Object.assign({}, draft, { fields }));
+    const content = Object.assign({}, draft, { fields });
+    delete content.ui; // Viewing the timeline does not edit the authored plan.
+    return JSON.stringify(content);
   }
 
   // collectDraft can only report what the form currently renders, so making a
@@ -4390,6 +4402,10 @@
     const version = Number(draft.version) || 1;
     if (version >= DRAFT_VERSION) return draft;
     const migrated = Object.assign({}, draft, { version: DRAFT_VERSION });
+    // v7 adds a draft UI preference; pre-existing drafts start hidden.
+    if (version < 7) {
+      migrated.ui = Object.assign({}, migrated.ui, { timelineVisible: false });
+    }
     if (version < 2) {
       const flat = (draft.lists && draft.lists.methods) || [];
       migrated.methods = flat.length ? [{ question: '', methods: flat }] : [];
@@ -4593,6 +4609,9 @@
     });
 
     syncMethodsGroups();
+    // Render only after every saved timeline cell/date has been restored.
+    timelineVisible = draft.ui?.timelineVisible === true;
+    if (updateTimelineVisibility) updateTimelineVisibility();
   }
 
   function restoreDraft() {
@@ -4612,7 +4631,9 @@
       draftRestoring = false;
       // The restored plan is the baseline: reopening it is not an edit, so
       // its own stored date stands until the user actually changes something.
-      lastSavedSignature = draftContentSignature(collectDraft());
+      // Include dormant answers just as saveDraft does, so the first toggle
+      // after restoring an older plan cannot look like a content change.
+      lastSavedSignature = draftContentSignature(carryUnrendered(collectDraft()));
     }
   }
 
@@ -4631,6 +4652,8 @@
     clearDraft();
     lastSavedSignature = null;
     lastUpdatedManual = false;
+    timelineVisible = false;
+    if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
