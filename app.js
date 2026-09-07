@@ -2311,8 +2311,7 @@
 
     const btnRow = el('div', 'add-btn-row');
     btnRow.appendChild(btn);
-    btnRow.appendChild(renderInfoTip('This only activates once Objective and at least one Research Question have content.'));
-
+    
     return [btnRow, panel];
   }
 
