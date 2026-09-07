@@ -25,7 +25,9 @@ for (const scenario of [
     const status = app.document.querySelector('.jira-status');
     setValue(app.window, input, 'RPA-52');
     await waitFor(() => status.textContent === scenario.message);
-    assert.equal(input.closest('td').querySelectorAll('[role="status"]').length, 1);
+    assert.equal(input.closest('.mf').querySelectorAll('[role="status"]').length, 1);
+    assert.equal(status.previousElementSibling, input, 'feedback sits beneath the header control');
+    assert.ok(input.classList.contains('jira-input'));
     assert.equal(status.getAttribute('aria-atomic'), 'true');
     // role=status has implicit aria-live=polite. No duplicate description route.
     assert.equal(status.getAttribute('aria-live'), null);

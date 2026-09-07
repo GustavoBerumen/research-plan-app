@@ -8,6 +8,7 @@ const {
   bootApp,
   listInputs,
   setValue,
+  withFieldUncommented,
 } = require('./app-harness');
 
 const LONG_PROSE =
@@ -52,25 +53,30 @@ test('classifies prose controls without changing genuinely compact controls', as
   t.after(() => app.close());
   const { document } = app;
 
-  const project = document.querySelector('[data-field="project"]');
-  assert.equal(project.tagName, 'TEXTAREA');
-  assert.ok(project.classList.contains('prose-input'));
+  // Project is dormant, so the Alignment grid holds only compact inputs now.
+  // The grid's prose path keeps its coverage in the last test in this file.
+  assert.equal(document.querySelectorAll('.atbl textarea.prose-input').length, 0);
   assert.equal(document.querySelector('[data-field="jiraProject"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffProjectOwner"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffResearcher"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="projectDecision"]').type, 'date');
-  assert.equal(document.querySelector('[data-field="reportResearch"]').type, 'date');
+  assert.equal(document.querySelector('[data-field="researchReadout"]').type, 'date');
 
-  for (const key of ['characteristics', 'userGroups']) {
-    const input = listInputs(document, key)[0];
-    assert.equal(input.tagName, 'TEXTAREA');
-    assert.ok(input.classList.contains('prose-input'));
-  }
+  const characteristicsInput = listInputs(document, 'characteristics')[0];
+  assert.equal(characteristicsInput.tagName, 'TEXTAREA');
+  assert.ok(characteristicsInput.classList.contains('prose-input'));
   assert.equal(listInputs(document, 'methods')[0].tagName, 'INPUT');
-  assert.equal(document.querySelector('[data-field="sampleSize"]').tagName, 'SELECT');
+  // Sample Size is radios now, not a dropdown: five short options that form a
+  // scale is the case GOV.UK says not to use a select for.
+  const sampleSize = document.querySelector('.radio-group[data-field-key="sampleSize"]');
+  assert.ok(sampleSize, 'Sample Size renders as a radio group');
+  assert.equal(sampleSize.querySelectorAll('.radio-input[type="radio"]').length, 5);
 
-  assert.equal(document.querySelectorAll('#requirements-table tbody textarea.prose-input').length, 3);
-  assert.equal(document.querySelectorAll('#requirements-table thead input.th-input').length, 3);
+  // Requirements is dormant in the template, so no editable-headers table
+  // renders here. The feature keeps its coverage in the last test below,
+  // which supplies a template that still declares one.
+  assert.equal(document.querySelectorAll('.th-input').length, 0);
+  assert.equal(document.querySelectorAll('#previousKnowledge-table tbody textarea.prose-input').length, 1);
   assert.equal(document.querySelectorAll('#stageTimeline-table textarea').length, 0);
   assert.equal(document.querySelector('#stageTimeline-table tbody select').tagName, 'SELECT');
   assert.equal(document.querySelectorAll('#stageTimeline-table input[type="date"]').length, 2);
@@ -98,13 +104,13 @@ test('prose rows grow independently after typing or pasting and shrink after del
   t.after(() => app.close());
   const { document, window } = app;
 
-  const project = document.querySelector('[data-field="project"]');
-  const initialProjectHeight = heightOf(project);
-  pasteValue(window, project, LONG_PROSE);
-  const longProjectHeight = heightOf(project);
+  const background = document.querySelector('[data-field="background"]');
+  const initialProjectHeight = heightOf(background);
+  pasteValue(window, background, LONG_PROSE);
+  const longProjectHeight = heightOf(background);
   assert.ok(longProjectHeight > initialProjectHeight);
-  setValue(window, project, SHORT_PROSE);
-  assert.ok(heightOf(project) < longProjectHeight);
+  setValue(window, background, SHORT_PROSE);
+  assert.ok(heightOf(background) < longProjectHeight);
 
   const characteristicsList = document.querySelector('.list-rows[data-list-key="characteristics"]');
   characteristicsList.closest('.field').querySelector('.add-btn').click();
@@ -121,33 +127,29 @@ test('prose rows grow independently after typing or pasting and shrink after del
   assert.ok(listRemoveButtons[0].classList.contains('list-remove-spacer'));
   assert.equal(listRemoveButtons[1].disabled, false);
 
-  const userGroup = listInputs(document, 'userGroups')[0];
-  pasteValue(window, userGroup, LONG_PROSE);
-  assert.ok(heightOf(userGroup) > initialProjectHeight);
-
   deleteValue(window, characteristics[0]);
   assert.equal(heightOf(characteristics[0]), heightOf(characteristics[1]));
   listRemoveButtons[1].click();
   assert.equal(listInputs(document, 'characteristics').length, 1);
 
-  const requirements = document.getElementById('requirements-table');
-  requirements.closest('.field').querySelector('.add-btn').click();
-  const requirementRows = requirements.querySelectorAll('tbody tr');
-  const firstRequirement = requirementRows[0].querySelector('textarea');
-  const secondRequirement = requirementRows[1].querySelector('textarea');
-  pasteValue(window, firstRequirement, LONG_PROSE);
-  setValue(window, secondRequirement, SHORT_PROSE);
-  assert.ok(heightOf(firstRequirement) > heightOf(secondRequirement));
+  const knowledge = document.getElementById('previousKnowledge-table');
+  knowledge.closest('.field').querySelector('.add-btn').click();
+  const knowledgeRows = knowledge.querySelectorAll('tbody tr');
+  const firstKnowledge = knowledgeRows[0].querySelector('textarea');
+  const secondKnowledge = knowledgeRows[1].querySelector('textarea');
+  pasteValue(window, firstKnowledge, LONG_PROSE);
+  setValue(window, secondKnowledge, SHORT_PROSE);
+  assert.ok(heightOf(firstKnowledge) > heightOf(secondKnowledge));
 
-  const headerCellCount = requirements.querySelectorAll('thead th').length;
-  requirementRows.forEach((row) => {
+  const headerCellCount = knowledge.querySelectorAll('thead th').length;
+  knowledgeRows.forEach((row) => {
     assert.equal(row.querySelectorAll('td').length, headerCellCount);
   });
-  assert.equal(requirementRows[0].querySelector('.row-remove').disabled, false);
-  assert.equal(requirementRows[1].querySelector('.row-remove').disabled, false);
-  requirementRows[1].querySelector('.row-remove').click();
-  assert.equal(requirements.querySelectorAll('tbody tr').length, 1);
-  assert.equal(requirements.querySelector('.row-remove').disabled, true);
+  assert.equal(knowledgeRows[0].querySelector('.row-remove').disabled, false);
+  assert.equal(knowledgeRows[1].querySelector('.row-remove').disabled, false);
+  knowledgeRows[1].querySelector('.row-remove').click();
+  assert.equal(knowledge.querySelectorAll('tbody tr').length, 1);
+  assert.equal(knowledge.querySelector('.row-remove').disabled, true);
 
   const actionTextareas = document.querySelectorAll('#actionPoints-table tbody textarea');
   assert.equal(actionTextareas.length, 2);
@@ -193,29 +195,23 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
 
   const draft = {
     version: 3,
-    fields: { project: LONG_PROSE },
+    fields: { background: LONG_PROSE },
     selects: {},
     lists: {
       characteristics: [LONG_PROSE, SHORT_PROSE],
-      userGroups: [LONG_PROSE],
     },
     methods: [],
     tables: {
-      'requirements-table': [
-        [textSnapshot(LONG_PROSE), textSnapshot(SHORT_PROSE), textSnapshot(LONG_PROSE), textSnapshot('')],
-        [textSnapshot(SHORT_PROSE), textSnapshot(LONG_PROSE), textSnapshot(SHORT_PROSE), textSnapshot('')],
-      ],
       'actionPoints-table': [[
         textSnapshot(LONG_PROSE),
         textSnapshot(LONG_PROSE + ' The responsible owner coordinates all follow-up work.'),
         { t: 'sel', v: 'in-progress' },
         textSnapshot(''),
       ]],
-      'previousKnowledge-table': [[
-        textSnapshot(LONG_PROSE),
-        { t: 'file', v: '', n: 'No file chosen' },
-        textSnapshot(''),
-      ]],
+      'previousKnowledge-table': [
+        [textSnapshot(LONG_PROSE), { t: 'file', v: '', n: 'No file chosen' }, textSnapshot('')],
+        [textSnapshot(SHORT_PROSE), { t: 'file', v: '', n: 'No file chosen' }, textSnapshot('')],
+      ],
     },
     custom: {},
   };
@@ -224,21 +220,20 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   t.after(() => restored.close());
   const { document } = restored;
 
-  const project = document.querySelector('[data-field="project"]');
-  assert.equal(project.value, LONG_PROSE);
-  assert.ok(heightOf(project) > 44);
+  const background = document.querySelector('[data-field="background"]');
+  assert.equal(background.value, LONG_PROSE);
+  assert.ok(heightOf(background) > 44);
 
   const characteristics = listInputs(document, 'characteristics');
   assert.deepEqual(characteristics.map((input) => input.value), [LONG_PROSE, SHORT_PROSE]);
   assert.ok(heightOf(characteristics[0]) > heightOf(characteristics[1]));
-  assert.equal(listInputs(document, 'userGroups')[0].value, LONG_PROSE);
 
-  const requirementRows = document.querySelectorAll('#requirements-table tbody tr');
-  assert.equal(requirementRows.length, 2);
-  assert.equal(requirementRows[0].querySelector('textarea').value, LONG_PROSE);
+  const knowledgeRows = document.querySelectorAll('#previousKnowledge-table tbody tr');
+  assert.equal(knowledgeRows.length, 2);
+  assert.equal(knowledgeRows[0].querySelector('textarea').value, LONG_PROSE);
   assert.ok(
-    heightOf(requirementRows[0].querySelector('textarea')) >
-      heightOf(requirementRows[1].querySelector('textarea'))
+    heightOf(knowledgeRows[0].querySelector('textarea')) >
+      heightOf(knowledgeRows[1].querySelector('textarea'))
   );
 
   const actionTextareas = document.querySelectorAll('#actionPoints-table tbody textarea');
@@ -253,4 +248,79 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   assert.equal(previousKnowledge.value, LONG_PROSE);
   assert.ok(heightOf(previousKnowledge) > 44);
   assert.equal(document.querySelector('#previousKnowledge-table .file-name').textContent, 'No file chosen');
+});
+
+// Requirements is the only field that ever declared editable-headers, and it
+// is dormant in the template. Rather than let that feature lose its coverage
+// the moment nothing happens to use it, this renders the template with
+// Requirements uncommented — the form exactly as it was before RPA-55 hid it.
+// If it is brought back, this test already covers it; if the feature is ever
+// removed for real, this is the test that should be deleted with it.
+function templateWithRequirements() {
+  const real = fs.readFileSync(
+    path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
+  );
+  // Keyed on the field, not on its exact text, so a reworded hint or a new
+  // flag does not quietly turn this test into a no-op.
+  const restored = withFieldUncommented(real, 'requirements');
+  assert.notEqual(restored, real, 'the dormant Requirements lines were not found to restore');
+  return restored;
+}
+
+test('an editable-headers table renders prose cells under renameable headings', async (t) => {
+  const app = await bootApp({
+    textareaScrollHeight,
+    textAssets: { 'research-plan-template.md': templateWithRequirements() },
+  });
+  t.after(() => app.close());
+  const { document, window } = app;
+
+  const table = document.getElementById('requirements-table');
+  assert.ok(table, 'the restored template renders the Requirements table');
+
+  // Three renameable headings, and prose cells beneath them.
+  const headers = table.querySelectorAll('thead input.th-input');
+  assert.equal(headers.length, 3);
+  assert.deepEqual(Array.from(headers).map((h) => h.value), ['Physical', 'Digital', 'Approvals']);
+  assert.equal(table.querySelectorAll('tbody textarea.prose-input').length, 3);
+
+  // Renaming a heading leaves the cells alone.
+  setValue(window, headers[2], 'Sign-offs');
+  assert.equal(headers[2].value, 'Sign-offs');
+  assert.equal(table.querySelectorAll('tbody textarea.prose-input').length, 3);
+
+  // And the prose cells still size themselves independently.
+  const cells = table.querySelectorAll('tbody textarea');
+  pasteValue(window, cells[0], LONG_PROSE);
+  setValue(window, cells[1], SHORT_PROSE);
+  assert.ok(heightOf(cells[0]) > heightOf(cells[1]));
+});
+
+// Project was the only textarea in the Alignment grid, and it is dormant now,
+// so no live field exercises buildGridCell's prose path. Same treatment as the
+// editable-headers table above: render the template with Project restored, so
+// the path keeps its coverage whether or not the form happens to use it.
+test('a grid cell renders prose that grows, when a grid field is a textarea', async (t) => {
+  const real = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8');
+  const restored = withFieldUncommented(real, 'project');
+  assert.notEqual(restored, real, 'the dormant Project lines were not found to restore');
+
+  const app = await bootApp({
+    textareaScrollHeight,
+    textAssets: { 'research-plan-template.md': restored },
+  });
+  t.after(() => app.close());
+  const { document, window } = app;
+
+  const project = document.querySelector('[data-field="project"]');
+  assert.ok(project, 'the restored template renders Project');
+  assert.equal(project.tagName, 'TEXTAREA');
+  assert.ok(project.classList.contains('prose-input'), 'a grid textarea is classified as prose');
+  assert.ok(project.closest('.atbl'), 'and it is inside the Alignment grid');
+
+  const before = heightOf(project);
+  pasteValue(window, project, LONG_PROSE);
+  assert.ok(heightOf(project) > before, 'it grows with its content');
+  setValue(window, project, SHORT_PROSE);
+  assert.ok(heightOf(project) < heightOf(document.querySelector('[data-field="background"]')) + 200);
 });

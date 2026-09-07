@@ -90,12 +90,11 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .page-wrap{padding:36px 24px 80px}
 .doc{max-width:860px;margin:0 auto;background:#fff;padding:32px 64px 52px}
 @media screen and (max-width:600px){.page-wrap{padding:16px 8px 48px}.doc{padding:20px 12px 36px}.acc-body{padding:18px 0 22px}.field-group{padding:14px 0}}
-.doc-header{margin-bottom:36px;padding-bottom:30px;border-bottom:1px solid var(--border)}
-.doc-header-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:8px}
-.doc-header-top .sup-label{margin-bottom:0}
-.sup-label{font-size:var(--text);font-weight:700;color:var(--text-2);margin-bottom:8px}
-.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:none;border:none;border-bottom:2px solid var(--border);padding:6px 0 8px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
-.title-inp:focus{border-bottom-color:var(--ink);box-shadow:none;outline:3px solid var(--focus);outline-offset:0}
+/* No border-bottom here: the first section's own border-top already closes
+   the header, and drawing both put two grey rules 36px apart with nothing
+   between them. Every later boundary has one rule, so this matches. */
+.doc-header{margin-bottom:36px;padding-bottom:30px}
+.title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .title-inp::placeholder{color:var(--text-2)}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:24px}
 .mf{display:flex;flex-direction:column;gap:5px}
@@ -103,6 +102,11 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
 .minput::placeholder{color:var(--text-2)}
 /* Last Updated is a computed corner value, kept compact. */
+.doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
+/* The ticket reference sits under the title on its own row, matching its
+   width. Narrower looked tidier in isolation but wrapped the hint onto two
+   lines and read as a different kind of thing from the title above it. */
+.mf-identifier{margin-top:20px}
 .mf-compact{gap:2px;flex-shrink:0}
 .mf-compact .mlabel{font-size:var(--text-sm)}
 .mf-compact .minput{font-size:var(--text-sm);min-height:34px;padding:3px 5px;max-width:190px}
@@ -140,6 +144,9 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .field-warning::before{content:'⚠ '}
 .finput{font-family:inherit;font-size:var(--text);line-height:var(--lh);color:var(--ink);border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;background:#fff;resize:none;width:100%;min-height:var(--control-h)}
 .finput::placeholder{color:var(--text-2)}
+/* A textarea that states its own rows sizes from that instead of the shared
+   floor below. Autosize still grows it the moment anyone types. */
+textarea.finput.finput-rows{min-height:0}
 textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 
@@ -160,10 +167,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    grouped switches to three equal tracks. minmax(0,1fr) stops a long method
    name widening its own track; align-items:start keeps a one-method group
    from stretching to match a five-method neighbour. */
+/* One column, always. These were three grid tracks, which put a text input in
+   a third of the width where it clipped its own placeholder, and asked the
+   reader to work out whether to go across or down. GOV.UK forms are a single
+   column and separate groups with space and a heading, not with rules, boxes
+   or side-by-side tracks. .methods-grouped only widens the gap, for when the
+   groups are real research questions rather than one unlabelled list. */
 .methods-groups{display:flex;flex-direction:column;gap:10px}
-.methods-groups.methods-grouped{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:24px 18px}
-@media screen and (max-width:900px){.methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media screen and (max-width:600px){.methods-groups.methods-grouped{grid-template-columns:minmax(0,1fr)}}
+.methods-groups.methods-grouped{gap:32px}
 .methods-group{min-width:0}
 .methods-group-q{font-size:var(--text);font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:10px;overflow-wrap:anywhere}
 .methods-group-q-empty{color:var(--text-2);font-weight:400}
@@ -190,6 +201,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .tbl-wrap{border:0;overflow-x:auto}
 .atbl,.dtbl{width:100%;border-collapse:collapse}
 .dtbl{table-layout:fixed}
+/* Column widths by what the column holds, not by which table it is in. A
+   status column is a short select — about 105px — so an equal share of the
+   table left ~90px of white space beside it. Sizing it to its control frees
+   that for the column that actually needs room. Where two prose columns sit
+   together, the second is fixed and the first takes the surplus: in Action
+   Points the task description needs the space, not the owner's name. */
+.dtbl th[data-col-type="status"]{width:140px}
+.dtbl th[data-col-type="prose"]+th[data-col-type="prose"]{width:32%}
 .atbl td{padding:0 36px 20px 0;border:0;vertical-align:top;width:50%}
 .atbl td:last-child{padding-right:0}
 .clbl{display:block;font-size:var(--text);font-weight:400;color:var(--ink);margin-bottom:5px}
@@ -204,13 +223,22 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .row-remove-cell{text-align:center;white-space:nowrap;vertical-align:middle}
 
 /* ---------- Date control ---------- */
+/* display:flex below outranks the browser's [hidden]{display:none}, so the
+   attribute alone does not hide a date control. */
+.date-control[hidden]{display:none}
 .date-control{display:flex;align-items:center;gap:3px;width:100%;min-width:0;flex-wrap:wrap;border:2px solid var(--ink);background:#fff;padding:5px;min-height:var(--control-h)}
-.date-segment{font:inherit;color:inherit;line-height:inherit;text-align:center;border:none;outline:none;background:transparent;padding:0;min-width:0}
+.date-segment{font:inherit;color:inherit;line-height:inherit;text-align:center;border:none;outline:none;background:transparent;padding:0;flex:0 0 auto}
 .date-segment:focus{background:var(--focus);color:var(--ink)}
 .date-segment::placeholder{color:var(--text-2);text-transform:uppercase}
-.date-day{width:2.3ch}
-.date-month{width:3.6ch}
-.date-year{width:4.8ch}
+/* Each segment is sized to the widest string it ever has to show: the
+   placeholder for day and year (DD, YYYY), the value for month (May is wider
+   than MM, and wider than Sep). Sized in em, not ch -- ch is the width of "0",
+   and D, M and Y are all wider than a digit, so ch-based widths clipped the
+   placeholders. Segments also refuse to shrink (flex above): in a tight cell
+   the control wraps to a second line rather than cutting the text off. */
+.date-day{width:1.7em}
+.date-month{width:2.2em}
+.date-year{width:3.1em}
 .date-separator{flex-shrink:0;color:var(--text-2);line-height:1}
 .date-control[aria-invalid="true"]{border-color:var(--red)}
 .date-picker-native{flex:0 0 24px;width:24px;min-width:24px;height:24px;color:transparent;background:transparent;border:none;outline:none;padding:0;cursor:pointer;margin-left:auto}
@@ -227,10 +255,21 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .ss-ip{background:var(--tag-blue-bg)}
 .ss-done{background:var(--tag-green-bg)}
 .ss-block{background:var(--tag-red-bg)}
-/* A filled Jira reference renders as a tag. Note this keys off
-   :placeholder-shown, so the field's placeholder is load-bearing (RPA-54). */
-.cinput[data-field="jiraProject"]:not(:placeholder-shown){display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
+/* A filled Jira reference renders as a tag. Driven by a class the combobox
+   sets, not by :placeholder-shown — that made the placeholder load-bearing,
+   so removing it would have styled every empty field as a tag. */
+.jira-input.jira-filled{display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
 .select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+/* Radios, GOV.UK shape: a real input, a generous hit area that includes the
+   label, and the focus ring on the control rather than the row. */
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-item{display:flex;align-items:center;gap:12px;min-height:40px}
+.radio-input{width:24px;height:24px;margin:0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
+.radio-input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.radio-label{font-size:var(--text);color:var(--ink);cursor:pointer}
+/* The conditional reveal sits under the option it belongs to, indented so the
+   relationship is visible without a box around it. */
+.radio-other-row{margin-left:36px;max-width:320px}
 .select-other-row{display:flex;align-items:center;gap:6px;width:100%}
 .select-other-row[hidden]{display:none}
 .select-other-input{flex:1;min-width:0}
@@ -413,10 +452,9 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   @page{margin:0.75in}
   .timeline-chart,.eval-head,.eval-panel{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
-  /* Two columns, not three: the printed content box is roughly 600px wide,
-     and an <input> clips rather than wraps, so three tracks would silently
-     truncate method names. */
-  .methods-groups.methods-grouped{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+  /* One column on paper too, so a method name has the full content width and
+     cannot be clipped by a narrow track. */
+  .methods-groups.methods-grouped{gap:20px}
   .methods-group{break-inside:avoid;page-break-inside:avoid}
   .acc-head{cursor:default}
   .acc-chevron{display:none}
@@ -425,7 +463,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   body,html{background:#fff!important}
   .page-wrap{padding:0!important}
   .doc{box-shadow:none!important;max-width:100%!important;padding:24px 36px!important;margin:0!important}
-  .finput,.cinput,.minput,.date-control,.ssel,.th-input{border-color:#999!important;box-shadow:none!important;background:#fff!important}
+  .finput,.cinput,.minput,.date-control,.ssel,.th-input,.title-inp{border-color:#999!important;box-shadow:none!important;background:#fff!important}
   /* overflow:visible only, deliberately no height:auto: the autosizer
      maintains an accurate inline height and recalculates before printing. */
   textarea.finput,textarea.prose-input{overflow:visible!important}

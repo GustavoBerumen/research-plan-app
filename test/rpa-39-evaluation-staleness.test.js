@@ -9,6 +9,7 @@ const {
   listInputs,
   setValue,
   waitFor,
+  withFieldFlag,
 } = require('./app-harness');
 
 function evaluationResult(metricName, score = 3) {
@@ -207,7 +208,7 @@ test('Method edits, additions, and removals make the aggregate stale', async (t)
   const app = await bootApp({
     evaluate: () => evaluationResult('Method metric'),
     textAssets: {
-      'research-plan-template.md': template.replace('Methods (list):', 'Methods (list, eval):'),
+      'research-plan-template.md': withFieldFlag(template, 'methods', 'eval'),
     },
   });
   t.after(() => app.close());

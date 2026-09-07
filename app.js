@@ -40,9 +40,23 @@
     return now.getFullYear() + '-' + mm + '-' + dd;
   }
 
+  // Last updated re-stamps itself whenever the plan's content changes. Once
+  // someone sets it by hand that stops, because an edit you can make and then
+  // lose on your next unrelated keystroke is worse than no edit at all. The
+  // choice is remembered in the draft, so it survives a reload; Clear Form
+  // resets it, since a cleared plan is a new plan.
+  let lastUpdatedManual = false;
+  let stampingLastUpdated = false;
+
   function setLastUpdatedToday() {
     const input = doc.querySelector('[data-field="lastUpdated"]');
-    if (input) setDateInputValue(input, todayIso());
+    if (!input) return;
+    stampingLastUpdated = true;
+    try {
+      setDateInputValue(input, todayIso());
+    } finally {
+      stampingLastUpdated = false;
+    }
   }
 
   // ---------- schema parsing (research-plan-template.md) ----------
@@ -84,18 +98,39 @@
     const label = m[1].trim();
     const typeParts = m[2].split(',').map((s) => s.trim().toLowerCase());
     const type = typeParts[0];
+    // "key=someKey" pins the field's key so it no longer follows the label.
+    // Read from the un-lowercased spec, because keys are camelCase and
+    // typeParts above has already flattened the case.
+    // Without this a copy edit renames the key, and every lookup by that name
+    // fails silently — it happened twice in one day (RPA-55): renaming Report
+    // Research killed the deadline warning, and renaming Title took out 26 of
+    // 45 tests. toCamelKey stays as the fallback so a field can still be added
+    // without thinking about keys.
+    const declaredKey = m[2].split(',')
+      .map((part) => part.trim())
+      .map((part) => /^key=([A-Za-z][A-Za-z0-9]*)$/.exec(part))
+      .filter(Boolean)
+      .map((match) => match[1])[0];
     const field = {
       label,
-      key: toCamelKey(label),
+      key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       prose: typeParts.includes('prose'),
+      // "rows=N" sets how tall a textarea starts — a hint about how much
+      // answer the question expects, so it belongs with the question. Not a
+      // stylesheet rule keyed on the field key: keys follow labels, and a
+      // rename would silently drop the styling with nothing to catch it.
+      rows: (() => {
+        const part = typeParts.find((p) => /^rows=\d+$/.test(p));
+        return part ? Number(part.slice(5)) : null;
+      })(),
     };
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
-    } else if (type === 'select') {
+    } else if (type === 'select' || type === 'radios') {
       field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
     } else {
       field.placeholder = m[3].trim();
@@ -111,7 +146,14 @@
   }
 
   function parseSchema(text) {
-    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    // Normalise line endings before anything else. A template saved on
+    // Windows arrives with CRLF, and the Hint/Good/Bad matchers below run
+    // against the raw line rather than the trimmed one, because they need to
+    // see its indentation. In a JavaScript regex "." excludes line
+    // terminators and \r is one, so "(.*)$" could not reach the end of a
+    // CRLF line and the match failed outright: every field rendered and not
+    // one hint did, with nothing reported.
+    text = text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
     const lines = text.split('\n');
     const header = { title: null, meta: [] };
     const sections = [];
@@ -185,6 +227,7 @@
     text = text.replace(/<!--[\s\S]*?-->/g, '');
     const rubrics = {};
     let currentKey = null;
+    text = text.replace(/\r\n?/g, '\n');
     text.split('\n').forEach((raw) => {
       const line = raw.replace(/\s+$/, '');
       if (!line.trim()) return;
@@ -214,7 +257,7 @@
 
   // ---------- methods list (research-methods.md) ----------
   function parseMethodsList(text) {
-    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    text = text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
     return text.split('\n')
       .map((line) => line.match(/^-\s*(.+?)\s*$/))
       .filter(Boolean)
@@ -1569,7 +1612,7 @@
     return `${authorLabel} (${year}). ${title}.` + (url ? ' ' + url : '');
   }
 
-  function renderFrameworkSuggest() {
+  function renderFrameworkSuggest(fieldInput) {
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
@@ -1607,11 +1650,34 @@
       body.appendChild(summary);
 
       const rawRef = extractFirstReference(data.entry);
-      if (rawRef) {
+      const reference = rawRef ? formatFrameworkReference(rawRef) : '';
+      if (reference) {
         const refBlock = el('p', 'fw-ref');
-        refBlock.textContent = 'For a starting point, see: ' + formatFrameworkReference(rawRef);
+        refBlock.textContent = 'For a starting point, see: ' + reference;
         body.appendChild(refBlock);
       }
+
+      // The whole reason this feature exists is that people cannot recall a
+      // framework on demand. Ending at "here is one, now type it out" wastes
+      // that, so the suggestion can be taken straight into the field.
+      if (!fieldInput) return;
+      const actions = el('div', 'eval-actions');
+      const useBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
+      useBtn.textContent = 'Use this framework';
+      actions.appendChild(useBtn);
+      body.appendChild(actions);
+
+      useBtn.addEventListener('click', () => {
+        const suggestion = reference ? data.name + '\n' + reference : data.name;
+        const existing = fieldInput.value.trim();
+        // Never replace what somebody already wrote — they may have typed a
+        // note before asking for a suggestion.
+        fieldInput.value = existing ? existing + '\n\n' + suggestion : suggestion;
+        dispatchFieldUpdate(fieldInput);
+        useBtn.disabled = true;
+        useBtn.textContent = 'Added ✓';
+        fieldInput.focus();
+      });
     }
 
     function renderDraft(data) {
@@ -2273,8 +2339,7 @@
 
     const btnRow = el('div', 'add-btn-row');
     btnRow.appendChild(btn);
-    btnRow.appendChild(renderInfoTip('This only activates once Objective and at least one Research Question have content.'));
-
+    
     return [btnRow, panel];
   }
 
@@ -2534,10 +2599,23 @@
 
     const tblWrap = el('div', 'tbl-wrap');
     const table = el('table', 'dtbl', { id: field.key + '-table' });
+    // The field's own key, for the same reason as data-col-key above: code
+    // branches on field.key === 'stageTimeline', and a table renders no
+    // [data-field] anywhere, so nothing could verify that lookup.
+    table.dataset.fieldKey = field.key;
     const thead = el('thead');
     const headRow = el('tr');
     field.columns.forEach((c, ci) => {
       const th = document.createElement('th');
+      // The column's key, exposed so it can be checked. Code looks columns up
+      // by key (the timeline reads stage/startDate/completionDate), and those
+      // keys are derived from column labels, so a renamed column can break
+      // them — but nothing could see a column key to test it until now.
+      th.dataset.colKey = c.key;
+      // ...and its type, so stylesheets can size a column by what it holds
+      // rather than by the table's id. An id is derived from the field key,
+      // and no test scans CSS for key references.
+      th.dataset.colType = c.type;
       if (field.editableHeaders) {
         // The value is the heading text; the name says what the input is for.
         const headInp = el('input', 'th-input', { type: 'text', value: c.label, 'aria-label': 'Column ' + (ci + 1) + ' heading' });
@@ -2701,97 +2779,6 @@
     );
   }
 
-  // ---------- dynamic placeholders (Characteristics / User Groups) ----------
-  // Generated from Background/Goal/Objective/Research Questions, but only
-  // ever written to .placeholder — never .value — so this behaves exactly
-  // like a normal HTML placeholder: visible only while empty, gone the
-  // instant the user types, never submitted as real content.
-  function collectParticipantContextFields() {
-    const val = (key) => {
-      const input = doc.querySelector('[data-field="' + key + '"]');
-      return input ? input.value.trim() : '';
-    };
-    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    return {
-      background: val('background'),
-      goal: val('goal'),
-      objective: val('objective'),
-      researchQuestions: rqList ? collectListValues(rqList).join('\n') : '',
-    };
-  }
-
-  // Cheap pre-check so a near-empty form never even calls the endpoint —
-  // the server has the same check as a backstop, but the point is to avoid
-  // spending the API call in the first place when there's too little to
-  // work from.
-  function hasEnoughContextForPlaceholders(ctx) {
-    return (ctx.background + ctx.goal + ctx.objective + ctx.researchQuestions).trim().length >= 40;
-  }
-
-  function participantContextChanged(a, b) {
-    if (!b) return true;
-    return a.background !== b.background || a.goal !== b.goal || a.objective !== b.objective || a.researchQuestions !== b.researchQuestions;
-  }
-
-  let participantPlaceholderCache = null; // { inputs, characteristics, userGroups }
-  let participantPlaceholderPromise = null; // in-flight request, de-duped across near-simultaneous focus events
-
-  function ensureParticipantPlaceholders() {
-    const ctx = collectParticipantContextFields();
-    if (!hasEnoughContextForPlaceholders(ctx)) return Promise.resolve(null);
-
-    if (participantPlaceholderCache && !participantContextChanged(ctx, participantPlaceholderCache.inputs)) {
-      return Promise.resolve(participantPlaceholderCache);
-    }
-    if (participantPlaceholderPromise) return participantPlaceholderPromise;
-
-    participantPlaceholderPromise = fetch('/api/suggest-participant-placeholders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ctx),
-    }).then((res) => {
-      return res.json().catch(() => ({})).then((data) => {
-        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-        return data;
-      });
-    }).then((data) => {
-      const result = { inputs: ctx, characteristics: data.characteristics, userGroups: data.userGroups };
-      participantPlaceholderCache = result;
-      return result;
-    }).catch((err) => {
-      console.warn('Dynamic placeholder generation failed, keeping static placeholder:', err);
-      return null;
-    }).finally(() => {
-      participantPlaceholderPromise = null;
-    });
-
-    return participantPlaceholderPromise;
-  }
-
-  // Applies to every currently-empty row of both fields, not just the one
-  // that was focused — a single API call covers both fields, so whichever
-  // one the user reaches next already has the fresh hint waiting.
-  function applyParticipantPlaceholders(result) {
-    if (!result) return;
-    if (result.characteristics) {
-      doc.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input').forEach((inp) => {
-        if (!inp.value.trim()) inp.placeholder = result.characteristics;
-      });
-    }
-    if (result.userGroups) {
-      doc.querySelectorAll('.list-rows[data-list-key="userGroups"] .list-input').forEach((inp) => {
-        if (!inp.value.trim()) inp.placeholder = result.userGroups;
-      });
-    }
-  }
-
-  function attachDynamicPlaceholder(inp) {
-    inp.addEventListener('focus', () => {
-      if (inp.value.trim()) return;
-      ensureParticipantPlaceholders().then(applyParticipantPlaceholders);
-    });
-  }
-
   function renderListField(field) {
     // A list has no single control for a <label> to point at, so the group
     // is named by its heading and each row's input names itself ("Research
@@ -2861,7 +2848,6 @@
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
-      if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
       if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
@@ -3067,11 +3053,28 @@
   // and a screen reader only meets it if it happens to land on the icon. The
   // hint is a sibling of the label rather than a child, so it describes the
   // control (aria-describedby) without bloating the control's name.
+  // *Emphasis* in a hint becomes a real <em>. Built as nodes rather than
+  // assigned as innerHTML, so a hint can never inject markup, and an unpaired
+  // asterisk is left alone as literal text rather than swallowing the rest of
+  // the line.
+  function appendHintText(target, text) {
+    text.split(/(\*[^*\n]+\*)/).forEach((part) => {
+      if (!part) return;
+      if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+        const em = document.createElement('em');
+        em.textContent = part.slice(1, -1);
+        target.appendChild(em);
+      } else {
+        target.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
     const hint = el('div', 'field-hint-text', { id: id });
-    hint.textContent = text;
+    appendHintText(hint, text);
     return hint;
   }
 
@@ -3224,6 +3227,9 @@
   // but results come from the network instead of a static list, so matches
   // are debounced and stamped with a request id to discard stale responses.
   function attachJiraCombobox(input) {
+    // Marks the control for the "KEY — summary" chip styling, so the
+    // stylesheet does not have to name the field key itself.
+    input.classList.add('jira-input');
     const status = el('div', 'jira-status', { role: 'status', 'aria-atomic': 'true' });
     const unavailableMessage = 'Jira suggestions are unavailable. You can still enter a ticket key manually, or ask your administrator to connect Jira.';
     const failureMessage = 'Jira search is temporarily unavailable. You can still enter a ticket key manually.';
@@ -3246,7 +3252,13 @@
     // see sizeInputToContent(). 26 = the pill's 11px horizontal padding on
     // each side, plus a small buffer.
     function updateWidth() {
-      if (input.value.trim()) sizeInputToContent(input, 26);
+      const filled = Boolean(input.value.trim());
+      // Drives the tag styling. This used to be :placeholder-shown in CSS,
+      // which made the placeholder load-bearing: emptying it turned every
+      // blank field into a tag, because a field with no placeholder text is
+      // never "showing" one. A class says what is actually meant.
+      input.classList.toggle('jira-filled', filled);
+      if (filled) sizeInputToContent(input, 26);
       else input.style.width = '';
     }
 
@@ -3416,16 +3428,16 @@
     return hint;
   }
 
-  // Warns when Report Research lands less than a week before Project
-  // Decision, so there's no buffer for setbacks. The controls keep their
+  // Warns when Research readout lands less than a week before Project
+  // decision, so there's no buffer for setbacks. The controls keep their
   // canonical values as ISO YYYY-MM-DD even though the segmented editor is
   // displayed as DD-MMM-YYYY.
   function initDeadlineConstraints() {
     const decisionInput = doc.querySelector('[data-field="projectDecision"]');
-    const researchInput = doc.querySelector('[data-field="reportResearch"]');
+    const researchInput = doc.querySelector('[data-field="researchReadout"]');
     if (!decisionInput || !researchInput) return;
 
-    // Report Research can't land after Project Decision — hard-blocked via
+    // Research readout can't land after Project decision — hard-blocked via
     // max= (constrains the native picker itself) plus a clamp-on-change
     // fallback, same approach as attachDateRangeConstraint for Stage
     // Timeline's start/completion pair (just the ceiling flipped).
@@ -3439,7 +3451,7 @@
     researchInput.addEventListener('change', clampResearch);
     clampResearch();
 
-    // Softer, complementary check: even a Report Research date that's
+    // Softer, complementary check: even a Research readout date that's
     // technically before the decision might not leave enough buffer.
     const warning = el('div', 'field-warning');
     warning.textContent = 'Allow a one-week buffer before the decision date.';
@@ -3490,6 +3502,67 @@
     // sel/otherInput carries data-field at a time — whichever is currently
     // showing — so a generic [data-field="key"] lookup elsewhere always
     // finds the field's actual current value, not a stale hidden one.
+    // GOV.UK treats a select as a last resort — people find them harder than
+    // other controls — and says to use radios below about 20 options. Five
+    // short, mutually exclusive options that form a scale is the case that
+    // guidance is written for: you can compare them without opening anything.
+    //
+    // The group keeps the .select-cell wrapper and its data-field-key on
+    // purpose. That is what collectDraft and applyDraft look for, and what
+    // scalarFieldEls skips, so a radio field saves and restores in exactly the
+    // { v, o } shape a select did — old drafts restore with no migration.
+    if (field.type === 'radios') {
+      const group = el('div', 'select-cell radio-group', {
+        role: 'radiogroup',
+        'aria-labelledby': label.id,
+      });
+      group.dataset.fieldKey = field.key;
+      describeControl(group, guidance);
+      // No single control to point at, so the heading names the group.
+      label.removeAttribute('for');
+
+      const otherRow = el('div', 'select-other-row radio-other-row');
+      const otherInput = el('input', 'finput select-other-input', {
+        type: 'text',
+        placeholder: 'Type your own value…',
+        'aria-label': field.label + ' — other',
+      });
+      otherRow.appendChild(otherInput);
+      otherRow.hidden = true;
+
+      const options = (field.options || []).concat(['__other__']);
+      options.forEach((value, i) => {
+        const item = el('div', 'radio-item');
+        const id = controlId + '-opt-' + i;
+        const radio = el('input', 'radio-input', {
+          type: 'radio',
+          id: id,
+          name: controlId,
+          value: value,
+        });
+        const optLabel = el('label', 'radio-label', { for: id });
+        optLabel.textContent = value === '__other__' ? 'Other' : value;
+        radio.addEventListener('change', () => {
+          if (!radio.checked) return;
+          const isOther = radio.value === '__other__';
+          otherRow.hidden = !isOther;
+          if (isOther) {
+            otherInput.focus();
+          } else {
+            otherInput.value = '';
+          }
+        });
+        item.append(radio, optLabel);
+        group.appendChild(item);
+        // The conditional reveal belongs directly under the option it belongs
+        // to, which is the last one.
+        if (value === '__other__') group.appendChild(otherRow);
+      });
+
+      wrap.appendChild(group);
+      return wrap;
+    }
+
     if (field.type === 'select') {
       const selectCell = el('div', 'select-cell');
       selectCell.dataset.fieldKey = field.key;
@@ -3564,6 +3637,10 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    if (isTextarea && field.rows) {
+      input.rows = field.rows;
+      input.classList.add('finput-rows');
+    }
     input.id = controlId;
     describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
@@ -3577,7 +3654,7 @@
       wrap.appendChild(controls);
       bindEvaluationStaleness(wrap, controls);
     }
-    if (field.key === 'theory') wrap.append(...renderFrameworkSuggest());
+    if (field.key === 'theory') wrap.append(...renderFrameworkSuggest(input));
 
     return wrap;
   }
@@ -3665,22 +3742,14 @@
         return td;
       }
 
-      // Jira Project gets its own full-width row (more room for the ticket
-      // combobox and its "KEY — summary" pill) instead of the usual
-      // 2-per-row pairing. Whatever field would have shared a row with it
-      // also gets bumped to its own full-width row rather than left paired
-      // with an empty cell.
+      // Two cells per row. Jira Project used to take a full-width row of its
+      // own here; it lives in the header now, so that exception is gone.
       let i = 0;
       while (i < section.fields.length) {
         const f = section.fields[i];
         const next = section.fields[i + 1];
         const tr = el('tr');
-        if (f.key === 'jiraProject' || (next && next.key === 'jiraProject')) {
-          const td = buildGridCell(f);
-          td.colSpan = 2;
-          tr.appendChild(td);
-          i += 1;
-        } else {
+        {
           tr.appendChild(buildGridCell(f));
           if (next) tr.appendChild(buildGridCell(next));
           i += 2;
@@ -3726,8 +3795,8 @@
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
-      // Last Updated sits in a compact corner slot with no room for guidance,
-      // and it is a computed value nobody is asked to fill in.
+      // The compact corner slot has no room for guidance, and this is a
+      // computed value nobody is asked to fill in.
       const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f, controlId + '-hint');
       let input;
       let control;
@@ -3739,7 +3808,16 @@
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         control = input;
       }
-      if (f.key === 'lastUpdated') setDateInputValue(input, todayIso());
+      const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
+      if (f.key === 'lastUpdated') {
+        setDateInputValue(input, todayIso());
+        // A draft restore replays saved values through this same event, and
+        // the stamp writes the value itself; neither is a person choosing a
+        // date, and only a person should switch the stamping off.
+        input.addEventListener('change', () => {
+          if (!stampingLastUpdated && !draftRestoring) lastUpdatedManual = true;
+        });
+      }
       if (f.type === 'date') {
         control.setAttribute('aria-labelledby', label.id);
       } else {
@@ -3748,48 +3826,57 @@
       }
       describeControl(control, guidance);
       mf.append(label, control);
+      if (jiraStatus) mf.appendChild(jiraStatus);
       if (guidance) label.insertAdjacentElement('afterend', guidance);
       return mf;
     }
 
-    // "Last Updated" sits in the top-right corner, next to "Research Plan"
-    // (bottom-aligned with it via align-items:flex-end on the row) instead
-    // of down in the regular meta grid with the other header fields.
+    // "Last updated" keeps its compact top-right corner slot rather than
+    // sitting in the grid of questions people are asked to answer.
     const topRow = el('div', 'doc-header-top');
-    const supLabel = el('div', 'sup-label');
-    supLabel.textContent = 'Research Plan';
-    topRow.appendChild(supLabel);
-
     const metaGrid = el('div', 'meta-grid');
+    let identifier = null;
     header.meta.forEach((f) => {
       const mf = buildMetaField(f);
       if (f.key === 'lastUpdated') {
         mf.classList.add('mf-compact');
         topRow.appendChild(mf);
+      } else if (f.key === 'jiraProject') {
+        // Directly under the title and the same width as it. It identifies
+        // the plan rather than asking one of the paired questions in the grid
+        // below, and the combobox wants room for its "KEY — summary" result.
+        mf.classList.add('mf-identifier');
+        identifier = mf;
       } else {
         metaGrid.appendChild(mf);
       }
     });
     wrap.appendChild(topRow);
 
-    // The title is its own heading, so its label stays visually hidden — but
-    // a placeholder alone is not an accessible name.
+    // Label and hint outside the control, like every other field: GOV.UK
+    // guidance is that placeholder text is not guidance. It vanishes as soon
+    // as anyone types, is too low-contrast to read comfortably, and gets
+    // mistaken for a value already filled in.
     const titleId = fieldControlId(header.title.key);
-    const titleLabel = el('label', 'visually-hidden', { for: titleId });
+    const titleLabel = el('label', 'flabel', { for: titleId, id: titleId + '-label' });
     titleLabel.textContent = header.title.label || 'Title';
+    const titleHint = renderFieldHint(header.title, titleId + '-hint');
     const titleInput = el('textarea', 'title-inp field-ta', {
       rows: '1',
       id: titleId,
       'data-field': header.title.key,
-      placeholder: header.title.placeholder || 'Title for your research plan',
     });
-    wrap.append(titleLabel, titleInput);
+    describeControl(titleInput, titleHint);
+    wrap.appendChild(titleLabel);
+    if (titleHint) wrap.appendChild(titleHint);
+    wrap.appendChild(titleInput);
+    if (identifier) wrap.appendChild(identifier);
     wrap.appendChild(metaGrid);
 
     return wrap;
   }
 
-  // "Additional Comments" isn't a titled accordion section like the others
+  // The feedback field isn't a titled accordion section like the others
   // — it's a single optional field, so showing an empty box for it by
   // default is more clutter than it's worth. renderField(field) builds the
   // exact same label/textarea/info-tip markup as always (so once revealed
@@ -3818,7 +3905,7 @@
     labelRow.append(labelEl, removeBtn);
 
     const btn = el('button', 'add-btn', { type: 'button' });
-    btn.textContent = '+ Add a comment';
+    btn.textContent = '+ Add feedback';
     btn.addEventListener('click', () => {
       btn.hidden = true;
       fieldEl.hidden = false;
@@ -3840,8 +3927,14 @@
     tables.length = 0;
     doc.appendChild(renderHeader(schema.header));
 
+    // Found by the field's key, not by its section's title. The title used to
+     // be matched literally, so renaming the section would have quietly
+     // demoted this to an ordinary accordion — the same label-to-code coupling
+     // that cost a day in RPA-55, one level up.
     const sections = schema.sections.slice();
-    const commentsIdx = sections.findIndex((s) => s.title === 'Additional Comments');
+    const commentsIdx = sections.findIndex(
+      (s) => s.fields.length === 1 && s.fields[0].key === 'comments'
+    );
     const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
 
     sections.forEach((s) => doc.appendChild(renderSection(s)));
@@ -3859,7 +3952,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 3;
+  const DRAFT_VERSION = 6;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -3973,8 +4066,18 @@
       if (cell.closest('table') || !cell.dataset.fieldKey) return;
       const sel = cell.querySelector('.ssel');
       const other = cell.querySelector('.select-other-input');
+      if (!sel) {
+        // Radio group: reports the same { v, o } a dropdown does, so the draft
+        // format does not fork and an old draft still restores.
+        const checked = cell.querySelector('.radio-input:checked');
+        selects[cell.dataset.fieldKey] = {
+          v: checked ? checked.value : '',
+          o: other ? other.value : '',
+        };
+        return;
+      }
       selects[cell.dataset.fieldKey] = {
-        v: sel && sel.hidden ? '__other__' : (sel ? sel.value : ''),
+        v: sel.hidden ? '__other__' : sel.value,
         o: other ? other.value : '',
       };
     });
@@ -4020,7 +4123,7 @@
       }));
     });
 
-    return { fields, selects, lists, methods, tables: tableData, custom };
+    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual };
   }
 
   // Everything about the plan except the stamp itself, so that re-dating the
@@ -4031,18 +4134,41 @@
     return JSON.stringify(Object.assign({}, draft, { fields }));
   }
 
+  // collectDraft can only report what the form currently renders, so making a
+  // field dormant used to delete anything already saved under it on the very
+  // next autosave — open an older plan, edit its title, and the Requirements
+  // table you filled in months ago is gone (found by Max reviewing PR #22).
+  //
+  // Anything the stored draft holds that this form cannot produce is carried
+  // forward untouched. A rendered-but-empty field still wins: collectDraft
+  // reports it as empty, and an empty answer is an answer. Clear Form removes
+  // the stored draft before resetting, so nothing is resurrected there.
+  function carryUnrendered(draft) {
+    const stored = readDraft();
+    if (!stored) return draft;
+    ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
+      const kept = stored[section];
+      if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return;
+      draft[section] = Object.assign({}, kept, draft[section] || {});
+    });
+    return draft;
+  }
+
   function saveDraft() {
     const store = draftStore();
     if (!store || draftRestoring) return;
     try {
-      let draft = collectDraft();
+      let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
       // scheduled by clicks that change nothing (opening a section, focusing
       // a field), and merely looking at a plan is not editing it.
       const signature = draftContentSignature(draft);
-      if (lastSavedSignature !== null && signature !== lastSavedSignature) {
+      if (lastSavedSignature !== null && signature !== lastSavedSignature && !lastUpdatedManual) {
         setLastUpdatedToday();
-        draft = collectDraft();
+        // Re-collected, so it has to be carried again — the merge above is on
+        // the discarded copy otherwise, which is exactly how the first
+        // attempt at this fix silently did nothing.
+        draft = carryUnrendered(collectDraft());
       }
       lastSavedSignature = signature;
       const payload = Object.assign(
@@ -4123,6 +4249,53 @@
         delete migrated.fields.problem;
       }
     }
+    // v4: RPA-55 renamed three header fields — Researcher, Project Owner and
+    // Report Research became Lead researcher, Project requester and Research
+    // readout. Same situation as v3: the key follows the label through
+    // toCamelKey, so a draft saved before the rename holds keys no live field
+    // answers to, and applyDraft would drop those values without a word.
+    // v6: RPA-55 merged User Groups into Characteristics. Its rows are moved
+    // rather than dropped — somebody's segments are still an answer to the
+    // merged question, and applyDraft ignores any list key that no longer
+    // renders, so without this they would vanish without a word.
+    if (version < 6) {
+      migrated.lists = Object.assign({}, migrated.lists);
+      const groups = migrated.lists.userGroups || [];
+      if (groups.length) {
+        const existing = migrated.lists.characteristics || [];
+        const seen = new Set(existing.map((v) => String(v).trim().toLowerCase()));
+        migrated.lists.characteristics = existing.concat(
+          groups.filter((v) => String(v).trim() && !seen.has(String(v).trim().toLowerCase()))
+        );
+      }
+      delete migrated.lists.userGroups;
+    }
+    // v5: RPA-55 renamed Title to Research title, and Last Updated to Last
+    // updated (label only — that key was already lastUpdated).
+    if (version < 5) {
+      migrated.fields = Object.assign({}, migrated.fields);
+      const renamedInV5 = { title: 'researchTitle' };
+      Object.keys(renamedInV5).forEach((oldKey) => {
+        const newKey = renamedInV5[oldKey];
+        if (!Object.prototype.hasOwnProperty.call(migrated.fields, oldKey)) return;
+        if (!migrated.fields[newKey]) migrated.fields[newKey] = migrated.fields[oldKey];
+        delete migrated.fields[oldKey];
+      });
+    }
+    if (version < 4) {
+      migrated.fields = Object.assign({}, migrated.fields);
+      const renamedInV4 = {
+        researcher: 'leadResearcher',
+        projectOwner: 'projectRequester',
+        reportResearch: 'researchReadout',
+      };
+      Object.keys(renamedInV4).forEach((oldKey) => {
+        const newKey = renamedInV4[oldKey];
+        if (!Object.prototype.hasOwnProperty.call(migrated.fields, oldKey)) return;
+        if (!migrated.fields[newKey]) migrated.fields[newKey] = migrated.fields[oldKey];
+        delete migrated.fields[oldKey];
+      });
+    }
     return migrated;
   }
 
@@ -4134,6 +4307,7 @@
   }
 
   function applyDraft(draft) {
+    lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     // Lists first — Research Questions drives both Outcomes rows and Methods
     // groups, so its rows must exist before either is restored.
     const orderedListKeys = Object.keys(draft.lists || {})
@@ -4190,6 +4364,18 @@
       const sel = cell.querySelector('.ssel');
       const otherRow = cell.querySelector('.select-other-row');
       const other = cell.querySelector('.select-other-input');
+      if (!sel) {
+        // Radio group. A draft saved while this was a dropdown has the same
+        // shape, so it restores here with no migration.
+        const radios = Array.from(cell.querySelectorAll('.radio-input'));
+        radios.forEach((r) => { r.checked = false; });
+        const match = radios.find((r) => r.value === snap.v);
+        if (match) match.checked = true;
+        const wantsOther = snap.v === '__other__';
+        if (otherRow) otherRow.hidden = !wantsOther;
+        if (other) other.value = wantsOther ? (snap.o || '') : '';
+        return;
+      }
       if (snap.v === '__other__') {
         if (sel) {
           sel.hidden = true;
@@ -4283,12 +4469,19 @@
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     clearDraft();
     lastSavedSignature = null;
+    lastUpdatedManual = false;
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
     });
+    // Radios are neither text inputs nor textareas, so the loops above miss
+    // them: a Sample Size chosen before the reset stayed selected and was
+    // saved into the next plan (found by Max reviewing PR #22). Their "Other"
+    // reveal is closed with them.
+    doc.querySelectorAll('.radio-input').forEach((el) => { el.checked = false; });
+    doc.querySelectorAll('.radio-group .select-other-row').forEach((row) => { row.hidden = true; });
 
     tables.forEach(({ id }) => {
       const tbody = document.getElementById(id).querySelector('tbody');

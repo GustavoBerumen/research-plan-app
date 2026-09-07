@@ -64,32 +64,53 @@ test('renders the complete form from the real index, template, rubric, and metho
   ]);
   assert.equal(document.querySelector('.doc-loading'), null);
   assert.equal(document.querySelectorAll('.doc-header').length, 1);
-  assert.equal(document.querySelector('[data-field="title"]').placeholder, 'Title for your research plan');
+  // RPA-55: the title's guidance is a hint outside the control, not a
+  // placeholder inside it.
+  assert.equal(document.querySelector('[data-field="researchTitle"]').hasAttribute('placeholder'), false);
+  const titleHint = document.querySelector('#field-researchTitle-hint');
+  assert.ok(titleHint && titleHint.textContent.trim().length > 0, 'the title renders a hint');
+  assert.equal(
+    document.querySelector('[data-field="researchTitle"]').getAttribute('aria-describedby'),
+    'field-researchTitle-hint'
+  );
 
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
-    ['Alignment', 'Project Context', 'Research', 'Methodology', 'Execution', 'Resources']
+    // RPA-55: opens with what a researcher can write; Alignment (identifiers
+    // and sign-off) closes; the two deadlines moved up into the header.
+    ['Context', 'Research', 'Methodology', 'Execution', 'Alignment']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['6 fields', '3 fields', '4 fields', '5 fields', '3 fields', '2 fields']
+    ['3 fields', '4 fields', '4 fields', '4 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last Updated', 'Researcher', 'Project Owner',
-      'Project', 'Jira Project', 'Project Decision', 'Report Research',
-      'Sign off: Project Owner', 'Sign off: Researcher',
+      'Last updated', 'Research title', 'Jira Project',
+      'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
-      'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
-      'Requirements', 'Stage Timeline', 'Action Points',
-      'Previous Knowledge', 'Comments',
+      'Theory', 'Methods', 'Characteristics', 'Sample Size',
+      'Stage Timeline', 'Action Points',
+      'Previous Knowledge',
+      'Sign off: Lead researcher', 'Sign off: Project requester',
+      'Feedback',
     ]
   );
+  // Column keys and types are in the DOM so they can be checked and styled.
+  // The stylesheet sizes a column by what it holds — a status column is a short
+  // select — rather than by the table's id, which would tie CSS to a field key
+  // that no test scans for.
+  assert.deepEqual(
+    Array.from(document.querySelectorAll('#actionPoints-table thead th'))
+      .map((th) => [th.dataset.colKey, th.dataset.colType]),
+    [['action', 'prose'], ['responsible', 'prose'], ['status', 'status'], [undefined, undefined]]
+  );
+
   assert.deepEqual(
     Array.from(document.querySelectorAll('.dtbl')).map((table) => table.id),
-    ['requirements-table', 'stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']
+    ['stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']
   );
   assert.equal(
     document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
@@ -97,6 +118,30 @@ test('renders the complete form from the real index, template, rubric, and metho
     '+ Add additional section'
   );
   assert.equal(document.querySelectorAll('.eval-controls').length, 7);
+
+  // RPA-55: a textarea can declare how tall it starts, in the template, as a
+  // hint about how much answer its question expects. Autosize grows it from
+  // there; a field that declares nothing keeps the shared default.
+  assert.deepEqual(
+    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'theory', 'comments'].map((key) => {
+      const ta = document.querySelector(`[data-field="${key}"]`);
+      return [key, ta.rows, ta.classList.contains('finput-rows')];
+    }),
+    [
+      ['background', 2, true],
+      ['goal', 2, true],
+      ['problemStatement', 2, true],
+      ['objective', 2, true],
+      ['hypothesis', 1, true],
+      ['theory', 2, true],
+      // Declares nothing, so it keeps the shared default. 2 is the browser's
+      // own default for a textarea with no rows attribute, not a declared one,
+      // which is why the class matters more than the number here. Comments is
+      // the control rather than Project: Project is a grid cell, built by
+      // buildGridCell, which sets rows itself.
+      ['comments', 2, false],
+    ]
+  );
   assert.equal(document.querySelector('.field-group-title').textContent, 'Participants');
 
   const methodInput = document.querySelector('.methods-group .list-input');
@@ -176,11 +221,11 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
   assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
 });
 
-test('round-trips a draft-v3 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft-v6 with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
-  setValue(window, document.querySelector('[data-field="title"]'), 'Checkout study');
+  setValue(window, document.querySelector('[data-field="researchTitle"]'), 'Checkout study');
   setValue(window, document.querySelector('[data-field="background"]'), 'Current checkout context');
   setValue(window, listInputs(document, 'researchQuestions')[0], 'Question one');
   addListRow(document, 'researchQuestions');
@@ -196,10 +241,10 @@ test('round-trips a draft-v3 with Research Questions restored before dependent r
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
     timeout: 1500,
-    message: 'The v3 draft was not saved',
+    message: 'The v6 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 3);
+  assert.equal(saved.version, 6);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
@@ -208,7 +253,7 @@ test('round-trips a draft-v3 with Research Questions restored before dependent r
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());
-  assert.equal(restored.document.querySelector('[data-field="title"]').value, 'Checkout study');
+  assert.equal(restored.document.querySelector('[data-field="researchTitle"]').value, 'Checkout study');
   assert.equal(restored.document.querySelector('[data-field="background"]').value, 'Current checkout context');
   assert.deepEqual(listInputs(restored.document, 'researchQuestions').map((input) => input.value), [
     'Question one',

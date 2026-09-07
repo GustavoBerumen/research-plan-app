@@ -13,6 +13,38 @@ const REAL_TEXT_ASSETS = new Set([
   'research-methods.md',
 ]);
 
+// Fixture helpers for tests that need a template slightly different from the
+// live one. They used to patch it with an exact string like
+// "Methods (list):", which broke the moment anything was added to that line —
+// adding key= to every field broke two of them at once. Matching on the
+// field's declared key survives label, flag and hint edits.
+function fieldLinePattern(key) {
+  return new RegExp('^([^\\n]*\\()([^)]*\\bkey=' + key + ')(\\)[^\\n]*)$', 'm');
+}
+
+// Adds a flag ("eval", "optional", ...) to one field's spec.
+function withFieldFlag(template, key, flag) {
+  const pattern = fieldLinePattern(key);
+  if (!pattern.test(template)) {
+    throw new Error(`No field declares key=${key}, so the fixture cannot add "${flag}" to it`);
+  }
+  return template.replace(pattern, (whole, open, spec, close) => open + spec + ', ' + flag + close);
+}
+
+// Brings a dormant (commented-out) field back, with its Hint line.
+function withFieldUncommented(template, key) {
+  const pattern = new RegExp(
+    '^<!--\\s*([^\\n]*\\bkey=' + key + '[^\\n]*?)\\s*-->$'
+      + '(\\n<!--\\s*(Hint:[^\\n]*?)\\s*-->$)?',
+    'm'
+  );
+  if (!pattern.test(template)) {
+    throw new Error(`No dormant field declares key=${key}, so the fixture cannot enable it`);
+  }
+  return template.replace(pattern, (whole, field, hintLine, hint) =>
+    hint ? field + '\n  ' + hint : field);
+}
+
 function response(body, status = 200) {
   const text = typeof body === 'string' ? body : JSON.stringify(body);
   return {
@@ -54,6 +86,7 @@ async function bootApp(options = {}) {
   const jsdomErrors = [];
   const alerts = [];
   const evaluationRequests = [];
+  const frameworkRequests = [];
   virtualConsole.on('jsdomError', (error) => jsdomErrors.push(error));
 
   const dom = new JSDOM(INDEX_HTML, {
@@ -120,6 +153,17 @@ async function bootApp(options = {}) {
       return response(await options.evaluate(request.body, request));
     }
 
+    if (url.origin === window.location.origin && url.pathname === '/api/suggest-framework') {
+      const request = {
+        method: init.method || 'GET',
+        headers: init.headers || {},
+        body: JSON.parse(init.body || '{}'),
+      };
+      frameworkRequests.push(request);
+      if (!options.suggestFramework) throw new Error('No framework-suggestion mock was configured');
+      return response(await options.suggestFramework(request.body, request));
+    }
+
     throw new Error('Unexpected network request in characterization test: ' + url.href);
   };
 
@@ -141,7 +185,10 @@ async function bootApp(options = {}) {
   }
 
   await waitFor(
-    () => document.querySelector('[data-field="title"]') || document.querySelector('.doc-error'),
+    // .title-inp, not [data-field="title"]: field keys are derived from
+    // labels, so keying this on one means a copy edit in the template stops
+    // every booting test with a timeout instead of a useful failure.
+    () => document.querySelector('.title-inp') || document.querySelector('.doc-error'),
     { message: 'The real application did not finish rendering' }
   );
   const loadError = document.querySelector('.doc-error');
@@ -152,6 +199,7 @@ async function bootApp(options = {}) {
     document,
     dom,
     evaluationRequests,
+    frameworkRequests,
     executedScripts,
     jsdomErrors,
     scriptSources,
@@ -164,6 +212,8 @@ async function bootApp(options = {}) {
 
 module.exports = {
   DRAFT_KEY,
+  withFieldFlag,
+  withFieldUncommented,
   bootApp,
   listInputs,
   setValue,

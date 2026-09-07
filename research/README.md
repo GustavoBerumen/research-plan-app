@@ -43,8 +43,10 @@ the Drive folder is the archive, this repo is the map.
 
 ```
 research/
-  README.md        This index
-  notes/           Synthesis notes, one per source or theme
-  decisions/       Numbered decision records (context / decision / consequences)
-  images/          Small screenshots only — keep large sets in Drive
+  README.md            This index
+  field-audit.md       Field-by-field audit of the form (RPA-55)
+  field-audit-gen.py   Drift-checks that audit against research-plan-template.md
+  notes/               Synthesis notes, one per source or theme
+  decisions/           Numbered decision records (context / decision / consequences)
+  images/              Small screenshots only — keep large sets in Drive
 ```
