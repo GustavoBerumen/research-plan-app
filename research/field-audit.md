@@ -118,8 +118,8 @@ high effort* is where the genuine cuts live.
 |---|---|---|---|---|---|
 | **Project**<br><sub>asks: Initiative</sub> | `text` | Ties the plan to the initiative it serves. | Researcher, from the project side. Low risk. | Yes — to hand. | **keep** |
 | **Jira Project**<br><sub>asks: Ticket reference</sub> | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
-| **Sign off: Project Owner**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — to the review step. |
-| **Sign off: Researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
+| **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
+| **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — to the review step. |
 
 ## Context
 
@@ -197,7 +197,7 @@ Three clusters, in descending order of how much they matter:
    about status is wrong the day after it is signed. This is a *move*
    (to wherever tracking actually happens), not a cut.
 
-3. **Sign off: Project Owner names an answerer who is not the filler**, in section
+3. **Sign off: Project requester names an answerer who is not the filler**, in section
    two of seven. The template states the problem in its own label. This is the
    strongest evidence for the relocation RPA-55 already decided, and it did not
    need the audit to find it — the field was self-evidently misplaced.
@@ -325,7 +325,7 @@ the problem to solve, and splitting Approvals out was the proposal.
 Two items RPA-55 records as already decided, carried here so the audit does not
 relitigate them:
 
-- **Sign off: Project Owner / Sign off: Researcher — _move_.** They sit in
+- **Sign off: Lead researcher / Sign off: Project requester — _move_.** They sit in
   Alignment, section two, so people approve a plan that does not yet exist. They
   belong in a review step at the end. Project decision and Research readout are
   planning inputs, not approvals, and have since moved to the header.

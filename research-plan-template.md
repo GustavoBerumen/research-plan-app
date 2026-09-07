@@ -156,10 +156,16 @@ Project (textarea, key=project): Initiative
 Jira Project (text, key=jiraProject): Ticket reference
   Hint: Links this plan to its tracking ticket in Jira.
 <!-- Jira Research (text, key=jiraResearch): Ticket reference -->
-Sign off: Project Owner (text, key=signOffProjectOwner): Type initials
-  Hint: Project Owner approval — type initials and the date is added automatically.
-Sign off: Researcher (text, key=signOffResearcher): Type initials
-  Hint: Researcher approval — type initials and the date is added automatically.
+<!-- The two sign-offs name the same two people as the header, in the same
+     order, so a reader is not left wondering whether "Project Owner" and
+     "Project requester" are different roles (RPA-55; Max raised it reviewing
+     PR #22). The keys keep their original spelling on purpose: a key is an
+     identifier, not a description, and now that the template pins them a
+     label can be reworded without touching stored drafts. -->
+Sign off: Lead researcher (text, key=signOffResearcher): Type initials
+  Hint: Lead researcher approval — type initials and the date is added automatically.
+Sign off: Project requester (text, key=signOffProjectOwner): Type initials
+  Hint: Project requester approval — type initials and the date is added automatically.
 
 # Additional Comments
 

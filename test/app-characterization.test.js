@@ -94,7 +94,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Theory', 'Methods', 'Characteristics', 'Sample Size',
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
-      'Project', 'Jira Project', 'Sign off: Project Owner', 'Sign off: Researcher',
+      'Project', 'Jira Project', 'Sign off: Lead researcher', 'Sign off: Project requester',
       'Comments',
     ]
   );
