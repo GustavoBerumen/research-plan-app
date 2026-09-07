@@ -167,7 +167,7 @@ Sign off: Lead researcher (text, key=signOffResearcher): Type initials
 Sign off: Project requester (text, key=signOffProjectOwner): Type initials
   Hint: Project requester approval — type initials and the date is added automatically.
 
-# Additional Comments
+# Feedback
 
-Comments (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
+Feedback (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
   Hint: Anything else worth noting that didn't fit elsewhere in this plan.

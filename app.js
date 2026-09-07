@@ -3845,7 +3845,7 @@
     return wrap;
   }
 
-  // "Additional Comments" isn't a titled accordion section like the others
+  // The feedback field isn't a titled accordion section like the others
   // — it's a single optional field, so showing an empty box for it by
   // default is more clutter than it's worth. renderField(field) builds the
   // exact same label/textarea/info-tip markup as always (so once revealed
@@ -3874,7 +3874,7 @@
     labelRow.append(labelEl, removeBtn);
 
     const btn = el('button', 'add-btn', { type: 'button' });
-    btn.textContent = '+ Add a comment';
+    btn.textContent = '+ Add feedback';
     btn.addEventListener('click', () => {
       btn.hidden = true;
       fieldEl.hidden = false;
@@ -3896,8 +3896,14 @@
     tables.length = 0;
     doc.appendChild(renderHeader(schema.header));
 
+    // Found by the field's key, not by its section's title. The title used to
+     // be matched literally, so renaming the section would have quietly
+     // demoted this to an ordinary accordion — the same label-to-code coupling
+     // that cost a day in RPA-55, one level up.
     const sections = schema.sections.slice();
-    const commentsIdx = sections.findIndex((s) => s.title === 'Additional Comments');
+    const commentsIdx = sections.findIndex(
+      (s) => s.fields.length === 1 && s.fields[0].key === 'comments'
+    );
     const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
 
     sections.forEach((s) => doc.appendChild(renderSection(s)));

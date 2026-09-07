@@ -95,7 +95,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
       'Jira Project', 'Sign off: Lead researcher', 'Sign off: Project requester',
-      'Comments',
+      'Feedback',
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.

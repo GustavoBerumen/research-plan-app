@@ -97,7 +97,8 @@ high effort* is where the genuine cuts live.
 - Action Points → Responsible
 - Previous Knowledge → Name
 - Previous Knowledge → File
-- Comments
+- Feedback *(renamed from Comments: Gus wants it used for feedback
+  on the plan, which names a writer but not yet a reader)*
 
 ## Header (document meta)
 
@@ -164,11 +165,11 @@ high effort* is where the genuine cuts live.
 *The Resources section was folded into Execution (RPA-55): two fields did not
 earn a section of their own.*
 
-## Additional Comments
+## Feedback
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Comments**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. |  |
+| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. |  |
 
 ## First pass: who has the answer?
 
