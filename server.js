@@ -1144,10 +1144,10 @@ async function handleSuggestMethods(req, res) {
   }
 }
 
-// ---------- dynamic placeholder suggestion (Characteristics / User Groups) ----------
+// ---------- dynamic placeholder suggestion (Characteristics) ----------
 const PARTICIPANT_PLACEHOLDER_TOOL = {
   name: 'submit_participant_placeholders',
-  description: 'Suggest short example phrases for the Characteristics and User Groups fields, grounded in the research context provided.',
+  description: 'Suggest a short example phrase for the Characteristics field, grounded in the research context provided.',
   input_schema: {
     type: 'object',
     properties: {
@@ -1156,13 +1156,8 @@ const PARTICIPANT_PLACEHOLDER_TOOL = {
         maxLength: 60,
         description: 'A noun phrase describing a KIND OF PERSON to recruit for THIS specific research — an adjective/behaviour plus a plural noun for the people themselves (e.g. "Frequent mobile shoppers", "Budget-conscious first-time buyers"), not a description of the problem or event. Just the phrase itself — no "e.g." prefix, no trailing period, under 8 words.',
       },
-      userGroups: {
-        type: 'string',
-        maxLength: 60,
-        description: 'A specific user segment relevant to THIS specific research (e.g. "New customers"). Just the phrase itself — no "e.g." prefix, no trailing period, under 8 words.',
-      },
     },
-    required: ['characteristics', 'userGroups'],
+    required: ['characteristics'],
   },
 };
 
@@ -1173,8 +1168,8 @@ function buildParticipantPlaceholderPrompt(ctx) {
   if (ctx.objective) parts.push(`Objective:\n"""\n${ctx.objective}\n"""`);
   if (ctx.researchQuestions) parts.push(`Research Questions:\n"""\n${ctx.researchQuestions}\n"""`);
   return 'You are writing example placeholder text (grey hint text shown before the user types anything — not real ' +
-    'answers) for two fields in a UX research plan form: "Characteristics" (participant traits/behaviours) and ' +
-    '"User Groups" (user segments).\n\n' +
+    'answers) for the "Characteristics" field in a UX research plan form: who the study needs to recruit, covering ' +
+    'both qualifying traits or behaviours and any distinct user segment.\n\n' +
     parts.join('\n\n') + '\n\n' +
     'Based on this context, write one short, concrete example for each field — specific to THIS research, not a ' +
     'generic placeholder. Capitalise the first word. Use British English spelling throughout (e.g. "prioritise", ' +
@@ -1223,15 +1218,13 @@ async function handleSuggestParticipantPlaceholders(req, res) {
     if (!toolUse) throw new Error('Model did not return structured placeholders');
 
     const characteristics = typeof toolUse.input.characteristics === 'string' ? toolUse.input.characteristics.trim() : '';
-    const userGroups = typeof toolUse.input.userGroups === 'string' ? toolUse.input.userGroups.trim() : '';
-    if (!characteristics || !userGroups) throw new Error('Model returned incomplete placeholders — please try again');
+    if (!characteristics) throw new Error('Model returned incomplete placeholders — please try again');
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     // "e.g. " prefix is added here, not trusted from the model, so the
     // format always exactly matches the static placeholders it's replacing.
     res.end(JSON.stringify({
       characteristics: 'e.g. ' + capitalizeFirst(characteristics),
-      userGroups: 'e.g. ' + capitalizeFirst(userGroups),
     }));
   } catch (err) {
     console.error('Participant placeholder suggestion failed:', err);

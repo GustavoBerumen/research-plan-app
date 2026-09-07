@@ -4,7 +4,7 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 25 of 32 verdicts settled.** The field list,
+**Status: questions 1–3 drafted; 26 of 31 verdicts settled.** The field list,
 types and hint text are generated from the template. Question 1 is filled from
 what the app demonstrably consumes; questions 2 and 3 from the template, the
 field order and how the app behaves. The 8 rows still open all have
@@ -60,19 +60,21 @@ Fill in as verdicts are reached.
 |---|---|
 | keep | 17 |
 | cut | 1 |
-| merge | 0 |
+| merge | 1 |
 | optional | 3 |
 | move | 4 |
-| undecided | 7 |
-| **total** | **32** |
+| undecided | 5 |
+| **total** | **31** |
 
-32 rather than 27: the three fixed-column tables are audited per column, per the
+31 rather than 26: the three fixed-column tables are audited per column, per the
 unit rule above. Requirements left the sheet when it was made dormant — hidden,
 not decided; its reasoning is under *Already dormant*.
 
 ## For the readers
 
-The rows below are the whole of what is still open. Every one of them passes
+The rows below are the whole of what is still open — the five with no verdict
+at all, plus Characteristics, whose merge is settled but whose keep-or-cut is
+not. Every one of them passes
 question 2 (someone knows the answer) and fails question 1 in the only way the
 code can measure it: **nothing in the app consumes the value.** That is not a
 verdict. A field can matter to a human reader and be used by nothing in the
@@ -88,8 +90,9 @@ to the suggesters). Anything nobody can justify is the cut list. Several of
 these are also the hardest fields to answer (question 3) — *no consumer and
 high effort* is where the genuine cuts live.
 
-- Characteristics
-- User Groups
+- Characteristics *(merged with User Groups; whether the merged field earns
+  its place is the part still open, which is why it is here and not in the
+  undecided count above)*
 - Action Points → Action
 - Action Points → Responsible
 - Previous Knowledge → Name
@@ -141,8 +144,7 @@ high effort* is where the genuine cuts live.
 |---|---|---|---|---|---|
 | **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> | Grounds the design; the framework suggester writes into it. | Researcher. | Often not to hand. Already optional, and the suggester exists precisely because recall is unreliable here. | **optional** — confirmed. Rarely to hand. |
 | **Methods**<br><sub>asks: Search or type a method</sub> | `list` | The study design itself — what the plan exists to state. | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. | **keep** — core expertise, well supported. |
-| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: e.g. Frequent mobile shoppers</sub> | `list` | ⚠ No in-app consumer. Presumably recruitment screening — needs a reader to confirm. | Researcher; recruitment/ops may hold the real numbers. | Roughly, yes. Precise figures usually sit with recruitment. |  |
-| **User Groups**<br><sub>in *Participants*</sub><br><sub>asks: e.g. New customers</sub> | `list` | ⚠ No in-app consumer. Overlaps Characteristics; a reader should say whether both are needed. | Researcher, though segment names may be owned by product. | Yes, though segment names may need product to confirm. |  |
+| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **merge** — done. User Groups asked the same question: both wanted a short noun phrase naming a kind of person, and "Frequent mobile shoppers" answered either. Whether the merged field earns its place is still open. |
 | **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `select` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. |
 
 ## Execution

@@ -2738,7 +2738,7 @@
     );
   }
 
-  // ---------- dynamic placeholders (Characteristics / User Groups) ----------
+  // ---------- dynamic placeholders (Characteristics) ----------
   // Generated from Background/Goal/Objective/Research Questions, but only
   // ever written to .placeholder — never .value — so this behaves exactly
   // like a normal HTML placeholder: visible only while empty, gone the
@@ -2770,7 +2770,7 @@
     return a.background !== b.background || a.goal !== b.goal || a.objective !== b.objective || a.researchQuestions !== b.researchQuestions;
   }
 
-  let participantPlaceholderCache = null; // { inputs, characteristics, userGroups }
+  let participantPlaceholderCache = null; // { inputs, characteristics }
   let participantPlaceholderPromise = null; // in-flight request, de-duped across near-simultaneous focus events
 
   function ensureParticipantPlaceholders() {
@@ -2792,7 +2792,7 @@
         return data;
       });
     }).then((data) => {
-      const result = { inputs: ctx, characteristics: data.characteristics, userGroups: data.userGroups };
+      const result = { inputs: ctx, characteristics: data.characteristics };
       participantPlaceholderCache = result;
       return result;
     }).catch((err) => {
@@ -2805,21 +2805,13 @@
     return participantPlaceholderPromise;
   }
 
-  // Applies to every currently-empty row of both fields, not just the one
-  // that was focused — a single API call covers both fields, so whichever
-  // one the user reaches next already has the fresh hint waiting.
+  // Applies to every currently-empty row, not just the one that was focused,
+  // so a row added later already has the fresh hint waiting.
   function applyParticipantPlaceholders(result) {
-    if (!result) return;
-    if (result.characteristics) {
-      doc.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input').forEach((inp) => {
-        if (!inp.value.trim()) inp.placeholder = result.characteristics;
-      });
-    }
-    if (result.userGroups) {
-      doc.querySelectorAll('.list-rows[data-list-key="userGroups"] .list-input').forEach((inp) => {
-        if (!inp.value.trim()) inp.placeholder = result.userGroups;
-      });
-    }
+    if (!result || !result.characteristics) return;
+    doc.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input').forEach((inp) => {
+      if (!inp.value.trim()) inp.placeholder = result.characteristics;
+    });
   }
 
   function attachDynamicPlaceholder(inp) {
@@ -2898,7 +2890,7 @@
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
-      if (field.key === 'characteristics' || field.key === 'userGroups') attachDynamicPlaceholder(inp);
+      if (field.key === 'characteristics') attachDynamicPlaceholder(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
       if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
@@ -3912,7 +3904,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 5;
+  const DRAFT_VERSION = 6;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -4181,6 +4173,22 @@
     // readout. Same situation as v3: the key follows the label through
     // toCamelKey, so a draft saved before the rename holds keys no live field
     // answers to, and applyDraft would drop those values without a word.
+    // v6: RPA-55 merged User Groups into Characteristics. Its rows are moved
+    // rather than dropped — somebody's segments are still an answer to the
+    // merged question, and applyDraft ignores any list key that no longer
+    // renders, so without this they would vanish without a word.
+    if (version < 6) {
+      migrated.lists = Object.assign({}, migrated.lists);
+      const groups = migrated.lists.userGroups || [];
+      if (groups.length) {
+        const existing = migrated.lists.characteristics || [];
+        const seen = new Set(existing.map((v) => String(v).trim().toLowerCase()));
+        migrated.lists.characteristics = existing.concat(
+          groups.filter((v) => String(v).trim() && !seen.has(String(v).trim().toLowerCase()))
+        );
+      }
+      delete migrated.lists.userGroups;
+    }
     // v5: RPA-55 renamed Title to Research title, and Last Updated to Last
     // updated (label only — that key was already lastUpdated).
     if (version < 5) {

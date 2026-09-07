@@ -61,11 +61,9 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(document.querySelector('[data-field="projectDecision"]').type, 'date');
   assert.equal(document.querySelector('[data-field="researchReadout"]').type, 'date');
 
-  for (const key of ['characteristics', 'userGroups']) {
-    const input = listInputs(document, key)[0];
-    assert.equal(input.tagName, 'TEXTAREA');
-    assert.ok(input.classList.contains('prose-input'));
-  }
+  const characteristicsInput = listInputs(document, 'characteristics')[0];
+  assert.equal(characteristicsInput.tagName, 'TEXTAREA');
+  assert.ok(characteristicsInput.classList.contains('prose-input'));
   assert.equal(listInputs(document, 'methods')[0].tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="sampleSize"]').tagName, 'SELECT');
 
@@ -123,10 +121,6 @@ test('prose rows grow independently after typing or pasting and shrink after del
   assert.equal(listRemoveButtons[0].disabled, true);
   assert.ok(listRemoveButtons[0].classList.contains('list-remove-spacer'));
   assert.equal(listRemoveButtons[1].disabled, false);
-
-  const userGroup = listInputs(document, 'userGroups')[0];
-  pasteValue(window, userGroup, LONG_PROSE);
-  assert.ok(heightOf(userGroup) > initialProjectHeight);
 
   deleteValue(window, characteristics[0]);
   assert.equal(heightOf(characteristics[0]), heightOf(characteristics[1]));
@@ -200,7 +194,6 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
     selects: {},
     lists: {
       characteristics: [LONG_PROSE, SHORT_PROSE],
-      userGroups: [LONG_PROSE],
     },
     methods: [],
     tables: {
@@ -229,7 +222,6 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   const characteristics = listInputs(document, 'characteristics');
   assert.deepEqual(characteristics.map((input) => input.value), [LONG_PROSE, SHORT_PROSE]);
   assert.ok(heightOf(characteristics[0]) > heightOf(characteristics[1]));
-  assert.equal(listInputs(document, 'userGroups')[0].value, LONG_PROSE);
 
   const knowledgeRows = document.querySelectorAll('#previousKnowledge-table tbody tr');
   assert.equal(knowledgeRows.length, 2);

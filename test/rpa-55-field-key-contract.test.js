@@ -127,3 +127,54 @@ test('a draft saved before the RPA-55 header renames restores into the new field
   // Untouched by any rename, and proof the migration moves only what it names.
   assert.equal(valueOf('projectDecision'), '2026-09-25');
 });
+
+test('a draft with User Groups keeps them when the field is merged away', async (t) => {
+  const app = await bootApp({
+    draft: {
+      version: 5,
+      savedAt: '2026-09-01T09:00:00.000Z',
+      fields: {},
+      selects: {},
+      lists: {
+        characteristics: ['Frequent mobile shoppers'],
+        userGroups: ['New customers', 'Returning customers'],
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  // User Groups no longer renders, and applyDraft skips list keys with no
+  // list to restore into — so without the migration these two would vanish.
+  assert.equal(app.document.querySelector('.list-rows[data-list-key="userGroups"]'), null);
+
+  const values = Array.from(
+    app.document.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input')
+  ).map((input) => input.value);
+  assert.deepEqual(values, [
+    'Frequent mobile shoppers',
+    'New customers',
+    'Returning customers',
+  ], 'the segments are appended to what was already there, in order');
+});
+
+test('merging User Groups does not duplicate a value already present', async (t) => {
+  const app = await bootApp({
+    draft: {
+      version: 5,
+      savedAt: '2026-09-01T09:00:00.000Z',
+      fields: {},
+      selects: {},
+      lists: {
+        characteristics: ['New customers'],
+        userGroups: ['new customers', '', 'Lapsed users'],
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const values = Array.from(
+    app.document.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input')
+  ).map((input) => input.value);
+  assert.deepEqual(values, ['New customers', 'Lapsed users'],
+    'case-insensitive duplicate dropped, and the blank row with it');
+});

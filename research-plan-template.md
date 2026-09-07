@@ -117,10 +117,12 @@ Methods (list):
 
 ## Participants
 
+<!-- Characteristics and User Groups were two fields until RPA-55. They asked
+     the same thing in practice: both wanted a short noun phrase naming a kind
+     of person, and "Frequent mobile shoppers" answered either. Merged rather
+     than reworded, because nothing in the app consumed either value. -->
 Characteristics (list, prose): 
-  Hint: Specific criteria, behaviours, or background that qualify people to participate in the study.
-User Groups (list, prose): e.g. New customers
-  Hint: The distinct user segments you want represented among participants.
+  Hint: Who you need to recruit — the criteria that qualify someone for this study, and any distinct segments you want represented.
 Sample Size (select): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: How many participants you plan to recruit for this study.
 
