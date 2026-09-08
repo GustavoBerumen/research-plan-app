@@ -17,7 +17,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue } = require('./app-harness');
+const { bootApp, setValue, DRAFT_KEY } = require('./app-harness');
 
 const APP_JS = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 
@@ -191,7 +191,13 @@ test('a draft saved before the RPA-55 header renames restores into the new field
   assert.equal(valueOf('projectDecision'), '2026-09-25');
 });
 
-test('a draft with User Groups keeps them when the field is merged away', async (t) => {
+test('a draft saved before the merge finds User Groups still there', async (t) => {
+  // RPA-55 merged these two and then reversed it: a screener criterion filters
+  // who is eligible, a segment sets who must be represented among those who
+  // are. While they were one field a migration folded userGroups into
+  // characteristics. That fold is gone, and its absence is the behaviour under
+  // test — running it now would move somebody's segments into the wrong field
+  // and delete the key they came from.
   const app = await bootApp({
     draft: {
       version: 5,
@@ -206,38 +212,59 @@ test('a draft with User Groups keeps them when the field is merged away', async 
   });
   t.after(() => app.close());
 
-  // User Groups no longer renders, and applyDraft skips list keys with no
-  // list to restore into — so without the migration these two would vanish.
-  assert.equal(app.document.querySelector('.list-rows[data-list-key="userGroups"]'), null);
-
-  const values = Array.from(
-    app.document.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input')
+  const listValues = (key) => Array.from(
+    app.document.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')
   ).map((input) => input.value);
-  assert.deepEqual(values, [
-    'Frequent mobile shoppers',
-    'New customers',
-    'Returning customers',
-  ], 'the segments are appended to what was already there, in order');
+
+  assert.ok(app.document.querySelector('.list-rows[data-list-key="userGroups"]'),
+    'User Groups renders again');
+  assert.deepEqual(listValues('userGroups'), ['New customers', 'Returning customers'],
+    'the segments stay segments');
+  assert.deepEqual(listValues('characteristics'), ['Frequent mobile shoppers'],
+    'and nothing was folded in on top of them');
 });
 
-test('merging User Groups does not duplicate a value already present', async (t) => {
-  const app = await bootApp({
-    draft: {
-      version: 5,
-      savedAt: '2026-09-01T09:00:00.000Z',
-      fields: {},
-      selects: {},
-      lists: {
-        characteristics: ['New customers'],
-        userGroups: ['new customers', '', 'Lapsed users'],
-      },
-    },
-  });
+test('the two fields ask different questions, and say so', async (t) => {
+  // The merge argued that both wanted a short noun phrase naming a kind of
+  // person. True of the format, wrong about the function — and the hints are
+  // the only thing keeping them from collapsing back together, so they are
+  // worth pinning. If a rewording ever makes both say the same thing again,
+  // this is the test that should object.
+  const app = await bootApp();
   t.after(() => app.close());
 
-  const values = Array.from(
-    app.document.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input')
-  ).map((input) => input.value);
-  assert.deepEqual(values, ['New customers', 'Lapsed users'],
-    'case-insensitive duplicate dropped, and the blank row with it');
+  const hintFor = (key) => {
+    const list = app.document.querySelector('.list-rows[data-list-key="' + key + '"]');
+    return list.closest('.field').querySelector('.field-hint-text').textContent.trim();
+  };
+
+  const characteristics = hintFor('characteristics');
+  const userGroups = hintFor('userGroups');
+  assert.notEqual(characteristics, userGroups);
+  assert.match(characteristics, /eligib/i, 'Characteristics is about who qualifies');
+  assert.match(userGroups, /represent/i, 'User Groups is about who must be present');
+});
+
+test('both lists save and come back under their own keys', async (t) => {
+  const app = await bootApp();
+  const { document, window } = app;
+
+  const inputFor = (key) => document
+    .querySelector('.list-rows[data-list-key="' + key + '"] .list-input');
+  setValue(window, inputFor('characteristics'), 'Abandoned a checkout in the last 30 days');
+  setValue(window, inputFor('userGroups'), 'New customers');
+  await new Promise((resolve) => setTimeout(resolve, 700));
+
+  const saved = JSON.parse(window.localStorage.getItem(DRAFT_KEY));
+  assert.deepEqual(saved.lists.characteristics, ['Abandoned a checkout in the last 30 days']);
+  assert.deepEqual(saved.lists.userGroups, ['New customers'],
+    'the segments are stored separately, not appended to the criteria');
+  app.close();
+
+  const reopened = await bootApp({ draft: saved });
+  t.after(() => reopened.close());
+  assert.equal(
+    reopened.document.querySelector('.list-rows[data-list-key="userGroups"] .list-input').value,
+    'New customers'
+  );
 });

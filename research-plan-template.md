@@ -119,12 +119,22 @@ Methods (list, key=methods):
 
 ## Participants
 
-<!-- Characteristics and User Groups were two fields until RPA-55. They asked
-     the same thing in practice: both wanted a short noun phrase naming a kind
-     of person, and "Frequent mobile shoppers" answered either. Merged rather
-     than reworded, because nothing in the app consumed either value. -->
-Characteristics (list, prose, key=characteristics): 
-  Hint: The criteria that qualify someone for this study, and any distinct segments you want represented.
+<!-- These were merged into one field earlier in RPA-55, on the grounds that
+     both wanted a short noun phrase naming a kind of person. That was true of
+     the format and wrong about the function, and Gus reversed it: a screener
+     criterion filters who is eligible, a segment sets who must be represented
+     among those who are. One is a filter, the other is a quota, and a study
+     can get the first right and the second wrong. The hints below hold that
+     line, since it is the only thing keeping them from collapsing together
+     again.
+
+     Drafts saved while the fields were merged keep everything in
+     Characteristics: which entries were segments was not recorded, so nothing
+     can sort them back out. Splitting them is forward-looking only. -->
+Characteristics (list, prose, key=characteristics): e.g. Abandoned a checkout in the last 30 days
+  Hint: The criteria that decide whether someone is eligible for this study.
+User Groups (list, prose, key=userGroups): e.g. New customers
+  Hint: The segments that must be represented among the people you recruit.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
 
@@ -148,7 +158,14 @@ Action Points (table, key=actionPoints): Action:prose=Task description | Respons
      section of their own. Two fields did not earn a section: what you already
      know and what you still need are part of executing the study, not a
      separate stage of it (RPA-55). -->
-Previous Knowledge (table, key=previousKnowledge): Name:prose=e.g. Q3 Checkout Usability Study | File:file
+<!-- Optional, per RPA-55. "What research already exists?" is the question
+     nobody in an organisation owns. It is asked of the researcher because they
+     are the one filling the form, not because they are the one who knows, and
+     answering it means searching past work with no repository to search. The
+     field stays for the people who have something to hand and stops being a
+     wall for everyone else. Marking it honestly is not the same as giving it
+     a source, which is still open — see recommendation 4. -->
+Previous Knowledge (table, optional, key=previousKnowledge): Name:prose=e.g. Q3 Checkout Usability Study | File:file
   Hint: Prior research or documentation relevant to this study, attached for reference.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
 Additional Resources (custom-fields, key=additionalResources): Add details...

@@ -2846,6 +2846,25 @@
   // own heading. Printing needs no separate handling — it's the same live DOM,
   // and a block's name renders via .flabel just like every other field's
   // heading already does.
+  // Every field builder draws the "(optional)" marker the same way, and each
+  // used to draw it inline — which meant the ones that forgot were impossible
+  // to spot, and declaring `optional` on those fields did nothing at all. Two
+  // of the six were in that state. RPA-55 marks more fields optional, so the
+  // marker is a single call now, and a test asserts every builder makes it.
+  function markOptional(label, field) {
+    if (!field.optional) return label;
+    const opt = el('span', 'fopt');
+    opt.textContent = '(optional)';
+    label.append(' ', opt);
+    return label;
+  }
+
+  // The one field type with no label of its own: Additional Resources is a
+  // heading-less list that appears on demand, so there is nowhere to hang an
+  // "(optional)" marker and nothing it would tell you — an empty list already
+  // says the field is not required. `optional` on a custom-fields field is
+  // therefore meaningless rather than merely unhandled, which is why this
+  // builder does not call markOptional. Asserted in optional-marker.test.js.
   function renderCustomFieldsField(field) {
     const wrap = el('div', 'field');
     const list = el('div', 'custom-fields-list');
@@ -2902,6 +2921,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3106,11 +3126,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3243,6 +3259,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3278,11 +3295,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3815,11 +3828,7 @@
     const controlId = fieldControlId(field.key);
     const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, controlId + '-hint');
     if (guidance) wrap.appendChild(guidance);
@@ -4124,6 +4133,10 @@
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
+      // Header fields can be optional too. Project decision is the live case:
+      // it is a delivery date the researcher does not set and often nobody has
+      // set yet, and its audit verdict is "keep — sourced or optional".
+      markOptional(label, f);
       // The compact corner slot has no room for guidance, and this is a
       // computed value nobody is asked to fill in.
       const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f, controlId + '-hint');
@@ -4798,22 +4811,13 @@
     // readout. Same situation as v3: the key follows the label through
     // toCamelKey, so a draft saved before the rename holds keys no live field
     // answers to, and applyDraft would drop those values without a word.
-    // v6: RPA-55 merged User Groups into Characteristics. Its rows are moved
-    // rather than dropped — somebody's segments are still an answer to the
-    // merged question, and applyDraft ignores any list key that no longer
-    // renders, so without this they would vanish without a word.
-    if (version < 6) {
-      migrated.lists = Object.assign({}, migrated.lists);
-      const groups = migrated.lists.userGroups || [];
-      if (groups.length) {
-        const existing = migrated.lists.characteristics || [];
-        const seen = new Set(existing.map((v) => String(v).trim().toLowerCase()));
-        migrated.lists.characteristics = existing.concat(
-          groups.filter((v) => String(v).trim() && !seen.has(String(v).trim().toLowerCase()))
-        );
-      }
-      delete migrated.lists.userGroups;
-    }
+    // v6 folded User Groups into Characteristics, and is deliberately gone.
+    // RPA-55 reversed that merge, so userGroups renders again and a draft
+    // that still holds it needs no migration at all — leaving the key alone
+    // is now the correct behaviour, and running the old fold would move
+    // somebody's segments into the wrong field and delete the key they came
+    // from. There is no un-merge for drafts saved while the fields were one:
+    // which entries had been segments was never recorded.
     // v5: RPA-55 renamed Title to Research title, and Last Updated to Last
     // updated (label only — that key was already lastUpdated).
     if (version < 5) {
