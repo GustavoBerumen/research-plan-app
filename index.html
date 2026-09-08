@@ -13,6 +13,9 @@
   <div class="tb-inner">
     <div class="tb-badge"><span class="tb-dot"></span>Research Plan</div>
     <div class="tb-btns">
+      <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
+      <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
+      <input id="backup-file" type="file" accept=".json,application/json" aria-label="Choose a plan backup" hidden>
       <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
       <button class="btn btn-dark" id="print-btn">↓ Print / Save as PDF</button>
     </div>
@@ -20,6 +23,15 @@
 </div>
 
 <div class="page-wrap">
+  <aside class="backup-help" aria-label="Plan backups">
+    <p id="backup-help">Your browser saves a draft automatically, but clearing browser data may delete it. Download a backup to restore your plan here later.</p>
+    <details>
+      <summary>What does a backup include?</summary>
+      <p>A backup contains plan values and additional sections, including saved fields that are currently hidden. It does not include evaluation results or original attachments: file names and references are saved, but the referenced files must still be available separately.</p>
+      <p>PDF and Word exports are documents to read or edit, not backups you can restore here. Calibration Save records feedback on an evaluation; Finish / Send submits a plan. Downloading or restoring a backup keeps the backup file local and does not send it anywhere.</p>
+    </details>
+    <p id="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </aside>
   <div class="doc" id="doc">
     <div class="doc-loading">Loading form fields…</div>
   </div>

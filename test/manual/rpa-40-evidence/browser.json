@@ -1,0 +1,40 @@
+{
+  "browser": "152.0.7977.82",
+  "mode": "Installed Windows Chrome, headless Playwright",
+  "cases": [
+    {
+      "width": 1366,
+      "keyboardDownload": true,
+      "keyboardFileChooser": true,
+      "actualDownloadedJson": true,
+      "importOverLargerPlan": true,
+      "repeatImport": true,
+      "reloadRoundTrip": true,
+      "cancellation": true,
+      "corruptJson": true,
+      "immediateBeforeAutosave": true,
+      "noOverflow": true,
+      "accessibleStatus": true,
+      "printControlsHidden": true,
+      "noPosts": true
+    },
+    {
+      "width": 390,
+      "keyboardDownload": true,
+      "keyboardFileChooser": true,
+      "actualDownloadedJson": true,
+      "importOverLargerPlan": true,
+      "repeatImport": true,
+      "reloadRoundTrip": true,
+      "cancellation": true,
+      "corruptJson": true,
+      "immediateBeforeAutosave": true,
+      "noOverflow": true,
+      "accessibleStatus": true,
+      "printControlsHidden": true,
+      "noPosts": true
+    }
+  ],
+  "errors": [],
+  "externalRequests": []
+}
