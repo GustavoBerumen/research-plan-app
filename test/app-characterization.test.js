@@ -88,7 +88,10 @@ test('renders the complete form from the real index, template, rubric, and metho
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '5 fields', '4 fields']
+    // Execution counts 3, not 4: Additional information is declared there but
+    // belongs to the document, so renderSchema lifts it out of the accordion
+    // and renders it after the sections (RPA-55).
+    ['3 fields', '4 fields', '5 fields', '3 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -99,7 +102,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
       'Stage Timeline', 'Action Points',
-      'Previous Knowledge',
+      'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
       // whole plan (RPA-55).
@@ -128,7 +131,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.equal(
     document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
       .closest('.field').querySelector('.add-btn').textContent,
-    '+ Add additional section'
+    '+ Add a section'
   );
   assert.equal(document.querySelectorAll('.eval-controls').length, 7);
 

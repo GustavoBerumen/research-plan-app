@@ -54,7 +54,10 @@ function markerFor(document, field) {
   const el = document.querySelector('[data-field="' + field.key + '"]')
     || document.querySelector('.list-rows[data-list-key="' + field.key + '"]')
     || document.getElementById(field.key + '-table')
-    || document.querySelector('.radio-group[data-field-key="' + field.key + '"]');
+    || document.querySelector('.radio-group[data-field-key="' + field.key + '"]')
+    // A custom-fields field renders no control until someone adds a block, so
+    // it is found by its empty list rather than by a [data-field].
+    || document.querySelector('.custom-fields-list[data-list-key="' + field.key + '"]');
   if (!el) return { found: false };
   // A header field renders into the compact meta block rather than a .field.
   const wrap = el.closest('.field') || el.closest('.mf');
@@ -91,9 +94,8 @@ test('every field type that has a label can carry the marker', async (t) => {
   // has to say so — so a builder that forgets is caught by the type rather
   // than by whichever field happens to be optional this month.
   //
-  // custom-fields is the one exception, and deliberate: Additional Resources
-  // renders no label of its own, so there is nowhere to put the marker and an
-  // empty list already says the field is not required.
+  // custom-fields used to be exempt, because it rendered no label at all. It
+  // has one now, so there are no exceptions left and nothing here to skip.
   const byType = new Map();
   liveFields().forEach((f) => {
     if (f.optional || f.heading || byType.has(f.type)) return;
@@ -102,7 +104,6 @@ test('every field type that has a label can carry the marker', async (t) => {
   assert.ok(byType.size >= 5, 'expected several field types to check, got ' + byType.size);
 
   for (const [type, field] of byType) {
-    if (type === 'custom-fields') continue;
     const app = await bootApp({
       textAssets: { 'research-plan-template.md': withFieldFlag(template(), field.key, 'optional') },
     });
@@ -112,9 +113,11 @@ test('every field type that has a label can carry the marker', async (t) => {
   }
 });
 
-test('a custom-fields field is the documented exception', async (t) => {
-  // Not an oversight, and the comment in app.js says so. If that ever changes,
-  // this test should be updated rather than deleted quietly.
+test('a custom-fields field can carry the marker too, now it has a label', async (t) => {
+  // It was the one exception, on the grounds that it rendered no label of its
+  // own. That was the bug rather than the design: the one control inviting you
+  // to invent your own content was also the only one that never said what it
+  // was for.
   const custom = liveFields().find((f) => f.type === 'custom-fields');
   assert.ok(custom, 'the form still has a custom-fields field');
 
@@ -123,8 +126,7 @@ test('a custom-fields field is the documented exception', async (t) => {
   });
   t.after(() => app.close());
 
-  const list = app.document.querySelector('.custom-fields-list[data-list-key="' + custom.key + '"]');
-  assert.ok(list, 'it still renders');
-  assert.equal(list.closest('.field').querySelector('.fopt'), null,
-    'and shows no marker, because it has no label to put one on');
+  const wrap = app.document
+    .querySelector('.custom-fields-list[data-list-key="' + custom.key + '"]').closest('.field');
+  assert.equal(wrap.querySelector('.flabel').textContent, custom.label + ' (optional)');
 });
