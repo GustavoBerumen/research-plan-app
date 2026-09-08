@@ -1,0 +1,13 @@
+{
+  "browser": "152.0.7977.82",
+  "platform": "win32",
+  "mode": "headless Windows Chrome keyboard and layout checks; native preview recorded separately",
+  "results": [
+    "background: keyboard expand/collapse/focus return, Tab order, yellow focus, like keyboard activation, saving/saved/disabled",
+    "researchQuestions: keyboard expand/collapse/focus return, Tab order, yellow focus, dislike keyboard activation, saving/saved/disabled",
+    "outcomes: keyboard expand/collapse/focus return, Tab order, yellow focus, save keyboard activation, saving/saved/disabled",
+    "Stale, pending with preserved result, single failure, successful sibling preservation and manual Retry recovery",
+    "Print CSS excludes actions, expanded results and user feedback print; actual PDF exported; draft and expanded panels preserved"
+  ],
+  "errors": []
+}

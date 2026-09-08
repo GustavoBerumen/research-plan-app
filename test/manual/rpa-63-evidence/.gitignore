@@ -1,0 +1,3 @@
+# Keep supplied PDF renders and native browser chrome local to this review.
+/user-pdf/
+/after-native-print-preview.jpg

@@ -1,0 +1,129 @@
+[
+  {
+    "variant": "before",
+    "filename": "before-chrome-print.pdf",
+    "pages": 14,
+    "expectedJustificationAndRecommendationPhrases": 30,
+    "actualJustificationAndRecommendationPhrases": 30,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 24,
+    "sparsePages": [
+      {
+        "page": 2,
+        "text": "Context 3 fields"
+      }
+    ],
+    "evaluationPages": [
+      3,
+      6,
+      7,
+      8,
+      9
+    ],
+    "missingInputs": [
+      "Which delivery details do customers need before they can confidently place their order?"
+    ],
+    "sectionHeadingsWithContent": false
+  },
+  {
+    "variant": "after",
+    "filename": "after-chrome-print.pdf",
+    "pages": 11,
+    "expectedJustificationAndRecommendationPhrases": 30,
+    "actualJustificationAndRecommendationPhrases": 30,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 24,
+    "sparsePages": [],
+    "evaluationPages": [
+      2,
+      4,
+      5,
+      6,
+      7
+    ],
+    "missingInputs": [],
+    "sectionHeadingsWithContent": true
+  },
+  {
+    "variant": "after",
+    "filename": "after-guardrail-letter-print.pdf",
+    "pages": 11,
+    "expectedJustificationAndRecommendationPhrases": 30,
+    "actualJustificationAndRecommendationPhrases": 30,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 24,
+    "sparsePages": [],
+    "evaluationPages": [
+      2,
+      4,
+      5,
+      6,
+      7
+    ],
+    "missingInputs": [],
+    "sectionHeadingsWithContent": true
+  },
+  {
+    "variant": "after",
+    "filename": "after-ready-a4-print.pdf",
+    "pages": 10,
+    "expectedJustificationAndRecommendationPhrases": 27,
+    "actualJustificationAndRecommendationPhrases": 27,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 0,
+    "sparsePages": [],
+    "evaluationPages": [
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "missingInputs": [],
+    "sectionHeadingsWithContent": true
+  },
+  {
+    "variant": "after",
+    "filename": "after-ready-letter-print.pdf",
+    "pages": 11,
+    "expectedJustificationAndRecommendationPhrases": 27,
+    "actualJustificationAndRecommendationPhrases": 27,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 0,
+    "sparsePages": [],
+    "evaluationPages": [
+      2,
+      4,
+      5,
+      6,
+      7
+    ],
+    "missingInputs": [],
+    "sectionHeadingsWithContent": true
+  },
+  {
+    "variant": "after",
+    "filename": "after-narrow-letter-print.pdf",
+    "pages": 11,
+    "expectedJustificationAndRecommendationPhrases": 30,
+    "actualJustificationAndRecommendationPhrases": 30,
+    "feedbackPreserved": true,
+    "actionTextExcluded": true,
+    "longReferenceSegments": 24,
+    "sparsePages": [],
+    "evaluationPages": [
+      2,
+      4,
+      5,
+      6,
+      7
+    ],
+    "missingInputs": [],
+    "sectionHeadingsWithContent": true
+  }
+]
