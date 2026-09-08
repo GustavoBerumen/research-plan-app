@@ -2869,14 +2869,22 @@
     return label;
   }
 
-  // The one field type with no label of its own: Additional Resources is a
-  // heading-less list that appears on demand, so there is nowhere to hang an
-  // "(optional)" marker and nothing it would tell you — an empty list already
-  // says the field is not required. `optional` on a custom-fields field is
-  // therefore meaningless rather than merely unhandled, which is why this
-  // builder does not call markOptional. Asserted in optional-marker.test.js.
+  // This used to render as a bare "+ Add additional section" button and
+  // nothing else: the builder ignored the field's label and its hint, so the
+  // one control in the form that invites you to invent your own content was
+  // also the only one that never said what it was for. It carries a label and
+  // a hint now, like every other field.
   function renderCustomFieldsField(field) {
-    const wrap = el('div', 'field');
+    const wrap = el('div', 'field', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    const label = el('div', 'flabel', { id: labelId });
+    label.textContent = field.label;
+    markOptional(label, field);
+    wrap.setAttribute('aria-labelledby', labelId);
+    wrap.appendChild(label);
+    const guidance = renderFieldHint(field, labelId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
+
     const list = el('div', 'custom-fields-list');
     let blockSeq = 0;
     list.dataset.listKey = field.key;
@@ -2907,7 +2915,11 @@
 
       const bodyLabel = el('label', 'visually-hidden', { for: bodyId });
       bodyLabel.textContent = 'Details';
-      const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, placeholder: field.placeholder || '', id: bodyId });
+      // No placeholder: the block's own title says what it holds, and the
+      // field's hint above says what the whole thing is for. This one escaped
+      // the placeholder sweep because it exists only after someone adds a
+      // block, so an empty form had nothing to find.
+      const body = el('textarea', 'finput field-ta custom-field-body', { 'data-field': field.key, id: bodyId });
       bindTextarea(body);
 
       block.append(head, bodyLabel, body);
@@ -2917,7 +2929,7 @@
     }
 
     const addBtn = el('button', 'add-btn', { type: 'button' });
-    addBtn.textContent = '+ Add additional section';
+    addBtn.textContent = '+ Add a section';
     addBtn.addEventListener('click', () => addBlock(true));
     wrap.appendChild(addBtn);
 
@@ -4451,7 +4463,25 @@
     );
     const reviewSection = reviewIdx !== -1 ? sections.splice(reviewIdx, 1)[0] : null;
 
+    // A custom-fields field belongs to the document, not to the section that
+    // happens to declare it. It is the escape hatch for what the template did
+    // not anticipate, and "what the template did not anticipate about
+    // Execution specifically" is not a question anyone is asking — it only
+    // sat in Execution because the Resources section was folded there.
+    //
+    // So it is lifted out and rendered after the sections, where it is always
+    // visible rather than hidden inside a collapsed accordion. Routed by type
+    // rather than by key or section title, for the same reason the review step
+    // is routed by its sign-off keys.
+    const loose = [];
+    sections.forEach((s) => {
+      const own = s.fields.filter((f) => f.type !== 'custom-fields');
+      loose.push(...s.fields.filter((f) => f.type === 'custom-fields'));
+      s.fields = own;
+    });
+
     sections.forEach((s) => doc.appendChild(renderSection(s)));
+    loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
   }

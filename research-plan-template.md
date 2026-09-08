@@ -168,7 +168,21 @@ Action Points (table, optional, key=actionPoints): Action:prose | Responsible:pr
 Previous Knowledge (table, optional, key=previousKnowledge): Name:prose | File:file
   Hint: Prior research or documentation relevant to this study, attached for reference. For example: Q3 Checkout Usability Study.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
-Additional Resources (custom-fields, key=additionalResources): Add details...
+<!-- Declared here because a field has to live in some section, but it is not
+     an Execution field and does not render as one: renderSchema lifts every
+     custom-fields field out and renders it after the sections, always visible
+     rather than shut inside a collapsed accordion. It only sat in Execution
+     because the Resources section was folded there (RPA-55).
+
+     Renamed from "Additional Resources", which described neither what it does
+     nor what its button offered. GOV.UK has no pattern for a user-defined
+     field — every "Ask users for" pattern is for a known thing — so there is
+     exactly one of these and it is scoped to the whole plan. One escape hatch
+     also keeps the signal in one place: what people add here is evidence of
+     what the template is missing, and five per-section hatches would scatter
+     it. -->
+Additional information (custom-fields, key=additionalResources):
+  Hint: Anything this plan needs that the sections above have no place for. Each one you add becomes its own titled part of the document. To comment on the plan rather than add to it, use Feedback at the end.
 
 <!-- The review step, and the last thing in the document. Alignment became this
      once its identifiers moved to the header: what was left was the two
@@ -195,7 +209,7 @@ Additional Resources (custom-fields, key=additionalResources): Add details...
      missed its moment. It keeps the key `comments`: a key is an identifier,
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, key=comments):
-  Hint: Anything else worth noting that didn't fit elsewhere in this plan — a question, a concern, or something the sections above had no room for.
+  Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
 Sign off: Lead researcher (text, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
 Sign off: Project requester (text, key=signOffProjectOwner):

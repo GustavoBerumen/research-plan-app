@@ -103,6 +103,62 @@ test('guidance is never hidden behind a tooltip either', async (t) => {
   assert.match(hint, /[Tt]hree/, 'the recommended number is still stated');
 });
 
+test('controls that only exist once revealed are swept too', async (t) => {
+  // The sweep above reads a form nobody has touched, so anything built on
+  // demand is invisible to it. Two things are: the custom section block, whose
+  // body carried the field's placeholder, and the Feedback textarea. Both are
+  // opened here first.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
+    .closest('.field').querySelector('.add-btn').click();
+  document.querySelector('.review-step .comments-block .add-btn').click();
+
+  const stray = placeholders(document).filter((p) =>
+    !DATE_SEGMENTS.includes(p.placeholder) && !OTHER_ESCAPE.test(p.placeholder));
+  assert.deepEqual(stray.map((p) => p.placeholder), ['Label'],
+    'only the custom block title keeps one, and it is a label rather than guidance');
+
+  // Both revealed controls are named, which is what the placeholder was doing
+  // badly. The block's textarea has a visually hidden label; the field above
+  // it explains the whole thing.
+  const body = document.querySelector('.custom-field-body');
+  assert.ok(body.id && document.querySelector('label[for="' + body.id + '"]'),
+    'the block body has a real label, not a placeholder');
+});
+
+test('the escape hatch says what it is, and is scoped to the plan', async (t) => {
+  // It rendered as a bare "+ Add additional section" button: no label, no
+  // hint, sitting at the bottom of Execution because that is where the
+  // Resources section was folded. GOV.UK has no pattern for a user-defined
+  // field, so there is exactly one of these and it belongs to the document.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  const wrap = document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
+    .closest('.field');
+
+  assert.equal(wrap.querySelector('.flabel').textContent, 'Additional information');
+  const hint = wrap.querySelector('.field-hint-text');
+  assert.ok(hint && hint.textContent.trim(), 'it explains what it is for');
+  assert.match(hint.textContent, /Feedback/,
+    'and points at Feedback for comments on the plan, which is the other thing');
+  assert.equal(wrap.querySelector('.add-btn').textContent, '+ Add a section');
+
+  // Outside every accordion, so collapsing a section cannot hide it, and after
+  // them all rather than inside Execution.
+  assert.equal(wrap.closest('.acc'), null);
+  const sections = Array.from(document.querySelectorAll('.acc'));
+  const last = sections[sections.length - 1];
+  assert.equal(last.compareDocumentPosition(wrap) & 4 /* FOLLOWING */, 4);
+
+  // And exactly one of them, per the GOV.UK reasoning above.
+  assert.equal(document.querySelectorAll('.custom-fields-list').length, 1);
+});
+
 test('the examples that were placeholders now read as hints', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
