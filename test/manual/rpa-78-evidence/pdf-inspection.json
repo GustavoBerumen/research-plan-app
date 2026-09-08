@@ -1,0 +1,28 @@
+[
+  {
+    "filename": "guardrail-a4.pdf",
+    "pages": 12,
+    "missingInputs": [],
+    "expectedFeedbackPhrases": 30,
+    "actualFeedbackPhrases": 30,
+    "correctedOutcomeCriterion": true,
+    "typoAbsent": true,
+    "feedbackPreserved": true,
+    "interactiveControlsExcluded": true,
+    "sparsePages": [],
+    "sectionHeadingsWithContent": true
+  },
+  {
+    "filename": "ready-letter.pdf",
+    "pages": 11,
+    "missingInputs": [],
+    "expectedFeedbackPhrases": 27,
+    "actualFeedbackPhrases": 27,
+    "correctedOutcomeCriterion": true,
+    "typoAbsent": true,
+    "feedbackPreserved": true,
+    "interactiveControlsExcluded": true,
+    "sparsePages": [],
+    "sectionHeadingsWithContent": true
+  }
+]

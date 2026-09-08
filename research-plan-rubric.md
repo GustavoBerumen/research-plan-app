@@ -18,7 +18,7 @@ Syntax:
 
 
 # Goal
-- Product Outcomes: Defines the concrete business, product, or user outcome the overall initiative aims to achieve, keeping the focus on organizational value rather than research execution.
+- Product Outcomes: Defines the concrete business, product, or user outcome the overall initiative aims to achieve, keeping the focus on organisational value rather than research execution.
 - Result-Oriented: Expresses a clear, measurable target outcome without getting bogged down in implementation details or broad, unmeasurable aspirations.
 - Defines the Future Product State: Clarifies the target state of the product as a result of this initiative, explicitly separating what the team is trying to build or improve from what insights the team needs to gather. 
 
@@ -32,12 +32,12 @@ Syntax:
 # Objective
 
 - User Understanding: Seeks to understand why a problem occurs, how users complete a task, where friction exists, or what their mental model is, rather than validating a specific feature
-- Actionable: Resolves a specific unknown that directly informs an upcoming product decision, such as launching an initiative, choosing a design direction, or prioritizing a roadmap item
+- Actionable: Resolves a specific unknown that directly informs an upcoming product decision, such as launching an initiative, choosing a design direction, or prioritising a roadmap item
 - Feasible: Targets specific user profiles, workflows, or friction points with a scope tightly bounded enough to avoid bloated studies or inconclusive data
 
 # Hypothesis
 
-- Testable: Designed so an experiment or qualitative study can directly verify whether the assumption is right or wrong through observable user behavior or feedback.
+- Testable: Designed so an experiment or qualitative study can directly verify whether the assumption is right or wrong through observable user behaviour or feedback.
 - Falsifiable: Formulated in a way that makes it genuinely possible to prove the statement incorrect, avoiding unfalsifiable claims like "users might find this nice".
 - Defined Variables: Clear connection between an independent variable (the cause/change) and a dependent variable (the effect/user outcome).
 <!--  Grounded in Knowledge: Built on prior user research, telemetry, or observed friction points, rather than a random guess. -->
@@ -46,11 +46,11 @@ Syntax:
 
 - Clear: Uses simple, direct, and unambiguous language so every stakeholder instantly understands what is being investigated.
 - Focused: Narrows down to a single core problem or workflow step, rather than trying to explore a broad, multi-layered topic all at once.
-- Specific: Identifies the exact target population, feature setting, or behavior variable under investigation.
+- Specific: Identifies the exact target population, feature setting, or behaviour variable under investigation.
 
 # Outcomes
 
-- Actionalble: tie directly to an explicit product or business decision rather than just promising open-ended summaries or reports.
+- Actionable: tie directly to an explicit product or business decision rather than just promising open-ended summaries or reports.
 - Format: Ensures final outputs—such as backlog items, wireframe recommendations, list of issues, or decision matrices—are clearly defined.
 - Alignment: the deliverable maps directly back to a specific research question, the outcome is built with the insight needed to answer that question.
 <!--  - Impact: A clear connection between the research results and broader team goals, key metrics, or Jira project timelines. -->

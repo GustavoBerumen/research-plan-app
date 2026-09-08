@@ -320,11 +320,11 @@ const CRITERION_EXAMPLES = {
   },
   'Actionable': {
     weak: 'Gather user opinions on our dashboard.',
-    strong: 'Identify which data visualization errors cause users to misinterpret their monthly report, so we can refine the Q3 dashboard redesign.',
+    strong: 'Identify which data visualisation errors cause users to misinterpret their monthly report, so we can refine the Q3 dashboard redesign.',
   },
   'Feasible': {
     weak: "Understand our users' entire financial workflow.",
-    strong: 'Understand how new users categorize their first expense during onboarding.',
+    strong: 'Understand how new users categorise their first expense during onboarding.',
   },
 };
 

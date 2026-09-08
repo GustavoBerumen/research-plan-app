@@ -1,0 +1,298 @@
+{
+  "base": "2d0f62d218861664fafd7620357f94eb6ebc6df7",
+  "keys": {
+    "data-field": [
+      "background",
+      "characteristics",
+      "comments",
+      "goal",
+      "hypothesis",
+      "jiraProject",
+      "lastUpdated",
+      "leadResearcher",
+      "methods",
+      "objective",
+      "outcomes",
+      "problemStatement",
+      "projectDecision",
+      "projectRequester",
+      "researchQuestions",
+      "researchReadout",
+      "researchTitle",
+      "signOffProjectOwner",
+      "signOffResearcher",
+      "theory",
+      "userGroups"
+    ],
+    "data-list-key": [
+      "additionalResources",
+      "characteristics",
+      "methods",
+      "outcomes",
+      "researchQuestions",
+      "userGroups"
+    ],
+    "data-field-key": [
+      "actionPoints",
+      "outcomes",
+      "previousKnowledge",
+      "sampleSize",
+      "stageTimeline"
+    ],
+    "tables": [
+      {
+        "id": "stageTimeline-table",
+        "columns": [
+          {
+            "key": "stage",
+            "label": "Stage"
+          },
+          {
+            "key": "startDate",
+            "label": "Start Date"
+          },
+          {
+            "key": "completionDate",
+            "label": "Completion Date"
+          }
+        ]
+      },
+      {
+        "id": "actionPoints-table",
+        "columns": [
+          {
+            "key": "action",
+            "label": "Action"
+          },
+          {
+            "key": "responsible",
+            "label": "Responsible"
+          }
+        ]
+      },
+      {
+        "id": "previousKnowledge-table",
+        "columns": [
+          {
+            "key": "name",
+            "label": "Name"
+          },
+          {
+            "key": "file",
+            "label": "File"
+          }
+        ]
+      }
+    ]
+  },
+  "mappings": {
+    "background": {
+      "label": "Background",
+      "criteria": [
+        "Contextual Relevance",
+        "Essential Knowledge",
+        "Focus"
+      ]
+    },
+    "goal": {
+      "label": "Goal",
+      "criteria": [
+        "Product Outcomes",
+        "Result-Oriented",
+        "Defines the Future Product State"
+      ]
+    },
+    "problemStatement": {
+      "label": "Problem Statement",
+      "criteria": [
+        "Clarity",
+        "Specificity",
+        "Feasibility",
+        "Significance"
+      ]
+    },
+    "objective": {
+      "label": "Objective",
+      "criteria": [
+        "User Understanding",
+        "Actionable",
+        "Feasible"
+      ]
+    },
+    "hypothesis": {
+      "label": "Hypothesis",
+      "criteria": [
+        "Testable",
+        "Falsifiable",
+        "Defined Variables"
+      ]
+    },
+    "researchQuestions": {
+      "label": "Research Questions",
+      "criteria": [
+        "Clear",
+        "Focused",
+        "Specific"
+      ]
+    },
+    "outcomes": {
+      "label": "Outcomes",
+      "criteria": [
+        "Actionalble",
+        "Format",
+        "Alignment"
+      ]
+    }
+  },
+  "draft": {
+    "version": 7,
+    "savedAt": "2026-09-08T20:45:50.750Z",
+    "createdAt": "2026-09-08",
+    "fields": {
+      "lastUpdated": "2026-09-08",
+      "researchTitle": "User-authored color and behavior: researchTitle\nPreserve this second line.",
+      "jiraProject": "",
+      "leadResearcher": "",
+      "projectRequester": "",
+      "projectDecision": "",
+      "researchReadout": "",
+      "background": "User-authored color and behavior: background\nPreserve this second line.",
+      "goal": "User-authored color and behavior: goal\nPreserve this second line.",
+      "problemStatement": "User-authored color and behavior: problemStatement\nPreserve this second line.",
+      "objective": "User-authored color and behavior: objective\nPreserve this second line.",
+      "hypothesis": "User-authored color and behavior: hypothesis\nPreserve this second line.",
+      "theory": "User-authored color and behavior: theory\nPreserve this second line.",
+      "signOffResearcher": "",
+      "signOffProjectOwner": "",
+      "comments": ""
+    },
+    "selects": {
+      "sampleSize": {
+        "v": "",
+        "o": ""
+      }
+    },
+    "lists": {
+      "researchQuestions": [
+        "How do customers organize their work?",
+        "",
+        "Which color helps users visualize progress?"
+      ],
+      "outcomes": [
+        "A prioritized report.",
+        "",
+        "A visualization of barriers."
+      ],
+      "characteristics": [
+        ""
+      ],
+      "userGroups": [
+        ""
+      ]
+    },
+    "methods": [
+      {
+        "question": "How do customers organize their work?",
+        "methods": [
+          "Behavioral Mapping"
+        ]
+      },
+      {
+        "question": "",
+        "methods": [
+          "Unassigned method"
+        ]
+      },
+      {
+        "question": "Which color helps users visualize progress?",
+        "methods": [
+          "Data Visualization"
+        ]
+      }
+    ],
+    "tables": {
+      "stageTimeline-table": [
+        [
+          {
+            "t": "select",
+            "v": "Planning",
+            "o": "",
+            "d": 1
+          },
+          {
+            "t": "date",
+            "v": "2026-09-01"
+          },
+          {
+            "t": "date",
+            "v": "2026-09-07"
+          },
+          {
+            "t": "text",
+            "v": ""
+          }
+        ],
+        [
+          {
+            "t": "select",
+            "v": "Recruitment",
+            "o": "",
+            "d": 1
+          },
+          {
+            "t": "date",
+            "v": "2026-09-08"
+          },
+          {
+            "t": "date",
+            "v": "2026-09-14"
+          },
+          {
+            "t": "text",
+            "v": ""
+          }
+        ]
+      ],
+      "actionPoints-table": [
+        [
+          {
+            "t": "text",
+            "v": ""
+          },
+          {
+            "t": "text",
+            "v": ""
+          },
+          {
+            "t": "text",
+            "v": ""
+          }
+        ]
+      ],
+      "previousKnowledge-table": [
+        [
+          {
+            "t": "text",
+            "v": ""
+          },
+          {
+            "t": "file",
+            "v": "",
+            "n": "No file chosen"
+          },
+          {
+            "t": "text",
+            "v": ""
+          }
+        ]
+      ]
+    },
+    "custom": {
+      "additionalResources": []
+    },
+    "lastUpdatedManual": false,
+    "ui": {
+      "timelineVisible": true
+    }
+  }
+}

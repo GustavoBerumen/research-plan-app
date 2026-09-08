@@ -10,7 +10,7 @@ if (previousKey === undefined) delete process.env.ANTHROPIC_API_KEY;
 else process.env.ANTHROPIC_API_KEY = previousKey;
 const rubrics = {
   researchQuestions: ['Clear', 'Focused', 'Specific'],
-  outcomes: ['Actionalble', 'Format', 'Alignment'],
+  outcomes: ['Actionable', 'Format', 'Alignment'],
 };
 const novice = ['What do users think about the checkout?', 'What would make the checkout better?'];
 function fixture(key, scores) {
