@@ -186,7 +186,14 @@ for (const [name, scale] of [['six-months', 'weeks'], ['monthly', 'months']]) {
       app.document.getElementById('clear-btn').click();
       assert.equal(app.chart.hidden, true);
       assert.equal(app.chart.childElementCount, 0);
-      assert.ok(values(app).every(value => value === ''));
+      // A reset plan is a new plan, so it gets the stage defaults back rather
+      // than an empty table — including today as the Planning start date,
+      // since that is when this plan was started (RPA-76). Everything else is
+      // blank, and the readout that fed the last row went with the reset.
+      const afterReset = values(app);
+      assert.equal(afterReset.length, 10);
+      assert.equal(afterReset[0], new Date().toISOString().slice(0, 10));
+      assert.ok(afterReset.slice(1).every(value => value === ''));
       await new Promise(resolve => setTimeout(resolve, 650));
       assert.equal(app.window.localStorage.getItem(DRAFT_KEY), null);
       assert.deepEqual(app.jsdomErrors, []);

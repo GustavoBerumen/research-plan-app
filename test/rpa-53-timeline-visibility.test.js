@@ -29,10 +29,15 @@ async function fixture(t, options = {}) {
   return app;
 }
 
+// A plan with exactly two stages. Stage Timeline is pre-populated with five
+// (RPA-76), so the surplus is removed rather than added to — which is also the
+// case that used to come back on reload, before restore learned to shrink.
 async function populatedDraft(t) {
   const app = await fixture(t);
   const { table, field } = timeline(app);
-  field.querySelector('.add-btn').click();
+  while (table.querySelectorAll('tbody tr').length > 2) {
+    table.querySelector('tbody tr:last-of-type .row-remove').click();
+  }
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach((row, i) => {
     const dates = row.querySelectorAll('input[type="date"]');
