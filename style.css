@@ -512,6 +512,11 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}
   .timeline-chart,.eval-head,.eval-panel{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* Paint daily separators: PDF viewers can drop the unpainted 1px gaps
+     when scaling the page. In-cell borders also share the gapless week
+     ruler's column positions, without changing screen or long-plan charts. */
+  .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
+  .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
   .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
