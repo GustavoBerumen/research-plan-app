@@ -93,9 +93,9 @@ none of them lives only here:
 
 | # | What | Where it goes |
 |---|---|---|
-| 1 | Prefill Background, Goal and Problem Statement from the linked Jira issue, instead of asking a researcher to retype a brief that already exists. | Needs a ticket. Blocked on a real constraint: the proxy calls `issue/picker`, which returns key and summary only, so descriptions need a second endpoint. |
-| 2b | Create Jira subtasks from Action Points, which is the consumer those two columns were kept for. | Ticket drafted. Settle first whether the team accepts tickets reported by a shared service account — the answer decides whether this is a day's work or per-user OAuth. |
-| 4 | Give Previous Knowledge a source — link it to the shared Drive research library. | Needs a ticket. The optional half is done; marking a field optional stops it blocking anyone without making the answer easier to find. |
+| 1 | Prefill Background, Goal and Problem Statement from the linked Jira issue, instead of asking a researcher to retype a brief that already exists. | **Still needs a ticket.** Blocked on a real constraint: the proxy calls `issue/picker`, which returns key and summary only, so descriptions need a second endpoint. |
+| 2b | Create Jira subtasks from Action Points, which is the consumer those two columns were kept for. | **RPA-69.** Settle first whether the team accepts tickets reported by a shared service account — the answer decides whether this is a day's work or per-user OAuth. |
+| 4 | Give Previous Knowledge a source — link it to the shared Drive research library. | **RPA-71.** The optional half is done; marking a field optional stops it blocking anyone without making the answer easier to find. |
 
 Recommendation 3 is deferred rather than open, and deliberately: moving Context is
 blocked behind #1, because the complaint about Context is that it is transcription
@@ -391,6 +391,13 @@ enforced, and a plan can be printed and signed entirely blank. "(optional)" is
 purely communicative, which makes over-marking a real cost: a form where a third of
 the labels say optional reads as a form that does not care what you put in it.
 
+**That changes with RPA-64**, which adds Finish / Send with required-field
+validation. At that point this decision stops being communicative and starts being
+enforced: every field not on the list of five becomes something a plan can be
+blocked on. Worth re-reading this section when that ticket is picked up — the
+answers here were given about a form that asks, not a form that insists, and
+Project decision in particular is a date the researcher does not set.
+
 Counts checked against the template rather than carried forward. The earlier figure
 of 28 predated the Status cut, the User Groups merge and Requirements going dormant.
 
@@ -564,7 +571,7 @@ of the guard below did not catch it.
 
 Two gaps remain, both known rather than overlooked:
 
-- **Table columns still derive their keys from their labels.** There is no `key=` for
+- **Table columns still derive their keys from their labels — RPA-74.** There is no `key=` for
   a column: the column spec is `Label:type=placeholder`, and threading a key through
   it safely is a larger change than it looks. Renaming *Start Date* would still break
   the timeline. The guard is the only protection there — column keys are exposed as
