@@ -152,8 +152,7 @@ Action Points (table, optional, key=actionPoints): Action:prose | Responsible:pr
      after sign-off. Nothing has happened yet at the point the question is
      asked, which makes every available answer untrue. Status belongs in Jira.
      Action and Responsible stay: the plan is where the work is decided, and
-     the planned Jira integration gives them a consumer by creating the
-     subtasks from them. -->
+     RPA-69 gives them a consumer by creating the Jira subtasks from them. -->
 <!-- Previous Knowledge and Additional Resources used to be a Resources
      section of their own. Two fields did not earn a section: what you already
      know and what you still need are part of executing the study, not a
