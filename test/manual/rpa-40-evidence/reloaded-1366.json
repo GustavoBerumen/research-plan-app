@@ -1,0 +1,204 @@
+{
+  "version": 7,
+  "savedAt": "2026-09-08T23:25:10.214Z",
+  "createdAt": "2026-08-01",
+  "fields": {
+    "lastUpdated": "2026-08-29",
+    "researchTitle": "Immediate edit — café 🧭 1366",
+    "jiraProject": "",
+    "leadResearcher": "",
+    "projectRequester": "",
+    "projectDecision": "",
+    "researchReadout": "2026-10-30",
+    "background": "First line\nSecond paragraph: colour, café and behaviour.",
+    "goal": "User-authored color and behavior: goal\nPreserve this second line.",
+    "problemStatement": "User-authored color and behavior: problemStatement\nPreserve this second line.",
+    "objective": "User-authored color and behavior: objective\nPreserve this second line.",
+    "hypothesis": "User-authored color and behavior: hypothesis\nPreserve this second line.",
+    "theory": "User-authored color and behavior: theory\nPreserve this second line.",
+    "signOffResearcher": "",
+    "signOffProjectOwner": "",
+    "comments": "",
+    "project": "Dormant project — never discard"
+  },
+  "selects": {
+    "sampleSize": {
+      "v": "__other__",
+      "o": "Two cohorts of eight — ocho"
+    },
+    "dormantChoice": {
+      "v": "__other__",
+      "o": "Archived choice"
+    }
+  },
+  "lists": {
+    "researchQuestions": [
+      "Which delivery details matter?",
+      "",
+      "How do people compare options?"
+    ],
+    "outcomes": [
+      "Prioritised delivery details.\nWith evidence.",
+      "",
+      "Comparison map."
+    ],
+    "characteristics": [
+      ""
+    ],
+    "userGroups": [
+      ""
+    ],
+    "dormantList": [
+      "First",
+      "",
+      "Third"
+    ]
+  },
+  "methods": [
+    {
+      "question": "Which delivery details matter?",
+      "methods": [
+        "Interviews",
+        "Usability testing"
+      ]
+    },
+    {
+      "question": "",
+      "methods": [
+        "Unassigned notes"
+      ]
+    },
+    {
+      "question": "How do people compare options?",
+      "methods": [
+        "Diary study",
+        "Observation"
+      ]
+    }
+  ],
+  "tables": {
+    "stageTimeline-table": [
+      [
+        {
+          "t": "select",
+          "v": "Planning",
+          "o": "",
+          "d": 1
+        },
+        {
+          "t": "date",
+          "v": "2026-09-01"
+        },
+        {
+          "t": "date",
+          "v": "2026-09-07"
+        },
+        {
+          "t": "text",
+          "v": ""
+        }
+      ],
+      [
+        {
+          "t": "select",
+          "v": "__other__",
+          "o": "Recruitment follow-up"
+        },
+        {
+          "t": "date",
+          "v": "2026-09-08"
+        },
+        {
+          "t": "date",
+          "v": "2026-09-14"
+        },
+        {
+          "t": "text",
+          "v": ""
+        }
+      ]
+    ],
+    "actionPoints-table": [
+      [
+        {
+          "t": "text",
+          "v": "Review findings\nAgree next steps"
+        },
+        {
+          "t": "text",
+          "v": "Ana"
+        },
+        {
+          "t": "text",
+          "v": ""
+        }
+      ],
+      [
+        {
+          "t": "text",
+          "v": "Share a summary"
+        },
+        {
+          "t": "text",
+          "v": "Max"
+        },
+        {
+          "t": "text",
+          "v": ""
+        }
+      ]
+    ],
+    "previousKnowledge-table": [
+      [
+        {
+          "t": "text",
+          "v": "Previous study\nReference only"
+        },
+        {
+          "t": "file",
+          "v": "/uploads/previous-study.pdf",
+          "n": "Previous study.pdf"
+        },
+        {
+          "t": "text",
+          "v": ""
+        }
+      ]
+    ],
+    "requirements-table": [
+      [
+        {
+          "t": "text",
+          "v": "Two phones"
+        },
+        {
+          "t": "file",
+          "v": "/uploads/spec.pdf",
+          "n": "Spec.pdf"
+        }
+      ]
+    ]
+  },
+  "custom": {
+    "additionalResources": [
+      {
+        "label": "Accessibilité",
+        "body": "Screen readers\nKeyboard use"
+      },
+      {
+        "label": "Notes",
+        "body": "Preserve this too."
+      }
+    ],
+    "dormantSections": [
+      {
+        "label": "Archived",
+        "body": "Dormant details"
+      }
+    ]
+  },
+  "lastUpdatedManual": true,
+  "ui": {
+    "timelineVisible": true
+  }
+}

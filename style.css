@@ -68,7 +68,14 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .tb-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .tb-badge{font-size:var(--text);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px}
 .tb-dot{width:8px;height:8px;background:var(--link);display:inline-block}
-.tb-btns{display:flex;gap:8px}
+.tb-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.backup-help{max-width:860px;margin:0 auto 20px;font-size:var(--text-sm);color:var(--text-2)}
+.backup-help summary{cursor:pointer;color:var(--link);text-decoration:underline;margin-top:6px}
+.backup-help summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink)}
+.backup-help details p{margin-top:8px}
+#backup-status:not(:empty){margin-top:8px;font-weight:700;color:var(--ink)}
+#backup-status[data-error="true"]{color:var(--red-dark)}
+@media print{.backup-help{display:none!important}}
 .test-profile-controls{display:flex;align-items:center;gap:8px;padding-right:8px;border-right:1px solid var(--border)}
 .test-profile-select{font-family:inherit;font-size:var(--text-sm);color:var(--ink);background:#fff;border:2px solid var(--ink);padding:5px 30px 5px 8px;cursor:pointer;height:var(--control-h)}
 /* Button hierarchy: one primary action per page (Print), everything else
@@ -85,6 +92,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .btn-dark{background:var(--green);color:#fff;box-shadow:0 2px 0 var(--green-dark)}
 .btn-dark:hover{background:var(--green-hover);color:#fff}
 @media(max-width:760px){.tb-inner{align-items:flex-start}.tb-btns{flex-wrap:wrap;justify-content:flex-end}.test-profile-controls{width:100%;justify-content:flex-end;padding-right:0;padding-bottom:8px;border-right:none;border-bottom:1px solid var(--border)}}
+@media screen and (max-width:600px){.toolbar{padding:12px}.tb-inner{flex-wrap:wrap;gap:8px}.tb-badge,.tb-btns{width:100%}.tb-btns{justify-content:flex-start}}
 
 /* ---------- Page and document ---------- */
 .page-wrap{padding:36px 24px 80px}

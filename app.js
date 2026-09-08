@@ -4,7 +4,9 @@
   const SCHEMA_URL = 'research-plan-template.md';
   const RUBRIC_URL = 'research-plan-rubric.md';
   const METHODS_URL = 'research-methods.md';
-  const doc = document.getElementById('doc');
+  let doc = document.getElementById('doc');
+  let formEvents = new AbortController();
+  let formSchema = null;
   const {
     bindTextarea,
     bindTextareas,
@@ -323,9 +325,9 @@
   }
   function initTextareas(root) {
     bindTextareas(root);
-    window.addEventListener('resize', () => resizeTextareas(root));
-    window.addEventListener('beforeprint', () => resizeTextareas(root));
-    window.addEventListener('afterprint', () => resizeTextareas(root));
+    ['resize', 'beforeprint', 'afterprint'].forEach((event) => {
+      window.addEventListener(event, () => resizeTextareas(root), { signal: formEvents.signal });
+    });
   }
 
   // ---------- status select coloring ----------
@@ -813,6 +815,7 @@
     }
 
     function syncFromSegments(type, reportInvalid, normalize) {
+      if (!control.isConnected) return null;
       const parsed = readDateSegments(nativeInput);
       nativeInput.value = parsed ? parsed.iso : '';
       if (parsed) {
@@ -856,6 +859,7 @@
 
       function commit(number, moveNext) {
         clearTimer();
+        if (!control.isConnected) return;
         buffer = '';
         input.value = options.format(number);
         const complete = hasEveryValue();
@@ -3216,12 +3220,12 @@
         if (chartWasHiddenBeforePrint === null) chartWasHiddenBeforePrint = chart.hidden;
         refreshTimeline();
         chart.hidden = false;
-      });
+      }, { signal: formEvents.signal });
       window.addEventListener('afterprint', () => {
         if (chartWasHiddenBeforePrint === null) return;
         chart.hidden = chartWasHiddenBeforePrint;
         chartWasHiddenBeforePrint = null;
-      });
+      }, { signal: formEvents.signal });
 
       vizBtn.addEventListener('click', () => {
         timelineVisible = !timelineVisible;
@@ -4656,7 +4660,7 @@
     // Feedback used to be hoisted out of a section of its own here. It lives
     // inside the review section now, so there is nothing to hoist: whatever
     // that section holds, renderReviewStep composes.
-    const sections = schema.sections.slice();
+    const sections = schema.sections.map((section) => ({ ...section, fields: section.fields.slice() }));
     const reviewIdx = sections.findIndex(
       (s) => s.fields.some((f) => f.key === 'signOffResearcher')
     );
@@ -4701,6 +4705,7 @@
   let draftRestoring = false;
   let lastSavedSignature = null;
   let draftTimer = null;
+  let recoveredDraft = null;
 
   // Storage can be absent or throw outright (private modes, blocked
   // cookies). A draft is a convenience, so every path here degrades to
@@ -4783,7 +4788,7 @@
       } else if (sel) {
         sel.hidden = false;
         if (otherRow) otherRow.hidden = true;
-        if (other) other.value = '';
+        if (other) other.value = snap.o || '';
         sel.value = snap.v || '';
         updateSelectClass(sel);
       }
@@ -4911,8 +4916,7 @@
   // forward untouched. A rendered-but-empty field still wins: collectDraft
   // reports it as empty, and an empty answer is an answer. Clear Form removes
   // the stored draft before resetting, so nothing is resurrected there.
-  function carryUnrendered(draft) {
-    const stored = readDraft();
+  function carryUnrendered(draft, stored = readDraft()) {
     if (!stored) return draft;
     ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
       const kept = stored[section];
@@ -4950,6 +4954,7 @@
         draft
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
+      recoveredDraft = payload;
     } catch (err) {
       // Most likely a quota error or storage blocked mid-session. Editing
       // must keep working, so this is reported and otherwise ignored.
@@ -4957,16 +4962,19 @@
     }
   }
 
-  function scheduleDraftSave() {
+  function scheduleDraftSave(event) {
+    if (event && !event.target.isConnected) return;
     if (draftRestoring) return;
     if (draftTimer) window.clearTimeout(draftTimer);
     draftTimer = window.setTimeout(saveDraft, DRAFT_SAVE_DELAY_MS);
   }
 
   function clearDraft() {
+    recoveredDraft = null;
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
     const store = draftStore();
     if (!store) return;
-    if (draftTimer) window.clearTimeout(draftTimer);
     try {
       store.removeItem(DRAFT_KEY);
     } catch (err) {
@@ -4976,17 +4984,18 @@
 
   function readDraft() {
     const store = draftStore();
-    if (!store) return null;
+    if (!store) return recoveredDraft;
     let raw;
     try {
       raw = store.getItem(DRAFT_KEY);
     } catch (err) {
-      return null;
+      return recoveredDraft;
     }
-    if (!raw) return null;
+    if (!raw) { recoveredDraft = null; return null; }
     try {
       const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : null;
+      recoveredDraft = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+      return recoveredDraft;
     } catch (err) {
       // A corrupt or hand-edited draft shouldn't wedge the form on every
       // load, so it's dropped rather than retried.
@@ -5165,7 +5174,7 @@
         if (match) match.checked = true;
         const wantsOther = snap.v === '__other__';
         if (otherRow) otherRow.hidden = !wantsOther;
-        if (other) other.value = wantsOther ? (snap.o || '') : '';
+        if (other) other.value = snap.o || '';
         return;
       }
       if (snap.v === '__other__') {
@@ -5182,7 +5191,7 @@
         sel.hidden = false;
         if (otherRow) otherRow.hidden = true;
         if (other) {
-          other.value = '';
+          other.value = snap.o || '';
           other.removeAttribute('data-field');
         }
         sel.value = snap.v || '';
@@ -5201,7 +5210,11 @@
       rows.forEach((cells, i) => {
         if (!trs[i]) return;
         const tds = Array.from(trs[i].querySelectorAll('td'));
-        cells.forEach((snap, j) => { if (tds[j]) setCellSnapshot(tds[j], snap); });
+        cells.forEach((snap, j) => {
+          if (!tds[j]) return;
+          setCellSnapshot(tds[j], snap);
+          restorePrefill(tds[j], snap);
+        });
       });
       updateRowRemoveButtons(tbody);
     });
@@ -5278,11 +5291,343 @@
 
   function initDraftPersistence() {
     restoreDraft();
+    bindDraftPersistence();
+  }
+
+  function bindDraftPersistence() {
     // 'click' is included because adding or removing a row changes the
     // structure without ever firing input/change.
     doc.addEventListener('input', scheduleDraftSave);
     doc.addEventListener('change', scheduleDraftSave);
     doc.addEventListener('click', scheduleDraftSave);
+  }
+
+  // ---------- local plan backups ----------
+  function backupStatus(message, error = false) {
+    const status = document.getElementById('backup-status');
+    status.dataset.error = String(error);
+    status.textContent = message;
+  }
+
+  function backupPayload(draft) {
+    return { version: DRAFT_VERSION, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
+  }
+
+  function collectBackup() {
+    const draft = collectDraft();
+    // Date segments have their own typing buffer. Read complete dates directly
+    // without committing an edit or waiting for either debounce.
+    doc.querySelectorAll('input[type="date"]').forEach((input) => {
+      const segments = dateSegments(input);
+      if (!segments) return;
+      const parsed = readDateSegments(input);
+      if (!parsed && [segments.day, segments.month, segments.year].some((part) => part.value.trim())) {
+        throw new Error('Complete or clear the unfinished date before downloading a backup.');
+      }
+      const value = parsed ? parsed.iso : '';
+      const td = input.closest('td');
+      if (td) {
+        const table = td.closest('table');
+        const row = Array.from(table.querySelectorAll('tbody tr')).indexOf(td.parentElement);
+        const column = Array.from(td.parentElement.children).indexOf(td);
+        draft.tables[table.id][row][column].v = value;
+      } else if (input.dataset.field) draft.fields[input.dataset.field] = value;
+    });
+    return backupPayload(carryUnrendered(draft));
+  }
+
+  function downloadBackup() {
+    let url;
+    try {
+      const backup = collectBackup();
+      validateBackup(backup);
+      const name = (backup.fields.researchTitle || 'Untitled plan')
+        .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
+        .replace(/[. ]+$/, '') || 'Untitled plan';
+      const blob = new Blob([JSON.stringify(backup, null, 2) + '\n'], { type: 'application/json' });
+      if (blob.size > 15 * 1024 * 1024) throw new Error('Backups must be smaller than 15 MB.');
+      url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name + ' - backup ' + todayIso() + '.json';
+      document.body.appendChild(link);
+      try { link.click(); } finally { link.remove(); }
+      backupStatus('Backup download started. Keep the JSON file to restore this plan later.');
+    } catch (err) {
+      backupStatus('Could not download a backup. ' + err.message, true);
+    } finally {
+      if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }
+
+  // Validate every nested value, including dormant keys. Unknown structure is
+  // rejected instead of being silently lost by the existing draft collectors.
+  function validateBackup(draft) {
+    const fail = (path) => { throw new Error('Invalid backup data at ' + path + '.'); };
+    const record = (value, path, keys) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) fail(path);
+      Object.keys(value).forEach((key) => {
+        if (!/^[a-zA-Z0-9_-]+$/.test(key) || ['__proto__', 'constructor', 'prototype'].includes(key)
+          || (keys && !keys.includes(key))) fail(path + '.' + key);
+      });
+    };
+    const string = (value, path) => { if (typeof value !== 'string') fail(path); };
+    const array = (value, path, check) => {
+      // Matches the existing row-growth guard, so no accepted import is truncated.
+      if (!Array.isArray(value) || value.length > 500) fail(path + ' (maximum 500 entries)');
+      value.forEach((item, i) => check(item, path + '[' + i + ']'));
+    };
+    const date = (value, path) => {
+      string(value, path);
+      if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !parseDateEntry(value))) fail(path);
+    };
+    const choice = (value, path) => {
+      record(value, path, ['v', 'o']);
+      string(value.v, path + '.v');
+      if ('o' in value) string(value.o, path + '.o');
+    };
+    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'tables', 'custom', 'lastUpdatedManual', 'ui']);
+    const version = draft.version === undefined ? 1 : draft.version;
+    if (!Number.isInteger(version) || version < 1 || version > DRAFT_VERSION) {
+      throw new Error('Unsupported backup version. This app supports versions 1 to ' + DRAFT_VERSION + '.');
+    }
+    record(draft.fields, 'fields');
+    if ('createdAt' in draft) { date(draft.createdAt, 'createdAt'); if (!draft.createdAt) fail('createdAt'); }
+    if ('savedAt' in draft) {
+      string(draft.savedAt, 'savedAt');
+      if (!/^\d{4}-\d{2}-\d{2}T/.test(draft.savedAt) || !Number.isFinite(Date.parse(draft.savedAt))) fail('savedAt');
+      date(draft.savedAt.slice(0, 10), 'savedAt');
+    }
+    if ('lastUpdatedManual' in draft && typeof draft.lastUpdatedManual !== 'boolean') fail('lastUpdatedManual');
+    if ('ui' in draft) {
+      record(draft.ui, 'ui', ['timelineVisible']);
+      if ('timelineVisible' in draft.ui && typeof draft.ui.timelineVisible !== 'boolean') fail('ui.timelineVisible');
+    }
+    ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
+      if (!(section in draft)) return;
+      record(draft[section], section);
+      Object.entries(draft[section]).forEach(([key, value]) => {
+        const path = section + '.' + key;
+        if (section === 'fields') string(value, path);
+        if (section === 'selects') choice(value, path);
+        if (section === 'lists') array(value, path, string);
+        if (section === 'custom') array(value, path, (block, blockPath) => {
+          record(block, blockPath, ['label', 'body']);
+          string(block.label, blockPath + '.label');
+          string(block.body, blockPath + '.body');
+        });
+        if (section === 'tables') array(value, path, (row, rowPath) => array(row, rowPath, (cell, cellPath) => {
+          record(cell, cellPath, ['t', 'v', 'o', 'n', 'd']);
+          if (!['text', 'date', 'sel', 'select', 'file'].includes(cell.t)) fail(cellPath + '.t');
+          string(cell.v, cellPath + '.v');
+          if ('d' in cell && cell.d !== 1) fail(cellPath + '.d');
+          if ('o' in cell) { if (cell.t !== 'select') fail(cellPath + '.o'); string(cell.o, cellPath + '.o'); }
+          if ('n' in cell) { if (cell.t !== 'file') fail(cellPath + '.n'); string(cell.n, cellPath + '.n'); }
+          if (cell.t === 'date') date(cell.v, cellPath + '.v');
+          if (cell.t === 'file' && !('n' in cell)) fail(cellPath + '.n');
+        }));
+      });
+    });
+    if ('methods' in draft) array(draft.methods, 'methods', (group, path) => {
+      record(group, path, ['question', 'methods']);
+      string(group.question, path + '.question');
+      array(group.methods, path + '.methods', string);
+    });
+    const renames = version < 5 ? { title: 'researchTitle' } : {};
+    if (version < 4) Object.assign(renames, { researcher: 'leadResearcher', projectOwner: 'projectRequester', reportResearch: 'researchReadout' });
+    if (version < 3) renames.problem = 'problemStatement';
+    Object.entries(renames).forEach(([oldKey, newKey]) => {
+      if (draft.fields[oldKey] && draft.fields[newKey] && draft.fields[oldKey] !== draft.fields[newKey]) fail('fields.' + oldKey + ' (conflicting legacy value)');
+    });
+    if (version < 2 && draft.methods?.length) fail('methods (version 1 uses lists.methods)');
+    if (version >= 2 && draft.lists?.methods) fail('lists.methods (use grouped methods)');
+    return migrateDraft(draft);
+  }
+
+  function planHasBackupContent() {
+    // Check actual controls as well as snapshots: unfinished date segments and
+    // unsaved writing need protection too. Ignore the generated dateline.
+    if (lastUpdatedManual) return true;
+    const header = doc.querySelector('.doc-header').cloneNode(true);
+    header.querySelector('.dateline')?.remove();
+    if (fieldHasContent(header) || Array.from(doc.querySelectorAll('.field')).some(fieldHasContent)) return true;
+    const live = collectDraft();
+    const complete = carryUnrendered(collectDraft());
+    const hasValue = (value) => {
+      if (typeof value === 'string') return !!value.trim();
+      if (Array.isArray(value)) return value.some(hasValue);
+      if (!value || typeof value !== 'object' || value.d === 1) return false;
+      if ('t' in value) return hasValue(value.v) || hasValue(value.o);
+      return Object.values(value).some(hasValue);
+    };
+    return ['fields', 'selects', 'lists', 'tables', 'custom'].some((section) =>
+      Object.keys(complete[section]).some((key) => !(key in live[section]) && hasValue(complete[section][key])));
+  }
+
+  // Compare what the supplied draft actually restored. This catches valid JSON
+  // with values the present controls cannot represent (unknown options, wrong
+  // cell types, extra columns, orphaned Methods, and single-line text loss).
+  function verifyBackupRestoration(expected, actual) {
+    const fail = (path) => { throw new Error('This backup cannot be restored faithfully at ' + path + '.'); };
+    const equal = (a, b, path) => { if (a !== b) fail(path); };
+    ['fields', 'selects', 'lists', 'custom', 'tables'].forEach((section) => {
+      Object.entries(expected[section] || {}).forEach(([key, value]) => {
+        if (!(key in actual[section])) return; // A legitimate dormant key is carried unchanged.
+        const restored = actual[section][key];
+        const path = section + '.' + key;
+        if (section === 'fields') equal(value, restored, path);
+        if (section === 'selects') {
+          equal(value.v, restored.v, path);
+          equal(value.o || '', restored.o || '', path + '.o');
+        }
+        if (section === 'lists') {
+          if (value.length > restored.length || (value.length && value.length !== restored.length)) fail(path);
+          value.forEach((entry, i) => equal(entry, restored[i], path + '[' + i + ']'));
+        }
+        if (section === 'custom') {
+          equal(value.length, restored.length, path);
+          value.forEach((block, i) => {
+            equal(block.label, restored[i].label, path + '[' + i + '].label');
+            equal(block.body, restored[i].body, path + '[' + i + '].body');
+          });
+        }
+        if (section === 'tables') {
+          equal(value.length, restored.length, path);
+          value.forEach((row, i) => {
+            equal(row.length, restored[i].length, path + '[' + i + ']');
+            row.forEach((cell, j) => {
+              const saved = restored[i][j];
+              equal(cell.t, saved.t, path);
+              // Existing migration/default behaviour may supply a missing date anchor.
+              if (cell.v || cell.t !== 'date') equal(cell.v, saved.v, path);
+              ['o', 'n'].forEach((part) => equal(cell[part] || '', saved[part] || '', path + '.' + part));
+              equal(cell.d, saved.d, path + '.d');
+            });
+          });
+        }
+      });
+    });
+    (expected.methods || []).forEach((group, i) => {
+      if (!actual.methods[i]) fail('methods[' + i + ']');
+      const values = actual.methods[i].methods;
+      if (group.methods.length && group.methods.length !== values.length) fail('methods[' + i + ']');
+      group.methods.forEach((value, j) => equal(value, values[j], 'methods[' + i + '].methods[' + j + ']'));
+    });
+  }
+
+  function replacePlanFromBackup(draft) {
+    const store = draftStore();
+    if (!store) throw new Error('Browser storage is unavailable. The current plan has been kept; allow storage and try again.');
+    // Keep the original nodes and closures, including feedback, focus and any
+    // unsaved text. A failed rebuild never has to reconstruct the original.
+    const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
+      syncCommentsReveal, planCreatedAt, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      methodsSuggestRefresh, fields: new Map(evaluationFields), batches: new Map(evaluationBatches),
+      focus: document.activeElement, signature: lastSavedSignature, recoveredDraft };
+    const replacement = doc.cloneNode(false);
+    const replacementEvents = new AbortController();
+    draftRestoring = true;
+    try {
+      original.doc.replaceWith(replacement);
+      doc = replacement;
+      formEvents = replacementEvents;
+      evaluationFields.clear();
+      evaluationBatches.clear();
+      timelineVisible = false;
+      lastUpdatedManual = false;
+      planCreatedAt = draft.createdAt || draft.savedAt?.slice(0, 10) || todayIso();
+      renderSchema(formSchema);
+      initTextareas(doc);
+      initStatusSelects(doc);
+      initAccordion();
+      initPlanDefaults();
+      initDeadlineConstraints();
+      initOutcomesSync();
+      initMethodsGroupsSync();
+      applyDraft(draft);
+      const rendered = collectDraft();
+      verifyBackupRestoration(draft, rendered);
+      const complete = carryUnrendered(rendered, draft);
+      const payload = backupPayload(complete);
+      const signature = draftContentSignature(complete);
+      const serialised = JSON.stringify(payload);
+      bindDraftPersistence();
+      // The only storage write is the commit point. setItem is atomic on error;
+      // all fallible rendering/validation happened before touching the old draft.
+      try { store.setItem(DRAFT_KEY, serialised); } catch (err) {
+        throw new Error('The restored plan could not be saved in browser storage. ' + err.message);
+      }
+      recoveredDraft = payload;
+      lastSavedSignature = signature;
+    } catch (err) {
+      replacementEvents.abort();
+      if (replacement.isConnected) replacement.replaceWith(original.doc);
+      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt,
+        lastUpdatedManual, refreshDateline, refreshReviewSummary, methodsSuggestRefresh, recoveredDraft } = original);
+      tables.splice(0, tables.length, ...original.tables);
+      evaluationFields.clear(); original.fields.forEach((value, key) => evaluationFields.set(key, value));
+      evaluationBatches.clear(); original.batches.forEach((value, key) => evaluationBatches.set(key, value));
+      lastSavedSignature = original.signature;
+      if (original.focus?.isConnected) original.focus.focus();
+      throw err;
+    } finally {
+      draftRestoring = false;
+    }
+    // There is no async gap during replacement. Pending saves cannot run until
+    // this commit finishes; cancellation and invalid files leave them intact.
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
+    original.formEvents.abort();
+    resetEvaluationWork();
+  }
+
+  function readBackupFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('The selected file could not be read.'));
+      reader.onabort = () => reject(new Error('Reading the selected file was cancelled.'));
+      reader.readAsText(file);
+    });
+  }
+
+  function initBackupControls() {
+    const download = document.getElementById('download-backup-btn');
+    const restore = document.getElementById('restore-backup-btn');
+    const picker = document.getElementById('backup-file');
+    download.disabled = false;
+    restore.disabled = false;
+    download.addEventListener('click', downloadBackup);
+    restore.addEventListener('click', () => { picker.value = ''; picker.click(); });
+    picker.addEventListener('change', async () => {
+      const file = picker.files[0];
+      if (!file) return;
+      const initialDoc = doc;
+      restore.disabled = true;
+      restore.setAttribute('aria-busy', 'true');
+      backupStatus('Reading backup…');
+      try {
+        // Bound memory use for accidental non-backup files; no content is uploaded.
+        if (file.size > 15 * 1024 * 1024) throw new Error('Choose a JSON backup smaller than 15 MB.');
+        const text = await readBackupFile(file);
+        let parsed;
+        try { parsed = JSON.parse(text); } catch (err) { throw new Error('The file is not valid JSON. Choose a downloaded plan backup.'); }
+        const draft = validateBackup(parsed);
+        if (planHasBackupContent() && !window.confirm('Replace the current plan with this backup? Unsaved writing and hidden saved fields will be replaced. Download a backup of the current plan first if you want to keep it.')) {
+          backupStatus('Restore cancelled. The current plan has been kept.');
+          return;
+        }
+        replacePlanFromBackup(draft);
+        backupStatus('Backup restored and saved in this browser. Evaluation results are not included in backups.');
+      } catch (err) {
+        backupStatus('Could not restore the backup. The current plan has been kept. ' + err.message, true);
+      } finally {
+        picker.value = ''; // Selecting the same file again must still fire change.
+        restore.disabled = false;
+        restore.setAttribute('aria-busy', 'false');
+        if (doc !== initialDoc) restore.focus();
+      }
+    });
   }
 
   function clearForm() {
@@ -5505,6 +5850,7 @@
         const schema = parseSchema(schemaText);
         attachRubrics(schema, parseRubric(rubricText));
         METHODS = parseMethodsList(methodsText);
+        formSchema = schema;
         renderSchema(schema);
         initTextareas(doc);
         initStatusSelects(doc);
@@ -5515,6 +5861,7 @@
         initMethodsGroupsSync();
         initTestProfileControls();
         initDraftPersistence();
+        initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
       })

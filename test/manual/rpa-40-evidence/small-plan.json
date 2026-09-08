@@ -1,0 +1,32 @@
+{
+  "version": 7,
+  "createdAt": "2026-08-15",
+  "fields": {
+    "researchTitle": "A smaller plan",
+    "background": "New context",
+    "lastUpdated": "2026-09-01"
+  },
+  "lists": {
+    "researchQuestions": [
+      "One question?"
+    ],
+    "outcomes": [
+      "One outcome."
+    ]
+  },
+  "methods": [
+    {
+      "question": "One question?",
+      "methods": [
+        "Interviews"
+      ]
+    }
+  ],
+  "selects": {},
+  "tables": {},
+  "custom": {},
+  "ui": {
+    "timelineVisible": false
+  },
+  "lastUpdatedManual": false
+}
