@@ -24,6 +24,7 @@
   // The user's draft choice is independent of temporary print visibility.
   let timelineVisible = false;
   let updateTimelineVisibility = null;
+  let syncCommentsReveal = null;
 
   // ---------- small DOM helper ----------
   function el(tag, className, attrs) {
@@ -4324,6 +4325,19 @@
       btn.hidden = false;
     });
 
+    // A restored draft writes the value straight into the textarea and fires
+    // no click, so without this a plan saved with feedback in it reopened with
+    // the field hidden behind "+ Add feedback" — the comment was there and
+    // invisible. That was survivable while this sat in a section of its own;
+    // it is not, now that the field's whole purpose is to be read at the
+    // moment somebody reviews the plan.
+    syncCommentsReveal = () => {
+      const written = Boolean(ta && ta.value.trim());
+      fieldEl.hidden = !written;
+      btn.hidden = written;
+      if (written) resizeTa(ta);
+    };
+
     wrap.append(btn, fieldEl);
     return wrap;
   }
@@ -4443,8 +4457,17 @@
       });
     }
 
+    // Feedback sits between the summary and the approvals: it is offered
+    // while reading the plan, and feedback given after sign-off has missed
+    // its moment. Found by key rather than by position in the section, for
+    // the same reason the section itself is.
+    const commentsField = section.fields.find((f) => f.key === 'comments');
+    if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
+
     const signOffs = el('div', 'review-signoffs');
-    section.fields.forEach((f) => signOffs.appendChild(renderField(f)));
+    section.fields
+      .filter((f) => f !== commentsField)
+      .forEach((f) => signOffs.appendChild(renderField(f)));
     step.appendChild(signOffs);
 
     // The summary is only true at the moment it is drawn, so redraw it
@@ -4468,25 +4491,21 @@
     tables.length = 0;
     doc.appendChild(renderHeader(schema.header));
 
-    // Found by the field's key, not by its section's title. The title used to
-     // be matched literally, so renaming the section would have quietly
-     // demoted this to an ordinary accordion — the same label-to-code coupling
-     // that cost a day in RPA-55, one level up.
+    // The review step is found by the sign-off keys, not by its section's
+    // title. The title used to be matched literally, so renaming the section
+    // would have quietly demoted this to an ordinary accordion — the same
+    // label-to-code coupling that cost a day in RPA-55, one level up.
+    //
+    // Feedback used to be hoisted out of a section of its own here. It lives
+    // inside the review section now, so there is nothing to hoist: whatever
+    // that section holds, renderReviewStep composes.
     const sections = schema.sections.slice();
-    const commentsIdx = sections.findIndex(
-      (s) => s.fields.length === 1 && s.fields[0].key === 'comments'
-    );
-    const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
-
-    // The review step, found by the sign-off keys rather than by its section's
-    // title, for the reason immediately above.
     const reviewIdx = sections.findIndex(
       (s) => s.fields.some((f) => f.key === 'signOffResearcher')
     );
     const reviewSection = reviewIdx !== -1 ? sections.splice(reviewIdx, 1)[0] : null;
 
     sections.forEach((s) => doc.appendChild(renderSection(s)));
-    if (commentsField) doc.appendChild(renderCommentsReveal(commentsField));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
   }
@@ -4984,6 +5003,7 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
+    if (syncCommentsReveal) syncCommentsReveal();
   }
 
   function restoreDraft() {

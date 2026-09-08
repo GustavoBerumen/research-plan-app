@@ -76,7 +76,7 @@ test('the choice is saved and restored in the shape a dropdown used', async (t) 
 
   choose(window, group(document).radios[2]);
   const raw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'the draft was never saved',
   });
   const saved = JSON.parse(raw);

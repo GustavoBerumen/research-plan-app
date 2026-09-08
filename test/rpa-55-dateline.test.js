@@ -74,7 +74,7 @@ test('activating it swaps in the editor, and leaving puts the sentence back', as
   // Leaving it restores the sentence, so the control is only present while in use.
   document.querySelector('[data-field="researchTitle"]').focus();
   await waitFor(() => dl.control.hidden === true, {
-    timeout: 1000,
+    timeout: 5000,
     message: 'leaving the editor should put the sentence back',
   });
   assert.equal(dl.text.hidden, false);

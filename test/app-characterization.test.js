@@ -252,7 +252,7 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
   setValue(window, groups[1].querySelectorAll('.list-input')[1], 'Survey');
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'The v7 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);

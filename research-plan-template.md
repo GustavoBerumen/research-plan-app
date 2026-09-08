@@ -187,12 +187,16 @@ Additional Resources (custom-fields, key=additionalResources): Add details...
      PR #22). The keys keep their original spelling on purpose: a key is an
      identifier, not a description, and now that the template pins them a
      label can be reworded without touching stored drafts. -->
+<!-- Feedback moved here from a section of its own (RPA-55). It was the only
+     field with no defined reader, and a section at the end of the document was
+     nobody's stop. The review step is where a plan is read rather than
+     written, which is the one moment a comment on it has an audience — and it
+     sits above the approvals, because feedback offered after sign-off has
+     missed its moment. It keeps the key `comments`: a key is an identifier,
+     not a description, so no saved draft moves. -->
+Feedback (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
+  Hint: Anything else worth noting that didn't fit elsewhere in this plan.
 Sign off: Lead researcher (text, key=signOffResearcher): Type initials
   Hint: Lead researcher approval — type initials and the date is added automatically.
 Sign off: Project requester (text, key=signOffProjectOwner): Type initials
   Hint: Project requester approval — type initials and the date is added automatically.
-
-# Feedback
-
-Feedback (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
-  Hint: Anything else worth noting that didn't fit elsewhere in this plan.

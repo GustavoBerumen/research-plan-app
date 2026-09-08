@@ -4,12 +4,16 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 30 of 31 verdicts settled.** The field list,
-types and hint text are generated from the template. Question 1 is filled from
-what the app demonstrably consumes; questions 2 and 3 from the template, the
-field order and how the app behaves. **One row is still open — Feedback.** It
-shares the property that held up all the others: **no in-app consumer.** It
-needs a reader, not a developer — see *For the readers* below.
+**Status: complete. All 31 verdicts are in.** The field list, types and hint text
+are generated from the template. Question 1 was filled from what the app
+demonstrably consumes; questions 2 and 3 from the template, the field order and
+how the app behaves.
+
+The six rows that held out longest all failed question 1 the same way — nothing
+in the app consumed them — and **not one of them was resolved by deleting it.**
+See *How the last rows were settled* below. Question 1 turned out to be the
+weakest of the three for finding cuts, because it measures the tool as much as
+the field. The single cut on the sheet came from question 3.
 
 The two Action Points columns left that list without one. Their answer to "no
 in-app consumer" was to build the consumer rather than to cut the question —
@@ -68,8 +72,8 @@ Fill in as verdicts are reached.
 | cut | 1 |
 | merge | 0 |
 | optional | 5 |
-| move | 4 |
-| undecided | 1 |
+| move | 5 |
+| undecided | 0 |
 | **total** | **31** |
 
 31 rather than 25: the three fixed-column tables are audited per column, per the
@@ -82,25 +86,19 @@ and the merge count went to zero. A verdict is not a ratchet: this one was made
 from the template and overturned by the researcher who runs the studies, which
 is the right way round.
 
-## For the readers
+## How the last rows were settled
 
-One row is left open, and it is the last of a list that started at six. It passes
-question 2 (someone knows the answer) and fails question 1 in the only way the
-code can measure it: **nothing in the app consumes the value.** That is not a
-verdict. A field can matter to a human reader and be used by nothing in the
-tool — or the tool may be ignoring information it already collects. Both need
-a reader to settle.
+Six rows held out to the end. Every one passed question 2 — somebody knew the
+answer — and failed question 1 in the only way code can measure it: **nothing in
+the app consumed the value.**
 
-The question to put to whoever reads these plans, field by field:
+That turned out not to be a verdict. A field can matter to a human reader and be
+used by nothing in the tool, or the tool can be ignoring information it already
+collects. The question that settled them was not *should this go?* but:
 
-> **Nothing in the tool uses this. What do you use it for?**
+> **Nothing in the tool uses this. What would have to exist for something to?**
 
-Anything with an answer is a *keep* (and possibly a feature request: feed it
-to the suggesters). Anything nobody can justify is the cut list. Several of
-these are also the hardest fields to answer (question 3) — *no consumer and
-high effort* is where the genuine cuts live.
-
-How the other five left is the useful part, because none of them left as a cut:
+None of the six was resolved by deleting it:
 
 - **Action Points → Action and → Responsible: kept.** "Nothing uses this" turned
   out to mean nothing uses it *yet*. The answer was to build the consumer.
@@ -111,11 +109,19 @@ How the other five left is the useful part, because none of them left as a cut:
   not question 1. A field nobody can answer at the moment it is asked does not
   have to be deleted; it has to stop blocking.
 
-Three different answers to the same failing question, and not one of them was
-"delete it". That is worth holding in mind for the row that remains.
+- **Feedback: moved** into the review step, above the approvals. Its missing
+  reader was a placement problem — a section of its own at the end of the
+  document was nobody's stop.
 
-- Feedback *(renamed from Comments: Gus wants it used for feedback
-  on the plan, which names a writer but not yet a reader)*
+Four different answers to the same failing question, and none of them a cut. The
+one field that was cut — Action Points → Status — failed question 3, not
+question 1: it was unanswerable at the moment it was asked and wrong the day
+after sign-off.
+
+**That is the finding worth carrying out of this audit.** "Nothing uses this"
+identifies where the tool is thin, not which questions are surplus. The question
+that finds real cuts is *can the person in front of the form actually answer this,
+here, now?*
 
 ## Header (document meta)
 
@@ -186,7 +192,7 @@ earn a section of their own.*
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. |  |
+| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. | **move** — **done.** Into the review step, above the approvals. The reader problem was a placement problem: a section of its own at the end of the document was nobody's stop, whereas the review step is the one moment somebody reads the plan rather than writes it. Above the sign-offs, because feedback offered after approval has missed its moment. It keeps the key `comments`, so no saved draft moved. |
 
 ## First pass: who has the answer?
 
@@ -311,6 +317,22 @@ three. The ordering principle is to open with what people can answer; this form
 does the opposite. Consider opening with Research, and letting the admin and
 project-context fields follow or arrive prefilled per #1.
 
+**Half done, and the rest deliberately deferred.** Alignment is gone — it became
+the review step and moved to the end, so the form no longer opens by asking for
+approvals. Context is still first, and Gus's decision is to leave it there until
+recommendation 1 lands.
+
+The reasoning: the complaint about Context is not its position but that it is
+transcription. If Background, Goal and Problem Statement arrive prefilled from the
+linked Jira issue, Context stops being a wall and the reorder is solving a problem
+that no longer exists. Reordering first would also cost the reader something real —
+a finished plan reads better with the background before the questions — for a
+writer-side gain that prefilling may deliver anyway.
+
+So this is blocked on #1 rather than open. Revisit it if #1 turns out not to be
+feasible, since the constraint noted there is real: the proxy calls `issue/picker`,
+which returns key and summary only.
+
 ### 4. Give Previous Knowledge a source, or make it optional
 
 Nobody owns "what research already exists". `research/README.md` already points at
@@ -334,14 +356,20 @@ The one field with no defined reader. Renaming Comments to Feedback named a writ
 and a subject — feedback on the plan — but still not a reader, so the question is
 unchanged by the rename. Either name its audience in the hint, or cut it.
 
-There is now a third option the earlier draft did not have: **move it into the
-review step.** That is where a plan is read rather than written, which is the one
-moment a comment on it has an audience. It would also stop the field being a
-section of its own at the end of the document, which is most of why it currently
-reads as an afterthought.
+**Done: moved into the review step**, above the approvals. The reader problem
+turned out to be a placement problem. A section of its own at the end of the
+document was nobody's stop; the review step is the one moment somebody reads the
+plan rather than writes it, so it is the one moment a comment on it has an
+audience. Above the sign-offs, because feedback offered after approval has missed
+its moment.
 
-Note the field keeps the key `comments` — labels and keys are independent since the
-`key=` work — so nothing in a saved draft moves when this is settled.
+The field keeps the key `comments` — labels and keys are independent since the
+`key=` work — so nothing in a saved draft moved.
+
+The move also exposed a bug worth recording: a plan saved with feedback in it
+reopened with the field hidden behind "+ Add feedback". The value was restored and
+invisible. That was survivable while this sat in a section of its own and is not,
+now that the whole point is to be read at review time.
 
 ### 7. Sign-off pair and Last Updated
 
@@ -358,18 +386,30 @@ out of the placeholder slot into their own `Hint:` line (RPA-58), so it has one 
 rather than a dropdown, since GOV.UK treats a select as a last resort and five
 options that form a scale read better all at once.
 
-### Expected shape of the finished sheet
+### Shape of the finished sheet
 
-One cut so far (Action Points/Status, done), possibly a second (Feedback), three or
-four moves, several made optional, and the great majority *keep*. If that
-disappoints, ADR 001 already argued why: the problem was probably orientation, not
-scope.
+Predicted: two cuts, three or four moves, several made optional, the great
+majority *keep*.
 
-The Action Points rows sharpened that. Two of the three columns looked like cuts on
-question 1 and turned out to be missing plumbing rather than surplus questions.
-**"Nothing uses this" is a finding about the tool as often as about the field**, and
-the audit's job is to tell those apart. Only the third column — unanswerable at the
-moment it is asked, and wrong the day after — was a genuine cut.
+Actual: **one cut, five moves, five optional, twenty keep**, out of 31.
+
+Close enough that the prediction was not the interesting part. What the sheet
+turned out to measure was this: a plan that felt too long had almost nothing
+surplus in it. One question genuinely could not be answered. Everything else was
+in the wrong place, unmarked as optional, or waiting on plumbing the tool did not
+have. ADR 001 said the problem was orientation rather than scope, and the sheet
+agrees more strongly than expected.
+
+Two things are worth carrying forward:
+
+**Question 1 is the weakest of the three for finding cuts.** "Nothing in the app
+consumes this" measures the tool as much as the field, and every row that failed
+only question 1 survived. The cut came from question 3 — *can the person in front
+of the form answer this, here, now?* That is the question to lead with next time.
+
+**A verdict is evidence, not a ratchet.** Two were overturned: Project was cut
+against a *keep*, and the Characteristics/User Groups merge was reversed. Both
+reversals came from someone who knew the practice better than the sheet did.
 
 ### Decision needed before verdicts go in — settled
 

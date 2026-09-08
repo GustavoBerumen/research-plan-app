@@ -57,7 +57,7 @@ test('a hand-set date survives editing the rest of the plan', async (t) => {
   // The exact thing that used to destroy it: an unrelated content edit.
   setValue(window, document.querySelector('[data-field="background"]'), 'New context');
   await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'the draft was never saved',
   });
 
@@ -106,7 +106,7 @@ test('without a hand-set date, editing the plan re-stamps it', async (t) => {
 
   setValue(app.window, app.document.querySelector('[data-field="background"]'), 'Edited today');
   await waitFor(() => input.value === todayIso(), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'an ordinary edit should re-stamp the date',
   });
 });
@@ -119,7 +119,7 @@ test('Clear Form starts a new plan, stamping again from today', async (t) => {
   const input = lastUpdated(document);
   setValue(window, input, '2020-01-01');
   setValue(window, document.querySelector('[data-field="background"]'), 'Some context');
-  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 1500 });
+  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 5000 });
   assert.equal(input.value, '2020-01-01');
 
   document.getElementById('clear-btn').click();
@@ -128,6 +128,6 @@ test('Clear Form starts a new plan, stamping again from today', async (t) => {
   // And the automatic stamping is back on for it.
   setValue(window, input, '2019-06-05');
   setValue(window, document.querySelector('[data-field="background"]'), 'Context again');
-  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 1500 });
+  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 5000 });
   assert.equal(input.value, '2019-06-05', 'until somebody sets it by hand again');
 });

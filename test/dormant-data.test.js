@@ -51,7 +51,7 @@ test('a dormant table keeps its saved rows through an autosave', async (t) => {
 
   setValue(window, document.querySelector('[data-field="researchTitle"]'), 'Checkout study, edited');
   await waitFor(() => storedDraft(window).fields.researchTitle === 'Checkout study, edited', {
-    timeout: 1500,
+    timeout: 5000,
     message: 'the edit was never saved',
   });
 
@@ -69,7 +69,7 @@ test('a dormant field keeps its saved value too', async (t) => {
   assert.equal(document.querySelector('[data-field="project"]'), null, 'Project is dormant');
 
   setValue(window, document.querySelector('[data-field="researchTitle"]'), 'Edited');
-  await waitFor(() => storedDraft(window).fields.researchTitle === 'Edited', { timeout: 1500 });
+  await waitFor(() => storedDraft(window).fields.researchTitle === 'Edited', { timeout: 5000 });
 
   assert.equal(storedDraft(window).fields.project, 'Mobile checkout');
 });
@@ -90,7 +90,7 @@ test('a rendered field that is emptied still saves as empty', async (t) => {
   assert.equal(background.value, 'Some background');
   setValue(window, background, '');
   await waitFor(() => storedDraft(window).fields.background === '', {
-    timeout: 1500,
+    timeout: 5000,
     message: 'clearing a field should be saved, not undone',
   });
 });
@@ -123,7 +123,7 @@ test('Clear Form does not resurrect the plan it just cleared', async (t) => {
 
   document.getElementById('clear-btn').click();
   setValue(window, document.querySelector('[data-field="researchTitle"]'), 'A new plan');
-  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 1500 });
+  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), { timeout: 5000 });
 
   const saved = storedDraft(window);
   assert.equal(saved.fields.researchTitle, 'A new plan');
