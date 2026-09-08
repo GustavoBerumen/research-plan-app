@@ -81,6 +81,34 @@ One branch per ticket, named `feat/rpa-<n>-<slug>` or `fix/rpa-<n>-<slug>`.
 Where a ticket is written up after the code exists, rename the branch *before*
 opening the PR, never after.
 
+## Merging
+
+**Merge commits, not squash.** Every PR on `main` from #30 onwards landed as a
+merge commit, and commit messages here carry reasoning rather than a one-line
+label. Squashing a six-commit branch throws five of them away.
+
+**Never delete a branch another PR is based on.** Stacked PRs are normal — a
+second branch cut from the first while the first is still in review. Merging the
+base PR with `--delete-branch` does *not* retarget the stacked PR: GitHub closes
+it, and it cannot be reopened until the deleted branch exists again. Merge the
+base, retarget the stack, then delete:
+
+```sh
+gh pr merge <base-pr> --merge          # no --delete-branch
+gh pr edit  <stacked-pr> --base main
+gh pr merge <stacked-pr> --merge
+git push origin --delete <base-branch>
+```
+
+Getting it wrong is survivable — push the deleted commit back as a branch,
+reopen the PR, retarget it, delete the branch again, and the PR keeps its
+number, commits and review history. It is four steps that buy nothing.
+
+Also skip `--delete-branch` when the head branch is checked out in a worktree or
+in the other session's directory. Deleting a checked-out branch fails, and
+letting a tool switch branches underneath an active session is the one thing
+this file exists to prevent. GitHub deletes the remote branch on merge anyway.
+
 ## Where decisions live
 
 In the repo, not in a session's context.
