@@ -224,6 +224,54 @@ test('a plan saved before this feature is not stamped with today', async (t) => 
   assert.equal(timeline(app.document).dates[0][0], '2026-07-14');
 });
 
+test('a plan already in progress gets the suggestions too', async (t) => {
+  // The case the first version missed, and the one people are actually in.
+  // A plan saved before this feature has a Stage Timeline in its draft, no
+  // marks on any cell, and often a Research readout already set. It was
+  // showing an entirely blank timeline: the anchors ran at the top of
+  // applyDraft, so the restore wrote the saved empty cells straight over them,
+  // and the marked-only rule meant nothing refilled afterwards.
+  const app = await bootApp({
+    draft: {
+      version: 7,
+      savedAt: '2026-07-14T09:30:00.000Z',
+      fields: { researchReadout: '2026-09-17', background: 'A plan in progress' },
+      lists: {},
+      tables: {
+        'stageTimeline-table': [
+          [{ t: 'select', v: 'Planning', o: '' }, { t: 'date', v: '' }, { t: 'date', v: '' }, { t: 'text', v: '' }],
+          [{ t: 'select', v: 'Reporting', o: '' }, { t: 'date', v: '' }, { t: 'date', v: '' }, { t: 'text', v: '' }],
+        ],
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const tl = timeline(app.document);
+  assert.equal(tl.rows.length, 2, 'the saved shape is kept — this does not add rows back');
+  assert.equal(tl.dates[0][0], '2026-07-14', 'the first stage starts when the plan did');
+  assert.equal(tl.dates[1][1], '2026-09-17', 'the last stage ends at the readout');
+});
+
+test('a half-typed date is not overwritten by a suggestion', async (t) => {
+  // An empty cell accepts a suggestion, which is what rescues the plans above.
+  // A date being typed reads as empty until all three segments are filled, so
+  // "empty" alone would let the readout overwrite someone mid-keystroke.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document, window } = app;
+
+  const cell = timeline(document).rows[4].querySelectorAll('.date-control')[1];
+  const day = cell.querySelector('.date-segment');
+  day.value = '09';
+  day.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(cell.querySelector('input[type="date"]').value, '', 'still incomplete');
+
+  setValue(window, document.querySelector('[data-field="researchReadout"]'), '2026-12-11');
+  assert.equal(timeline(document).dates[4][1], '',
+    'somebody is typing here, so the suggestion stays out of it');
+});
+
 test('the hint says the defaults are suggestions', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());

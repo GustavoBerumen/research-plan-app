@@ -1082,13 +1082,23 @@
   // timeline nobody wrote, and RPA-64's required-field validation would accept
   // it. So it is marked in the DOM, carried in the cell snapshot, and dropped
   // the moment somebody types.
+  // Three states, because two were not enough:
+  //   "1"     the form put this here, and may replace it
+  //   "0"     a person has been in this cell, so leave it alone
+  //   absent  unknown — a plan saved before any of this existed
+  // Two states forced a choice between never helping a plan already in
+  // progress (marked-only) and overwriting a half-typed date (empty-too).
   function markPrefilled(control) {
     if (control) control.dataset.prefill = '1';
     return control;
   }
 
   function isPrefilled(control) {
-    return Boolean(control && control.dataset && control.dataset.prefill);
+    return Boolean(control && control.dataset && control.dataset.prefill === '1');
+  }
+
+  function wasTouched(control) {
+    return Boolean(control && control.dataset && control.dataset.prefill === '0');
   }
 
   // Any real edit clears it, wherever the control lives. Bound once, at the
@@ -1104,8 +1114,10 @@
       if (!el || !el.closest) return;
       const scope = el.closest('td') || el.closest('.date-control') || el;
       const marked = scope.dataset && scope.dataset.prefill ? [scope] : [];
-      marked.concat(Array.from(scope.querySelectorAll ? scope.querySelectorAll('[data-prefill]') : []))
-        .forEach((c) => { delete c.dataset.prefill; });
+      const controls = scope.querySelectorAll
+        ? Array.from(scope.querySelectorAll('input, select, textarea'))
+        : [];
+      marked.concat(controls).forEach((c) => { c.dataset.prefill = '0'; });
     };
     root.addEventListener('input', clear, true);
     root.addEventListener('change', clear, true);
@@ -1168,12 +1180,19 @@
       return td ? td.querySelector('input[type="date"]') : null;
     };
 
+    // A suggestion may fill a cell that is still marked as a default, and also
+    // one that is simply empty — an empty cell holds no decision to protect.
+    // Marked-only was too strict: a plan saved before this feature carries no
+    // marks, so every plan already in progress would have shown a blank
+    // timeline for ever, which is the case people are actually in.
+    const open = (input) => input && !wasTouched(input) && (isPrefilled(input) || !input.value);
+
     const first = dateIn(rows[0], 'startDate');
-    if (first && isPrefilled(first)) setDateInputValue(first, planCreatedAt);
+    if (open(first)) setDateInputValue(first, planCreatedAt);
 
     const readout = doc.querySelector('[data-field="researchReadout"]');
     const last = dateIn(rows[rows.length - 1], 'completionDate');
-    if (readout && last && isPrefilled(last)) setDateInputValue(last, readout.value || '');
+    if (readout && readout.value && open(last)) setDateInputValue(last, readout.value);
   }
 
   function addRow(tableId, columns) {
@@ -4676,6 +4695,8 @@
   // spurious `d` on the next save.
   function restorePrefill(td, snap) {
     td.querySelectorAll('input, select, textarea').forEach((control) => {
+      // No `d` means unknown rather than touched: a legacy draft has no marks
+      // at all, and its empty cells should still accept a suggestion.
       if (snap.d) markPrefilled(control);
       else delete control.dataset.prefill;
     });
@@ -5021,7 +5042,6 @@
     // six-week-old plan started this morning.
     planCreatedAt = draft.createdAt
       || (/^\d{4}-\d{2}-\d{2}/.test(String(draft.savedAt || '')) ? String(draft.savedAt).slice(0, 10) : planCreatedAt);
-    applyTimelineAnchors();
     // Lists first — Research Questions drives both Outcomes rows and Methods
     // groups, so its rows must exist before either is restored.
     const orderedListKeys = Object.keys(draft.lists || {})
@@ -5147,6 +5167,10 @@
     });
 
     syncMethodsGroups();
+    // After the tables, not before: this used to run at the top of applyDraft,
+    // so the restore wrote the saved (empty) cells straight over the anchors
+    // and a returning plan showed no dates at all.
+    applyTimelineAnchors();
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
