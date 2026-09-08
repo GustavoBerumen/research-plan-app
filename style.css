@@ -461,6 +461,51 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .eval-dislike-btn.active{background:var(--tag-red-bg);opacity:1}
 .eval-save-btn.active{background:var(--tag-blue-bg);opacity:1}
 
+/* Evaluation details share the form's rules, type and secondary buttons.
+   Scope these styles to evaluations: suggestions also use .eval-panel. */
+.eval-controls{min-width:0}
+.eval-controls .eval-panel{border:1px solid var(--border);border-top:3px solid var(--ink);overflow-wrap:anywhere}
+.eval-controls .eval-head{gap:12px;flex-wrap:wrap;padding:16px;background:var(--canvas);color:var(--ink);border-bottom:1px solid var(--border-light)}
+.eval-controls .eval-hl{flex:1 1 180px;min-width:0;font-size:var(--text);line-height:var(--lh);color:var(--ink)}
+.eval-controls .eval-badge{font-size:var(--text-sm);line-height:var(--lh);padding:2px 8px;color:var(--tag-blue-text);background:var(--tag-blue-bg)}
+.eval-controls .eval-tone-problem .eval-badge{color:var(--tag-red-text);background:var(--tag-red-bg)}
+.eval-controls .eval-tone-warning .eval-badge{color:var(--tag-yellow-text);background:var(--tag-yellow-bg)}
+.eval-controls .eval-tone-success .eval-badge{color:var(--tag-green-text);background:var(--tag-green-bg)}
+.eval-controls .eval-x{color:var(--ink);width:32px;height:32px;flex-shrink:0;margin-left:auto}
+.eval-controls .eval-x:hover{background:var(--btn-2-hover)}
+.eval-controls .eval-explanation{margin:16px 16px 0;padding:12px;border-left:4px solid var(--tag-yellow-text);background:var(--tag-yellow-bg);line-height:var(--lh)}
+.eval-controls .eval-metrics{display:block;padding:0 16px}
+.eval-controls .eval-metric{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);column-gap:24px;row-gap:8px;padding:16px 0;align-items:start}
+.eval-controls .eval-metric + .eval-metric{border-top:1px solid var(--border-light)}
+.eval-controls .eval-mname{grid-column:1;grid-row:1;min-width:0;line-height:var(--lh)}
+.eval-controls .eval-dots{grid-column:1;grid-row:2;margin:0;flex-wrap:wrap}
+.eval-controls .eval-dot-on{background:var(--ink)}
+.eval-controls .eval-mdesc{grid-column:2;grid-row:1 / span 2;min-width:0;font-size:var(--text);line-height:var(--lh);color:var(--ink)}
+.eval-controls .eval-rlabel{border-top:1px solid var(--border-light);padding:16px 0 0;margin:0 16px 8px}
+.eval-controls .eval-recs{padding:0 16px 0 36px}
+.eval-controls .eval-rec{line-height:var(--lh);padding-left:4px;margin-bottom:12px}
+.eval-controls .eval-actions{flex-wrap:wrap;gap:12px 8px;padding:16px;border-top:1px solid var(--border-light)}
+.eval-controls .eval-actions button{min-height:var(--control-h);height:auto;max-width:100%;font-size:var(--text);line-height:1.25}
+.eval-controls .eval-fb-btn{width:auto;gap:8px;padding:8px 10px;background:var(--btn-2);border:2px solid transparent;box-shadow:0 2px 0 var(--btn-2-shadow)}
+.eval-icon{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.eval-controls .eval-fb-btn:hover:not(:disabled){background:var(--btn-2-hover)}
+.eval-controls .eval-fb-btn.active{background:var(--tag-blue-bg);border-color:var(--ink);box-shadow:none;opacity:1;font-weight:700}
+.eval-controls .eval-fb-btn:disabled:not(.active),.eval-controls .eval-reevaluate-btn:disabled{opacity:.5;cursor:not-allowed}
+.eval-controls .eval-fb-btn[aria-busy="true"]{border-style:dashed;border-color:var(--ink)}
+.eval-controls .eval-fb-btn:focus-visible,.eval-controls .eval-fb-btn:hover:focus-visible,.eval-controls .eval-x:focus-visible{outline:3px solid transparent;background:var(--focus);color:var(--ink);box-shadow:0 2px 0 var(--ink);border-color:var(--ink)}
+.eval-feedback-status{padding:0 16px 16px;font-size:var(--text-sm)}
+.eval-feedback-status:empty{display:none}
+.eval-controls .eval-error,.field-eval-progress,.section-eval-status{overflow-wrap:anywhere}
+@media screen and (max-width:600px){
+  .eval-controls .eval-head{gap:8px}
+  .eval-controls .eval-hl{flex-basis:calc(100% - 48px);order:0}
+  .eval-controls .eval-x{order:1}
+  .eval-controls .eval-badge{order:2}
+  .eval-controls .eval-metric{grid-template-columns:minmax(0,1fr);gap:8px}
+  .eval-controls .eval-mdesc{grid-column:1;grid-row:3}
+  .eval-controls .eval-reevaluate-btn{margin-right:0;flex-basis:100%}
+}
+
 /* ---------- Suggestion panels (framework, methods) ---------- */
 .fw-panel .fw-body,.ms-panel .fw-body{padding:20px}
 .fw-match{border-top-color:var(--link)} .fw-match .eval-head{background:var(--link)}
@@ -507,6 +552,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 
 /* ---------- Print ---------- */
 @media print{
+  .eval-feedback-status{display:none!important}
+  /* Chrome can drop a spanning grid cell at a printed page boundary.
+     Normal block flow keeps each criterion, score and justification together. */
+  .eval-controls .eval-metric{display:block;break-inside:avoid}
+  .eval-controls .eval-dots{margin:8px 0}
+  /* Close the border on each printed fragment of a long evaluation. */
+  .eval-controls .eval-panel{box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .eval-controls .eval-rec{break-inside:avoid}
   .jira-status{display:none!important}
   /* @page margins apply per physical page, so every page gets consistent
      spacing regardless of where content happens to break. */
@@ -523,16 +576,26 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   .methods-groups.methods-grouped{gap:20px}
   .methods-group{break-inside:avoid;page-break-inside:avoid}
   .acc-head{cursor:default}
+  .acc-head,.flabel,.field-hint-text,.field-group-title,.eval-head,.eval-rlabel{break-inside:avoid;break-after:avoid;page-break-after:avoid}
   .acc-chevron{display:none}
   .acc-body[hidden]{display:block!important}
-  .comments-block .field[hidden]{display:flex!important}
+  .comments-block .field[hidden]{display:block!important}
+  /* Let long evaluated fields flow across pages. Flex columns combined with
+     section-wide break avoidance can strand a heading on an empty page. */
+  .fields,.field-group,.field{display:block}
+  .fields > * + *{margin-top:28px}
+  .field-group > * + *{margin-top:24px}
+  .field > * + *{margin-top:5px}
   body,html{background:#fff!important}
   .page-wrap{padding:0!important}
   .doc{box-shadow:none!important;max-width:100%!important;padding:24px 36px!important;margin:0!important}
-  .finput,.cinput,.minput,.date-control,.ssel,.th-input,.title-inp{border-color:#999!important;box-shadow:none!important;background:#fff!important}
-  /* overflow:visible only, deliberately no height:auto: the autosizer
-     maintains an accurate inline height and recalculates before printing. */
+  .finput,.cinput,.minput,.date-control,.ssel,.th-input,.title-inp{border-color:#999!important;box-shadow:none!important;background:#fff!important;outline:none!important}
+  /* Keep the autosizer as a fallback. Supporting browsers size from the
+     actual paper width: beforeprint can still measure the screen viewport. */
   textarea.finput,textarea.prose-input{overflow:visible!important}
+  @supports(field-sizing:content){
+    textarea.finput,textarea.prose-input{field-sizing:content;height:auto!important}
+  }
   .dtbl td,.dtbl th{border-color:#bbb!important}
-  .acc,.field,.dtbl tr,.atbl tr,.list-row,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
+  .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }

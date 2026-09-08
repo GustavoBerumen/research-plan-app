@@ -1,0 +1,102 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { chromium } = require(process.argv[2] || 'playwright');
+const origin = process.argv[3] || 'http://127.0.0.1:8953';
+const output = path.join(__dirname, 'rpa-63-evidence');
+const shot = { style: '.toolbar { visibility:hidden !important }' };
+(async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
+  const errors = [], results = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  const controls = key => page.locator(key === 'background' ? '[data-field=background]' : `[data-list-key=${key}]`).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," field ")][1]').locator('.eval-controls');
+  const load = async () => { await page.goto(origin + '/?scenario=guardrail'); await page.locator('html[data-fixture-ready=true]').waitFor(); };
+  try {
+    for (const [key, kind, label] of [['background', 'like', 'Liked'], ['researchQuestions', 'dislike', 'Disliked'], ['outcomes', 'save', 'Saved']]) {
+      await load();
+      const c = controls(key), button = c.locator(`.eval-${kind}-btn`);
+      const restingColour = await button.evaluate(e => getComputedStyle(e).backgroundColor);
+      await button.hover();
+      assert.notEqual(await button.evaluate(e => getComputedStyle(e).backgroundColor), restingColour);
+      await c.locator('.eval-actions').screenshot({ ...shot, path: path.join(output, `after-${kind}-hover.png`) });
+      await c.locator('.eval-result-btn').focus();
+      await page.keyboard.press('Space');
+      assert.equal(await c.locator('.eval-panel').isVisible(), false);
+      await page.keyboard.press('Enter');
+      assert.equal(await c.locator('.eval-panel').isVisible(), true);
+      await page.keyboard.press('Tab'); // dismiss
+      assert.equal(await c.locator('.eval-x').evaluate(e => e === document.activeElement), true);
+      await page.keyboard.press('Enter');
+      assert.equal(await c.locator('.eval-result-btn').evaluate(e => e === document.activeElement), true);
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); // Evaluate again
+      assert.equal(await c.locator('.eval-actions .eval-reevaluate-btn').evaluate(e => e === document.activeElement), true);
+      for (let i = 0; i <= ['like', 'dislike', 'save'].indexOf(kind); i++) await page.keyboard.press('Tab');
+      assert.equal(await button.evaluate(e => e === document.activeElement && e.matches(':focus-visible')), true);
+      assert.equal(await button.evaluate(e => getComputedStyle(e).backgroundColor), 'rgb(255, 221, 0)');
+      await c.locator('.eval-actions').screenshot({ ...shot, path: path.join(output, `after-${kind}-keyboard-focus.png`) });
+      let release;
+      await page.route('**/api/calibration?*', async route => { await new Promise(r => { release = r; }); await route.continue(); });
+      await page.keyboard.press(kind === 'dislike' ? 'Enter' : 'Space');
+      await page.waitForFunction(selector => document.querySelector(selector)?.getAttribute('aria-busy') === 'true', `#${await c.locator('.eval-panel').getAttribute('id')} .eval-${kind}-btn`);
+      assert.ok(await c.locator('.eval-fb-btn').evaluateAll(buttons => buttons.every(b => b.disabled)));
+      await c.locator('.eval-panel').screenshot({ ...shot, path: path.join(output, `after-${kind}-saving.png`) });
+      while (!release) await new Promise(r => setTimeout(r, 10));
+      release();
+      await page.waitForFunction(([selector, label]) => document.querySelector(selector)?.title === label, [`#${await c.locator('.eval-panel').getAttribute('id')} .eval-${kind}-btn`, label]);
+      assert.equal(await button.textContent(), label);
+      if (kind !== 'save') assert.equal(await button.getAttribute('aria-pressed'), 'true');
+      await c.locator('.eval-actions').screenshot({ ...shot, path: path.join(output, `after-${kind}-saved.png`) });
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.equal(await c.locator('.eval-panel').evaluate(e => e.scrollWidth <= e.clientWidth + 1), true);
+      await c.locator('.eval-actions').screenshot({ ...shot, path: path.join(output, `after-${kind}-saved-390.png`) });
+      await page.setViewportSize({ width: 1366, height: 900 });
+      await page.unroute('**/api/calibration?*');
+      results.push(`${key}: keyboard expand/collapse/focus return, Tab order, yellow focus, ${kind} keyboard activation, saving/saved/disabled`);
+    }
+    await load();
+    const c = controls('background');
+    const original = await c.locator('.eval-metrics').innerHTML();
+    const sibling = await controls('outcomes').locator('.eval-metrics').innerHTML();
+    await page.locator('[data-field=background]').fill('Revised checkout context for a stale evaluation.');
+    assert.equal(await c.locator('.eval-stale-status').isVisible(), true);
+    assert.ok(await c.locator('.eval-fb-btn').evaluateAll(buttons => buttons.every(b => b.disabled)));
+    await c.screenshot({ ...shot, path: path.join(output, 'after-stale.png') });
+    let release;
+    await page.route('**/api/evaluate?*', async route => { await new Promise(r => { release = r; }); await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Deterministic preview failure.' }) }); });
+    await c.locator('.eval-actions .eval-reevaluate-btn').click();
+    assert.equal(await c.locator('.eval-actions .eval-reevaluate-btn').getAttribute('aria-busy'), 'true');
+    assert.equal(await c.locator('.eval-metrics').innerHTML(), original);
+    await c.screenshot({ ...shot, path: path.join(output, 'after-pending.png') });
+    while (!release) await new Promise(r => setTimeout(r, 10));
+    release(); await c.locator('.eval-error').waitFor();
+    assert.equal(await c.locator('.eval-error').textContent(), 'Evaluation request failed: Deterministic preview failure. Retry Background below.');
+    assert.equal(await controls('outcomes').locator('.eval-metrics').innerHTML(), sibling);
+    await c.screenshot({ ...shot, path: path.join(output, 'after-failure.png') });
+    await page.unroute('**/api/evaluate?*');
+    await c.locator('.eval-btn').click();
+    await c.locator('.eval-stale-status').waitFor({ state: 'hidden' });
+    assert.equal(await c.locator('.eval-error').isVisible(), false);
+    results.push('Stale, pending with preserved result, single failure, successful sibling preservation and manual Retry recovery');
+    // Print the real page with expanded results and the existing feedback field.
+    await load();
+    await page.locator('.comments-block > .add-btn').click();
+    await page.locator('.comments-block textarea').fill('RPA-63 printable feedback: keep this review comment in the saved plan.');
+    await page.waitForTimeout(600); // settle real debounced draft saving
+    const draft = await page.evaluate(() => localStorage.getItem('research-plan-app:draft'));
+    await page.emulateMedia({ media: 'print' });
+    assert.ok(await page.locator('.eval-actions,.eval-x,.eval-result-summary,.eval-feedback-status').evaluateAll(elements => elements.every(e => getComputedStyle(e).display === 'none')));
+    assert.equal(await page.locator('.eval-controls .eval-panel:visible').count(), 3);
+    assert.equal(await page.locator('.comments-block textarea').isVisible(), true);
+    await page.pdf({ path: path.join(output, 'after-chrome-print.pdf'), format: 'A4', printBackground: true, displayHeaderFooter: false });
+    await page.emulateMedia({ media: 'screen' });
+    assert.equal(await page.evaluate(() => localStorage.getItem('research-plan-app:draft')), draft);
+    assert.equal(await page.locator('.eval-controls .eval-panel:visible').count(), 3);
+    results.push('Print CSS excludes actions, expanded results and user feedback print; actual PDF exported; draft and expanded panels preserved');
+    assert.deepEqual(errors, []);
+    fs.writeFileSync(path.join(output, 'interactions.json'), JSON.stringify({ browser: await browser.version(), platform: process.platform, mode: 'headless Windows Chrome keyboard and layout checks; native preview recorded separately', results, errors }, null, 2) + '\n');
+    console.log(JSON.stringify({ results, errors }));
+  } finally { await browser.close(); }
+})().catch(e => { console.error(e); process.exitCode = 1; });

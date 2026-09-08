@@ -1,0 +1,465 @@
+{
+  "platform": "win32",
+  "browser": "152.0.7977.82",
+  "mode": "Headless Windows Chrome, 100% zoom",
+  "errors": [],
+  "external": [],
+  "cases": [
+    {
+      "scenario": "guardrail",
+      "width": 1366,
+      "key": "background",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "guardrail",
+      "width": 1366,
+      "key": "researchQuestions",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "1 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "guardrail",
+      "width": 1366,
+      "key": "outcomes",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "1 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "guardrail",
+      "width": 390,
+      "key": "background",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "guardrail",
+      "width": 390,
+      "key": "researchQuestions",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "1 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "guardrail",
+      "width": 390,
+      "key": "outcomes",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "1 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "ready",
+      "width": 1366,
+      "key": "background",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "ready",
+      "width": 1366,
+      "key": "researchQuestions",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "ready",
+      "width": 1366,
+      "key": "outcomes",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "ready",
+      "width": 390,
+      "key": "background",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "ready",
+      "width": 390,
+      "key": "researchQuestions",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "ready",
+      "width": 390,
+      "key": "outcomes",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Ready"
+    },
+    {
+      "scenario": "developing",
+      "width": 1366,
+      "key": "background",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "developing",
+      "width": 1366,
+      "key": "researchQuestions",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Good"
+    },
+    {
+      "scenario": "developing",
+      "width": 1366,
+      "key": "outcomes",
+      "panelWidth": 732,
+      "scrollWidth": 732,
+      "clientWidth": 732,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Good"
+    },
+    {
+      "scenario": "developing",
+      "width": 390,
+      "key": "background",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3"
+      ],
+      "names": [
+        "Contextual Relevance — evidence and relevance to the proposed research decision",
+        "Essential Knowledge",
+        "Focus"
+      ],
+      "status": "Developing"
+    },
+    {
+      "scenario": "developing",
+      "width": 390,
+      "key": "researchQuestions",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Research Question 1 — Clear",
+        "Research Question 1 — Focused",
+        "Research Question 1 — Specific",
+        "Research Question 3 — Clear",
+        "Research Question 3 — Focused",
+        "Research Question 3 — Specific",
+        "Set quality — distinct coverage across the research questions"
+      ],
+      "status": "Good"
+    },
+    {
+      "scenario": "developing",
+      "width": 390,
+      "key": "outcomes",
+      "panelWidth": 350,
+      "scrollWidth": 350,
+      "clientWidth": 350,
+      "overflowing": [],
+      "scores": [
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "2 of 3",
+        "3 of 3"
+      ],
+      "names": [
+        "Outcome 1 — Actionalble",
+        "Outcome 1 — Format",
+        "Outcome 1 — Alignment",
+        "Outcome 3 — Actionalble",
+        "Outcome 3 — Format",
+        "Outcome 3 — Alignment",
+        "Alignment — Outcome 3 ↔ Research Question 3"
+      ],
+      "status": "Good"
+    }
+  ]
+}

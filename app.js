@@ -1287,7 +1287,7 @@
     data.metrics.forEach((m) => {
       const wrap = document.createElement('div');
       wrap.className = 'eval-metric';
-      const name = document.createElement('div');
+      const name = document.createElement('h4');
       name.className = 'eval-mname';
       name.textContent = m.name;
       // The score has to survive without colour: empty dots are outlined
@@ -1472,6 +1472,23 @@
 
   let evaluationControlCount = 0;
 
+  function renderEvaluationIcon(kind) {
+    const paths = {
+      like: 'M7 10v11H3V10h4Zm0 0 5-7h2v6h5a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7',
+      dislike: 'M7 14V3H3v11h4Zm0 0 5 7h2v-6h5a2 2 0 0 0 2-2l-2-8a2 2 0 0 0-2-2H7',
+      save: 'M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8',
+    };
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('class', 'eval-icon');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+    const path = document.createElementNS(icon.namespaceURI, 'path');
+    path.setAttribute('d', paths[kind]);
+    icon.appendChild(path);
+    return icon;
+  }
+
   function renderEvalControls(field, getValue) {
     const controls = el('div', 'eval-controls');
     const btn = el('button', 'eval-btn', { type: 'button' });
@@ -1506,38 +1523,43 @@
     const error = el('div', 'eval-error', { role: 'alert' });
     error.hidden = true;
 
-    const panel = el('div', 'eval-panel', { id: detailsId });
+    const panel = el('div', 'eval-panel', { id: detailsId, role: 'region', 'aria-labelledby': detailsId + '-heading' });
     panel.hidden = true;
     const head = el('div', 'eval-head');
     const badge = el('span', 'eval-badge');
-    const hl = el('span', 'eval-hl');
+    const hl = el('h3', 'eval-hl', { id: detailsId + '-heading' });
     hl.textContent = field.label + ' Evaluation';
     const dismiss = el('button', 'eval-x', { type: 'button' });
     dismiss.textContent = '✕';
     dismiss.title = 'Collapse evaluation details';
     dismiss.setAttribute('aria-label', 'Collapse ' + field.label + ' evaluation details');
-    head.append(badge, hl, dismiss);
+    head.append(hl, badge, dismiss);
     const metrics = el('div', 'eval-metrics');
-    const rlabel = el('div', 'eval-rlabel');
+    const rlabel = el('h4', 'eval-rlabel');
     rlabel.textContent = 'Recommendations';
     const recs = el('ul', 'eval-recs');
-    const saveBtn = el('button', 'eval-fb-btn eval-save-btn', { type: 'button' });
-    saveBtn.textContent = '📤';
-    saveBtn.title = 'Save';
-    saveBtn.disabled = true;
-    const likeBtn = el('button', 'eval-fb-btn eval-like-btn', { type: 'button' });
-    likeBtn.textContent = '👍';
-    likeBtn.title = 'Like';
-    likeBtn.disabled = true;
-    const dislikeBtn = el('button', 'eval-fb-btn eval-dislike-btn', { type: 'button' });
-    dislikeBtn.textContent = '👎';
-    dislikeBtn.title = 'Dislike';
-    dislikeBtn.disabled = true;
+    function feedbackButton(kind, label) {
+      const button = el('button', 'btn eval-fb-btn eval-' + kind + '-btn', { type: 'button' });
+      const text = el('span', 'eval-action-label');
+      text.textContent = label;
+      button.append(renderEvaluationIcon(kind), text);
+      button.title = label;
+      button.disabled = true;
+      if (kind !== 'save') {
+        button.setAttribute('aria-label', label);
+        button.setAttribute('aria-pressed', 'false');
+      }
+      return button;
+    }
+    const saveBtn = feedbackButton('save', 'Save');
+    const likeBtn = feedbackButton('like', 'Like');
+    const dislikeBtn = feedbackButton('dislike', 'Dislike');
     const reevaluateBtn = el('button', 'eval-reevaluate-btn', { type: 'button' });
     reevaluateBtn.textContent = 'Evaluate again';
     const actions = el('div', 'eval-actions');
     actions.append(reevaluateBtn, likeBtn, dislikeBtn, saveBtn);
-    panel.append(head, metrics, rlabel, recs, actions);
+    const feedbackStatus = el('div', 'eval-feedback-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    panel.append(head, metrics, rlabel, recs, actions, feedbackStatus);
     const progress = el('div', 'field-eval-progress', { role: 'status', 'aria-live': 'polite' });
     controls.append(resultSummary, progress, error, btn, panel);
     let pending = null;
@@ -1573,6 +1595,13 @@
     }
 
     function resetFeedbackActions() {
+      feedbackStatus.textContent = '';
+      [saveBtn, likeBtn, dislikeBtn].forEach(button => button.setAttribute('aria-busy', 'false'));
+      saveBtn.querySelector('.eval-action-label').textContent = 'Save';
+      likeBtn.querySelector('.eval-action-label').textContent = 'Like';
+      dislikeBtn.querySelector('.eval-action-label').textContent = 'Dislike';
+      likeBtn.setAttribute('aria-pressed', 'false');
+      dislikeBtn.setAttribute('aria-pressed', 'false');
       saveBtn.disabled = true;
       saveBtn.classList.remove('active');
       saveBtn.title = 'Save';
@@ -1635,6 +1664,7 @@
       btn.disabled = true;
       btn.setAttribute('aria-busy', 'true');
       reevaluateBtn.disabled = true;
+      reevaluateBtn.setAttribute('aria-busy', 'true');
       quickReevaluateBtn.disabled = true;
       quickReevaluateBtn.setAttribute('aria-busy', 'true');
       pending = queueEvaluation(async () => {
@@ -1691,6 +1721,7 @@
         btn.disabled = false;
         btn.setAttribute('aria-busy', 'false');
         reevaluateBtn.disabled = false;
+        reevaluateBtn.setAttribute('aria-busy', 'false');
         quickReevaluateBtn.disabled = false;
         quickReevaluateBtn.setAttribute('aria-busy', 'false');
         refreshSection();
@@ -1741,8 +1772,14 @@
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
       saveBtn.title = 'Saving…';
+      saveBtn.setAttribute('aria-busy', 'true');
+      saveBtn.querySelector('.eval-action-label').textContent = 'Saving…';
+      feedbackStatus.textContent = 'Saving evaluation…';
       saveForCalibration(field, lastResult.text, lastResult.data).then(() => {
         saveBtn.title = 'Saved';
+        saveBtn.setAttribute('aria-busy', 'false');
+        saveBtn.querySelector('.eval-action-label').textContent = 'Saved';
+        feedbackStatus.textContent = 'Evaluation saved.';
         saveBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
@@ -1752,6 +1789,9 @@
           dislikeBtn.disabled = false;
         }
         saveBtn.title = 'Save';
+        saveBtn.setAttribute('aria-busy', 'false');
+        saveBtn.querySelector('.eval-action-label').textContent = 'Save';
+        feedbackStatus.textContent = 'Evaluation could not be saved.';
       });
     });
 
@@ -1761,8 +1801,14 @@
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
       likeBtn.title = 'Saving…';
+      likeBtn.setAttribute('aria-busy', 'true');
+      feedbackStatus.textContent = 'Saving Like feedback…';
       saveForCalibration(field, lastResult.text, lastResult.data, 'like').then(() => {
         likeBtn.title = 'Liked';
+        likeBtn.setAttribute('aria-busy', 'false');
+        likeBtn.setAttribute('aria-pressed', 'true');
+        likeBtn.querySelector('.eval-action-label').textContent = 'Liked';
+        feedbackStatus.textContent = 'Like feedback saved.';
         likeBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
@@ -1772,6 +1818,8 @@
           dislikeBtn.disabled = false;
         }
         likeBtn.title = 'Like';
+        likeBtn.setAttribute('aria-busy', 'false');
+        feedbackStatus.textContent = 'Like feedback could not be saved.';
       });
     });
 
@@ -1781,8 +1829,14 @@
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
       dislikeBtn.title = 'Saving…';
+      dislikeBtn.setAttribute('aria-busy', 'true');
+      feedbackStatus.textContent = 'Saving Dislike feedback…';
       saveForCalibration(field, lastResult.text, lastResult.data, 'dislike').then(() => {
         dislikeBtn.title = 'Disliked';
+        dislikeBtn.setAttribute('aria-busy', 'false');
+        dislikeBtn.setAttribute('aria-pressed', 'true');
+        dislikeBtn.querySelector('.eval-action-label').textContent = 'Disliked';
+        feedbackStatus.textContent = 'Dislike feedback saved.';
         dislikeBtn.classList.add('active');
       }).catch((err) => {
         alert('Save failed: ' + err.message);
@@ -1792,6 +1846,8 @@
           dislikeBtn.disabled = false;
         }
         dislikeBtn.title = 'Dislike';
+        dislikeBtn.setAttribute('aria-busy', 'false');
+        feedbackStatus.textContent = 'Dislike feedback could not be saved.';
       });
     });
 
@@ -1819,6 +1875,7 @@
       error.textContent = '';
       panel.hidden = true;
       reevaluateBtn.disabled = false;
+      reevaluateBtn.setAttribute('aria-busy', 'false');
       quickReevaluateBtn.hidden = false;
       quickReevaluateBtn.disabled = false;
       quickReevaluateBtn.setAttribute('aria-busy', 'false');
