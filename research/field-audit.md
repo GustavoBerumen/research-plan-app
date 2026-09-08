@@ -86,6 +86,21 @@ and the merge count went to zero. A verdict is not a ratchet: this one was made
 from the template and overturned by the researcher who runs the studies, which
 is the right way round.
 
+## What is left
+
+The verdicts are done. Three recommendations are not, and each has a home so that
+none of them lives only here:
+
+| # | What | Where it goes |
+|---|---|---|
+| 1 | Prefill Background, Goal and Problem Statement from the linked Jira issue, instead of asking a researcher to retype a brief that already exists. | Needs a ticket. Blocked on a real constraint: the proxy calls `issue/picker`, which returns key and summary only, so descriptions need a second endpoint. |
+| 2b | Create Jira subtasks from Action Points, which is the consumer those two columns were kept for. | Ticket drafted. Settle first whether the team accepts tickets reported by a shared service account — the answer decides whether this is a day's work or per-user OAuth. |
+| 4 | Give Previous Knowledge a source — link it to the shared Drive research library. | Needs a ticket. The optional half is done; marking a field optional stops it blocking anyone without making the answer easier to find. |
+
+Recommendation 3 is deferred rather than open, and deliberately: moving Context is
+blocked behind #1, because the complaint about Context is that it is transcription
+rather than that it is first. Everything else is closed.
+
 ## How the last rows were settled
 
 Six rows held out to the end. Every one passed question 2 — somebody knew the
@@ -132,8 +147,8 @@ here, now?*
 | **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** |
 | **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** |
 | **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **done, and verified in the app this time.** It reads as a dateline in the header corner. It stays editable at Gus's request, so the sentence itself is the control: activating it swaps in the date editor in place, with no separate Change link. |
-| **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced or optional.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. Pull it from the linked Jira issue, or let people proceed without it. Blocking on a date someone else has not set is how forms get abandoned. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
-| **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
+| **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. The verdict used to read "sourced **or** optional"; the optional half was put to Gus under recommendation 5 and declined, so this is a required question and the answer is to pull it from the linked Jira issue. Nothing blocks on it in the meantime — the form has no validation — so an unanswered date costs the deadline warning, not the plan. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
+| **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. Proposed as optional under recommendation 5 and declined; question 3 flags the *timing* here rather than the ability, and the answer to a timing complaint is order, not a marker. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
 
 ## Alignment
 
@@ -176,7 +191,7 @@ here, now?*
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
 | **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
-| **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. |
+| **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. Proposed as optional under recommendation 5 and declined: a schedule is part of what makes a plan reviewable. |
 | **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
 | **Action Points → Action** | `prose` | ⚠ No in-app consumer *yet*. Overlaps what Jira already tracks — which is the argument for feeding Jira from it, not for asking twice. | Researcher. | Yes. | **keep — pending its consumer.** The plan is where the work is decided; Jira is where it is tracked. The integration below makes this column the input to creating the subtask, which is the consumer it lacks. |
 | **Action Points → Responsible** | `prose` | ⚠ No in-app consumer *yet*. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. | **keep — pending its consumer, and question 3 stays open.** An assignee is half of an action, so cutting it leaves work with no owner. The integration answers question 1 and **does not answer question 3**: creating a Jira subtask still commits someone who was not asked. It arguably raises the stakes — a name in a document is a note, a ticket in a queue is a claim on someone's time. The mitigation is that Jira makes the commitment visible and refusable, which a printed plan does not. Becoming a person picker is part of that work. |
@@ -344,16 +359,40 @@ the two are not substitutes. Marking it optional stops the field blocking anyone
 it does not make the answer any easier to find for the people who want to give one.
 Linking it to the Drive library is still the change that would earn the question.
 
-### 5. Apply the optionality convention properly
+### 5. Apply the optionality convention properly — settled
 
-Only 3 of 25 fields are marked optional today: Hypothesis, Theory and Feedback. On
-a form of this length completed by one person that is almost certainly understated.
-Marking what is genuinely optional is the cheapest way to make the form feel shorter
-without cutting anything — which is precisely the ADR 001 hypothesis.
+**5 of 26 fields are optional, and that is the final set:** Hypothesis, Theory,
+Action Points, Previous Knowledge and Feedback. Nothing further is added.
+
+This recommendation opened by predicting the opposite. It said 3 of 25 was "almost
+certainly understated" on a form of this length. Four more were put forward as
+candidates, each one flagged on question 3 — Project decision, Stage Timeline,
+Research readout and Goal — and Gus's answer was that all four are required.
+
+That is the third inference this audit drew from reading the template and had
+overturned by the person who runs these studies, after Project (cut against a
+*keep*) and the Characteristics merge (reversed). The pattern is consistent enough
+to be worth stating: **the sheet is good at finding what a form cannot answer and
+poor at judging what a team is willing to leave blank.** The first is a property of
+the form and can be read off it. The second is a property of the practice and
+cannot.
+
+**The framing was also wrong, and GOV.UK is clear about it.** This recommendation
+argued optionality was "the cheapest way to make the form feel shorter without
+cutting anything". The service manual does not offer that: its answers to a form
+feeling long are to eliminate the question, or to use branching so people only see
+what applies to them. Marking a required question optional to make a form feel
+shorter is mislabelling it.
+
+So optionality is a correctness goal, not a length one — the marker states which
+questions may honestly be skipped. That matters more here than in a government
+service, because **this form has no validation at all.** Nothing blocks, nothing is
+enforced, and a plan can be printed and signed entirely blank. "(optional)" is
+purely communicative, which makes over-marking a real cost: a form where a third of
+the labels say optional reads as a form that does not care what you put in it.
 
 Counts checked against the template rather than carried forward. The earlier figure
 of 28 predated the Status cut, the User Groups merge and Requirements going dormant.
-Previous Knowledge has since joined the set, taking it to 4 of 26.
 
 **The mechanism is fixed; the convention is not yet applied.** Marking Previous
 Knowledge optional revealed that the flag was unreliable: each builder drew the
@@ -364,13 +403,14 @@ field to hit it. It is one helper now, called from every builder with a label to
 hang it on, and a test derives its cases from the template so a field type added
 later is covered without anyone remembering.
 
-That matters for what is left here, because the obvious next candidate is a header
-field: **Project decision**, whose verdict is already "keep — sourced or optional".
-Before this fix, marking it would have done nothing at all.
+**The mechanism is worth keeping even though the list did not grow.** Two of the
+five optional fields — Action Points and Previous Knowledge — are a table and a
+table, and both would have accepted the flag and rendered nothing before the fix.
+So would Project decision, the header field this recommendation expected to add
+next. The bug was real and was found by trying to apply the convention; the
+convention then turned out not to need applying any further.
 
-Still open: deciding which further fields are genuinely optional. That is a
-question about research practice rather than about the form, so it wants Gus and
-whoever else writes these plans, not a developer.
+Nothing here is still open.
 
 ### 6. Decide who reads Feedback
 
