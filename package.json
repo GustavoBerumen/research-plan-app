@@ -5,7 +5,7 @@
   "description": "Research plan form with LLM-based rubric evaluation",
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "test": "node --test test/rpa-65-timeline-scales.test.js test/rpa-51-first-question-deletion.test.js test/rpa-53-timeline-visibility.test.js test/rpa-34-section-evaluation.test.js test/score-classification.test.js test/textarea-autosize.test.js test/rpa-33-integration.test.js test/app-characterization.test.js test/rpa-36-optional-recommendations.test.js test/rpa-38-paired-outcome-deletion.test.js test/rpa-39-evaluation-staleness.test.js test/rpa-48-prose-wrapping.test.js test/dormant-data.test.js test/jira-chip.test.js test/line-endings.test.js test/radios.test.js test/rpa-55-field-key-contract.test.js test/rpa-55-last-updated-stamp.test.js test/framework-suggestion.test.js test/rpa-52-jira-feedback.test.js test/rpa-56-structured-score-guardrail.test.js"
+    "test": "node --test test/rpa-65-timeline-scales.test.js test/rpa-51-first-question-deletion.test.js test/rpa-53-timeline-visibility.test.js test/rpa-34-section-evaluation.test.js test/score-classification.test.js test/textarea-autosize.test.js test/rpa-33-integration.test.js test/app-characterization.test.js test/rpa-36-optional-recommendations.test.js test/rpa-38-paired-outcome-deletion.test.js test/rpa-39-evaluation-staleness.test.js test/rpa-48-prose-wrapping.test.js test/dormant-data.test.js test/jira-chip.test.js test/line-endings.test.js test/radios.test.js test/rpa-55-field-key-contract.test.js test/rpa-55-review-step.test.js test/rpa-55-last-updated-stamp.test.js test/framework-suggestion.test.js test/rpa-52-jira-feedback.test.js test/rpa-56-structured-score-guardrail.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0"

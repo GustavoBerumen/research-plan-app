@@ -82,11 +82,13 @@ test('renders the complete form from the real index, template, rubric, and metho
     Array.from(document.querySelectorAll('.acc-title')).map((element) => element.textContent),
     // RPA-55: opens with what a researcher can write; Alignment (identifiers
     // and sign-off) closes; the two deadlines moved up into the header.
-    ['Context', 'Research', 'Methodology', 'Execution', 'Alignment']
+    // Alignment became the review step (RPA-55), which is deliberately not an
+    // accordion, so it no longer appears among the collapsible sections.
+    ['Context', 'Research', 'Methodology', 'Execution']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '4 fields', '4 fields', '2 fields']
+    ['3 fields', '4 fields', '4 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -98,8 +100,10 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Theory', 'Methods', 'Characteristics', 'Sample Size',
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
-      'Sign off: Lead researcher', 'Sign off: Project requester',
+      // Feedback is part of the document; the review step closes it, so the
+      // sign-offs come last (RPA-55).
       'Feedback',
+      'Sign off: Lead researcher', 'Sign off: Project requester',
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.

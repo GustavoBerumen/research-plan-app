@@ -260,6 +260,28 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    so removing it would have styled every empty field as a tag. */
 .jira-input.jira-filled{display:inline-block;width:auto;max-width:100%;min-height:0;font-size:var(--text-sm);font-weight:700;color:var(--tag-blue-text);background:var(--tag-blue-bg);border:0;padding:4px 8px;cursor:text}
 .select-cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+/* ---------- Review step (RPA-55) ----------
+   Not an accordion: a heavier rule marks where the document stops and approval
+   begins, and it cannot be collapsed past. Shaped after GOV.UK's check-answers
+   summary — a row per section, its state, and a Change action. */
+.review-step{margin-top:40px;border-top:5px solid var(--ink);padding-top:24px}
+.review-h{font-size:var(--heading);font-weight:700;color:var(--ink);margin:0 0 6px;line-height:1.1}
+.review-sub{font-size:var(--text);color:var(--text-2);margin:0 0 20px}
+.review-list{border-top:1px solid var(--border);margin-bottom:28px}
+.review-row{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.review-tick{width:18px;flex-shrink:0;color:var(--text-2);font-weight:700}
+.review-tick-done{color:var(--green)}
+.review-name{flex:1;min-width:0;font-weight:700;color:var(--ink)}
+.review-state{color:var(--text-2)}
+.review-state-open{color:var(--ink)}
+.review-note{font-size:var(--text-sm);color:var(--text-2)}
+.review-note-stale{color:var(--red-dark);font-weight:700}
+.review-change{flex-shrink:0;font-family:inherit;font-size:var(--text);color:var(--link);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline}
+.review-change:hover{color:var(--link-hover)}
+.review-change:focus-visible{outline:3px solid var(--focus);outline-offset:0;background:var(--focus);color:var(--ink);text-decoration:none}
+.review-signoffs{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media screen and (max-width:600px){.review-signoffs{grid-template-columns:1fr}}
+
 /* Radios, GOV.UK shape: a real input, a generous hit area that includes the
    label, and the focus ring on the control rather than the row. */
 .radio-group{display:flex;flex-direction:column;gap:8px}
