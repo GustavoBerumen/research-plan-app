@@ -1,0 +1,10 @@
+Offline RPA-67 fixture: http://127.0.0.1:8947/?scenario=exhaust
+Evaluation attempt: {"evaluationId":"298a6c10-6f2a-422f-aeef-5b752d443dc2","attempt":1,"category":"success"}
+Evaluation attempt: {"evaluationId":"834f17c4-c974-4bb6-8ba9-f79f7c408166","attempt":1,"category":"invalid_evaluation","rule":"metrics.array_length"}
+Evaluation attempt: {"evaluationId":"834f17c4-c974-4bb6-8ba9-f79f7c408166","attempt":2,"category":"invalid_evaluation","rule":"metrics.array_length"}
+Evaluation attempt: {"evaluationId":"834f17c4-c974-4bb6-8ba9-f79f7c408166","attempt":3,"category":"invalid_evaluation","rule":"metrics.array_length"}
+Evaluation attempt: {"evaluationId":"80b0a192-84c0-4df6-8d83-19853d4aa167","attempt":1,"category":"invalid_evaluation","rule":"metrics.array_length"}
+Evaluation attempt: {"evaluationId":"80b0a192-84c0-4df6-8d83-19853d4aa167","attempt":2,"category":"invalid_evaluation","rule":"metrics.array_length"}
+Evaluation attempt: {"evaluationId":"80b0a192-84c0-4df6-8d83-19853d4aa167","attempt":3,"category":"success"}
+Evaluation attempt: {"evaluationId":"8e105549-f283-4441-b22e-1ed7f6c82928","attempt":1,"category":"cancelled"}
+Evaluation attempt: {"evaluationId":"ef38b79c-0bb2-47a3-8ff9-c44365a517a7","attempt":1,"category":"cancelled"}

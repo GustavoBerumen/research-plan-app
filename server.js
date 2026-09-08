@@ -4,6 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { setTimeout: delay } = require('node:timers/promises');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const PORT = process.env.PORT || 8934;
@@ -415,35 +416,125 @@ function buildOutcomesPrompt(entries, researchQuestions, rubric, objective) {
     'spelling throughout.';
 }
 
-async function requestEvaluation(tool, prompt, maxTokens) {
-  const message = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: maxTokens,
-    tools: [tool],
-    tool_choice: { type: 'tool', name: tool.name },
-    messages: [{ role: 'user', content: prompt }],
-  });
-  const toolUse = message.content.find((block) => block.type === 'tool_use');
-  if (!toolUse) throw new Error('Model did not return a structured evaluation');
+async function requestEvaluation(tool, prompt, maxTokens, { client, signal, attemptTimeoutMs }) {
+  let message;
+  try {
+    message = await client.messages.create({
+      model: MODEL,
+      max_tokens: maxTokens,
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name },
+      messages: [{ role: 'user', content: prompt }],
+    }, { maxRetries: 0, timeout: attemptTimeoutMs, signal });
+  } catch (err) {
+    // A truncated/non-JSON provider response fails while the SDK reads the body.
+    if (err instanceof SyntaxError) throw unexpectedEvaluationShape('response.json');
+    if (['ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_BODY_TIMEOUT']
+      .includes(err.cause?.code || err.code)) {
+      throw new Anthropic.APIConnectionError({ cause: err });
+    }
+    throw err;
+  }
+  const toolUse = Array.isArray(message?.content)
+    ? message.content.find((block) => block?.type === 'tool_use' && block.name === tool.name) : null;
+  if (!toolUse) throw unexpectedEvaluationShape('tool_use.missing');
+  validateEvaluationInput(toolUse.input);
   return toolUse.input;
 }
 
-const UNEXPECTED_EVALUATION_SHAPE = 'Model returned an unexpected evaluation shape — please try again';
+const EVALUATION_ATTEMPTS = 3;
+const EVALUATION_ATTEMPT_TIMEOUT_MS = 30000;
+const EVALUATION_RETRY_DELAYS_MS = [500, 1000];
 
-function unexpectedEvaluationShape() {
-  return new Error(UNEXPECTED_EVALUATION_SHAPE);
+function unexpectedEvaluationShape(rule) {
+  return Object.assign(new Error('Model returned an unexpected evaluation shape'), {
+    category: 'invalid_evaluation', rule,
+  });
+}
+
+function validateEvaluationInput(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw unexpectedEvaluationShape('tool_input.object');
+  }
+}
+
+function evaluationFailureCategory(err) {
+  if (err.category === 'invalid_evaluation' || err.category === 'timeout') return err.category;
+  if (err instanceof Anthropic.APIUserAbortError || err.name === 'AbortError') return 'cancelled';
+  if (err instanceof Anthropic.APIConnectionTimeoutError) return 'timeout';
+  if (err instanceof Anthropic.APIConnectionError) return 'connection';
+  if (err.status === 401 || err.status === 403) return 'authentication';
+  if ([408, 409, 429].includes(err.status) || (err.status >= 500 && err.status <= 599)) return 'transient_http';
+  return 'provider_error';
+}
+
+// The only retry owner for evaluations. Injectable SDK client and short durations
+// let offline tests exercise real request/validation/cancellation paths without
+// changing production environment variables or waiting 30 seconds per attempt.
+async function evaluateWithRetries(tool, prompt, maxTokens, format, {
+  signal,
+  client = anthropic,
+  attemptTimeoutMs = EVALUATION_ATTEMPT_TIMEOUT_MS,
+  retryDelaysMs = EVALUATION_RETRY_DELAYS_MS,
+  log = (event) => console.info('Evaluation attempt:', JSON.stringify(event)),
+} = {}) {
+  const evaluationId = crypto.randomUUID();
+  for (let attempt = 1; attempt <= EVALUATION_ATTEMPTS; attempt++) {
+    signal?.throwIfAborted();
+    const controller = new AbortController();
+    const cancel = () => controller.abort(signal.reason);
+    signal?.addEventListener('abort', cancel, { once: true });
+    const timer = setTimeout(() => controller.abort(Object.assign(new Error('Evaluation timed out'), {
+      category: 'timeout',
+    })), attemptTimeoutMs);
+    let onAbort;
+    try {
+      const aborted = new Promise((resolve, reject) => {
+        onAbort = () => reject(controller.signal.reason);
+        controller.signal.addEventListener('abort', onAbort, { once: true });
+      });
+      // The outer deadline also covers response-body reads, beyond the SDK's
+      // header timeout. Aborting propagates to its actual fetch, not just our wait.
+      const result = await Promise.race([
+        requestEvaluation(tool, prompt, maxTokens, { client, signal: controller.signal, attemptTimeoutMs })
+          .then(format),
+        aborted,
+      ]);
+      controller.signal.throwIfAborted();
+      log({ evaluationId, attempt, category: 'success' });
+      return result;
+    } catch (err) {
+      const category = signal?.aborted ? 'cancelled' : evaluationFailureCategory(err);
+      log({ evaluationId, attempt, category, ...(err.rule ? { rule: err.rule } : {}),
+        ...(Number.isInteger(err.status) ? { status: err.status } : {}) });
+      if (category === 'cancelled') throw err;
+      const retryable = ['invalid_evaluation', 'timeout', 'connection', 'transient_http'].includes(category);
+      if (!retryable || attempt === EVALUATION_ATTEMPTS) {
+        // Never send raw SDK errors (which can contain request content) to the UI.
+        const message = retryable ? 'No valid evaluation was received after 3 attempts.'
+          : category === 'authentication' ? 'The evaluation service could not authenticate. Check its configuration.'
+          : 'The evaluation service could not complete this request. Check its configuration and input.';
+        throw new Error(message);
+      }
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', cancel);
+      controller.signal.removeEventListener('abort', onAbort);
+    }
+    await delay(retryDelaysMs[attempt - 1], undefined, { signal });
+  }
 }
 
 function validateMetrics(metrics, rubric) {
   if (!Array.isArray(metrics) || metrics.length !== rubric.length) {
-    throw unexpectedEvaluationShape();
+    throw unexpectedEvaluationShape('metrics.array_length');
   }
   rubric.forEach((criterion, index) => {
     const metric = metrics[index];
     if (!metric || typeof metric !== 'object' || metric.name !== criterion.name ||
         !Number.isInteger(metric.score) || metric.score < 1 || metric.score > 3 ||
         typeof metric.desc !== 'string' || !metric.desc.trim()) {
-      throw unexpectedEvaluationShape();
+      throw unexpectedEvaluationShape('metrics[' + index + '].name_score_description');
     }
   });
   return metrics;
@@ -457,20 +548,21 @@ function lowerScoringCriteria(metrics, rubric) {
 
 function validateRecommendations(recommendations, validateRecommendation) {
   if (!Array.isArray(recommendations) || recommendations.length > 2) {
-    throw unexpectedEvaluationShape();
+    throw unexpectedEvaluationShape('recommendations.array_length');
   }
   return recommendations.map((recommendation) => {
     if (!recommendation || typeof recommendation !== 'object' ||
         typeof recommendation.criterionName !== 'string' ||
         typeof recommendation.text !== 'string' || !recommendation.text.trim() ||
         !validateRecommendation(recommendation)) {
-      throw unexpectedEvaluationShape();
+      throw unexpectedEvaluationShape('recommendations.criterion_target_text');
     }
     return { ...recommendation, text: recommendation.text.trim() };
   });
 }
 
 function formatScalarResult(input, rubric) {
+  validateEvaluationInput(input);
   const metrics = validateMetrics(input.metrics, rubric);
   const lowerCriteria = lowerScoringCriteria(metrics, rubric);
   const recommendations = validateRecommendations(
@@ -486,15 +578,16 @@ function formatScalarResult(input, rubric) {
 }
 
 function entryEvaluationsByNumber(input, entries, rubric) {
+  validateEvaluationInput(input);
   if (!Array.isArray(input.entryEvaluations) || input.entryEvaluations.length !== entries.length) {
-    throw unexpectedEvaluationShape();
+    throw unexpectedEvaluationShape('entryEvaluations.array_length');
   }
   const validNumbers = new Set(entries.map((entry) => entry.number));
   const byNumber = new Map();
   input.entryEvaluations.forEach((evaluation) => {
     if (!evaluation || typeof evaluation !== 'object' ||
         !validNumbers.has(evaluation.number) || byNumber.has(evaluation.number)) {
-      throw unexpectedEvaluationShape();
+      throw unexpectedEvaluationShape('entryEvaluations.unique_supplied_number');
     }
     validateMetrics(evaluation.metrics, rubric);
     byNumber.set(evaluation.number, evaluation);
@@ -575,7 +668,7 @@ function formatOutcomesResult(input, entries, rubric) {
   };
 }
 
-async function handleEvaluate(req, res) {
+async function handleEvaluate(req, res, evaluationOptions = {}) {
   let payload;
   try {
     payload = await readJsonBody(req);
@@ -585,6 +678,11 @@ async function handleEvaluate(req, res) {
     return;
   }
 
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'An evaluation object is required.' }));
+    return;
+  }
   const text = typeof payload.text === 'string' ? payload.text.trim() : '';
   const rubric = Array.isArray(payload.rubric) ? payload.rubric : [];
   const fieldLabel = typeof payload.fieldLabel === 'string' && payload.fieldLabel ? payload.fieldLabel : 'Field';
@@ -595,7 +693,8 @@ async function handleEvaluate(req, res) {
     ? payload.context.objective.trim()
     : '';
 
-  if (!text && entries.length === 0) {
+  const structured = fieldKey === 'researchQuestions' || fieldKey === 'outcomes';
+  if (structured ? entries.length === 0 : !text) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: fieldKey === 'researchQuestions' || fieldKey === 'outcomes' ? 'entries are required' : 'text is required' }));
     return;
@@ -605,41 +704,51 @@ async function handleEvaluate(req, res) {
     res.end(JSON.stringify({ error: 'No rubric criteria configured for "' + fieldLabel + '" in research-plan-rubric.md' }));
     return;
   }
+  if (rubric.some((criterion) => !criterion || typeof criterion.name !== 'string' || !criterion.name.trim() ||
+      typeof criterion.desc !== 'string' || !criterion.desc.trim()) ||
+      new Set(rubric.map((criterion) => criterion.name)).size !== rubric.length ||
+      (structured && new Set(entries.map((entry) => entry.number)).size !== entries.length)) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid rubric criteria or duplicate entry numbers.' }));
+    return;
+  }
 
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  // IncomingMessage's 'close' also fires after a normal request body. Observe
+  // the response instead so only a disconnected browser cancels provider work.
+  res.on('close', cancel);
+  if (res.destroyed) cancel();
   try {
+    const options = { ...evaluationOptions, signal: controller.signal };
+    let result;
     if (fieldKey === 'researchQuestions') {
-      const input = await requestEvaluation(
+      result = await evaluateWithRetries(
         researchQuestionsEvalTool(entries.length, rubric),
         buildResearchQuestionsPrompt(entries, rubric, objective),
-        2048
+        2048,
+        (input) => formatResearchQuestionResult(input, entries, rubric), options
       );
-      const result = formatResearchQuestionResult(input, entries, rubric);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result));
-      return;
-    }
-
-    if (fieldKey === 'outcomes') {
-      const input = await requestEvaluation(
+    } else if (fieldKey === 'outcomes') {
+      result = await evaluateWithRetries(
         outcomesEvalTool(rubric),
         buildOutcomesPrompt(entries, researchQuestions, rubric, objective),
-        2048
+        2048,
+        (input) => formatOutcomesResult(input, entries, rubric), options
       );
-      const result = formatOutcomesResult(input, entries, rubric);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result));
-      return;
+    } else {
+      result = await evaluateWithRetries(scalarEvalTool(rubric), buildPrompt(fieldLabel, text, rubric), 1024,
+        (input) => formatScalarResult(input, rubric), options);
     }
-
-    const input = await requestEvaluation(scalarEvalTool(rubric), buildPrompt(fieldLabel, text, rubric), 1024);
-    const result = formatScalarResult(input, rubric);
-
+    if (controller.signal.aborted) return;
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(result));
   } catch (err) {
-    console.error('Evaluation request failed:', err);
+    if (controller.signal.aborted) return;
     res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Evaluation request failed: ' + err.message }));
+    res.end(JSON.stringify({ error: err.message }));
+  } finally {
+    res.removeListener('close', cancel);
   }
 }
 
@@ -1333,6 +1442,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  evaluateWithRetries,
+  handleEvaluate,
   EVAL_TOOL,
   OUTCOMES_EVAL_TOOL,
   QUESTION_SET_CRITERIA,
