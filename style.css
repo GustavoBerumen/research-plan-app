@@ -60,7 +60,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .eval-quick-reevaluate-btn:focus-visible,.file-add-btn:focus-visible,.timeline-viz-btn:focus-visible,
 .fw-add-btn:focus-visible{outline:3px solid transparent;background:var(--focus);color:var(--ink);border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
 .list-remove:focus-visible,.eval-x:focus-visible,.ex-toggle:focus-visible,.select-other-back:focus-visible,
-.acc-head:focus-visible,.info-tip:focus-visible,.eval-fb-btn:focus-visible,.eval-result-btn:focus-visible,
+.acc-head:focus-visible,.eval-fb-btn:focus-visible,.eval-result-btn:focus-visible,
 .ms-method:focus-visible,.file-menu-item:focus-visible{outline:3px solid transparent;background:var(--focus);color:var(--ink);box-shadow:0 -2px var(--focus),0 4px var(--ink);text-decoration:none}
 
 /* ---------- Toolbar ---------- */
@@ -158,16 +158,9 @@ textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-brea
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 
 /* The remaining "?" tips sit on two button rows, not on field labels. */
-.info-tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);color:var(--ink);font-size:12px;font-weight:700;line-height:1;cursor:help;user-select:none}
-.info-tip:hover{background:var(--btn-2)}
 /* Reparented to <body> with position:fixed and top/left set by JS (see
    renderInfoTip in app.js), so it escapes any clipping ancestor and can flip
    below the icon when there is no room above. */
-.info-tip-bubble{position:fixed;top:0;left:0;width:220px;background:var(--ink);color:#fff;font-size:var(--text-sm);font-weight:400;font-style:normal;line-height:1.4;text-align:center;padding:8px 10px;white-space:normal;opacity:0;transition:opacity .15s;pointer-events:none;z-index:1000}
-.info-tip-bubble[hidden]{display:none}
-.info-tip-bubble.show{opacity:1}
-.info-tip-bubble::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink)}
-.info-tip-bubble.info-tip-bubble-below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--ink)}
 
 /* ---------- Methods groups ---------- */
 /* Ungrouped (no research questions yet) stays a single full-width column;
@@ -519,7 +512,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}
   .timeline-chart,.eval-head,.eval-panel{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.info-tip,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}

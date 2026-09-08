@@ -100,10 +100,11 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
-      // Feedback is part of the document; the review step closes it, so the
-      // sign-offs come last (RPA-55).
-      'Feedback',
+      // The review step closes the document, and Feedback closes the review
+      // step — below the approvals, so a reader arrives at it having read the
+      // whole plan (RPA-55).
       'Sign off: Lead researcher', 'Sign off: Project requester',
+      'Feedback',
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.

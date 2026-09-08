@@ -169,14 +169,15 @@ test('an evaluated section says so, and says when that has gone out of date', as
   assert.equal(stale.state, 'complete', 'stale still counts as complete');
 });
 
-test('Feedback is offered here, above the approvals', async (t) => {
+test('Feedback is offered here, and closes the step', async (t) => {
   // RPA-55's last open row. Feedback was the only field with no defined
   // reader, and a section of its own at the end of the document was nobody's
   // stop. The review step is where a plan is read rather than written, which
   // is the one moment a comment on it has an audience.
   //
-  // Above the sign-offs, not below: feedback offered after approval has missed
-  // its moment.
+  // Below the sign-offs. It sat above them briefly, on the argument that
+  // feedback after approval has missed its moment; Gus put it last, where a
+  // reader reaches it having read the whole plan.
   const app = await bootApp();
   t.after(() => app.close());
   const { document } = app;
@@ -194,9 +195,10 @@ test('Feedback is offered here, above the approvals', async (t) => {
   const signOffs = el.querySelector('.review-signoffs');
   assert.ok(signOffs);
   assert.equal(
-    block.compareDocumentPosition(signOffs) & 4 /* DOCUMENT_POSITION_FOLLOWING */, 4,
-    'Feedback comes before the approvals'
+    signOffs.compareDocumentPosition(block) & 4 /* DOCUMENT_POSITION_FOLLOWING */, 4,
+    'Feedback comes after the approvals'
   );
+  assert.equal(block, el.lastElementChild, 'and is the last thing in the step');
 
   // It also stays out of the way until wanted, as it did before the move, and
   // is not counted as an unanswered field by the summary above it.
@@ -210,7 +212,9 @@ test('Feedback still reveals, saves and clears from its new home', async (t) => 
   const { document, window } = app;
 
   const block = step(document).querySelector('.comments-block');
-  block.querySelector('.add-btn').click();
+  const addBtn = block.querySelector('.add-btn');
+  assert.equal(addBtn.textContent, 'Give feedback');
+  addBtn.click();
   const ta = block.querySelector('[data-field="comments"]');
   assert.equal(block.querySelector('.field').hidden, false, 'the reveal still works');
 

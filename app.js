@@ -88,7 +88,16 @@
       label = label.trim();
       type = (type || 'text').trim().toLowerCase();
       if (placeholder === undefined) {
-        placeholder = type === 'date' ? 'Date' : type === 'person' ? 'Person' : type === 'status' ? '' : type === 'url' ? 'https://…' : type === 'file' ? 'No file chosen' : 'Enter text…';
+        // A cell with no declared placeholder gets none. It used to fall back
+        // to "Enter text…", which is a placeholder telling you to type in a
+        // box you can already see, under a column header that already names
+        // what goes in it. Guidance belongs in the field's hint, where it
+        // stays visible once typing starts.
+        //
+        // "No file chosen" is the exception and is not a placeholder: it is
+        // the file cell's empty-state label, rendered as text rather than
+        // into an input, so removing it would leave a bare button.
+        placeholder = type === 'file' ? 'No file chosen' : '';
       } else {
         placeholder = placeholder.trim();
       }
@@ -3234,9 +3243,6 @@
     addBtn.textContent = '+ Add ' + singular;
     addBtn.addEventListener('click', () => addRow(true));
     addBtnRow.appendChild(addBtn);
-    if (field.key === 'researchQuestions') {
-      addBtnRow.appendChild(renderInfoTip('We recommend three research questions for a well-balanced study.'));
-    }
     wrap.appendChild(addBtnRow);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
@@ -3337,68 +3343,6 @@
   // "Hint:" line under each field (see parseSchema). This icon is only used
   // for the two button-row tips that are not tied to a field.
   //
-  // The bubble is reparented to <body> with position:fixed while shown —
-  // same trick as .combo-menu — so it always escapes any ancestor's
-  // overflow:hidden (e.g. the accordion box) regardless of which field it's
-  // attached to, and position is computed fresh each time so it can flip
-  // below the icon when there isn't room above (e.g. a field near the top
-  // of an open accordion).
-  function renderInfoTip(text) {
-    const tip = el('span', 'info-tip', { tabindex: '0', role: 'note', 'aria-label': text });
-    tip.textContent = '?';
-    const bubble = el('span', 'info-tip-bubble');
-    bubble.textContent = text;
-    bubble.hidden = true;
-
-    let hideTimer = null;
-
-    function position() {
-      const rect = tip.getBoundingClientRect();
-      const gap = 7;
-      const bw = bubble.offsetWidth;
-      const bh = bubble.offsetHeight;
-
-      const fitsAbove = rect.top - gap - bh >= 0;
-      bubble.style.top = (fitsAbove ? rect.top - bh - gap : rect.bottom + gap) + 'px';
-      bubble.classList.toggle('info-tip-bubble-below', !fitsAbove);
-
-      const left = Math.max(6, Math.min(rect.left + rect.width / 2 - bw / 2, window.innerWidth - bw - 6));
-      bubble.style.left = left + 'px';
-    }
-
-    function show() {
-      clearTimeout(hideTimer);
-      if (bubble.parentNode !== document.body) document.body.appendChild(bubble);
-      bubble.hidden = false;
-      position();
-      bubble.classList.add('show');
-    }
-
-    function hide() {
-      bubble.classList.remove('show');
-      hideTimer = setTimeout(() => {
-        bubble.hidden = true;
-        if (bubble.parentNode === document.body) bubble.remove();
-      }, 160);
-    }
-
-    tip.addEventListener('mouseenter', show);
-    tip.addEventListener('mouseleave', hide);
-    tip.addEventListener('focus', show);
-    tip.addEventListener('blur', hide);
-
-    return tip;
-  }
-
-  // Field guidance as visible hint text, GOV.UK style, in place of the "?"
-  // tooltip: a tooltip needs a hover to find, which touch devices cannot do,
-  // and a screen reader only meets it if it happens to land on the icon. The
-  // hint is a sibling of the label rather than a child, so it describes the
-  // control (aria-describedby) without bloating the control's name.
-  // *Emphasis* in a hint becomes a real <em>. Built as nodes rather than
-  // assigned as innerHTML, so a hint can never inject markup, and an unpaired
-  // asterisk is left alone as literal text rather than swallowing the rest of
-  // the line.
   function appendHintText(target, text) {
     text.split(/(\*[^*\n]+\*)/).forEach((part) => {
       if (!part) return;
@@ -4312,7 +4256,7 @@
     labelRow.append(labelEl, removeBtn);
 
     const btn = el('button', 'add-btn', { type: 'button' });
-    btn.textContent = '+ Add feedback';
+    btn.textContent = 'Give feedback';
     btn.addEventListener('click', () => {
       btn.hidden = true;
       fieldEl.hidden = false;
@@ -4457,18 +4401,20 @@
       });
     }
 
-    // Feedback sits between the summary and the approvals: it is offered
-    // while reading the plan, and feedback given after sign-off has missed
-    // its moment. Found by key rather than by position in the section, for
-    // the same reason the section itself is.
+    // Feedback closes the document, below the approvals. It was briefly above
+    // them, on the argument that feedback after sign-off has missed its
+    // moment; Gus put it last, where a reader arrives at it having read the
+    // whole plan. Found by key rather than by position in the section, for the
+    // same reason the section itself is.
     const commentsField = section.fields.find((f) => f.key === 'comments');
-    if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
 
     const signOffs = el('div', 'review-signoffs');
     section.fields
       .filter((f) => f !== commentsField)
       .forEach((f) => signOffs.appendChild(renderField(f)));
     step.appendChild(signOffs);
+
+    if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
 
     // The summary is only true at the moment it is drawn, so redraw it
     // whenever the plan changes rather than once at render.

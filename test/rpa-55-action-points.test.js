@@ -57,6 +57,29 @@ test('the table asks for the work and its owner, and nothing else', async (t) =>
   assert.deepEqual(inputs, ['TEXTAREA', 'TEXTAREA', null]);
 });
 
+test('the table is optional, and says so', () => {
+  // Not covered by optional-marker.test.js: that file checks the form agrees
+  // with the template, so removing the flag from both would keep it green.
+  // This asserts the decision itself.
+  const line = fs.readFileSync(TEMPLATE, 'utf8')
+    .split('\n')
+    .find((l) => l.startsWith('Action Points ('));
+  const flags = /\(([^)]*)\)/.exec(line)[1].split(',').map((f) => f.trim());
+  assert.ok(flags.includes('optional'),
+    'Action Points is optional: a plan can be worth approving before anyone has '
+    + 'worked out who does what next');
+});
+
+test('and shows the marker in the form', async (t) => {
+  const app = await bootApp();
+  t.after(() => app.close());
+
+  const wrap = app.document.getElementById('actionPoints-table').closest('.field');
+  const marker = wrap.querySelector('.fopt');
+  assert.ok(marker, 'the table shows an (optional) marker');
+  assert.equal(marker.textContent, '(optional)');
+});
+
 test('the template itself no longer declares a status column', () => {
   // The form is generated from the template, so the cut has to be in the
   // content file rather than worked around in code. Reading it here means a
@@ -152,10 +175,15 @@ test('a draft saved before the cut still opens, minus the status', async (t) => 
 test('the status column type still works, for any template that asks for one', async (t) => {
   // Coverage for a template-language feature with no live user. If the type is
   // ever removed for real, this is the test to delete alongside it.
+  // Keyed on the field rather than matched as an exact string: reworded hints,
+  // new flags and changed column placeholders are all routine here, and any of
+  // them would have turned an exact match into a silent no-op that still went
+  // green. Adding `optional` and dropping a column placeholder did exactly
+  // that the first time.
   const real = fs.readFileSync(TEMPLATE, 'utf8');
   const restored = real.replace(
-    'Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose',
-    'Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose | Status:status'
+    /^(Action Points \([^)]*key=actionPoints\):.*)$/m,
+    '$1 | Status:status'
   );
   assert.notEqual(restored, real, 'the Action Points line was not found to extend');
 
