@@ -1252,13 +1252,13 @@
     }).then((data) => {
       const metrics = Array.isArray(data.metrics) ? data.metrics : [];
       if (metrics.length === 0 || metrics.some((m) => !Number.isFinite(m.score))) {
-        throw new Error('The evaluator returned an unexpected result — please try again');
+        throw new Error('The evaluator returned an unexpected result.');
       }
       if (!Array.isArray(data.recommendations) || data.recommendations.length > 2 ||
           data.recommendations.some((recommendation) =>
             typeof recommendation !== 'string' || !recommendation.trim()
           )) {
-        throw new Error('The evaluator returned unexpected recommendations — please try again');
+        throw new Error('The evaluator returned unexpected recommendations.');
       }
       const recs = data.recommendations.map((recommendation) => recommendation.trim());
       return { ...classifyEvaluation(body.fieldKey, metrics), metrics, recs };
@@ -1672,7 +1672,8 @@
         } catch (err) {
           if (epoch !== evaluationEpoch) return 'cancelled';
           requestState = 'failed';
-          error.textContent = 'Evaluation request failed: ' + err.message + ' Retry ' + field.label + ' below.';
+          const reason = err.message.trim().replace(/[.!?]+$/, '');
+          error.textContent = 'Evaluation request failed: ' + reason + '. Retry ' + field.label + ' below.';
           error.hidden = false;
           btn.hidden = false;
           txt.textContent = 'Retry ' + field.label;
