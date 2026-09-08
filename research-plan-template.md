@@ -106,7 +106,7 @@ Objective (textarea, eval, rows=2, key=objective):
 Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval, key=researchQuestions): 
-  Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover.
+  Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
 Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
 
@@ -119,12 +119,22 @@ Methods (list, key=methods):
 
 ## Participants
 
-<!-- Characteristics and User Groups were two fields until RPA-55. They asked
-     the same thing in practice: both wanted a short noun phrase naming a kind
-     of person, and "Frequent mobile shoppers" answered either. Merged rather
-     than reworded, because nothing in the app consumed either value. -->
-Characteristics (list, prose, key=characteristics): 
-  Hint: The criteria that qualify someone for this study, and any distinct segments you want represented.
+<!-- These were merged into one field earlier in RPA-55, on the grounds that
+     both wanted a short noun phrase naming a kind of person. That was true of
+     the format and wrong about the function, and Gus reversed it: a screener
+     criterion filters who is eligible, a segment sets who must be represented
+     among those who are. One is a filter, the other is a quota, and a study
+     can get the first right and the second wrong. The hints below hold that
+     line, since it is the only thing keeping them from collapsing together
+     again.
+
+     Drafts saved while the fields were merged keep everything in
+     Characteristics: which entries were segments was not recorded, so nothing
+     can sort them back out. Splitting them is forward-looking only. -->
+Characteristics (list, prose, key=characteristics):
+  Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
+User Groups (list, prose, key=userGroups):
+  Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
 
@@ -135,14 +145,28 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
 <!-- Timeframe (textarea, key=timeframe): Scheduled duration for each research phase -->
 Stage Timeline (table, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
   Hint: The planned schedule for each stage of this research, from planning through reporting.
-Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose | Status:status
+Action Points (table, optional, key=actionPoints): Action:prose | Responsible:prose
   Hint: Tasks needed to move this research forward, and who owns each one.
+<!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
+     cannot also be a live tracker, so any status it claims is wrong the day
+     after sign-off. Nothing has happened yet at the point the question is
+     asked, which makes every available answer untrue. Status belongs in Jira.
+     Action and Responsible stay: the plan is where the work is decided, and
+     the planned Jira integration gives them a consumer by creating the
+     subtasks from them. -->
 <!-- Previous Knowledge and Additional Resources used to be a Resources
      section of their own. Two fields did not earn a section: what you already
      know and what you still need are part of executing the study, not a
      separate stage of it (RPA-55). -->
-Previous Knowledge (table, key=previousKnowledge): Name:prose=e.g. Q3 Checkout Usability Study | File:file
-  Hint: Prior research or documentation relevant to this study, attached for reference.
+<!-- Optional, per RPA-55. "What research already exists?" is the question
+     nobody in an organisation owns. It is asked of the researcher because they
+     are the one filling the form, not because they are the one who knows, and
+     answering it means searching past work with no repository to search. The
+     field stays for the people who have something to hand and stops being a
+     wall for everyone else. Marking it honestly is not the same as giving it
+     a source, which is still open — see recommendation 4. -->
+Previous Knowledge (table, optional, key=previousKnowledge): Name:prose | File:file
+  Hint: Prior research or documentation relevant to this study, attached for reference. For example: Q3 Checkout Usability Study.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
 Additional Resources (custom-fields, key=additionalResources): Add details...
 
@@ -163,12 +187,16 @@ Additional Resources (custom-fields, key=additionalResources): Add details...
      PR #22). The keys keep their original spelling on purpose: a key is an
      identifier, not a description, and now that the template pins them a
      label can be reworded without touching stored drafts. -->
-Sign off: Lead researcher (text, key=signOffResearcher): Type initials
+<!-- Feedback moved here from a section of its own (RPA-55). It was the only
+     field with no defined reader, and a section at the end of the document was
+     nobody's stop. The review step is where a plan is read rather than
+     written, which is the one moment a comment on it has an audience — and it
+     sits above the approvals, because feedback offered after sign-off has
+     missed its moment. It keeps the key `comments`: a key is an identifier,
+     not a description, so no saved draft moves. -->
+Feedback (textarea, optional, key=comments):
+  Hint: Anything else worth noting that didn't fit elsewhere in this plan — a question, a concern, or something the sections above had no room for.
+Sign off: Lead researcher (text, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
-Sign off: Project requester (text, key=signOffProjectOwner): Type initials
+Sign off: Project requester (text, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.
-
-# Feedback
-
-Feedback (textarea, optional, key=comments): Anything you'd like to say, any question you'd like to add, or something else not discussed here?
-  Hint: Anything else worth noting that didn't fit elsewhere in this plan.

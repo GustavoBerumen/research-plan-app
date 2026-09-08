@@ -55,8 +55,16 @@ function response(body, status = 200) {
   };
 }
 
+// Timeouts here are ceilings, not budgets: waitFor returns the moment the
+// predicate holds, so a generous number costs nothing on a healthy run and
+// only changes how long a genuinely broken one takes to report. They are set
+// well above what the app needs because the suite runs its files in parallel,
+// and under that load a wait that normally settles in ~200ms was seen taking
+// over 2s — enough to fail intermittently against the 1500ms these used to
+// carry. Nothing here asserts a performance budget; if one ever should, it
+// wants its own explicit assertion rather than a tight waitFor.
 async function waitFor(predicate, options = {}) {
-  const timeout = options.timeout || 2000;
+  const timeout = options.timeout || 5000;
   const interval = options.interval || 5;
   const startedAt = Date.now();
 

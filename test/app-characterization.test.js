@@ -88,7 +88,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
-    ['3 fields', '4 fields', '4 fields', '4 fields']
+    ['3 fields', '4 fields', '5 fields', '4 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -97,23 +97,28 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
-      'Theory', 'Methods', 'Characteristics', 'Sample Size',
+      'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
       'Stage Timeline', 'Action Points',
       'Previous Knowledge',
-      // Feedback is part of the document; the review step closes it, so the
-      // sign-offs come last (RPA-55).
-      'Feedback',
+      // The review step closes the document, and Feedback closes the review
+      // step — below the approvals, so a reader arrives at it having read the
+      // whole plan (RPA-55).
       'Sign off: Lead researcher', 'Sign off: Project requester',
+      'Feedback',
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.
-  // The stylesheet sizes a column by what it holds — a status column is a short
-  // select — rather than by the table's id, which would tie CSS to a field key
-  // that no test scans for.
+  // The stylesheet sizes a column by what it holds rather than by the table's
+  // id, which would tie CSS to a field key that no test scans for.
+  //
+  // Two columns, not three: RPA-55 cut Status. A signed, printed plan cannot
+  // hold live state, and nothing has happened at the point the question is
+  // asked. The type itself is still part of the template language, and keeps
+  // its coverage in rpa-55-action-points.test.js.
   assert.deepEqual(
     Array.from(document.querySelectorAll('#actionPoints-table thead th'))
       .map((th) => [th.dataset.colKey, th.dataset.colType]),
-    [['action', 'prose'], ['responsible', 'prose'], ['status', 'status'], [undefined, undefined]]
+    [['action', 'prose'], ['responsible', 'prose'], [undefined, undefined]]
   );
 
   assert.deepEqual(
@@ -248,7 +253,7 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
   setValue(window, groups[1].querySelectorAll('.list-input')[1], 'Survey');
 
   const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'The v7 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);

@@ -4,13 +4,22 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 25 of 30 verdicts settled.** The field list,
-types and hint text are generated from the template. Question 1 is filled from
-what the app demonstrably consumes; questions 2 and 3 from the template, the
-field order and how the app behaves. The **5 rows with no verdict at all**, plus
-Characteristics, whose merge is settled but whose keep-or-cut is not, share one
-property: **no in-app consumer.** They need a reader, not a developer — see
-*For the readers* below.
+**Status: complete. All 31 verdicts are in.** The field list, types and hint text
+are generated from the template. Question 1 was filled from what the app
+demonstrably consumes; questions 2 and 3 from the template, the field order and
+how the app behaves.
+
+The six rows that held out longest all failed question 1 the same way — nothing
+in the app consumed them — and **not one of them was resolved by deleting it.**
+See *How the last rows were settled* below. Question 1 turned out to be the
+weakest of the three for finding cuts, because it measures the tool as much as
+the field. The single cut on the sheet came from question 3.
+
+The two Action Points columns left that list without one. Their answer to "no
+in-app consumer" was to build the consumer rather than to cut the question —
+see *Action Points* below. It is the pattern worth trying on the rows that
+remain: **before cutting a field for having no reader, ask what would have to
+exist for it to have one.**
 
 Question 1 is deliberately last. It asks what decision depends on each answer,
 which is the one thing that cannot be inferred from the form: it needs the people
@@ -59,47 +68,60 @@ Fill in as verdicts are reached.
 
 | Verdict | Count |
 |---|---|
-| keep | 16 |
+| keep | 20 |
 | cut | 1 |
-| merge | 1 |
-| optional | 3 |
-| move | 4 |
-| undecided | 5 |
-| **total** | **30** |
+| merge | 0 |
+| optional | 5 |
+| move | 5 |
+| undecided | 0 |
+| **total** | **31** |
 
-30 rather than 25: the three fixed-column tables are audited per column, per the
+31 rather than 25: the three fixed-column tables are audited per column, per the
 unit rule above. Requirements left the sheet when it was made dormant — hidden,
 not decided; its reasoning is under *Already dormant*.
 
-## For the readers
+It was 30 until User Groups came back. The sheet's one *merge* was reversed —
+Characteristics and User Groups are two questions again — so that row returned
+and the merge count went to zero. A verdict is not a ratchet: this one was made
+from the template and overturned by the researcher who runs the studies, which
+is the right way round.
 
-The rows below are the whole of what is still open — the five with no verdict
-at all, plus Characteristics, whose merge is settled but whose keep-or-cut is
-not. Every one of them passes
-question 2 (someone knows the answer) and fails question 1 in the only way the
-code can measure it: **nothing in the app consumes the value.** That is not a
-verdict. A field can matter to a human reader and be used by nothing in the
-tool — or the tool may be ignoring information it already collects. Both need
-a reader to settle.
+## How the last rows were settled
 
-The question to put to whoever reads these plans, field by field:
+Six rows held out to the end. Every one passed question 2 — somebody knew the
+answer — and failed question 1 in the only way code can measure it: **nothing in
+the app consumed the value.**
 
-> **Nothing in the tool uses this. What do you use it for?**
+That turned out not to be a verdict. A field can matter to a human reader and be
+used by nothing in the tool, or the tool can be ignoring information it already
+collects. The question that settled them was not *should this go?* but:
 
-Anything with an answer is a *keep* (and possibly a feature request: feed it
-to the suggesters). Anything nobody can justify is the cut list. Several of
-these are also the hardest fields to answer (question 3) — *no consumer and
-high effort* is where the genuine cuts live.
+> **Nothing in the tool uses this. What would have to exist for something to?**
 
-- Characteristics *(merged with User Groups; whether the merged field earns
-  its place is the part still open, which is why it is here and not in the
-  undecided count above)*
-- Action Points → Action
-- Action Points → Responsible
-- Previous Knowledge → Name
-- Previous Knowledge → File
-- Feedback *(renamed from Comments: Gus wants it used for feedback
-  on the plan, which names a writer but not yet a reader)*
+None of the six was resolved by deleting it:
+
+- **Action Points → Action and → Responsible: kept.** "Nothing uses this" turned
+  out to mean nothing uses it *yet*. The answer was to build the consumer.
+- **Characteristics: kept, and User Groups restored with it.** The reader was
+  recruitment all along. The tool not consuming a value says nothing about
+  whether a person does.
+- **Previous Knowledge → Name and → File: optional.** Question 3 settled these,
+  not question 1. A field nobody can answer at the moment it is asked does not
+  have to be deleted; it has to stop blocking.
+
+- **Feedback: moved** into the review step, above the approvals. Its missing
+  reader was a placement problem — a section of its own at the end of the
+  document was nobody's stop.
+
+Four different answers to the same failing question, and none of them a cut. The
+one field that was cut — Action Points → Status — failed question 3, not
+question 1: it was unanswerable at the moment it was asked and wrong the day
+after sign-off.
+
+**That is the finding worth carrying out of this audit.** "Nothing uses this"
+identifies where the tool is thin, not which questions are surplus. The question
+that finds real cuts is *can the person in front of the form actually answer this,
+here, now?*
 
 ## Header (document meta)
 
@@ -109,7 +131,7 @@ high effort* is where the genuine cuts live.
 | **Jira Project** | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
 | **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** |
 | **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** |
-| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **not done.** It was a dateline in the RPA-54 prototype, and that did not ship: it still renders as an editable date control in the header corner. A computed value should not invite editing. Kept as an open action, not a claim. |
+| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **done, and verified in the app this time.** It reads as a dateline in the header corner. It stays editable at Gus's request, so the sentence itself is the control: activating it swaps in the date editor in place, with no separate Change link. |
 | **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced or optional.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. Pull it from the linked Jira issue, or let people proceed without it. Blocking on a date someone else has not set is how forms get abandoned. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
 | **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
 
@@ -145,7 +167,8 @@ high effort* is where the genuine cuts live.
 |---|---|---|---|---|---|
 | **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> | Grounds the design; the framework suggester writes into it. | Researcher. | Often not to hand. Already optional, and the suggester exists precisely because recall is unreliable here. | **optional** — confirmed. Rarely to hand. |
 | **Methods**<br><sub>asks: Search or type a method</sub> | `list` | The study design itself — what the plan exists to state. | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. | **keep** — core expertise, well supported. |
-| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **merge** — done. User Groups asked the same question: both wanted a short noun phrase naming a kind of person, and "Frequent mobile shoppers" answered either. Whether the merged field earns its place is still open. |
+| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **keep — and the merge is reversed.** The merge argued that both fields wanted a short noun phrase naming a kind of person. True of the format, wrong about the function: a screener criterion filters who is eligible, a segment sets who must be represented among those who are. One is a filter, the other a quota, and a study can get the first right and the second wrong. Gus reversed it as the researcher who runs these studies, which outranks an inference drawn from the template. The hints now hold the line and a test objects if they ever collapse together again. Drafts saved while the fields were one keep everything in Characteristics: which entries had been segments was never recorded, so the split is forward-looking only. |
+| **User Groups**<br><sub>in *Participants*</sub><br><sub>asks: which segments to represent</sub> | `list` | ⚠ No in-app consumer. Sets the sampling quota — who must be present among the people recruited, which is a different instrument from the screener above it. Needs a reader to confirm, like its neighbour. | Researcher, usually with product: segment names are often the product's rather than research's. | Yes for the names; the numbers behind a quota usually sit with recruitment. | **keep** — restored. It was merged into Characteristics earlier in RPA-55 and split back out: filtering who is eligible and setting who must be represented are two questions, and a study can answer the first well and the second badly. |
 | **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `radios` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. |
 
 ## Execution
@@ -155,12 +178,11 @@ high effort* is where the genuine cuts live.
 | **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
 | **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. |
 | **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
-| **Action Points → Action** | `prose` | ⚠ No in-app consumer. Overlaps what Jira already tracks. | Researcher. | Yes. |  |
-| **Action Points → Responsible** | `prose` | ⚠ No in-app consumer. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. |  |
-| **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — live state in a signed document. Unanswerable when written, wrong the day after. |
-
-| **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. |  |
-| **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. |  |
+| **Action Points → Action** | `prose` | ⚠ No in-app consumer *yet*. Overlaps what Jira already tracks — which is the argument for feeding Jira from it, not for asking twice. | Researcher. | Yes. | **keep — pending its consumer.** The plan is where the work is decided; Jira is where it is tracked. The integration below makes this column the input to creating the subtask, which is the consumer it lacks. |
+| **Action Points → Responsible** | `prose` | ⚠ No in-app consumer *yet*. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. | **keep — pending its consumer, and question 3 stays open.** An assignee is half of an action, so cutting it leaves work with no owner. The integration answers question 1 and **does not answer question 3**: creating a Jira subtask still commits someone who was not asked. It arguably raises the stakes — a name in a document is a note, a ticket in a queue is a claim on someone's time. The mitigation is that Jira makes the commitment visible and refusable, which a printed plan does not. Becoming a person picker is part of that work. |
+| **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — **done.** Removed from the template, so the table asks two questions. The only row so far to fail all three questions at once. The `status` column type stays part of the template language and keeps its coverage from a fixture. |
+| **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. | **optional** — **done.** Question 3 decided this one. The field stays for the people who have something to hand, and stops being a wall for everyone else. Marking it honestly is not the same as giving it a source, which is still open — see recommendation 4. |
+| **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. | **optional** — **done.** With the Name column, since the two are one row of one table and cannot be optional separately. The harder half of an already-hard question. |
 | **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` | Escape hatch for anything the template did not anticipate. | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. | **optional** — confirmed. Appears on demand. |
 
 *The Resources section was folded into Execution (RPA-55): two fields did not
@@ -170,7 +192,7 @@ earn a section of their own.*
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. |  |
+| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. | **move** — **done.** Into the review step, above the approvals. The reader problem was a placement problem: a section of its own at the end of the document was nobody's stop, whereas the review step is the one moment somebody reads the plan rather than writes it. Above the sign-offs, because feedback offered after approval has missed its moment. It keeps the key `comments`, so no saved draft moved. |
 
 ## First pass: who has the answer?
 
@@ -236,13 +258,56 @@ summary only. Prefilling descriptions needs a second endpoint.
 
 ### 2. Take live state out of a signed document
 
-- **Action Points → Status: cut.** The plan holds the action and its owner; status
-  belongs in Jira. A signed, printed document that claims to know status is wrong
-  the day after it is signed.
+- **Action Points → Status: cut. Done.** The plan holds the action and its owner;
+  status belongs in Jira. A signed, printed document that claims to know status is
+  wrong the day after it is signed. Removed from the template, so the table now asks
+  two questions rather than three. The `status` column type remains part of the
+  template language and keeps its coverage from a fixture, so cutting the column did
+  not quietly delete the capability.
 - **Requirements → split Approvals out.** Physical and Digital are the researcher's.
   Approvals is legal/privacy — a different answerer, a different timeline, and
   usually the thing that actually blocks a study. It is currently hiding as a third
   column of a table about equipment.
+
+### 2b. Give Action Points its consumer — connect it to Jira
+
+The cut above only removed the column that could not be answered. The two that
+remain were kept on a promise, and this is the promise.
+
+Action and Responsible fail question 1 today for a reason that is fixable rather
+than fatal: the plan is where the work gets decided, and Jira is where it gets
+tracked, and nothing carries it across. So it gets typed twice, or once and then
+forgotten. **Make the table the input to creating the work.**
+
+Most of the plumbing exists. `server.js` already proxies Jira with the token kept
+server-side, the plan already stores a real ticket key in Jira Project, which gives
+a subtask its parent, and the ticket combobox is a pattern already built twice.
+Creating a subtask is one more call to the same API; assigning needs a second
+lookup to turn a name into an account.
+
+Four things change, and they are the decision rather than the code:
+
+- **Read becomes write.** Every Jira call so far is a search. Creating tickets from
+  a draft document means an explicit action, never autosave, and each row recording
+  the key it created so pressing it twice does not duplicate the work.
+- **The tickets would be reported by the wrong person.** One API token is one
+  account, so every subtask shows a service account as reporter rather than the
+  researcher. Per-user OAuth fixes it and costs an order of magnitude more. **Settle
+  this before writing any code** — it is a Jira administration decision, and the
+  answer determines the size of the build.
+- **Responsible stops being prose.** Assigning requires picking a real user, so the
+  column becomes a person picker over the same proxy.
+- **Where the button lives.** After sign-off, in the review step, fits the grain of
+  the document better than a button inside an unsigned draft. Approving the plan is
+  the moment the actions become real.
+
+**What it does not fix.** Question 3 on Responsible stays open, and see that row:
+assigning a ticket to someone who was not in the room is still committing them.
+Visible and refusable beats invisible, but it is a mitigation and not an answer.
+
+*Scope for a first version:* one action per row that creates a subtask under the
+plan's ticket and writes the key back as a chip, reusing the Jira Project chip
+styling. Roughly a day against a shared account; considerably more against OAuth.
 
 ### 3. Fix the opening sequence
 
@@ -252,30 +317,87 @@ three. The ordering principle is to open with what people can answer; this form
 does the opposite. Consider opening with Research, and letting the admin and
 project-context fields follow or arrive prefilled per #1.
 
+**Half done, and the rest deliberately deferred.** Alignment is gone — it became
+the review step and moved to the end, so the form no longer opens by asking for
+approvals. Context is still first, and Gus's decision is to leave it there until
+recommendation 1 lands.
+
+The reasoning: the complaint about Context is not its position but that it is
+transcription. If Background, Goal and Problem Statement arrive prefilled from the
+linked Jira issue, Context stops being a wall and the reorder is solving a problem
+that no longer exists. Reordering first would also cost the reader something real —
+a finished plan reads better with the background before the questions — for a
+writer-side gain that prefilling may deliver anyway.
+
+So this is blocked on #1 rather than open. Revisit it if #1 turns out not to be
+feasible, since the constraint noted there is real: the proxy calls `issue/picker`,
+which returns key and summary only.
+
 ### 4. Give Previous Knowledge a source, or make it optional
 
 Nobody owns "what research already exists". `research/README.md` already points at
 a shared Drive research library — either link the field to it, or accept the field
 is aspirational and mark it optional.
 
+**The second half is done: both columns are optional.** The first half is not, and
+the two are not substitutes. Marking it optional stops the field blocking anyone;
+it does not make the answer any easier to find for the people who want to give one.
+Linking it to the Drive library is still the change that would earn the question.
+
 ### 5. Apply the optionality convention properly
 
-Only 3 of 28 fields are marked optional today (Hypothesis, Theory, Comments). On a
-28-field form completed by one person that is almost certainly understated. Marking
-what is genuinely optional is the cheapest way to make the form feel shorter
+Only 3 of 25 fields are marked optional today: Hypothesis, Theory and Feedback. On
+a form of this length completed by one person that is almost certainly understated.
+Marking what is genuinely optional is the cheapest way to make the form feel shorter
 without cutting anything — which is precisely the ADR 001 hypothesis.
 
-### 6. Decide who reads Comments
+Counts checked against the template rather than carried forward. The earlier figure
+of 28 predated the Status cut, the User Groups merge and Requirements going dormant.
+Previous Knowledge has since joined the set, taking it to 4 of 26.
 
-The one field with no defined reader. Either name its audience in the hint, or cut
-it. Note the RPA-54 prototype has just gained coverage for it, so there is fresh
-work riding on the answer.
+**The mechanism is fixed; the convention is not yet applied.** Marking Previous
+Knowledge optional revealed that the flag was unreliable: each builder drew the
+"(optional)" marker inline, so the ones that never did were invisible. Declaring
+`optional` on a table, on Outcomes, or on any header field parsed fine, rendered
+fine and produced nothing — and Previous Knowledge is a table, so it was the first
+field to hit it. It is one helper now, called from every builder with a label to
+hang it on, and a test derives its cases from the template so a field type added
+later is covered without anyone remembering.
+
+That matters for what is left here, because the obvious next candidate is a header
+field: **Project decision**, whose verdict is already "keep — sourced or optional".
+Before this fix, marking it would have done nothing at all.
+
+Still open: deciding which further fields are genuinely optional. That is a
+question about research practice rather than about the form, so it wants Gus and
+whoever else writes these plans, not a developer.
+
+### 6. Decide who reads Feedback
+
+The one field with no defined reader. Renaming Comments to Feedback named a writer
+and a subject — feedback on the plan — but still not a reader, so the question is
+unchanged by the rename. Either name its audience in the hint, or cut it.
+
+**Done: moved into the review step**, above the approvals. The reader problem
+turned out to be a placement problem. A section of its own at the end of the
+document was nobody's stop; the review step is the one moment somebody reads the
+plan rather than writes it, so it is the one moment a comment on it has an
+audience. Above the sign-offs, because feedback offered after approval has missed
+its moment.
+
+The field keeps the key `comments` — labels and keys are independent since the
+`key=` work — so nothing in a saved draft moved.
+
+The move also exposed a bug worth recording: a plan saved with feedback in it
+reopened with the field hidden behind "+ Add feedback". The value was restored and
+invisible. That was survivable while this sat in a section of its own and is not,
+now that the whole point is to be read at review time.
 
 ### 7. Sign-off pair and Last Updated
 
-Already decided in RPA-55; listed for completeness. Sign-off is now built: the
-review step exists and both approvals are in it. Last Updated is still outstanding —
-it becomes a dateline, and RPA-54's prototype had one while the app does not.
+Already decided in RPA-55, and both are now built: the review step exists with both
+approvals in it, and Last Updated reads as a dateline. Neither claim is inherited
+from a prototype this time; both were checked against the running app.
 
 ### 8. Small and unambiguous
 
@@ -286,11 +408,30 @@ out of the placeholder slot into their own `Hint:` line (RPA-58), so it has one 
 rather than a dropdown, since GOV.UK treats a select as a last resort and five
 options that form a scale read better all at once.
 
-### Expected shape of the finished sheet
+### Shape of the finished sheet
 
-Two cuts (Action Points/Status, possibly Comments), three or four moves, several
-made optional, and the great majority *keep*. If that disappoints, ADR 001 already
-argued why: the problem was probably orientation, not scope.
+Predicted: two cuts, three or four moves, several made optional, the great
+majority *keep*.
+
+Actual: **one cut, five moves, five optional, twenty keep**, out of 31.
+
+Close enough that the prediction was not the interesting part. What the sheet
+turned out to measure was this: a plan that felt too long had almost nothing
+surplus in it. One question genuinely could not be answered. Everything else was
+in the wrong place, unmarked as optional, or waiting on plumbing the tool did not
+have. ADR 001 said the problem was orientation rather than scope, and the sheet
+agrees more strongly than expected.
+
+Two things are worth carrying forward:
+
+**Question 1 is the weakest of the three for finding cuts.** "Nothing in the app
+consumes this" measures the tool as much as the field, and every row that failed
+only question 1 survived. The cut came from question 3 — *can the person in front
+of the form answer this, here, now?* That is the question to lead with next time.
+
+**A verdict is evidence, not a ratchet.** Two were overturned: Project was cut
+against a *keep*, and the Characteristics/User Groups merge was reversed. Both
+reversals came from someone who knew the practice better than the sheet did.
 
 ### Decision needed before verdicts go in — settled
 
@@ -340,11 +481,11 @@ relitigate them:
   The step is not an accordion, so it cannot be collapsed past, and it carries the
   completion-and-currency summary this record asked for. Project decision and
   Research readout are planning inputs, not approvals, and moved to the header.
-- **Last Updated — _move_, not done.** It was rendered as a dateline in the RPA-54
-  prototype, and that part did not ship: the app still shows an editable date
-  control in the header corner. It is a computed value and should not invite
-  editing. Recorded here as outstanding rather than settled — the prototype was
-  mistaken for the product once already.
+- **Last Updated — _move_, done.** It reads as a dateline in the header corner
+  rather than as a date box. The first time this was marked done it described the
+  RPA-54 prototype and not the app; this time it was checked against the running
+  form. It remains editable at Gus's request — the sentence is the control, and
+  activating it swaps in the editor in place.
 
 ## Open question this audit inherits
 

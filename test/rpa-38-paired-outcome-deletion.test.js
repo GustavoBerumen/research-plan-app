@@ -209,7 +209,7 @@ test('the confirmed structure saves, restores, and evaluates without re-pairing 
   ]);
 
   const savedRaw = await waitFor(() => first.window.localStorage.getItem(DRAFT_KEY), {
-    timeout: 1500,
+    timeout: 5000,
     message: 'The confirmed deletion was not saved',
   });
   const saved = JSON.parse(savedRaw);

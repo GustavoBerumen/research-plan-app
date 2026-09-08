@@ -16,7 +16,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor } = require('./app-harness');
+const { bootApp, setValue, waitFor, DRAFT_KEY } = require('./app-harness');
 
 function step(document) {
   const el = document.querySelector('.review-step');
@@ -108,7 +108,7 @@ test('a section reads complete once its fields are answered', async (t) => {
     setValue(window, document.querySelector(`[data-field="${key}"]`), 'Something written here');
   });
   await waitFor(() => rows(document).find((r) => r.name === 'Context').state === 'complete', {
-    timeout: 1500,
+    timeout: 5000,
     message: 'the summary should redraw as the plan changes',
   });
 
@@ -160,13 +160,77 @@ test('an evaluated section says so, and says when that has gone out of date', as
   // but the feedback no longer describes what is there, and that shows.
   setValue(window, background, 'Mobile checkout abandonment rose. An extra sentence.');
   await waitFor(() => rows(document).find((r) => r.name === 'Context').stale, {
-    timeout: 1500,
+    timeout: 5000,
     message: 'editing an evaluated field should mark its currency, not its completeness',
   });
 
   const stale = rows(document).find((r) => r.name === 'Context');
   assert.equal(stale.note, 'evaluation out of date');
   assert.equal(stale.state, 'complete', 'stale still counts as complete');
+});
+
+test('Feedback is offered here, and closes the step', async (t) => {
+  // RPA-55's last open row. Feedback was the only field with no defined
+  // reader, and a section of its own at the end of the document was nobody's
+  // stop. The review step is where a plan is read rather than written, which
+  // is the one moment a comment on it has an audience.
+  //
+  // Below the sign-offs. It sat above them briefly, on the argument that
+  // feedback after approval has missed its moment; Gus put it last, where a
+  // reader reaches it having read the whole plan.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  const el = step(document);
+  const block = el.querySelector('.comments-block');
+  assert.ok(block, 'the review step offers Feedback');
+  assert.equal(document.querySelectorAll('.comments-block').length, 1,
+    'and only here — it is not still rendered outside the step as well');
+
+  // No section of its own any more.
+  const titles = Array.from(document.querySelectorAll('.acc-title')).map((e) => e.textContent);
+  assert.equal(titles.includes('Feedback'), false);
+
+  const signOffs = el.querySelector('.review-signoffs');
+  assert.ok(signOffs);
+  assert.equal(
+    signOffs.compareDocumentPosition(block) & 4 /* DOCUMENT_POSITION_FOLLOWING */, 4,
+    'Feedback comes after the approvals'
+  );
+  assert.equal(block, el.lastElementChild, 'and is the last thing in the step');
+
+  // It also stays out of the way until wanted, as it did before the move, and
+  // is not counted as an unanswered field by the summary above it.
+  assert.equal(block.querySelector('.field').hidden, true);
+  assert.equal(signOffs.querySelector('[data-field="comments"]'), null,
+    'and is not rendered as a third sign-off');
+});
+
+test('Feedback still reveals, saves and clears from its new home', async (t) => {
+  const app = await bootApp();
+  const { document, window } = app;
+
+  const block = step(document).querySelector('.comments-block');
+  const addBtn = block.querySelector('.add-btn');
+  assert.equal(addBtn.textContent, 'Give feedback');
+  addBtn.click();
+  const ta = block.querySelector('[data-field="comments"]');
+  assert.equal(block.querySelector('.field').hidden, false, 'the reveal still works');
+
+  setValue(window, ta, 'The recruitment timeline looks optimistic.');
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  const saved = JSON.parse(window.localStorage.getItem(DRAFT_KEY));
+  assert.equal(saved.fields.comments, 'The recruitment timeline looks optimistic.',
+    'still stored under the key it has always had, so no draft moves');
+  app.close();
+
+  const reopened = await bootApp({ draft: saved });
+  t.after(() => reopened.close());
+  const restored = reopened.document.querySelector('.review-step [data-field="comments"]');
+  assert.equal(restored.value, 'The recruitment timeline looks optimistic.');
+  assert.equal(restored.closest('.field').hidden, false,
+    'a draft with feedback in it opens with the feedback showing');
 });
 
 test('nothing in the step blocks signing', async (t) => {

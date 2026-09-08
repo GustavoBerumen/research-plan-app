@@ -24,6 +24,7 @@
   // The user's draft choice is independent of temporary print visibility.
   let timelineVisible = false;
   let updateTimelineVisibility = null;
+  let syncCommentsReveal = null;
 
   // ---------- small DOM helper ----------
   function el(tag, className, attrs) {
@@ -49,6 +50,9 @@
   // choice is remembered in the draft, so it survives a reload; Clear Form
   // resets it, since a cleared plan is a new plan.
   let lastUpdatedManual = false;
+  // Set by the dateline; the stamp writes the value directly and fires no
+  // event, so the visible sentence has to be told to redraw.
+  let refreshDateline = () => {};
   let stampingLastUpdated = false;
 
   function setLastUpdatedToday() {
@@ -60,6 +64,7 @@
     } finally {
       stampingLastUpdated = false;
     }
+    refreshDateline();
   }
 
   // ---------- schema parsing (research-plan-template.md) ----------
@@ -83,7 +88,16 @@
       label = label.trim();
       type = (type || 'text').trim().toLowerCase();
       if (placeholder === undefined) {
-        placeholder = type === 'date' ? 'Date' : type === 'person' ? 'Person' : type === 'status' ? '' : type === 'url' ? 'https://…' : type === 'file' ? 'No file chosen' : 'Enter text…';
+        // A cell with no declared placeholder gets none. It used to fall back
+        // to "Enter text…", which is a placeholder telling you to type in a
+        // box you can already see, under a column header that already names
+        // what goes in it. Guidance belongs in the field's hint, where it
+        // stays visible once typing starts.
+        //
+        // "No file chosen" is the exception and is not a placeholder: it is
+        // the file cell's empty-state label, rendered as text rather than
+        // into an input, so removing it would leave a bare button.
+        placeholder = type === 'file' ? 'No file chosen' : '';
       } else {
         placeholder = placeholder.trim();
       }
@@ -610,6 +624,16 @@
   // the canonical ISO value and calendar picker, but render controllable
   // day/month/year segments for predictable manual editing.
   const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // The segmented editor shows "Sep" because it has three characters of room.
+  // The dateline is a sentence, and a sentence says September.
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function formatDateline(isoValue) {
+    const parsed = parseDateEntry(isoValue);
+    if (!parsed) return 'not set';
+    return parsed.day + ' ' + MONTH_NAMES[parsed.month - 1] + ' ' + parsed.year;
+  }
   const DATE_SEGMENT_DELAY_MS = 900;
   let dateControlCount = 0;
 
@@ -2832,6 +2856,25 @@
   // own heading. Printing needs no separate handling — it's the same live DOM,
   // and a block's name renders via .flabel just like every other field's
   // heading already does.
+  // Every field builder draws the "(optional)" marker the same way, and each
+  // used to draw it inline — which meant the ones that forgot were impossible
+  // to spot, and declaring `optional` on those fields did nothing at all. Two
+  // of the six were in that state. RPA-55 marks more fields optional, so the
+  // marker is a single call now, and a test asserts every builder makes it.
+  function markOptional(label, field) {
+    if (!field.optional) return label;
+    const opt = el('span', 'fopt');
+    opt.textContent = '(optional)';
+    label.append(' ', opt);
+    return label;
+  }
+
+  // The one field type with no label of its own: Additional Resources is a
+  // heading-less list that appears on demand, so there is nowhere to hang an
+  // "(optional)" marker and nothing it would tell you — an empty list already
+  // says the field is not required. `optional` on a custom-fields field is
+  // therefore meaningless rather than merely unhandled, which is why this
+  // builder does not call markOptional. Asserted in optional-marker.test.js.
   function renderCustomFieldsField(field) {
     const wrap = el('div', 'field');
     const list = el('div', 'custom-fields-list');
@@ -2888,6 +2931,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3092,11 +3136,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3203,9 +3243,6 @@
     addBtn.textContent = '+ Add ' + singular;
     addBtn.addEventListener('click', () => addRow(true));
     addBtnRow.appendChild(addBtn);
-    if (field.key === 'researchQuestions') {
-      addBtnRow.appendChild(renderInfoTip('We recommend three research questions for a well-balanced study.'));
-    }
     wrap.appendChild(addBtnRow);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
@@ -3229,6 +3266,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3264,11 +3302,7 @@
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, labelId + '-hint');
@@ -3309,68 +3343,6 @@
   // "Hint:" line under each field (see parseSchema). This icon is only used
   // for the two button-row tips that are not tied to a field.
   //
-  // The bubble is reparented to <body> with position:fixed while shown —
-  // same trick as .combo-menu — so it always escapes any ancestor's
-  // overflow:hidden (e.g. the accordion box) regardless of which field it's
-  // attached to, and position is computed fresh each time so it can flip
-  // below the icon when there isn't room above (e.g. a field near the top
-  // of an open accordion).
-  function renderInfoTip(text) {
-    const tip = el('span', 'info-tip', { tabindex: '0', role: 'note', 'aria-label': text });
-    tip.textContent = '?';
-    const bubble = el('span', 'info-tip-bubble');
-    bubble.textContent = text;
-    bubble.hidden = true;
-
-    let hideTimer = null;
-
-    function position() {
-      const rect = tip.getBoundingClientRect();
-      const gap = 7;
-      const bw = bubble.offsetWidth;
-      const bh = bubble.offsetHeight;
-
-      const fitsAbove = rect.top - gap - bh >= 0;
-      bubble.style.top = (fitsAbove ? rect.top - bh - gap : rect.bottom + gap) + 'px';
-      bubble.classList.toggle('info-tip-bubble-below', !fitsAbove);
-
-      const left = Math.max(6, Math.min(rect.left + rect.width / 2 - bw / 2, window.innerWidth - bw - 6));
-      bubble.style.left = left + 'px';
-    }
-
-    function show() {
-      clearTimeout(hideTimer);
-      if (bubble.parentNode !== document.body) document.body.appendChild(bubble);
-      bubble.hidden = false;
-      position();
-      bubble.classList.add('show');
-    }
-
-    function hide() {
-      bubble.classList.remove('show');
-      hideTimer = setTimeout(() => {
-        bubble.hidden = true;
-        if (bubble.parentNode === document.body) bubble.remove();
-      }, 160);
-    }
-
-    tip.addEventListener('mouseenter', show);
-    tip.addEventListener('mouseleave', hide);
-    tip.addEventListener('focus', show);
-    tip.addEventListener('blur', hide);
-
-    return tip;
-  }
-
-  // Field guidance as visible hint text, GOV.UK style, in place of the "?"
-  // tooltip: a tooltip needs a hover to find, which touch devices cannot do,
-  // and a screen reader only meets it if it happens to land on the icon. The
-  // hint is a sibling of the label rather than a child, so it describes the
-  // control (aria-describedby) without bloating the control's name.
-  // *Emphasis* in a hint becomes a real <em>. Built as nodes rather than
-  // assigned as innerHTML, so a hint can never inject markup, and an unpaired
-  // asterisk is left alone as literal text rather than swallowing the rest of
-  // the line.
   function appendHintText(target, text) {
     text.split(/(\*[^*\n]+\*)/).forEach((part) => {
       if (!part) return;
@@ -3801,11 +3773,7 @@
     const controlId = fieldControlId(field.key);
     const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
     label.textContent = field.label;
-    if (field.optional) {
-      const opt = el('span', 'fopt');
-      opt.textContent = '(optional)';
-      label.append(' ', opt);
-    }
+    markOptional(label, field);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, controlId + '-hint');
     if (guidance) wrap.appendChild(guidance);
@@ -4110,6 +4078,10 @@
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
+      // Header fields can be optional too. Project decision is the live case:
+      // it is a delivery date the researcher does not set and often nobody has
+      // set yet, and its audit verdict is "keep — sourced or optional".
+      markOptional(label, f);
       // The compact corner slot has no room for guidance, and this is a
       // computed value nobody is asked to fill in.
       const guidance = f.key === 'lastUpdated' ? null : renderFieldHint(f, controlId + '-hint');
@@ -4146,17 +4118,81 @@
       return mf;
     }
 
+    // "Last updated" is computed: the app stamps it whenever the plan's content
+    // changes. RPA-55's verdict was that a computed value should read as a
+    // dateline rather than an editable control, because a box invites an answer
+    // to a question nobody is being asked.
+    //
+    // It stays editable, because Gus asked for that explicitly. So the sentence
+    // itself is the control: activating it swaps in the date editor in place.
+    // No separate "Change" link — that was tried and rejected as clutter in a
+    // corner slot this small.
+    function buildDateline(f) {
+      const wrap = el('div', 'mf mf-compact dateline');
+      const controlId = fieldControlId(f.key);
+      const label = el('div', 'mlabel', { id: controlId + '-label' });
+      label.textContent = f.label;
+
+      const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
+      const input = dateControl.input;
+      const control = dateControl.element;
+      control.setAttribute('aria-labelledby', label.id);
+      control.hidden = true;
+
+      const text = el('button', 'dateline-value', {
+        type: 'button',
+        'aria-describedby': label.id,
+      });
+
+      refreshDateline = () => {
+        text.textContent = formatDateline(input.value);
+        text.setAttribute('aria-label', f.label + ' ' + formatDateline(input.value) + ', edit');
+      };
+
+      setDateInputValue(input, todayIso());
+      refreshDateline();
+
+      function edit() {
+        control.hidden = false;
+        text.hidden = true;
+        const day = control.querySelector('.date-day');
+        if (day) day.focus();
+      }
+      function done() {
+        control.hidden = true;
+        text.hidden = false;
+        refreshDateline();
+      }
+      text.addEventListener('click', edit);
+      // Leaving the editor puts the sentence back, so the control is only
+      // present while it is being used.
+      control.addEventListener('focusout', () => {
+        window.setTimeout(() => {
+          if (!control.contains(doc.activeElement || document.activeElement)) done();
+        }, 0);
+      });
+
+      input.addEventListener('change', () => {
+        if (!stampingLastUpdated && !draftRestoring) lastUpdatedManual = true;
+        refreshDateline();
+      });
+
+      wrap.append(label, text, control);
+      return wrap;
+    }
+
     // "Last updated" keeps its compact top-right corner slot rather than
     // sitting in the grid of questions people are asked to answer.
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
     let identifier = null;
     header.meta.forEach((f) => {
-      const mf = buildMetaField(f);
       if (f.key === 'lastUpdated') {
-        mf.classList.add('mf-compact');
-        topRow.appendChild(mf);
-      } else if (f.key === 'jiraProject') {
+        topRow.appendChild(buildDateline(f));
+        return;
+      }
+      const mf = buildMetaField(f);
+      if (f.key === 'jiraProject') {
         // Directly under the title and the same width as it. It identifies
         // the plan rather than asking one of the paired questions in the grid
         // below, and the combobox wants room for its "KEY — summary" result.
@@ -4220,7 +4256,7 @@
     labelRow.append(labelEl, removeBtn);
 
     const btn = el('button', 'add-btn', { type: 'button' });
-    btn.textContent = '+ Add feedback';
+    btn.textContent = 'Give feedback';
     btn.addEventListener('click', () => {
       btn.hidden = true;
       fieldEl.hidden = false;
@@ -4232,6 +4268,19 @@
       fieldEl.hidden = true;
       btn.hidden = false;
     });
+
+    // A restored draft writes the value straight into the textarea and fires
+    // no click, so without this a plan saved with feedback in it reopened with
+    // the field hidden behind "+ Add feedback" — the comment was there and
+    // invisible. That was survivable while this sat in a section of its own;
+    // it is not, now that the field's whole purpose is to be read at the
+    // moment somebody reviews the plan.
+    syncCommentsReveal = () => {
+      const written = Boolean(ta && ta.value.trim());
+      fieldEl.hidden = !written;
+      btn.hidden = written;
+      if (written) resizeTa(ta);
+    };
 
     wrap.append(btn, fieldEl);
     return wrap;
@@ -4352,9 +4401,20 @@
       });
     }
 
+    // Feedback closes the document, below the approvals. It was briefly above
+    // them, on the argument that feedback after sign-off has missed its
+    // moment; Gus put it last, where a reader arrives at it having read the
+    // whole plan. Found by key rather than by position in the section, for the
+    // same reason the section itself is.
+    const commentsField = section.fields.find((f) => f.key === 'comments');
+
     const signOffs = el('div', 'review-signoffs');
-    section.fields.forEach((f) => signOffs.appendChild(renderField(f)));
+    section.fields
+      .filter((f) => f !== commentsField)
+      .forEach((f) => signOffs.appendChild(renderField(f)));
     step.appendChild(signOffs);
+
+    if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
 
     // The summary is only true at the moment it is drawn, so redraw it
     // whenever the plan changes rather than once at render.
@@ -4377,25 +4437,21 @@
     tables.length = 0;
     doc.appendChild(renderHeader(schema.header));
 
-    // Found by the field's key, not by its section's title. The title used to
-     // be matched literally, so renaming the section would have quietly
-     // demoted this to an ordinary accordion — the same label-to-code coupling
-     // that cost a day in RPA-55, one level up.
+    // The review step is found by the sign-off keys, not by its section's
+    // title. The title used to be matched literally, so renaming the section
+    // would have quietly demoted this to an ordinary accordion — the same
+    // label-to-code coupling that cost a day in RPA-55, one level up.
+    //
+    // Feedback used to be hoisted out of a section of its own here. It lives
+    // inside the review section now, so there is nothing to hoist: whatever
+    // that section holds, renderReviewStep composes.
     const sections = schema.sections.slice();
-    const commentsIdx = sections.findIndex(
-      (s) => s.fields.length === 1 && s.fields[0].key === 'comments'
-    );
-    const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
-
-    // The review step, found by the sign-off keys rather than by its section's
-    // title, for the reason immediately above.
     const reviewIdx = sections.findIndex(
       (s) => s.fields.some((f) => f.key === 'signOffResearcher')
     );
     const reviewSection = reviewIdx !== -1 ? sections.splice(reviewIdx, 1)[0] : null;
 
     sections.forEach((s) => doc.appendChild(renderSection(s)));
-    if (commentsField) doc.appendChild(renderCommentsReveal(commentsField));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
   }
@@ -4720,22 +4776,13 @@
     // readout. Same situation as v3: the key follows the label through
     // toCamelKey, so a draft saved before the rename holds keys no live field
     // answers to, and applyDraft would drop those values without a word.
-    // v6: RPA-55 merged User Groups into Characteristics. Its rows are moved
-    // rather than dropped — somebody's segments are still an answer to the
-    // merged question, and applyDraft ignores any list key that no longer
-    // renders, so without this they would vanish without a word.
-    if (version < 6) {
-      migrated.lists = Object.assign({}, migrated.lists);
-      const groups = migrated.lists.userGroups || [];
-      if (groups.length) {
-        const existing = migrated.lists.characteristics || [];
-        const seen = new Set(existing.map((v) => String(v).trim().toLowerCase()));
-        migrated.lists.characteristics = existing.concat(
-          groups.filter((v) => String(v).trim() && !seen.has(String(v).trim().toLowerCase()))
-        );
-      }
-      delete migrated.lists.userGroups;
-    }
+    // v6 folded User Groups into Characteristics, and is deliberately gone.
+    // RPA-55 reversed that merge, so userGroups renders again and a draft
+    // that still holds it needs no migration at all — leaving the key alone
+    // is now the correct behaviour, and running the old fold would move
+    // somebody's segments into the wrong field and delete the key they came
+    // from. There is no un-merge for drafts saved while the fields were one:
+    // which entries had been segments was never recorded.
     // v5: RPA-55 renamed Title to Research title, and Last Updated to Last
     // updated (label only — that key was already lastUpdated).
     if (version < 5) {
@@ -4902,6 +4949,7 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
+    if (syncCommentsReveal) syncCommentsReveal();
   }
 
   function restoreDraft() {
