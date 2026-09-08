@@ -1,0 +1,78 @@
+[
+  {
+    "scenario": "guardrail",
+    "width": 1366,
+    "format": "A4",
+    "filename": "guardrail-a4.pdf",
+    "inputs": [
+      "Checkout research will examine where returning customers hesitate before payment.\nSupport interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. \nFinal background line: preserve the complete research context in print.",
+      "How do returning customers use delivery information when deciding whether to complete checkout?",
+      "Which delivery details do customers need before they can confidently place their order?\nConsider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. Consider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. Consider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. \nFinal question line: preserve this complete third question in print.",
+      "A prioritised report of checkout delivery-information barriers.",
+      "An evidence-based comparison of delivery-information needs to guide the next design decision.",
+      "RPA-78 print check: retain this user-authored color and behavior wording."
+    ],
+    "texts": [
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Clarify the lower-scoring criterion with a concrete observation and explain how it will guide the research decision. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context.",
+      "Include the relevant evidence reference: checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Clarify the lower-scoring criterion with a concrete observation and explain how it will guide the research decision. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context.",
+      "Include the relevant evidence reference: checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Clarify the lower-scoring criterion with a concrete observation and explain how it will guide the research decision. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context.",
+      "Include the relevant evidence reference: checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-checkout-research-evidence-"
+    ],
+    "screenAndDraftPreserved": true,
+    "interactiveControlsExcluded": true
+  },
+  {
+    "scenario": "ready",
+    "width": 390,
+    "format": "Letter",
+    "filename": "ready-letter.pdf",
+    "inputs": [
+      "Checkout research will examine where returning customers hesitate before payment.\nSupport interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. Support interviews describe uncertainty about delivery dates; analytics show repeated visits to the delivery information page. \nFinal background line: preserve the complete research context in print.",
+      "How do returning customers use delivery information when deciding whether to complete checkout?",
+      "Which delivery details do customers need before they can confidently place their order?\nConsider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. Consider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. Consider the promised delivery window, the address confirmation, the available collection options and the information needed to compare alternatives. \nFinal question line: preserve this complete third question in print.",
+      "A prioritised report of checkout delivery-information barriers.",
+      "An evidence-based comparison of delivery-information needs to guide the next design decision.",
+      "RPA-78 print check: retain this user-authored color and behavior wording."
+    ],
+    "texts": [
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. ",
+      "Explain which observed checkout behaviour supports this judgement and how it relates to the study population, decision and delivery context. "
+    ],
+    "screenAndDraftPreserved": true,
+    "interactiveControlsExcluded": true
+  }
+]

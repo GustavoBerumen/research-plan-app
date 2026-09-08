@@ -1,0 +1,26 @@
+✔ a template with Windows line endings renders exactly like a Unix one (1057.3712ms)
+✔ no hint carries a stray carriage return into the page (185.7614ms)
+✔ old Mac line endings parse too (197.5901ms)
+✔ the server parses a CRLF methods list the same as a LF one (136.4542ms)
+✔ every field key the application looks up by name exists in the form (540.8903ms)
+✔ every table column key the application looks up by name exists (474.9175ms)
+✔ the template pins every field key, so labels can be reworded freely (2.8306ms)
+✔ the readout buffer warning tracks the gap to the decision date (283.2236ms)
+✔ a draft saved before the RPA-55 header renames restores into the new fields (312.6806ms)
+✔ a draft saved before the merge finds User Groups still there (210.5292ms)
+✔ the two fields ask different questions, and say so (144.9484ms)
+✔ both lists save and come back under their own keys (1131.3425ms)
+✔ British document language, visible Methods hint and timeline button survive toggling (548.1402ms)
+✔ LF: pre-change field/list/column keys and all seven rubric mappings are retained (897.4063ms)
+✔ CRLF: pre-change field/list/column keys and all seven rubric mappings are retained (449.5422ms)
+✔ a draft saved by the pre-change app retains user spelling, multiline values, pairs and timeline data (1086.6923ms)
+✔ Actionable reaches exact-name validation, recommendation schemas, visible results and calibration unchanged (315.5877ms)
+✔ all seven generated-feedback prompt paths request British English once and retain source text (2.1961ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4882.6722

@@ -3197,14 +3197,14 @@
 
     if (field.key === 'stageTimeline') {
       const vizBtn = el('button', 'btn btn-ghost timeline-viz-btn', { type: 'button' });
-      vizBtn.textContent = 'Visualize Timeline';
+      vizBtn.textContent = 'Visualise Timeline';
       const chart = el('div', 'timeline-chart');
       chart.hidden = true;
 
       const refreshTimeline = () => renderTimelineChart(table.id, field.columns, chart);
       updateTimelineVisibility = () => {
         chart.hidden = !timelineVisible;
-        vizBtn.textContent = timelineVisible ? 'Hide Timeline' : 'Visualize Timeline';
+        vizBtn.textContent = timelineVisible ? 'Hide Timeline' : 'Visualise Timeline';
         if (timelineVisible) refreshTimeline();
         else chart.replaceChildren();
       };

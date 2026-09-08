@@ -13,7 +13,7 @@ function timeline(app) {
 function assertChoice(app, visible) {
   const { button, chart } = timeline(app);
   assert.equal(chart.hidden, !visible);
-  assert.equal(button.textContent, visible ? 'Hide Timeline' : 'Visualize Timeline');
+  assert.equal(button.textContent, visible ? 'Hide Timeline' : 'Visualise Timeline');
 }
 
 async function savedChoice(app, visible) {
@@ -106,7 +106,7 @@ for (const visible of [true, false]) {
     app.window.dispatchEvent(new app.window.Event('beforeprint'));
     assert.equal(chart.hidden, false);
     assert.equal(chart.querySelectorAll('.timeline-row').length, 2);
-    assert.equal(button.textContent, visible ? 'Hide Timeline' : 'Visualize Timeline');
+    assert.equal(button.textContent, visible ? 'Hide Timeline' : 'Visualise Timeline');
     const saved = await waitFor(() => {
       const value = JSON.parse(app.window.localStorage.getItem(DRAFT_KEY));
       return value.savedAt !== draft.savedAt && value;

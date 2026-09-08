@@ -1,0 +1,42 @@
+{
+  "platform": "win32",
+  "browser": "152.0.7977.82",
+  "mode": "Headless Windows Chrome",
+  "cases": [
+    {
+      "scenario": "guardrail",
+      "width": 1366,
+      "language": "en-GB",
+      "accessibleTimelineToggle": true,
+      "outcomeCriterion": "Actionable",
+      "evaluationOverflow": false
+    },
+    {
+      "scenario": "guardrail",
+      "width": 390,
+      "language": "en-GB",
+      "accessibleTimelineToggle": true,
+      "outcomeCriterion": "Actionable",
+      "evaluationOverflow": false
+    },
+    {
+      "scenario": "ready",
+      "width": 1366,
+      "language": "en-GB",
+      "accessibleTimelineToggle": true,
+      "outcomeCriterion": "Actionable",
+      "evaluationOverflow": false
+    },
+    {
+      "scenario": "ready",
+      "width": 390,
+      "language": "en-GB",
+      "accessibleTimelineToggle": true,
+      "outcomeCriterion": "Actionable",
+      "evaluationOverflow": false
+    }
+  ],
+  "loadingPendingErrorAndRetry": true,
+  "errors": [],
+  "external": []
+}
