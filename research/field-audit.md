@@ -109,7 +109,7 @@ high effort* is where the genuine cuts live.
 | **Jira Project** | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
 | **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** |
 | **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** |
-| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **not done.** It was a dateline in the RPA-54 prototype, and that did not ship: it still renders as an editable date control in the header corner. A computed value should not invite editing. Kept as an open action, not a claim. |
+| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **done, and verified in the app this time.** It reads as a dateline in the header corner. It stays editable at Gus's request, so the sentence itself is the control: activating it swaps in the date editor in place, with no separate Change link. |
 | **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced or optional.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. Pull it from the linked Jira issue, or let people proceed without it. Blocking on a date someone else has not set is how forms get abandoned. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
 | **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
 
@@ -273,9 +273,9 @@ work riding on the answer.
 
 ### 7. Sign-off pair and Last Updated
 
-Already decided in RPA-55; listed for completeness. Sign-off is now built: the
-review step exists and both approvals are in it. Last Updated is still outstanding —
-it becomes a dateline, and RPA-54's prototype had one while the app does not.
+Already decided in RPA-55, and both are now built: the review step exists with both
+approvals in it, and Last Updated reads as a dateline. Neither claim is inherited
+from a prototype this time; both were checked against the running app.
 
 ### 8. Small and unambiguous
 
@@ -340,11 +340,11 @@ relitigate them:
   The step is not an accordion, so it cannot be collapsed past, and it carries the
   completion-and-currency summary this record asked for. Project decision and
   Research readout are planning inputs, not approvals, and moved to the header.
-- **Last Updated — _move_, not done.** It was rendered as a dateline in the RPA-54
-  prototype, and that part did not ship: the app still shows an editable date
-  control in the header corner. It is a computed value and should not invite
-  editing. Recorded here as outstanding rather than settled — the prototype was
-  mistaken for the product once already.
+- **Last Updated — _move_, done.** It reads as a dateline in the header corner
+  rather than as a date box. The first time this was marked done it described the
+  RPA-54 prototype and not the app; this time it was checked against the running
+  form. It remains editable at Gus's request — the sentence is the control, and
+  activating it swaps in the editor in place.
 
 ## Open question this audit inherits
 

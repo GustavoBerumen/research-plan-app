@@ -49,6 +49,9 @@
   // choice is remembered in the draft, so it survives a reload; Clear Form
   // resets it, since a cleared plan is a new plan.
   let lastUpdatedManual = false;
+  // Set by the dateline; the stamp writes the value directly and fires no
+  // event, so the visible sentence has to be told to redraw.
+  let refreshDateline = () => {};
   let stampingLastUpdated = false;
 
   function setLastUpdatedToday() {
@@ -60,6 +63,7 @@
     } finally {
       stampingLastUpdated = false;
     }
+    refreshDateline();
   }
 
   // ---------- schema parsing (research-plan-template.md) ----------
@@ -610,6 +614,16 @@
   // the canonical ISO value and calendar picker, but render controllable
   // day/month/year segments for predictable manual editing.
   const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // The segmented editor shows "Sep" because it has three characters of room.
+  // The dateline is a sentence, and a sentence says September.
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function formatDateline(isoValue) {
+    const parsed = parseDateEntry(isoValue);
+    if (!parsed) return 'not set';
+    return parsed.day + ' ' + MONTH_NAMES[parsed.month - 1] + ' ' + parsed.year;
+  }
   const DATE_SEGMENT_DELAY_MS = 900;
   let dateControlCount = 0;
 
@@ -4146,17 +4160,81 @@
       return mf;
     }
 
+    // "Last updated" is computed: the app stamps it whenever the plan's content
+    // changes. RPA-55's verdict was that a computed value should read as a
+    // dateline rather than an editable control, because a box invites an answer
+    // to a question nobody is being asked.
+    //
+    // It stays editable, because Gus asked for that explicitly. So the sentence
+    // itself is the control: activating it swaps in the date editor in place.
+    // No separate "Change" link — that was tried and rejected as clutter in a
+    // corner slot this small.
+    function buildDateline(f) {
+      const wrap = el('div', 'mf mf-compact dateline');
+      const controlId = fieldControlId(f.key);
+      const label = el('div', 'mlabel', { id: controlId + '-label' });
+      label.textContent = f.label;
+
+      const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
+      const input = dateControl.input;
+      const control = dateControl.element;
+      control.setAttribute('aria-labelledby', label.id);
+      control.hidden = true;
+
+      const text = el('button', 'dateline-value', {
+        type: 'button',
+        'aria-describedby': label.id,
+      });
+
+      refreshDateline = () => {
+        text.textContent = formatDateline(input.value);
+        text.setAttribute('aria-label', f.label + ' ' + formatDateline(input.value) + ', edit');
+      };
+
+      setDateInputValue(input, todayIso());
+      refreshDateline();
+
+      function edit() {
+        control.hidden = false;
+        text.hidden = true;
+        const day = control.querySelector('.date-day');
+        if (day) day.focus();
+      }
+      function done() {
+        control.hidden = true;
+        text.hidden = false;
+        refreshDateline();
+      }
+      text.addEventListener('click', edit);
+      // Leaving the editor puts the sentence back, so the control is only
+      // present while it is being used.
+      control.addEventListener('focusout', () => {
+        window.setTimeout(() => {
+          if (!control.contains(doc.activeElement || document.activeElement)) done();
+        }, 0);
+      });
+
+      input.addEventListener('change', () => {
+        if (!stampingLastUpdated && !draftRestoring) lastUpdatedManual = true;
+        refreshDateline();
+      });
+
+      wrap.append(label, text, control);
+      return wrap;
+    }
+
     // "Last updated" keeps its compact top-right corner slot rather than
     // sitting in the grid of questions people are asked to answer.
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
     let identifier = null;
     header.meta.forEach((f) => {
-      const mf = buildMetaField(f);
       if (f.key === 'lastUpdated') {
-        mf.classList.add('mf-compact');
-        topRow.appendChild(mf);
-      } else if (f.key === 'jiraProject') {
+        topRow.appendChild(buildDateline(f));
+        return;
+      }
+      const mf = buildMetaField(f);
+      if (f.key === 'jiraProject') {
         // Directly under the title and the same width as it. It identifies
         // the plan rather than asking one of the paired questions in the grid
         // below, and the combobox wants room for its "KEY — summary" result.

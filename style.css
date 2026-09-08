@@ -107,6 +107,13 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    width. Narrower looked tidier in isolation but wrapped the hint onto two
    lines and read as a different kind of thing from the title above it. */
 .mf-identifier{margin-top:20px}
+/* The dateline: a computed value stated as a sentence, not offered as a box.
+   The sentence is the control — activating it swaps in the date editor — so
+   there is no separate Change link cluttering a slot this small. */
+.dateline{align-items:flex-end}
+.dateline-value{font-family:inherit;font-size:var(--text-sm);color:var(--text-2);background:none;border:none;padding:2px 0;cursor:text;text-align:right}
+.dateline-value:hover{color:var(--ink)}
+.dateline-value:focus-visible{outline:3px solid var(--focus);outline-offset:0;background:var(--focus);color:var(--ink)}
 .mf-compact{gap:2px;flex-shrink:0}
 .mf-compact .mlabel{font-size:var(--text-sm)}
 .mf-compact .minput{font-size:var(--text-sm);min-height:34px;padding:3px 5px;max-width:190px}
