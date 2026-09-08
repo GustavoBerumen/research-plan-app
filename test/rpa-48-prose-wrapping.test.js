@@ -79,7 +79,9 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(document.querySelectorAll('#previousKnowledge-table tbody textarea.prose-input').length, 1);
   assert.equal(document.querySelectorAll('#stageTimeline-table textarea').length, 0);
   assert.equal(document.querySelector('#stageTimeline-table tbody select').tagName, 'SELECT');
-  assert.equal(document.querySelectorAll('#stageTimeline-table input[type="date"]').length, 2);
+  // Five pre-populated stages, two dates each (RPA-76).
+  assert.equal(document.querySelectorAll('#stageTimeline-table tbody tr').length, 5);
+  assert.equal(document.querySelectorAll('#stageTimeline-table input[type="date"]').length, 10);
 
   // Two prose columns and no status select: RPA-55 cut Status.
   const actionCells = document.querySelectorAll('#actionPoints-table tbody td');
@@ -167,7 +169,10 @@ test('timeline date ranges stay contained without changing compact date editors'
   t.after(() => app.close());
   const { document, window } = app;
 
-  const dateInputs = document.querySelectorAll('#stageTimeline-table input[type="date"]');
+  // The first stage's two dates. The table is pre-populated with five rows
+  // (RPA-76), so this scopes to one row rather than assuming the table holds
+  // exactly one.
+  const dateInputs = document.querySelectorAll('#stageTimeline-table tbody tr:first-child input[type="date"]');
   assert.equal(dateInputs.length, 2);
   setValue(window, dateInputs[0], '2026-09-02');
   setValue(window, dateInputs[1], '2026-09-16');

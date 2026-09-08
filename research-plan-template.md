@@ -143,8 +143,14 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
 <!-- Requirements (table, editable-headers, key=requirements): Physical:prose | Digital:prose | Approvals:prose -->
 <!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->
 <!-- Timeframe (textarea, key=timeframe): Scheduled duration for each research phase -->
-Stage Timeline (table, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
-  Hint: The planned schedule for each stage of this research, from planning through reporting.
+<!-- "prefill" starts this table with one row per Stage option rather than one
+     empty row, so the five-stage schedule everybody builds by hand is already
+     there (RPA-76). The stage names come from the column's own options, so
+     renaming or reordering a stage here is enough — app.js holds no copy of
+     the list. Planning's start date is when the plan was started; Reporting's
+     completion date follows Research readout until somebody edits it. -->
+Stage Timeline (table, prefill, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
+  Hint: The planned schedule for each stage of this research, from planning through reporting. Stages and dates are suggested defaults based on your plan details — feel free to adjust or remove them.
 Action Points (table, optional, key=actionPoints): Action:prose | Responsible:prose
   Hint: Tasks needed to move this research forward, and who owns each one.
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it

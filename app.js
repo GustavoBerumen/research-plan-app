@@ -25,6 +25,12 @@
   let timelineVisible = false;
   let updateTimelineVisibility = null;
   let syncCommentsReveal = null;
+  // When this plan was started, as opposed to when it was last saved
+  // (draft.savedAt) or last changed (the lastUpdated field, which is
+  // re-stamped on every edit and editable by hand). Nothing recorded it
+  // before RPA-76, so a plan that predates this gets the earliest date we can
+  // honestly claim rather than today — see migrateDraft.
+  let planCreatedAt = todayIso();
 
   // ---------- small DOM helper ----------
   function el(tag, className, attrs) {
@@ -135,6 +141,13 @@
       optional: typeParts.includes('optional'),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
+      // "prefill" starts a table with one row per option of its first select
+      // column, that option already chosen. The stage names are the column's
+      // options and live in this file, so a renamed or reordered stage flows
+      // through without touching app.js — the alternative was a copy of the
+      // five names in code, which is the coupling this template exists to
+      // avoid (RPA-76).
+      prefill: typeParts.includes('prefill'),
       prose: typeParts.includes('prose'),
       // "rows=N" sets how tall a textarea starts — a hint about how much
       // answer the question expects, so it belongs with the question. Not a
@@ -1061,6 +1074,106 @@
     tr.appendChild(removeTd);
 
     return tr;
+  }
+
+  // A prefilled control holds a value the form supplied, not one a person
+  // gave. The distinction has to survive a save, because otherwise reopening a
+  // plan turns every default into an answer: the review step would count a
+  // timeline nobody wrote, and RPA-64's required-field validation would accept
+  // it. So it is marked in the DOM, carried in the cell snapshot, and dropped
+  // the moment somebody types.
+  function markPrefilled(control) {
+    if (control) control.dataset.prefill = '1';
+    return control;
+  }
+
+  function isPrefilled(control) {
+    return Boolean(control && control.dataset && control.dataset.prefill);
+  }
+
+  // Any real edit clears it, wherever the control lives. Bound once, at the
+  // document, so a row added later needs no wiring of its own.
+  //
+  // Clearing the whole cell rather than the event's target, because a date is
+  // three visible segment inputs in front of one real input[type=date]. Typing
+  // into a segment would otherwise leave the date itself still marked, and the
+  // readout mirror would overwrite what had just been typed.
+  function bindPrefillClearing(root) {
+    const clear = (event) => {
+      const el = event.target;
+      if (!el || !el.closest) return;
+      const scope = el.closest('td') || el.closest('.date-control') || el;
+      const marked = scope.dataset && scope.dataset.prefill ? [scope] : [];
+      marked.concat(Array.from(scope.querySelectorAll ? scope.querySelectorAll('[data-prefill]') : []))
+        .forEach((c) => { delete c.dataset.prefill; });
+    };
+    root.addEventListener('input', clear, true);
+    root.addEventListener('change', clear, true);
+  }
+
+  // Fills a prefill table with one row per option of its first select column,
+  // then hands the field-specific anchors to applyTimelineAnchors. Safe to run
+  // again: it only ever writes into rows it just created.
+  function withoutDraftSave(fn) {
+    const wasRestoring = draftRestoring;
+    draftRestoring = true;
+    try { fn(); } finally { draftRestoring = wasRestoring; }
+  }
+
+  function applyTableDefaults() {
+    tables.forEach(({ id, columns, prefill }) => {
+      if (!prefill) return;
+      const table = document.getElementById(id);
+      const tbody = table && table.querySelector('tbody');
+      const optionCol = columns.findIndex((c) => c.type === 'select' && (c.options || []).length);
+      if (!tbody || optionCol === -1) return;
+
+      const options = columns[optionCol].options;
+      const addBtn = table.closest('.field').querySelector('.add-btn');
+      while (tbody.querySelectorAll('tr').length < options.length && addBtn) addBtn.click();
+
+      Array.from(tbody.querySelectorAll('tr')).forEach((tr, i) => {
+        if (i >= options.length) return;
+        // Every control in a generated row is a default, including the empty
+        // ones: an empty cell holds no content either way, and the mark is
+        // what lets a date the plan learns later still land in it.
+        tr.querySelectorAll('input, select, textarea').forEach(markPrefilled);
+        const sel = tr.querySelectorAll('td')[optionCol].querySelector('.ssel');
+        if (!sel) return;
+        sel.value = options[i];
+        updateSelectClass(sel);
+      });
+      updateRowRemoveButtons(tbody);
+    });
+    applyTimelineAnchors();
+  }
+
+  // The two dates the plan already knows. Planning starts when the plan was
+  // started; reporting finishes when the readout is due.
+  //
+  // The readout is a header field the researcher fills long after this table
+  // renders, so writing it once at render would mean it was always empty and
+  // the feature never fired. It tracks the header instead — but only while the
+  // cell is still a default, so an edited date is never overwritten.
+  function applyTimelineAnchors() {
+    const table = document.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    if (!table) return;
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    if (!rows.length) return;
+
+    const dateIn = (tr, colKey) => {
+      const meta = tables.find((t) => t.id === table.id);
+      const idx = meta ? meta.cols.indexOf(colKey) : -1;
+      const td = idx === -1 ? null : tr.querySelectorAll('td')[idx];
+      return td ? td.querySelector('input[type="date"]') : null;
+    };
+
+    const first = dateIn(rows[0], 'startDate');
+    if (first && isPrefilled(first)) setDateInputValue(first, planCreatedAt);
+
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    const last = dateIn(rows[rows.length - 1], 'completionDate');
+    if (readout && last && isPrefilled(last)) setDateInputValue(last, readout.value || '');
   }
 
   function addRow(tableId, columns) {
@@ -2988,7 +3101,12 @@
     // nameRowCells finds the columns via tbody.closest('table') and the
     // tables registry, so both have to exist by the time it runs.
     table.append(thead, tbody);
-    tables.push({ id: table.id, columns: field.columns, cols: field.columns.map((c) => c.key) });
+    tables.push({
+      id: table.id,
+      columns: field.columns,
+      cols: field.columns.map((c) => c.key),
+      prefill: Boolean(field.prefill),
+    });
     tbody.appendChild(buildRow(field.columns));
     updateRowRemoveButtons(tbody);
     tblWrap.appendChild(table);
@@ -4317,6 +4435,10 @@
   function fieldHasContent(fieldEl) {
     const controls = fieldEl.querySelectorAll('input, textarea, select');
     return Array.from(controls).some((c) => {
+      // A value the form supplied is not an answer. Without this an untouched
+      // Execution reports the pre-filled Stage Timeline as answered — the same
+      // bug the select rule below fixes, arriving by a different route.
+      if (isPrefilled(c)) return false;
       if (c.type === 'radio' || c.type === 'checkbox') return c.checked;
       if (c.type === 'file') return !!(c.files && c.files.length);
       // A select always has a value, so its first option is not an answer —
@@ -4527,22 +4649,41 @@
     if (selectCell) {
       const sel = selectCell.querySelector('.ssel');
       const other = selectCell.querySelector('.select-other-input');
-      return {
+      return withPrefill({
         t: 'select',
         v: sel && sel.hidden ? '__other__' : (sel ? sel.value : ''),
         o: other ? other.value : '',
-      };
+      }, sel);
     }
     const plainSel = td.querySelector('select');
-    if (plainSel) return { t: 'sel', v: plainSel.value };
+    if (plainSel) return withPrefill({ t: 'sel', v: plainSel.value }, plainSel);
     const dateInput = td.querySelector('input[type="date"]');
-    if (dateInput) return { t: 'date', v: dateInput.value };
+    if (dateInput) return withPrefill({ t: 'date', v: dateInput.value }, dateInput);
     const input = td.querySelector('input, textarea');
-    return { t: 'text', v: input ? input.value : '' };
+    return withPrefill({ t: 'text', v: input ? input.value : '' }, input);
+  }
+
+  // Drafts written before RPA-76 carry no `d`, which is the right answer for
+  // them: nothing was ever pre-filled, so every value in one was typed.
+  function withPrefill(snap, control) {
+    if (isPrefilled(control)) snap.d = 1;
+    return snap;
+  }
+
+  // Every control in the cell, not just the first: a date cell is three
+  // segment inputs plus the real input[type=date], and they were marked as a
+  // set. Clearing one of them left the rest marked, which came back as a
+  // spurious `d` on the next save.
+  function restorePrefill(td, snap) {
+    td.querySelectorAll('input, select, textarea').forEach((control) => {
+      if (snap.d) markPrefilled(control);
+      else delete control.dataset.prefill;
+    });
   }
 
   function setCellSnapshot(td, snap) {
     if (!snap) return;
+    restorePrefill(td, snap);
     if (snap.t === 'file') {
       const cell = td.querySelector('.file-cell');
       if (!cell) return;
@@ -4720,7 +4861,13 @@
       }
       lastSavedSignature = signature;
       const payload = Object.assign(
-        { version: DRAFT_VERSION, savedAt: new Date().toISOString() },
+        {
+          version: DRAFT_VERSION,
+          savedAt: new Date().toISOString(),
+          // Written on every save but only ever from the value already in
+          // memory, so the first save fixes it and later ones carry it.
+          createdAt: planCreatedAt,
+        },
         draft
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
@@ -4849,8 +4996,32 @@
     while (addBtn && currentCount() < target && guard++ < 500) addBtn.click();
   }
 
+  // Tables need the other direction too, now that they start with five rows
+  // rather than one (RPA-76). Restoring a plan whose owner deleted a stage used
+  // to hand the stage back: growTo has no way down, and no table had ever had
+  // more rows on screen than in the draft. Rows come off the end, which is
+  // where the surplus is — the saved rows are then restored into what is left,
+  // positionally, exactly as before.
+  function setRowCount(tbody, target, addBtn) {
+    growTo(() => tbody.querySelectorAll('tr').length, target, addBtn);
+    let guard = 0;
+    while (tbody.children.length > Math.max(target, 1) && guard++ < 500) {
+      tbody.lastElementChild.remove();
+    }
+    updateRowRemoveButtons(tbody);
+  }
+
   function applyDraft(draft) {
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
+    // Not handled in migrateDraft: that returns early for any draft already at
+    // the current version, and every plan saved before RPA-76 is one. A draft
+    // with no creation date falls back to savedAt — the last save rather than
+    // the first, so not the answer, but a date the plan demonstrably existed
+    // on. That beats stamping it with today and telling someone their
+    // six-week-old plan started this morning.
+    planCreatedAt = draft.createdAt
+      || (/^\d{4}-\d{2}-\d{2}/.test(String(draft.savedAt || '')) ? String(draft.savedAt).slice(0, 10) : planCreatedAt);
+    applyTimelineAnchors();
     // Lists first — Research Questions drives both Outcomes rows and Methods
     // groups, so its rows must exist before either is restored.
     const orderedListKeys = Object.keys(draft.lists || {})
@@ -4947,7 +5118,7 @@
       if (!table) return;
       const tbody = table.querySelector('tbody');
       const addBtn = table.closest('.field') ? table.closest('.field').querySelector('.add-btn') : null;
-      growTo(() => tbody.querySelectorAll('tr').length, rows.length, addBtn);
+      setRowCount(tbody, rows.length, addBtn);
       const trs = Array.from(tbody.querySelectorAll('tr'));
       rows.forEach((cells, i) => {
         if (!trs[i]) return;
@@ -5003,6 +5174,24 @@
       // after restoring an older plan cannot look like a content change.
       lastSavedSignature = draftContentSignature(carryUnrendered(collectDraft()));
     }
+  }
+
+  // Runs after the form is built and before any draft is restored, so a saved
+  // plan lands on top of the defaults rather than the other way round.
+  function initPlanDefaults() {
+    bindPrefillClearing(doc);
+    applyTableDefaults();
+    // The readout is filled long after this table renders, so the last row's
+    // completion date follows it until somebody edits that cell.
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    if (readout) {
+      readout.addEventListener('input', applyTimelineAnchors);
+      readout.addEventListener('change', applyTimelineAnchors);
+    }
+    // The review step drew its summary during render, before any of this
+    // existed. Redraw it so the first thing a reader sees is computed from the
+    // form they are actually looking at, rather than being right by accident.
+    refreshReviewSummary();
   }
 
   function initDraftPersistence() {
@@ -5093,6 +5282,14 @@
     // Runs after the date inputs above have been blanked: a reset plan is a
     // new plan, and a new plan is dated today just like a freshly rendered one.
     setLastUpdatedToday();
+    // Same argument for the timeline: a reset plan was started today, and gets
+    // the stages back. The loops above stripped the marks along with the
+    // values, so this re-applies both.
+    planCreatedAt = todayIso();
+    // Adding the rows back clicks the add button, and a click schedules a
+    // save. Reset deliberately leaves no draft behind until the next real
+    // edit, so this must not be the edit that resurrects one.
+    withoutDraftSave(applyTableDefaults);
   }
 
   // ---------- evaluation test profiles ----------
@@ -5230,6 +5427,7 @@
         initTextareas(doc);
         initStatusSelects(doc);
         initAccordion();
+        initPlanDefaults();
         initDeadlineConstraints();
         initOutcomesSync();
         initMethodsGroupsSync();
