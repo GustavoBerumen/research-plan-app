@@ -1223,6 +1223,10 @@
     research: ['objective', 'hypothesis', 'researchQuestions', 'outcomes'],
   };
   const evaluationFields = new Map();
+  // Set by renderReviewStep; called whenever evaluation state settles, because
+  // finishing an evaluation fires no input event and the summary would
+  // otherwise keep saying nothing until the next keystroke.
+  let refreshReviewSummary = () => {};
   const evaluationBatches = new Map();
   let evaluationEpoch = 0;
   let activeEvaluations = 0;
@@ -1451,6 +1455,10 @@
       const sectionKey = Object.keys(evaluationSections).find(key => evaluationSections[key].includes(field.key));
       const refreshSection = () => {
         if (sectionKey) evaluationBatches.get(sectionKey).refresh();
+        // The review summary reports evaluation currency, and finishing an
+        // evaluation fires no input event, so it has to be told here or the
+        // row keeps its old wording until the next keystroke.
+        refreshReviewSummary();
       };
       if (!evaluationValueToText(getValue()).trim()) {
         requestState = 'skipped';
@@ -1537,6 +1545,12 @@
       run: runEvaluation,
       populated: () => !!evaluationValueToText(getValue()).trim(),
       state: () => requestState,
+      // For the review step: has this been evaluated at all, and does that
+      // result still describe what the field says now? ADR 001 settled that
+      // stale evaluations still count as complete and that currency is
+      // tracked separately — this is where the two part company.
+      evaluated: () => !!lastResult,
+      stale: () => resultIsStale,
     });
     // Structured feedback includes Objective and, for Outcomes, paired Questions.
     if (field.key === 'researchQuestions' || field.key === 'outcomes') {
@@ -4223,6 +4237,141 @@
     return wrap;
   }
 
+  // ---------- review step (RPA-55) ----------
+  // The last thing in the document, and deliberately not an accordion. The
+  // audit's verdict was that people approve a plan before it exists, which is
+  // about the moment rather than the place: a collapsible section would move
+  // that problem down the page instead of fixing it.
+  //
+  // Shaped after GOV.UK's "check your answers": a summary of what is there,
+  // a Change action on every row, then the approval. ADR 001 names that
+  // pattern and the task list as the two GOV.UK patterns that survive this
+  // being an application rather than a one-time form. It is a hybrid of the
+  // two — rows are sections, not answers, because restating thirty rows would
+  // be unreadable — and nothing here blocks signing, per the same record.
+
+  // A field counts as answered if any control inside it holds something.
+  // Deliberately shallow: it treats a table with one filled cell as answered,
+  // which matches "information added" rather than trying to judge quality.
+  function fieldHasContent(fieldEl) {
+    const controls = fieldEl.querySelectorAll('input, textarea, select');
+    return Array.from(controls).some((c) => {
+      if (c.type === 'radio' || c.type === 'checkbox') return c.checked;
+      if (c.type === 'file') return !!(c.files && c.files.length);
+      // A select always has a value, so its first option is not an answer —
+      // otherwise an untouched Execution reports "2 of 4 fields" because the
+      // Stage and Status columns default to Planning and Not Started.
+      if (c.tagName === 'SELECT') {
+        const first = c.options[0];
+        return !!first && c.value !== first.value;
+      }
+      return !!(c.value || '').trim();
+    });
+  }
+
+  function sectionSummary(sectionEl) {
+    const title = sectionEl.querySelector('.acc-title').textContent.trim();
+    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field'));
+    const answered = fields.filter(fieldHasContent).length;
+
+    // Currency, only where evaluation exists at all.
+    const slug = (sectionEl.querySelector('.acc-body') || {}).id || '';
+    const key = slug.replace(/^body-/, '');
+    const evalKeys = evaluationSections[key] || [];
+    const registered = evalKeys.map((k) => evaluationFields.get(k)).filter(Boolean);
+    const evaluated = registered.filter((f) => f.evaluated());
+    const stale = evaluated.filter((f) => f.stale()).length;
+
+    return {
+      title,
+      sectionEl,
+      total: fields.length,
+      answered,
+      complete: fields.length > 0 && answered === fields.length,
+      hasEvaluation: registered.length > 0,
+      evaluatedCount: evaluated.length,
+      staleCount: stale,
+    };
+  }
+
+  function renderReviewStep(section) {
+    const step = el('section', 'review-step');
+    const headingId = 'review-step-heading';
+    step.setAttribute('aria-labelledby', headingId);
+
+    const heading = el('h2', 'review-h', { id: headingId });
+    heading.textContent = section.title;
+    const sub = el('p', 'review-sub');
+    sub.textContent = 'Check the plan is complete and current, then approve it.';
+    step.append(heading, sub);
+
+    const list = el('div', 'review-list');
+    step.appendChild(list);
+
+    function draw() {
+      list.innerHTML = '';
+      Array.from(doc.querySelectorAll('.acc')).forEach((sectionEl) => {
+        const s = sectionSummary(sectionEl);
+        const row = el('div', 'review-row');
+
+        const tick = el('span', 'review-tick' + (s.complete ? ' review-tick-done' : ''));
+        tick.textContent = s.complete ? '✓' : '•';
+        tick.setAttribute('aria-hidden', 'true');
+
+        const name = el('span', 'review-name');
+        name.textContent = s.title;
+
+        const state = el('span', 'review-state' + (s.complete ? '' : ' review-state-open'));
+        state.textContent = s.complete ? 'complete' : s.answered + ' of ' + s.total + ' fields';
+
+        const note = el('span', 'review-note');
+        if (s.hasEvaluation && s.staleCount) {
+          note.textContent = 'evaluation out of date';
+          note.classList.add('review-note-stale');
+        } else if (s.hasEvaluation && s.evaluatedCount) {
+          note.textContent = 'evaluated';
+        }
+
+        // Every row gets a Change action — the part of check-your-answers that
+        // makes the summary useful rather than just a verdict on your work.
+        const change = el('button', 'review-change', {
+          type: 'button',
+          'aria-label': 'Change ' + s.title,
+        });
+        change.textContent = 'Change';
+        change.addEventListener('click', () => {
+          const body = sectionEl.querySelector('.acc-body');
+          if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
+          sectionEl.scrollIntoView({ block: 'start' });
+          const first = sectionEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select');
+          if (first) first.focus();
+        });
+
+        row.append(tick, name, state, note, change);
+        list.appendChild(row);
+      });
+    }
+
+    const signOffs = el('div', 'review-signoffs');
+    section.fields.forEach((f) => signOffs.appendChild(renderField(f)));
+    step.appendChild(signOffs);
+
+    // The summary is only true at the moment it is drawn, so redraw it
+    // whenever the plan changes rather than once at render.
+    let pending = null;
+    const refresh = () => {
+      if (pending) window.clearTimeout(pending);
+      pending = window.setTimeout(draw, 120);
+    };
+    doc.addEventListener('input', refresh);
+    doc.addEventListener('change', refresh);
+    doc.addEventListener('click', refresh);
+    refreshReviewSummary = refresh;
+    draw();
+
+    return step;
+  }
+
   function renderSchema(schema) {
     doc.innerHTML = '';
     tables.length = 0;
@@ -4238,8 +4387,17 @@
     );
     const commentsField = commentsIdx !== -1 ? sections.splice(commentsIdx, 1)[0].fields[0] : null;
 
+    // The review step, found by the sign-off keys rather than by its section's
+    // title, for the reason immediately above.
+    const reviewIdx = sections.findIndex(
+      (s) => s.fields.some((f) => f.key === 'signOffResearcher')
+    );
+    const reviewSection = reviewIdx !== -1 ? sections.splice(reviewIdx, 1)[0] : null;
+
     sections.forEach((s) => doc.appendChild(renderSection(s)));
     if (commentsField) doc.appendChild(renderCommentsReveal(commentsField));
+    // Last, and after the summary rows can see every section above it.
+    if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
   }
 
   // ---------- clear form ----------

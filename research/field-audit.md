@@ -119,8 +119,8 @@ high effort* is where the genuine cuts live.
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — to the review step. |
-| **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — to the review step. |
+| **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. |
+| **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. |
 
 ## Context
 
@@ -273,10 +273,9 @@ work riding on the answer.
 
 ### 7. Sign-off pair and Last Updated
 
-Already decided in RPA-55; listed for completeness. Both are decided and neither is
-built: sign-off moves to a review step at the end, and Last Updated becomes a
-dateline. "Done in the prototype" is not done — RPA-54's prototype had the dateline
-and the app does not.
+Already decided in RPA-55; listed for completeness. Sign-off is now built: the
+review step exists and both approvals are in it. Last Updated is still outstanding —
+it becomes a dateline, and RPA-54's prototype had one while the app does not.
 
 ### 8. Small and unambiguous
 
@@ -334,10 +333,13 @@ the problem to solve, and splitting Approvals out was the proposal.
 Two items RPA-55 records as already decided, carried here so the audit does not
 relitigate them:
 
-- **Sign off: Lead researcher / Sign off: Project requester — _move_.** They sit in
-  Alignment, section two, so people approve a plan that does not yet exist. They
-  belong in a review step at the end. Project decision and Research readout are
-  planning inputs, not approvals, and have since moved to the header.
+- **Sign off: Lead researcher / Sign off: Project requester — _move_, done.** They
+  sat in Alignment, section two, so people approved a plan that did not yet exist.
+  Alignment became the review step once its identifiers moved to the header: what
+  was left was the two approvals, and approving is a moment rather than a section.
+  The step is not an accordion, so it cannot be collapsed past, and it carries the
+  completion-and-currency summary this record asked for. Project decision and
+  Research readout are planning inputs, not approvals, and moved to the header.
 - **Last Updated — _move_, not done.** It was rendered as a dateline in the RPA-54
   prototype, and that part did not ship: the app still shows an editable date
   control in the header corner. It is a computed value and should not invite

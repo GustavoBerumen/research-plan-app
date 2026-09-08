@@ -302,8 +302,21 @@ test('an editable-headers table renders prose cells under renameable headings', 
 // the path keeps its coverage whether or not the form happens to use it.
 test('a grid cell renders prose that grows, when a grid field is a textarea', async (t) => {
   const real = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8');
-  const restored = withFieldUncommented(real, 'project');
-  assert.notEqual(restored, real, 'the dormant Project lines were not found to restore');
+  // No section declares {grid} any anymore: Alignment was the last one and it
+  // became the review step (RPA-55), so buildGridCell has no live user. The
+  // fixture therefore declares its own grid section rather than borrowing one.
+  // It cannot reuse the review section — that is routed to renderReviewStep by
+  // its sign-off fields, whatever its heading says.
+  const gridSection = [
+    '',
+    '# Grid fixture {grid}',
+    '',
+    'Initiative (textarea, key=project): Initiative',
+    '  Hint: A grid cell holding prose, for buildGridCell to render.',
+    '',
+  ].join('\n');
+  const restored = real.replace('# Review', gridSection + '# Review');
+  assert.notEqual(restored, real, 'the fixture section was not inserted');
 
   const app = await bootApp({
     textareaScrollHeight,
@@ -316,7 +329,7 @@ test('a grid cell renders prose that grows, when a grid field is a textarea', as
   assert.ok(project, 'the restored template renders Project');
   assert.equal(project.tagName, 'TEXTAREA');
   assert.ok(project.classList.contains('prose-input'), 'a grid textarea is classified as prose');
-  assert.ok(project.closest('.atbl'), 'and it is inside the Alignment grid');
+  assert.ok(project.closest('.atbl'), 'and it is inside a grid section');
 
   const before = heightOf(project);
   pasteValue(window, project, LONG_PROSE);

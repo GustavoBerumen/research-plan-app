@@ -146,11 +146,12 @@ Previous Knowledge (table, key=previousKnowledge): Name:prose=e.g. Q3 Checkout U
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
 Additional Resources (custom-fields, key=additionalResources): Add details...
 
-<!-- Alignment sits last. Project and Jira Project are identifiers, and the
-     sign-offs are headed for a review step at the end of the flow (RPA-55).
-     The form opens with Context and Research — the sections a
-     researcher can actually write — instead of paperwork. -->
-# Alignment {grid}
+<!-- The review step, and the last thing in the document. Alignment became this
+     once its identifiers moved to the header: what was left was the two
+     approvals, and approving is a moment rather than a section (RPA-55).
+     Rendered by renderReviewStep, not as an accordion, so it cannot be
+     collapsed past. -->
+# Review
 
 <!-- Project (textarea, key=project): Initiative -->
 <!-- Hint: The product or business initiative this research plan supports. -->
