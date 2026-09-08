@@ -4,13 +4,19 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: questions 1–3 drafted; 25 of 30 verdicts settled.** The field list,
+**Status: questions 1–3 drafted; 27 of 30 verdicts settled.** The field list,
 types and hint text are generated from the template. Question 1 is filled from
 what the app demonstrably consumes; questions 2 and 3 from the template, the
-field order and how the app behaves. The **5 rows with no verdict at all**, plus
+field order and how the app behaves. The **3 rows with no verdict at all**, plus
 Characteristics, whose merge is settled but whose keep-or-cut is not, share one
 property: **no in-app consumer.** They need a reader, not a developer — see
 *For the readers* below.
+
+The two Action Points columns left that list without one. Their answer to "no
+in-app consumer" was to build the consumer rather than to cut the question —
+see *Action Points* below. It is the pattern worth trying on the rows that
+remain: **before cutting a field for having no reader, ask what would have to
+exist for it to have one.**
 
 Question 1 is deliberately last. It asks what decision depends on each answer,
 which is the one thing that cannot be inferred from the form: it needs the people
@@ -59,12 +65,12 @@ Fill in as verdicts are reached.
 
 | Verdict | Count |
 |---|---|
-| keep | 16 |
+| keep | 18 |
 | cut | 1 |
 | merge | 1 |
 | optional | 3 |
 | move | 4 |
-| undecided | 5 |
+| undecided | 3 |
 | **total** | **30** |
 
 30 rather than 25: the three fixed-column tables are audited per column, per the
@@ -73,7 +79,7 @@ not decided; its reasoning is under *Already dormant*.
 
 ## For the readers
 
-The rows below are the whole of what is still open — the five with no verdict
+The rows below are the whole of what is still open — the three with no verdict
 at all, plus Characteristics, whose merge is settled but whose keep-or-cut is
 not. Every one of them passes
 question 2 (someone knows the answer) and fails question 1 in the only way the
@@ -91,11 +97,15 @@ to the suggesters). Anything nobody can justify is the cut list. Several of
 these are also the hardest fields to answer (question 3) — *no consumer and
 high effort* is where the genuine cuts live.
 
+Two rows have already left this list, and how they left is the useful part.
+Action Points → Action and → Responsible failed question 1 exactly as these do.
+They were kept, because the honest answer to "nothing uses this" turned out to
+be that nothing uses it *yet*. Put the same second question to every row below
+before cutting it.
+
 - Characteristics *(merged with User Groups; whether the merged field earns
   its place is the part still open, which is why it is here and not in the
   undecided count above)*
-- Action Points → Action
-- Action Points → Responsible
 - Previous Knowledge → Name
 - Previous Knowledge → File
 - Feedback *(renamed from Comments: Gus wants it used for feedback
@@ -155,10 +165,9 @@ high effort* is where the genuine cuts live.
 | **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
 | **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. |
 | **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
-| **Action Points → Action** | `prose` | ⚠ No in-app consumer. Overlaps what Jira already tracks. | Researcher. | Yes. |  |
-| **Action Points → Responsible** | `prose` | ⚠ No in-app consumer. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. |  |
-| **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — live state in a signed document. Unanswerable when written, wrong the day after. |
-
+| **Action Points → Action** | `prose` | ⚠ No in-app consumer *yet*. Overlaps what Jira already tracks — which is the argument for feeding Jira from it, not for asking twice. | Researcher. | Yes. | **keep — pending its consumer.** The plan is where the work is decided; Jira is where it is tracked. The integration below makes this column the input to creating the subtask, which is the consumer it lacks. |
+| **Action Points → Responsible** | `prose` | ⚠ No in-app consumer *yet*. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. | **keep — pending its consumer, and question 3 stays open.** An assignee is half of an action, so cutting it leaves work with no owner. The integration answers question 1 and **does not answer question 3**: creating a Jira subtask still commits someone who was not asked. It arguably raises the stakes — a name in a document is a note, a ticket in a queue is a claim on someone's time. The mitigation is that Jira makes the commitment visible and refusable, which a printed plan does not. Becoming a person picker is part of that work. |
+| **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — **done.** Removed from the template, so the table asks two questions. The only row so far to fail all three questions at once. The `status` column type stays part of the template language and keeps its coverage from a fixture. |
 | **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. |  |
 | **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. |  |
 | **Additional Resources**<br><sub>asks: Add details...</sub> | `custom-fields` | Escape hatch for anything the template did not anticipate. | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. | **optional** — confirmed. Appears on demand. |
@@ -236,13 +245,56 @@ summary only. Prefilling descriptions needs a second endpoint.
 
 ### 2. Take live state out of a signed document
 
-- **Action Points → Status: cut.** The plan holds the action and its owner; status
-  belongs in Jira. A signed, printed document that claims to know status is wrong
-  the day after it is signed.
+- **Action Points → Status: cut. Done.** The plan holds the action and its owner;
+  status belongs in Jira. A signed, printed document that claims to know status is
+  wrong the day after it is signed. Removed from the template, so the table now asks
+  two questions rather than three. The `status` column type remains part of the
+  template language and keeps its coverage from a fixture, so cutting the column did
+  not quietly delete the capability.
 - **Requirements → split Approvals out.** Physical and Digital are the researcher's.
   Approvals is legal/privacy — a different answerer, a different timeline, and
   usually the thing that actually blocks a study. It is currently hiding as a third
   column of a table about equipment.
+
+### 2b. Give Action Points its consumer — connect it to Jira
+
+The cut above only removed the column that could not be answered. The two that
+remain were kept on a promise, and this is the promise.
+
+Action and Responsible fail question 1 today for a reason that is fixable rather
+than fatal: the plan is where the work gets decided, and Jira is where it gets
+tracked, and nothing carries it across. So it gets typed twice, or once and then
+forgotten. **Make the table the input to creating the work.**
+
+Most of the plumbing exists. `server.js` already proxies Jira with the token kept
+server-side, the plan already stores a real ticket key in Jira Project, which gives
+a subtask its parent, and the ticket combobox is a pattern already built twice.
+Creating a subtask is one more call to the same API; assigning needs a second
+lookup to turn a name into an account.
+
+Four things change, and they are the decision rather than the code:
+
+- **Read becomes write.** Every Jira call so far is a search. Creating tickets from
+  a draft document means an explicit action, never autosave, and each row recording
+  the key it created so pressing it twice does not duplicate the work.
+- **The tickets would be reported by the wrong person.** One API token is one
+  account, so every subtask shows a service account as reporter rather than the
+  researcher. Per-user OAuth fixes it and costs an order of magnitude more. **Settle
+  this before writing any code** — it is a Jira administration decision, and the
+  answer determines the size of the build.
+- **Responsible stops being prose.** Assigning requires picking a real user, so the
+  column becomes a person picker over the same proxy.
+- **Where the button lives.** After sign-off, in the review step, fits the grain of
+  the document better than a button inside an unsigned draft. Approving the plan is
+  the moment the actions become real.
+
+**What it does not fix.** Question 3 on Responsible stays open, and see that row:
+assigning a ticket to someone who was not in the room is still committing them.
+Visible and refusable beats invisible, but it is a mitigation and not an answer.
+
+*Scope for a first version:* one action per row that creates a subtask under the
+plan's ticket and writes the key back as a chip, reusing the Jira Project chip
+styling. Roughly a day against a shared account; considerably more against OAuth.
 
 ### 3. Fix the opening sequence
 
@@ -288,9 +340,16 @@ options that form a scale read better all at once.
 
 ### Expected shape of the finished sheet
 
-Two cuts (Action Points/Status, possibly Comments), three or four moves, several
-made optional, and the great majority *keep*. If that disappoints, ADR 001 already
-argued why: the problem was probably orientation, not scope.
+One cut so far (Action Points/Status, done), possibly a second (Feedback), three or
+four moves, several made optional, and the great majority *keep*. If that
+disappoints, ADR 001 already argued why: the problem was probably orientation, not
+scope.
+
+The Action Points rows sharpened that. Two of the three columns looked like cuts on
+question 1 and turned out to be missing plumbing rather than surplus questions.
+**"Nothing uses this" is a finding about the tool as often as about the field**, and
+the audit's job is to tell those apart. Only the third column — unanswerable at the
+moment it is asked, and wrong the day after — was a genuine cut.
 
 ### Decision needed before verdicts go in — settled
 

@@ -213,7 +213,11 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    table left ~90px of white space beside it. Sizing it to its control frees
    that for the column that actually needs room. Where two prose columns sit
    together, the second is fixed and the first takes the surplus: in Action
-   Points the task description needs the space, not the owner's name. */
+   Points the task description needs the space, not the owner's name.
+
+   No live column is a status any more — RPA-55 cut the one there was — but the
+   type is still part of the template language, so the rule stays with it rather
+   than being deleted as dead. test/rpa-55-action-points.test.js renders one. */
 .dtbl th[data-col-type="status"]{width:140px}
 .dtbl th[data-col-type="prose"]+th[data-col-type="prose"]{width:32%}
 .atbl td{padding:0 36px 20px 0;border:0;vertical-align:top;width:50%}

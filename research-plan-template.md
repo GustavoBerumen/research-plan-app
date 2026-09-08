@@ -135,8 +135,15 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
 <!-- Timeframe (textarea, key=timeframe): Scheduled duration for each research phase -->
 Stage Timeline (table, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
   Hint: The planned schedule for each stage of this research, from planning through reporting.
-Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose | Status:status
+Action Points (table, key=actionPoints): Action:prose=Task description | Responsible:prose
   Hint: Tasks needed to move this research forward, and who owns each one.
+<!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
+     cannot also be a live tracker, so any status it claims is wrong the day
+     after sign-off. Nothing has happened yet at the point the question is
+     asked, which makes every available answer untrue. Status belongs in Jira.
+     Action and Responsible stay: the plan is where the work is decided, and
+     the planned Jira integration gives them a consumer by creating the
+     subtasks from them. -->
 <!-- Previous Knowledge and Additional Resources used to be a Resources
      section of their own. Two fields did not earn a section: what you already
      know and what you still need are part of executing the study, not a

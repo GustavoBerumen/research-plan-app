@@ -107,13 +107,17 @@ test('renders the complete form from the real index, template, rubric, and metho
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.
-  // The stylesheet sizes a column by what it holds — a status column is a short
-  // select — rather than by the table's id, which would tie CSS to a field key
-  // that no test scans for.
+  // The stylesheet sizes a column by what it holds rather than by the table's
+  // id, which would tie CSS to a field key that no test scans for.
+  //
+  // Two columns, not three: RPA-55 cut Status. A signed, printed plan cannot
+  // hold live state, and nothing has happened at the point the question is
+  // asked. The type itself is still part of the template language, and keeps
+  // its coverage in rpa-55-action-points.test.js.
   assert.deepEqual(
     Array.from(document.querySelectorAll('#actionPoints-table thead th'))
       .map((th) => [th.dataset.colKey, th.dataset.colType]),
-    [['action', 'prose'], ['responsible', 'prose'], ['status', 'status'], [undefined, undefined]]
+    [['action', 'prose'], ['responsible', 'prose'], [undefined, undefined]]
   );
 
   assert.deepEqual(

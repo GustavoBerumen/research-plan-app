@@ -81,10 +81,11 @@ test('classifies prose controls without changing genuinely compact controls', as
   assert.equal(document.querySelector('#stageTimeline-table tbody select').tagName, 'SELECT');
   assert.equal(document.querySelectorAll('#stageTimeline-table input[type="date"]').length, 2);
 
+  // Two prose columns and no status select: RPA-55 cut Status.
   const actionCells = document.querySelectorAll('#actionPoints-table tbody td');
   assert.equal(actionCells[0].querySelector('.cinput').tagName, 'TEXTAREA');
   assert.equal(actionCells[1].querySelector('.cinput').tagName, 'TEXTAREA');
-  assert.equal(actionCells[2].querySelector('.ssel').tagName, 'SELECT');
+  assert.equal(document.querySelector('#actionPoints-table tbody select'), null);
 
   const previousCells = document.querySelectorAll('#previousKnowledge-table tbody td');
   assert.equal(previousCells[0].querySelector('.cinput').tagName, 'TEXTAREA');
@@ -159,7 +160,6 @@ test('prose rows grow independently after typing or pasting and shrink after del
   assert.ok(responsibleLongHeight > 44);
   deleteValue(window, actionTextareas[1]);
   assert.ok(heightOf(actionTextareas[1]) < responsibleLongHeight);
-  assert.equal(document.querySelector('#actionPoints-table tbody select').tagName, 'SELECT');
 });
 
 test('timeline date ranges stay contained without changing compact date editors', async (t) => {
@@ -202,6 +202,9 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
     },
     methods: [],
     tables: {
+      // Deliberately the pre-RPA-55 row shape, with the cut Status cell still
+      // in it. Restoration is positional, so this is the case where a saved
+      // draft is wider than the table it lands in.
       'actionPoints-table': [[
         textSnapshot(LONG_PROSE),
         textSnapshot(LONG_PROSE + ' The responsible owner coordinates all follow-up work.'),
@@ -242,7 +245,9 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
   assert.ok(heightOf(actionTextareas[0]) > 44);
   assert.match(actionTextareas[1].value, /^A deliberately long research-planning value/);
   assert.ok(heightOf(actionTextareas[1]) > 44);
-  assert.equal(document.querySelector('#actionPoints-table tbody select').value, 'in-progress');
+  // The extra Status cell has nowhere to go and is dropped, without disturbing
+  // the two columns before it.
+  assert.equal(document.querySelector('#actionPoints-table tbody select'), null);
 
   const previousKnowledge = document.querySelector('#previousKnowledge-table tbody textarea');
   assert.equal(previousKnowledge.value, LONG_PROSE);
