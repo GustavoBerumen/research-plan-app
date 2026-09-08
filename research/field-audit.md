@@ -339,6 +339,11 @@ Nobody owns "what research already exists". `research/README.md` already points 
 a shared Drive research library — either link the field to it, or accept the field
 is aspirational and mark it optional.
 
+**The second half is done: both columns are optional.** The first half is not, and
+the two are not substitutes. Marking it optional stops the field blocking anyone;
+it does not make the answer any easier to find for the people who want to give one.
+Linking it to the Drive library is still the change that would earn the question.
+
 ### 5. Apply the optionality convention properly
 
 Only 3 of 25 fields are marked optional today: Hypothesis, Theory and Feedback. On
@@ -346,9 +351,26 @@ a form of this length completed by one person that is almost certainly understat
 Marking what is genuinely optional is the cheapest way to make the form feel shorter
 without cutting anything — which is precisely the ADR 001 hypothesis.
 
-Counts checked against the template rather than carried forward: 25 live fields, and
-the three above are the whole of the optional set. The earlier figure of 28 predated
-the Status cut, the User Groups merge and Requirements going dormant.
+Counts checked against the template rather than carried forward. The earlier figure
+of 28 predated the Status cut, the User Groups merge and Requirements going dormant.
+Previous Knowledge has since joined the set, taking it to 4 of 26.
+
+**The mechanism is fixed; the convention is not yet applied.** Marking Previous
+Knowledge optional revealed that the flag was unreliable: each builder drew the
+"(optional)" marker inline, so the ones that never did were invisible. Declaring
+`optional` on a table, on Outcomes, or on any header field parsed fine, rendered
+fine and produced nothing — and Previous Knowledge is a table, so it was the first
+field to hit it. It is one helper now, called from every builder with a label to
+hang it on, and a test derives its cases from the template so a field type added
+later is covered without anyone remembering.
+
+That matters for what is left here, because the obvious next candidate is a header
+field: **Project decision**, whose verdict is already "keep — sourced or optional".
+Before this fix, marking it would have done nothing at all.
+
+Still open: deciding which further fields are genuinely optional. That is a
+question about research practice rather than about the form, so it wants Gus and
+whoever else writes these plans, not a developer.
 
 ### 6. Decide who reads Feedback
 
