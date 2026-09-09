@@ -1998,6 +1998,15 @@
   // first within each entry (e.g. Reckwitz before Kuijer, Davis before
   // Venkatesh), so "first" is a reasonable deterministic stand-in for "most
   // foundational" without needing another model call to choose one.
+  // Pulls one "* **Label:** value" line out of a library entry. The entry is
+  // sent whole on the match path and only its first reference was ever read,
+  // so Core Focus and UXR Application were already arriving and being thrown
+  // away (RPA-62). Nothing about the model or the API changes to show them.
+  function extractEntryField(entryText, label) {
+    const m = String(entryText || '').match(new RegExp('\\*\\*' + label + ':\\*\\*\\s*(.+)'));
+    return m ? m[1].trim() : null;
+  }
+
   function extractFirstReference(entryText) {
     const m = entryText.match(/\*\*Key References:\*\*\s*\n\s*\*\s*(.+)/);
     return m ? m[1].trim() : null;
@@ -2083,6 +2092,22 @@
       nameEl.textContent = data.name;
       summary.append('We recommend the ', nameEl, '. ', data.rationale);
       body.appendChild(summary);
+
+      // What the library already knows about this framework, which the match
+      // path never showed. Until now a researcher who got a good answer saw
+      // less than one who got the fallback: the draft path renders a whole
+      // proposed entry, and this one rendered a sentence.
+      const detail = el('dl', 'fw-detail');
+      [['Core focus', 'Core Focus'], ['Where it helps', 'UXR Application']].forEach(([label, key]) => {
+        const value = extractEntryField(data.entry, key);
+        if (!value) return;
+        const dt = el('dt');
+        dt.textContent = label;
+        const dd = el('dd');
+        dd.textContent = value;
+        detail.append(dt, dd);
+      });
+      if (detail.children.length) body.appendChild(detail);
 
       const rawRef = extractFirstReference(data.entry);
       const reference = rawRef ? formatFrameworkReference(rawRef) : '';

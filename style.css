@@ -524,6 +524,13 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .fw-category{font-size:var(--text-sm);font-weight:700;color:var(--text-2);margin-bottom:8px}
 /* The quoted entry as GOV.UK inset text. */
 .fw-entry{font-family:inherit;font-size:var(--text-sm);line-height:1.5;white-space:pre-wrap;background:none;border:0;border-left:5px solid var(--border);padding:10px 15px}
+/* What the library already holds about a matched framework. A definition list
+   because that is what these are — a label and its value — and it gives the
+   pairing to a screen reader without extra markup. */
+.fw-detail{margin:0 0 15px;display:grid;grid-template-columns:auto;gap:2px 0}
+.fw-detail dt{font-size:var(--text-sm);font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+.fw-detail dd{margin:0 0 10px;font-size:var(--text);color:var(--ink);line-height:1.5}
+.fw-detail dd:last-child{margin-bottom:0}
 .fw-ref{font-size:var(--text-sm);color:var(--text-2);line-height:1.4;margin:0;padding-top:15px;border-top:1px solid var(--border)}
 .fw-warn{margin-top:12px}
 .fw-add-btn{margin-top:0}

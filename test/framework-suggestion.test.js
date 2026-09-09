@@ -69,6 +69,64 @@ async function openTheory(app, respondWith) {
   };
 }
 
+test('a match shows what the library already knows about the framework', async (t) => {
+  // The asymmetry RPA-62 opens with: when the model found a match you got a
+  // name, a sentence and a citation, while the fallback draft path rendered a
+  // whole proposed entry. The good answer showed less than the consolation.
+  //
+  // The fix costs nothing at the API: the server already sends the matched
+  // entry whole, and the client already parses it — for one citation, then
+  // discarded the rest.
+  const app = await bootApp({ suggestFramework: () => MATCH });
+  t.after(() => app.close());
+
+  const ui = await openTheory(app);
+  const detail = ui.panel.querySelector('.fw-detail');
+  assert.ok(detail, 'the matched panel shows the entry detail');
+
+  const pairs = Array.from(detail.children).map((n) => [n.tagName, n.textContent]);
+  assert.deepEqual(pairs, [
+    ['DT', 'Core focus'],
+    ['DD', 'Models behavioural intent to adopt new technology.'],
+    ['DT', 'Where it helps'],
+    ['DD', 'Enterprise rollout and feature adoption studies.'],
+  ]);
+
+  // The rationale and the citation are still there — this adds, it does not
+  // replace what the panel already said.
+  assert.match(ui.panel.querySelector('.fw-rationale').textContent, /switching cost/);
+  assert.match(ui.panel.querySelector('.fw-ref').textContent, /Davis \(1989\)/);
+});
+
+test('an entry missing those lines renders without them, not emptily', async (t) => {
+  // Library entries are hand-edited Markdown, so one can be missing a line.
+  // A blank labelled row would look like the library had nothing to say.
+  const bare = ['### Sparse Framework', '* **Key References:**', '  * Someone, A. (2020). A title.'].join('\n');
+  const app = await bootApp({
+    suggestFramework: () => ({ matched: true, name: 'Sparse Framework', rationale: 'It fits.', entry: bare }),
+  });
+  t.after(() => app.close());
+
+  const ui = await openTheory(app);
+  assert.equal(ui.panel.querySelector('.fw-detail'), null, 'no empty definition list');
+  assert.match(ui.panel.querySelector('.fw-rationale').textContent, /It fits\./);
+  assert.ok(ui.panel.querySelector('.fw-ref'), 'and the reference still renders');
+});
+
+test('the detail is read, not written into the plan', async (t) => {
+  // Decision 1 in the ticket: the guidance stays panel-side. Writing it into
+  // Theory would make every plan longer, which is the opposite of RPA-55.
+  const app = await bootApp({ suggestFramework: () => MATCH });
+  t.after(() => app.close());
+
+  const ui = await openTheory(app);
+  ui.button('Use this framework').click();
+
+  assert.doesNotMatch(ui.input.value, /Models behavioural intent/);
+  assert.doesNotMatch(ui.input.value, /Enterprise rollout/);
+  assert.equal(ui.input.value.split('\n').length, 2, 'still just the name and the reference');
+});
+
 test('a matched framework can be taken straight into the Theory field', async (t) => {
   const app = await bootApp({ suggestFramework: () => MATCH });
   t.after(() => app.close());
