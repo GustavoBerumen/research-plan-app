@@ -21,12 +21,20 @@ Types:
               list with no controls of its own — its rows track Research
               Questions 1:1 by position instead.
   table     — repeatable rows. Placeholder text instead describes columns as
-              "ColLabel:coltype=placeholder | ColLabel:coltype=placeholder"
+              "ColLabel:coltype:colkey=placeholder | ..."
               coltype is one of: text, prose (wrapping auto-expanding text),
               date, person, status (fixed dropdown),
               select (dropdown with custom options — placeholder becomes a
-              comma-separated option list, e.g. "Stage:select=A,B,C"),
+              comma-separated option list, e.g. "Stage:select:stage=A,B,C"),
               url, file (click to attach, 15MB max)
+              colkey pins the column's key so a reworded heading cannot change
+              it — the same job key= does for a field. It is optional and falls
+              back to the label; declare it anyway. Code reads columns by key
+              (the timeline finds stage, startDate and completionDate that
+              way), and renaming a heading without a pinned key unhooks that
+              silently, on a form that still renders (RPA-74). Saved drafts are
+              unaffected either way: table cells are stored by position, never
+              by column name.
   custom-fields — "+ Add additional section" button that appends user-named blocks (an
               editable label plus a textarea each), for letting users add
               their own ad-hoc fields to a section instead of being limited
@@ -140,7 +148,7 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
 
 # Execution
 
-<!-- Requirements (table, editable-headers, key=requirements): Physical:prose | Digital:prose | Approvals:prose -->
+<!-- Requirements (table, editable-headers, key=requirements): Physical:prose:physical | Digital:prose:digital | Approvals:prose:approvals -->
 <!-- Hint: What you'll need to run this study — physical items, digital tools, and approvals. -->
 <!-- Timeframe (textarea, key=timeframe): Scheduled duration for each research phase -->
 <!-- "prefill" starts this table with one row per Stage option rather than one
@@ -149,9 +157,9 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
      renaming or reordering a stage here is enough — app.js holds no copy of
      the list. Planning's start date is when the plan was started; Reporting's
      completion date follows Research readout until somebody edits it. -->
-Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
+Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
   Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
-Action Points (table, optional, key=actionPoints): Action:prose | Responsible:prose
+Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible
   Hint: Tasks needed to move this research forward, and who owns each one.
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
      cannot also be a live tracker, so any status it claims is wrong the day
@@ -170,7 +178,7 @@ Action Points (table, optional, key=actionPoints): Action:prose | Responsible:pr
      field stays for the people who have something to hand and stops being a
      wall for everyone else. Marking it honestly is not the same as giving it
      a source, which is still open — see recommendation 4. -->
-Previous Knowledge (table, optional, key=previousKnowledge): Name:prose | File:file
+Previous Knowledge (table, optional, key=previousKnowledge): Name:prose:name | File:file:file
   Hint: Prior research or documentation relevant to this study, attached for reference. For example: Q3 Checkout Usability Study.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
 <!-- Declared here because a field has to live in some section, but it is not

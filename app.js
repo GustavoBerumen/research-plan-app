@@ -99,7 +99,7 @@
     return spec.split('|').map((part) => {
       part = part.trim();
       let [labelType, placeholder] = part.split('=');
-      let [label, type] = labelType.split(':');
+      let [label, type, declaredKey] = labelType.split(':');
       label = label.trim();
       type = (type || 'text').trim().toLowerCase();
       if (placeholder === undefined) {
@@ -116,7 +116,19 @@
       } else {
         placeholder = placeholder.trim();
       }
-      const col = { label, key: toCamelKey(label), type, placeholder };
+      // A third colon segment pins the column's key, the way key= pins a
+      // field's: "Start Date:date:startDate". Without it the key is derived
+      // from the label, and four places read these by name — buildRow pairs
+      // startDate with completionDate, applyTimelineAnchors looks up both, and
+      // renderTimelineChart finds all three — so a copy edit to a heading used
+      // to silently unhook the timeline (RPA-74).
+      //
+      // The colon is where it goes because the spec already splits on one, and
+      // the "=" after it belongs to the placeholder or the select options.
+      // toCamelKey stays the fallback so a column can still be added without
+      // thinking about keys.
+      const key = declaredKey && declaredKey.trim() ? declaredKey.trim() : toCamelKey(label);
+      const col = { label, key, type, placeholder };
       // For select columns the placeholder slot holds "Option A,Option B,…"
       // instead of literal placeholder text.
       if (type === 'select') col.options = placeholder.split(',').map((s) => s.trim()).filter(Boolean);

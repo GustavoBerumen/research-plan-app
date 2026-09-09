@@ -60,7 +60,7 @@ test('the stage names come from the template, not from app.js', async (t) => {
   // the fixture a no-op the moment somebody did. Renaming Stage Timeline to
   // Planned Schedule is what proved the point.
   const renamed = real.replace(
-    /^([A-Z][^(\n]*\([^)]*key=stageTimeline[^)]*\): Stage:select=)[^|]*/m,
+    /^([A-Z][^(\n]*\([^)]*key=stageTimeline[^)]*\): Stage:select(?::\w+)?=)[^|]*/m,
     '$1Scoping,Fieldwork,Write-up '
   );
   assert.notEqual(renamed, real, 'the Stage column was not found to rewrite');
