@@ -3293,13 +3293,80 @@
   // get its own remove button, same as Research Questions' rows, so a
   // stray/extra Outcome can be deleted directly without touching the
   // paired question.
+  // Research Questions and Outcomes both warn once a list passes three, and
+  // every awkward detail a live region needs lives here rather than twice:
+  //
+  //   * built before it is needed, because a region inserted and filled in the
+  //     same breath is announced unreliably;
+  //   * emptied rather than hidden, because assistive technology ignores a
+  //     hidden region — hiding it would silence every warning after the first;
+  //   * carrying its own class, because both fields are eval fields and
+  //     already hold three role="status" regions from the evaluation controls,
+  //     so "the status element" identifies nothing;
+  //   * moved only when it has to be, since shuffling a live region around the
+  //     document is a good way to lose the announcement.
+  //
+  // It sits at the foot of the list, directly above the Add button. It used to
+  // be inserted after the fourth row, which reads well at four rows and badly
+  // at nine — the warning ends up marooned in the middle of the list, pointing
+  // at a row that is no longer the problem. At the bottom it stays beside the
+  // row just added, which is the one the reader is looking at.
+  function makeListWarning(className, text, isRelevant) {
+    let node = null;
+    return function update(list) {
+      if (!list) return;
+      const rows = list.querySelectorAll('.list-row');
+      const show = rows.length >= 4 && (!isRelevant || isRelevant(rows.length));
+      // Re-created if the form was re-rendered underneath it: the old node is
+      // still referenced but no longer in the document.
+      if (!node || !list.contains(node)) {
+        node = el('div', className, { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+        list.appendChild(node);
+      }
+      // New rows are appended to the same list, so the warning has to be put
+      // back on the end after one arrives — but only then, not on every call.
+      if (list.lastElementChild !== node) list.appendChild(node);
+      // Class and text together: an empty .field-warning would still draw its
+      // own mark from the stylesheet.
+      node.classList.toggle('field-warning', show);
+      node.textContent = show ? text : '';
+    };
+  }
+
+  // Outcomes are created one-per-question, so a fourth question makes a fourth
+  // outcome in the same breath. Warning on both would say nearly the same thing
+  // twice, about one action — so this speaks only when the outcomes list has
+  // run ahead on its own, which it can, because Outcomes has an Add button of
+  // its own.
+  //
+  // The test is "more outcomes than questions" rather than "a different number
+  // of them". With fewer outcomes than questions the plan is already too long
+  // and the question warning already says so; a second voice adds nothing
+  // there either.
+  const updateOutcomesWarning = makeListWarning(
+    'outcome-warning',
+    'We recommend three outcomes for a balanced study. '
+      + 'More outcomes make the study too long; consider whether you need more than one research study.',
+    (count) => count > questionsListEl().querySelectorAll('.list-row').length
+  );
+
   function outcomesListEl() {
     return doc.querySelector('.list-rows[data-list-key="outcomes"]');
   }
 
+  // Its counterpart, added for the warning above, which has to compare the two
+  // lists. Six other places query this selector inline; they are left alone
+  // rather than swept into an unrelated change.
+  function questionsListEl() {
+    return doc.querySelector('.list-rows[data-list-key="researchQuestions"]') || { querySelectorAll: () => [] };
+  }
+
+  // Every add and remove already routes through here, so the warning needs no
+  // wiring of its own on either path.
   function renumberOutcomes() {
     const list = outcomesListEl();
     if (!list) return;
+    updateOutcomesWarning(list);
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
       row.querySelector('.list-input').setAttribute('aria-label', 'Outcome ' + (i + 1));
@@ -3411,19 +3478,28 @@
     // unfocused, so flag it on the 4th row and keep flagging however many
     // more get added — only clearing once it's back down to 3 or fewer.
     let rqWarning = null;
+    // The recommendation used to sit permanently beside the Add button, in a
+    // "?" bubble you had to hover to read — invisible on touch, in print, and
+    // to anyone who never thought to hover. It reaches people here instead, at
+    // the moment it applies (RPA-61), and carries the reason as well as the
+    // limit: "four may be too many" states a rule without saying why anyone
+    // should care.
+    //
+    // Nothing is blocked. The fourth question is still added, as it is in
+    // Outcomes, which warns the same way through the same helper.
+    const showQuestionWarning = makeListWarning(
+      'rq-warning',
+      'We recommend three questions for a balanced study. '
+        + 'More questions make the study too long; consider whether you need more than one research study.'
+    );
+
     function updateResearchQuestionsWarning() {
       if (field.key !== 'researchQuestions') return;
-      const rows = list.querySelectorAll('.list-row');
-      if (rows.length < 4) {
-        if (rqWarning) rqWarning.hidden = true;
-        return;
-      }
-      if (!rqWarning) {
-        rqWarning = el('div', 'field-warning');
-        rqWarning.textContent = 'Four questions may be too many for a study.';
-      }
-      rows[3].insertAdjacentElement('afterend', rqWarning);
-      rqWarning.hidden = false;
+      showQuestionWarning(list);
+      // The outcomes warning compares the two lists, so a change to this one
+      // moves its answer. Cheaper to say so than to rely on every question
+      // path also happening to touch Outcomes.
+      updateOutcomesWarning(outcomesListEl());
     }
 
     function addRow(focus) {
@@ -4470,7 +4546,7 @@
   // The feedback field isn't a titled accordion section like the others
   // — it's a single optional field, so showing an empty box for it by
   // default is more clutter than it's worth. renderField(field) builds the
-  // exact same label/textarea/info-tip markup as always (so once revealed
+  // exact same label/textarea markup as always (so once revealed
   // it's indistinguishable from any other optional textarea field); this
   // just starts it hidden behind an "+ Add a comment" button matching the
   // .add-btn pattern used everywhere else. The field element itself is
