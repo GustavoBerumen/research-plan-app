@@ -259,6 +259,12 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .date-picker-native:focus-visible{outline:3px solid var(--focus)}
 .date-error{flex-basis:100%;font-size:var(--text-sm);font-weight:700;color:var(--red);line-height:1.3}
 .date-error[hidden]{display:none}
+/* The quieter tier: true and worth seeing, but not something the reader can
+   put right, so it is stated rather than raised. Weight and colour separate it
+   from .date-error above without inventing a third visual language. */
+.date-note{flex-basis:100%;font-size:var(--text-sm);color:var(--text-2);line-height:1.3;margin-top:2px}
+.date-note[hidden]{display:none}
+.date-note::before{content:'⚠ '}
 
 /* ---------- Selects and the Jira chip ---------- */
 .ssel{font-family:inherit;font-size:var(--text);color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:0;padding:5px 8px;min-height:var(--control-h);outline:none;cursor:pointer;max-width:100%}
