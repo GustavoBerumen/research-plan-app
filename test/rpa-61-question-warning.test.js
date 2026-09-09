@@ -81,8 +81,8 @@ test('the fourth question carries the recommendation and the reason', async (t) 
   assert.equal(listInputs(document, 'researchQuestions').length, 4);
 
   const region = warning(document);
-  assert.match(region.textContent, /Three questions/, 'states the recommendation');
-  assert.match(region.textContent, /too thin/, 'and why it matters');
+  assert.match(region.textContent, /three questions/i, 'states the recommendation');
+  assert.match(region.textContent, /too long/, 'and why it matters');
   assert.ok(region.classList.contains('field-warning'), 'and looks like a warning');
 
   // Beside the question it is about, not at the foot of the list.
@@ -127,7 +127,7 @@ test('the region is the same element throughout, and never hidden', async (t) =>
 
   addQuestions(document, 1);
   assert.equal(warning(document), atStart, 'still the same node the second time');
-  assert.match(atStart.textContent, /Three questions/);
+  assert.match(atStart.textContent, /three questions/i);
 });
 
 test('a fifth question does not stack a second warning', async (t) => {

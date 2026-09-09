@@ -3420,8 +3420,8 @@
     //
     // Nothing is blocked: the fourth question is still added. This app does not
     // gate progress on quality anywhere, and would not start here.
-    const RQ_WARNING = 'Three questions usually make a better-balanced study. '
-      + 'A fourth can stretch one study too thin — consider whether it belongs in a plan of its own.';
+    const RQ_WARNING = 'We recommend three questions for a balanced study. '
+      + 'More questions make the study too long; consider whether you need more than one research study.';
 
     function updateResearchQuestionsWarning() {
       if (field.key !== 'researchQuestions') return;

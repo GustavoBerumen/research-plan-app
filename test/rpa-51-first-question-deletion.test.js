@@ -79,7 +79,7 @@ test('repeat first deletion to one, add again, preserve unrelated list and Metho
   // region, and assistive technology ignores a hidden one, so hiding it would
   // silence the next warning as well. Presence of the text is what shows.
   add(app); const warning = inputs(app, 'researchQuestions')[0].closest('.field').querySelector('.rq-warning');
-  assert.match(warning.textContent, /Three questions/); remove(app, 3);
+  assert.match(warning.textContent, /three questions/i); remove(app, 3);
   assert.equal(warning.textContent, '');
   add(app, 'characteristics');
   const unrelated = inputs(app, 'characteristics')[0].closest('.field');
