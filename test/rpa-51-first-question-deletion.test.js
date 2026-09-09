@@ -75,8 +75,12 @@ for (const methodsOnly of [false, true]) {
 
 test('repeat first deletion to one, add again, preserve unrelated list and Methods controls and question warning', async t => {
   const app = await bootApp(); t.after(() => app.close()); populate(app);
-  add(app); const warning = inputs(app, 'researchQuestions')[0].closest('.field').querySelector('.field-warning');
-  assert.equal(warning.hidden, false); remove(app, 3); assert.equal(warning.hidden, true);
+  // The warning is emptied rather than hidden now (RPA-61): it is a live
+  // region, and assistive technology ignores a hidden one, so hiding it would
+  // silence the next warning as well. Presence of the text is what shows.
+  add(app); const warning = inputs(app, 'researchQuestions')[0].closest('.field').querySelector('.rq-warning');
+  assert.match(warning.textContent, /Three questions/); remove(app, 3);
+  assert.equal(warning.textContent, '');
   add(app, 'characteristics');
   const unrelated = inputs(app, 'characteristics')[0].closest('.field');
   const before = unrelated.innerHTML;

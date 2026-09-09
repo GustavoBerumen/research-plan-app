@@ -3411,19 +3411,47 @@
     // unfocused, so flag it on the 4th row and keep flagging however many
     // more get added — only clearing once it's back down to 3 or fewer.
     let rqWarning = null;
+    // The recommendation used to sit permanently beside the Add button, in a
+    // "?" bubble you had to hover to read — invisible on touch, in print, and
+    // to anyone who never thought to hover. It reaches people here instead, at
+    // the moment it applies (RPA-61). It carries the reason as well as the
+    // limit, because "four may be too many" states a rule without saying why
+    // anyone should care.
+    //
+    // Nothing is blocked: the fourth question is still added. This app does not
+    // gate progress on quality anywhere, and would not start here.
+    const RQ_WARNING = 'Three questions usually make a better-balanced study. '
+      + 'A fourth can stretch one study too thin — consider whether it belongs in a plan of its own.';
+
     function updateResearchQuestionsWarning() {
       if (field.key !== 'researchQuestions') return;
       const rows = list.querySelectorAll('.list-row');
-      if (rows.length < 4) {
-        if (rqWarning) rqWarning.hidden = true;
-        return;
-      }
+      const show = rows.length >= 4;
+
+      // Built once and kept in the document, because a live region that is
+      // inserted and filled in the same breath is announced unreliably — the
+      // region has to be there before the text arrives. That is also why the
+      // element is emptied rather than hidden: assistive technology ignores a
+      // hidden region, so hiding it would silence the next warning too.
       if (!rqWarning) {
-        rqWarning = el('div', 'field-warning');
-        rqWarning.textContent = 'Four questions may be too many for a study.';
+        // A stable class of its own, separate from the styling: this field is
+        // an eval field, so it already holds three role="status" regions from
+        // the evaluation controls, and "the status element" does not identify
+        // this one. .field-warning is toggled for appearance and cannot be the
+        // hook either, since it is absent exactly when the warning is quiet.
+        rqWarning = el('div', 'rq-warning', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+        list.appendChild(rqWarning);
       }
-      rows[3].insertAdjacentElement('afterend', rqWarning);
-      rqWarning.hidden = false;
+      // Only moved when it is actually needed somewhere else: shuffling a live
+      // region on every keystroke is a good way to lose the announcement.
+      if (show && rows[3].nextElementSibling !== rqWarning) {
+        rows[3].insertAdjacentElement('afterend', rqWarning);
+      }
+      // Class and text change together. An empty .field-warning would still
+      // draw its own ⚠ from the stylesheet, so the class has to go with the
+      // words rather than the element being hidden behind them.
+      rqWarning.classList.toggle('field-warning', show);
+      rqWarning.textContent = show ? RQ_WARNING : '';
     }
 
     function addRow(focus) {
@@ -4470,7 +4498,7 @@
   // The feedback field isn't a titled accordion section like the others
   // — it's a single optional field, so showing an empty box for it by
   // default is more clutter than it's worth. renderField(field) builds the
-  // exact same label/textarea/info-tip markup as always (so once revealed
+  // exact same label/textarea markup as always (so once revealed
   // it's indistinguishable from any other optional textarea field); this
   // just starts it hidden behind an "+ Add a comment" button matching the
   // .add-btn pattern used everywhere else. The field element itself is
