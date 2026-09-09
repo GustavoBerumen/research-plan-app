@@ -3293,13 +3293,60 @@
   // get its own remove button, same as Research Questions' rows, so a
   // stray/extra Outcome can be deleted directly without touching the
   // paired question.
+  // Research Questions and Outcomes both warn once a list passes three, and
+  // every awkward detail a live region needs lives here rather than twice:
+  //
+  //   * built before it is needed, because a region inserted and filled in the
+  //     same breath is announced unreliably;
+  //   * emptied rather than hidden, because assistive technology ignores a
+  //     hidden region — hiding it would silence every warning after the first;
+  //   * carrying its own class, because both fields are eval fields and
+  //     already hold three role="status" regions from the evaluation controls,
+  //     so "the status element" identifies nothing;
+  //   * moved only when it has to be, since shuffling a live region around the
+  //     document is a good way to lose the announcement.
+  function makeListWarning(className, text) {
+    let node = null;
+    return function update(list) {
+      if (!list) return;
+      const rows = list.querySelectorAll('.list-row');
+      const show = rows.length >= 4;
+      // Re-created if the form was re-rendered underneath it: the old node is
+      // still referenced but no longer in the document.
+      if (!node || !list.contains(node)) {
+        node = el('div', className, { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+        list.appendChild(node);
+      }
+      if (show && rows[3].nextElementSibling !== node) {
+        rows[3].insertAdjacentElement('afterend', node);
+      }
+      // Class and text together: an empty .field-warning would still draw its
+      // own mark from the stylesheet.
+      node.classList.toggle('field-warning', show);
+      node.textContent = show ? text : '';
+    };
+  }
+
+  // Outcomes are created one-per-question, so this usually fires alongside the
+  // question warning. It is not redundant: Outcomes has its own Add button, so
+  // a plan can carry more outcomes than questions, and that is the case where
+  // this is the only thing that says so.
+  const updateOutcomesWarning = makeListWarning(
+    'outcome-warning',
+    'We recommend three outcomes for a balanced study. '
+      + 'More outcomes make the study too long; consider whether you need more than one research study.'
+  );
+
   function outcomesListEl() {
     return doc.querySelector('.list-rows[data-list-key="outcomes"]');
   }
 
+  // Every add and remove already routes through here, so the warning needs no
+  // wiring of its own on either path.
   function renumberOutcomes() {
     const list = outcomesListEl();
     if (!list) return;
+    updateOutcomesWarning(list);
     list.querySelectorAll('.list-row').forEach((row, i) => {
       row.querySelector('.list-num').textContent = (i + 1) + '.';
       row.querySelector('.list-input').setAttribute('aria-label', 'Outcome ' + (i + 1));
@@ -3414,44 +3461,21 @@
     // The recommendation used to sit permanently beside the Add button, in a
     // "?" bubble you had to hover to read — invisible on touch, in print, and
     // to anyone who never thought to hover. It reaches people here instead, at
-    // the moment it applies (RPA-61). It carries the reason as well as the
-    // limit, because "four may be too many" states a rule without saying why
-    // anyone should care.
+    // the moment it applies (RPA-61), and carries the reason as well as the
+    // limit: "four may be too many" states a rule without saying why anyone
+    // should care.
     //
-    // Nothing is blocked: the fourth question is still added. This app does not
-    // gate progress on quality anywhere, and would not start here.
-    const RQ_WARNING = 'We recommend three questions for a balanced study. '
-      + 'More questions make the study too long; consider whether you need more than one research study.';
+    // Nothing is blocked. The fourth question is still added, as it is in
+    // Outcomes, which warns the same way through the same helper.
+    const showQuestionWarning = makeListWarning(
+      'rq-warning',
+      'We recommend three questions for a balanced study. '
+        + 'More questions make the study too long; consider whether you need more than one research study.'
+    );
 
     function updateResearchQuestionsWarning() {
       if (field.key !== 'researchQuestions') return;
-      const rows = list.querySelectorAll('.list-row');
-      const show = rows.length >= 4;
-
-      // Built once and kept in the document, because a live region that is
-      // inserted and filled in the same breath is announced unreliably — the
-      // region has to be there before the text arrives. That is also why the
-      // element is emptied rather than hidden: assistive technology ignores a
-      // hidden region, so hiding it would silence the next warning too.
-      if (!rqWarning) {
-        // A stable class of its own, separate from the styling: this field is
-        // an eval field, so it already holds three role="status" regions from
-        // the evaluation controls, and "the status element" does not identify
-        // this one. .field-warning is toggled for appearance and cannot be the
-        // hook either, since it is absent exactly when the warning is quiet.
-        rqWarning = el('div', 'rq-warning', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
-        list.appendChild(rqWarning);
-      }
-      // Only moved when it is actually needed somewhere else: shuffling a live
-      // region on every keystroke is a good way to lose the announcement.
-      if (show && rows[3].nextElementSibling !== rqWarning) {
-        rows[3].insertAdjacentElement('afterend', rqWarning);
-      }
-      // Class and text change together. An empty .field-warning would still
-      // draw its own ⚠ from the stylesheet, so the class has to go with the
-      // words rather than the element being hidden behind them.
-      rqWarning.classList.toggle('field-warning', show);
-      rqWarning.textContent = show ? RQ_WARNING : '';
+      showQuestionWarning(list);
     }
 
     function addRow(focus) {

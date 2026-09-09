@@ -141,6 +141,67 @@ test('a fifth question does not stack a second warning', async (t) => {
   assert.equal(field(document).querySelectorAll('.field-warning').length, 1);
 });
 
+// Outcomes warns the same way and through the same helper. It is created
+// one-per-question, so it usually fires alongside the question warning — but
+// Outcomes has its own Add button, so a plan can carry more outcomes than
+// questions, and then this is the only thing that says so.
+
+function outcomes(document) {
+  return document.querySelector('.list-rows[data-list-key="outcomes"]');
+}
+
+function outcomeWarning(document) {
+  return outcomes(document).closest('.field').querySelector('.outcome-warning');
+}
+
+test('a fourth outcome is warned about too', async (t) => {
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  const region = outcomeWarning(document);
+  assert.ok(region, 'the live region is there from the start, as on questions');
+  assert.equal(region.textContent, '');
+  assert.equal(region.getAttribute('aria-live'), 'polite');
+
+  addQuestions(document, 3);
+  assert.match(outcomeWarning(document).textContent, /three outcomes/i);
+  assert.match(outcomeWarning(document).textContent, /too long/);
+});
+
+test('outcomes added on their own are warned about on their own', async (t) => {
+  // The case that makes this more than a duplicate of the question warning:
+  // Outcomes has its own Add button, so the two lists can differ.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  const addOutcome = outcomes(document).closest('.field').querySelector('.add-btn');
+  for (let i = 0; i < 3; i += 1) addOutcome.click();
+
+  assert.equal(listInputs(document, 'outcomes').length, 4);
+  assert.equal(listInputs(document, 'researchQuestions').length, 1, 'questions untouched');
+  assert.match(outcomeWarning(document).textContent, /three outcomes/i);
+  assert.equal(warning(document).textContent, '', 'and the question list says nothing');
+});
+
+test('removing the fourth outcome quiets it again', async (t) => {
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  const wrap = outcomes(document).closest('.field');
+  const addOutcome = wrap.querySelector('.add-btn');
+  for (let i = 0; i < 3; i += 1) addOutcome.click();
+  const region = outcomeWarning(document);
+  assert.match(region.textContent, /three outcomes/i);
+
+  wrap.querySelectorAll('.list-remove')[3].click();
+  assert.equal(outcomeWarning(document), region, 'same element, as on questions');
+  assert.equal(region.textContent, '');
+  assert.equal(region.hidden, false, 'emptied, not hidden');
+});
+
 test('nothing is blocked — the fourth question is still added', async (t) => {
   // This app does not gate progress on quality anywhere, and does not start
   // here. The warning is guidance.
