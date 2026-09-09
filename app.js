@@ -3305,21 +3305,27 @@
   //     so "the status element" identifies nothing;
   //   * moved only when it has to be, since shuffling a live region around the
   //     document is a good way to lose the announcement.
-  function makeListWarning(className, text) {
+  //
+  // It sits at the foot of the list, directly above the Add button. It used to
+  // be inserted after the fourth row, which reads well at four rows and badly
+  // at nine — the warning ends up marooned in the middle of the list, pointing
+  // at a row that is no longer the problem. At the bottom it stays beside the
+  // row just added, which is the one the reader is looking at.
+  function makeListWarning(className, text, isRelevant) {
     let node = null;
     return function update(list) {
       if (!list) return;
       const rows = list.querySelectorAll('.list-row');
-      const show = rows.length >= 4;
+      const show = rows.length >= 4 && (!isRelevant || isRelevant(rows.length));
       // Re-created if the form was re-rendered underneath it: the old node is
       // still referenced but no longer in the document.
       if (!node || !list.contains(node)) {
         node = el('div', className, { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
         list.appendChild(node);
       }
-      if (show && rows[3].nextElementSibling !== node) {
-        rows[3].insertAdjacentElement('afterend', node);
-      }
+      // New rows are appended to the same list, so the warning has to be put
+      // back on the end after one arrives — but only then, not on every call.
+      if (list.lastElementChild !== node) list.appendChild(node);
       // Class and text together: an empty .field-warning would still draw its
       // own mark from the stylesheet.
       node.classList.toggle('field-warning', show);
@@ -3327,18 +3333,32 @@
     };
   }
 
-  // Outcomes are created one-per-question, so this usually fires alongside the
-  // question warning. It is not redundant: Outcomes has its own Add button, so
-  // a plan can carry more outcomes than questions, and that is the case where
-  // this is the only thing that says so.
+  // Outcomes are created one-per-question, so a fourth question makes a fourth
+  // outcome in the same breath. Warning on both would say nearly the same thing
+  // twice, about one action — so this speaks only when the outcomes list has
+  // run ahead on its own, which it can, because Outcomes has an Add button of
+  // its own.
+  //
+  // The test is "more outcomes than questions" rather than "a different number
+  // of them". With fewer outcomes than questions the plan is already too long
+  // and the question warning already says so; a second voice adds nothing
+  // there either.
   const updateOutcomesWarning = makeListWarning(
     'outcome-warning',
     'We recommend three outcomes for a balanced study. '
-      + 'More outcomes make the study too long; consider whether you need more than one research study.'
+      + 'More outcomes make the study too long; consider whether you need more than one research study.',
+    (count) => count > questionsListEl().querySelectorAll('.list-row').length
   );
 
   function outcomesListEl() {
     return doc.querySelector('.list-rows[data-list-key="outcomes"]');
+  }
+
+  // Its counterpart, added for the warning above, which has to compare the two
+  // lists. Six other places query this selector inline; they are left alone
+  // rather than swept into an unrelated change.
+  function questionsListEl() {
+    return doc.querySelector('.list-rows[data-list-key="researchQuestions"]') || { querySelectorAll: () => [] };
   }
 
   // Every add and remove already routes through here, so the warning needs no
@@ -3476,6 +3496,10 @@
     function updateResearchQuestionsWarning() {
       if (field.key !== 'researchQuestions') return;
       showQuestionWarning(list);
+      // The outcomes warning compares the two lists, so a change to this one
+      // moves its answer. Cheaper to say so than to rely on every question
+      // path also happening to touch Outcomes.
+      updateOutcomesWarning(outcomesListEl());
     }
 
     function addRow(focus) {

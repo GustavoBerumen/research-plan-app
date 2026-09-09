@@ -85,9 +85,10 @@ test('the fourth question carries the recommendation and the reason', async (t) 
   assert.match(region.textContent, /too long/, 'and why it matters');
   assert.ok(region.classList.contains('field-warning'), 'and looks like a warning');
 
-  // Beside the question it is about, not at the foot of the list.
-  const rows = questions(document).querySelectorAll('.list-row');
-  assert.equal(rows[3].nextElementSibling, region);
+  // At the foot of the list, directly above the Add button. Pinning it to the
+  // fourth row reads well at four questions and badly at nine, where it ends
+  // up marooned mid-list pointing at a row that is no longer the problem.
+  assert.equal(questions(document).lastElementChild, region);
 });
 
 test('it is announced, not merely displayed', async (t) => {
@@ -130,15 +131,17 @@ test('the region is the same element throughout, and never hidden', async (t) =>
   assert.match(atStart.textContent, /three questions/i);
 });
 
-test('a fifth question does not stack a second warning', async (t) => {
+test('later questions do not stack warnings, and it stays at the bottom', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
   const { document } = app;
 
-  addQuestions(document, 5);
-  assert.equal(listInputs(document, 'researchQuestions').length, 6);
+  addQuestions(document, 8);
+  assert.equal(listInputs(document, 'researchQuestions').length, 9);
   assert.equal(field(document).querySelectorAll('.rq-warning').length, 1);
   assert.equal(field(document).querySelectorAll('.field-warning').length, 1);
+  // Still last, five rows after the one it used to be pinned to.
+  assert.equal(questions(document).lastElementChild, warning(document));
 });
 
 // Outcomes warns the same way and through the same helper. It is created
@@ -154,19 +157,23 @@ function outcomeWarning(document) {
   return outcomes(document).closest('.field').querySelector('.outcome-warning');
 }
 
-test('a fourth outcome is warned about too', async (t) => {
+test('a fourth question does not warn twice about one action', async (t) => {
+  // Outcomes are created one-per-question, so a fourth question makes a fourth
+  // outcome in the same breath. Two warnings for one click says the same thing
+  // twice, so Outcomes stays quiet while it is only keeping pace.
   const app = await bootApp();
   t.after(() => app.close());
   const { document } = app;
 
   const region = outcomeWarning(document);
   assert.ok(region, 'the live region is there from the start, as on questions');
-  assert.equal(region.textContent, '');
   assert.equal(region.getAttribute('aria-live'), 'polite');
 
   addQuestions(document, 3);
-  assert.match(outcomeWarning(document).textContent, /three outcomes/i);
-  assert.match(outcomeWarning(document).textContent, /too long/);
+  assert.equal(listInputs(document, 'outcomes').length, 4, 'the fourth outcome exists');
+  assert.match(warning(document).textContent, /three questions/i, 'and the questions say so');
+  assert.equal(outcomeWarning(document).textContent, '',
+    'while Outcomes, which only followed along, says nothing');
 });
 
 test('outcomes added on their own are warned about on their own', async (t) => {
@@ -183,6 +190,26 @@ test('outcomes added on their own are warned about on their own', async (t) => {
   assert.equal(listInputs(document, 'researchQuestions').length, 1, 'questions untouched');
   assert.match(outcomeWarning(document).textContent, /three outcomes/i);
   assert.equal(warning(document).textContent, '', 'and the question list says nothing');
+});
+
+test('fewer outcomes than questions stays quiet too', async (t) => {
+  // The rule is "more outcomes than questions", not "a different number of
+  // them". With outcomes behind, the plan is already long and the question
+  // warning already says so — a second voice there would be the doubling this
+  // suppression exists to prevent, just in the other direction.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  addQuestions(document, 4);
+  assert.equal(listInputs(document, 'researchQuestions').length, 5);
+
+  outcomes(document).closest('.field').querySelectorAll('.list-remove')[4].click();
+  assert.equal(listInputs(document, 'outcomes').length, 4, 'four outcomes, five questions');
+
+  assert.match(warning(document).textContent, /three questions/i, 'the questions still say it');
+  assert.equal(outcomeWarning(document).textContent, '',
+    'and Outcomes, which is behind rather than ahead, does not repeat it');
 });
 
 test('removing the fourth outcome quiets it again', async (t) => {
