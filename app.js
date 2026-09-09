@@ -33,6 +33,13 @@
   // before RPA-76, so a plan that predates this gets the earliest date we can
   // honestly claim rather than today — see migrateDraft.
   let planCreatedAt = todayIso();
+  // Whether that date is the plan's own or a stand-in. RPA-76 falls back to
+  // savedAt for plans that predate it, which was fine for a suggestion in one
+  // cell and is not fine as a boundary: savedAt is the *last* save, so a plan
+  // started in July and saved yesterday would get a floor of yesterday and
+  // report its entire real schedule as impossible. The floor is only applied
+  // where the date is the plan's own.
+  let planCreatedAtExact = true;
 
   // ---------- small DOM helper ----------
   function el(tag, className, attrs) {
@@ -734,13 +741,17 @@
     if (error) error.hidden = true;
   }
 
-  function showDateError(nativeInput) {
+  function showDateError(nativeInput, message) {
     const segments = dateSegments(nativeInput);
     if (!segments) return;
     const error = segments.control.querySelector('.date-error');
-    segments.day.setCustomValidity('Enter a valid date.');
+    const text = message || 'Enter a valid date.';
+    segments.day.setCustomValidity(text);
     segments.control.setAttribute('aria-invalid', 'true');
-    if (error) error.hidden = false;
+    // The element carries role="alert", so replacing the text is what
+    // announces it. A range failure has to say which boundary was crossed and
+    // by what — "invalid" tells someone nothing they can act on.
+    if (error) { error.textContent = text; error.hidden = false; }
   }
 
   function setDateInputValue(nativeInput, isoValue) {
@@ -794,6 +805,12 @@
     const error = el('span', 'date-error', { id: errorId, role: 'alert' });
     error.textContent = 'Enter a valid date.';
     error.hidden = true;
+    // A second, quieter tier. The error above is for something the person can
+    // put right; this is for something true and worth seeing that they may not
+    // be able to change — so it carries no aria-invalid and no alert role, and
+    // is announced only when the field is read.
+    const note = el('span', 'date-note');
+    note.hidden = true;
 
     let dispatchingSegmentEvent = false;
 
@@ -950,7 +967,7 @@
     const separator2 = el('span', 'date-separator', { 'aria-hidden': 'true' });
     separator1.textContent = '-';
     separator2.textContent = '-';
-    control.append(dayInput, separator1, monthInput, separator2, yearInput, nativeInput, error);
+    control.append(dayInput, separator1, monthInput, separator2, yearInput, nativeInput, error, note);
     return { element: control, input: nativeInput };
   }
 
@@ -5107,6 +5124,7 @@
     // the first, so not the answer, but a date the plan demonstrably existed
     // on. That beats stamping it with today and telling someone their
     // six-week-old plan started this morning.
+    planCreatedAtExact = Boolean(draft.createdAt);
     planCreatedAt = draft.createdAt
       || (/^\d{4}-\d{2}-\d{2}/.test(String(draft.savedAt || '')) ? String(draft.savedAt).slice(0, 10) : planCreatedAt);
     // Lists first — Research Questions drives both Outcomes rows and Methods
@@ -5242,6 +5260,10 @@
     // so the restore wrote the saved (empty) cells straight over the anchors
     // and a returning plan showed no dates at all.
     applyTimelineAnchors();
+    // A restored plan can hold dates that a later readout change put out of
+    // range, so the rule is re-checked rather than assumed to have held.
+    applyTimelineCeiling();
+    applyTimelineFloor();
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
@@ -5283,10 +5305,137 @@
       readout.addEventListener('input', applyTimelineAnchors);
       readout.addEventListener('change', applyTimelineAnchors);
     }
+    // After the anchors, so a mirrored date is written before it is checked.
+    initTimelineCeiling();
+    const readoutForCeiling = doc.querySelector('[data-field="researchReadout"]');
+    if (readoutForCeiling) readoutForCeiling.addEventListener('change', applyTimelineFloor);
     // The review step drew its summary during render, before any of this
     // existed. Redraw it so the first thing a reader sees is computed from the
     // form they are actually looking at, rather than being right by accident.
     refreshReviewSummary();
+  }
+
+  // ---------- Stage Timeline ceiling (RPA-59, part one) ----------
+  // No stage may finish after the readout: that date is when findings are
+  // shared, so work scheduled past it cannot belong to the plan it sits in.
+  //
+  // The floor — nothing before the plan started — is part two and needs the
+  // createdAt RPA-76 persisted. This half needs no new state at all.
+  //
+  // Nothing out of range is ever rewritten. The first instinct was to move a
+  // cell the form still owns and flag only the ones a person had edited — but
+  // the only form-owned cell that tracks anything is the last row's completion
+  // date, and RPA-76's mirror already moves that before this runs. What was
+  // left in that branch was the first row's start date, which holds when the
+  // plan began; clamping it to a readout set earlier than that would have
+  // silently claimed the plan started on a day it did not.
+  //
+  // So an out-of-range date is always kept and always flagged. A readout
+  // before the plan started is a real problem, and saying so is more use than
+  // quietly making the dates agree.
+  function timelineCeiling() {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    return readout && readout.value ? readout.value : '';
+  }
+
+  function ceilingMessage(ceiling) {
+    return 'This is after the research readout on ' + formatDateline(ceiling)
+      + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or change the readout date.';
+  }
+
+  // Both columns: a stage that starts after the readout is as wrong as one
+  // that ends after it.
+  function applyTimelineCeiling() {
+    const table = doc.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    if (!table) return;
+    const ceiling = timelineCeiling();
+
+    table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
+      // max= constrains the native picker, and is not enough on its own:
+      // typed, pasted and restored values never pass through it. Everything
+      // below is the fallback that actually holds the rule.
+      if (ceiling) input.max = ceiling;
+      else input.removeAttribute('max');
+
+      if (!ceiling || !input.value || input.value <= ceiling) {
+        if (input.dataset.ceilingFlagged) {
+          delete input.dataset.ceilingFlagged;
+          clearDateError(input);
+        }
+        return;
+      }
+
+      input.dataset.ceilingFlagged = '1';
+      showDateError(input, ceilingMessage(ceiling));
+    });
+  }
+
+  // ---------- Stage Timeline floor (RPA-59, part two) ----------
+  // Nothing should be scheduled before the plan existed. Unlike the ceiling,
+  // this one warns rather than errors, and the reason is whether the person
+  // reading it can do anything.
+  //
+  // A date past the readout has two ways out: move the date, or move the
+  // readout. A date before the plan started has neither — the start date is
+  // computed and not editable — so an error would be a red box demanding an
+  // action nobody can take. It is also sometimes simply correct: a plan
+  // written up weeks after the work began has real stages that predate the
+  // document. So it is stated, not enforced.
+  function timelineFloor() {
+    return planCreatedAtExact && planCreatedAt ? planCreatedAt : '';
+  }
+
+  function floorMessage(floor) {
+    return 'This is before the plan was started on ' + formatDateline(floor) + '.';
+  }
+
+  // min= has to compose rather than overwrite: attachDateRangeConstraint
+  // already sets it on each completion date to keep it at or after its own
+  // start date. Whichever is later wins, and both still hold.
+  function rowMinimumFor(input) {
+    const tr = input.closest('tr');
+    const dates = tr ? tr.querySelectorAll('input[type="date"]') : [];
+    return dates.length === 2 && dates[1] === input ? dates[0].value || '' : '';
+  }
+
+  function applyTimelineFloor() {
+    const table = doc.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    if (!table) return;
+    const floor = timelineFloor();
+
+    table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
+      const rowMin = rowMinimumFor(input);
+      const effective = [floor, rowMin].filter(Boolean).sort().pop() || '';
+      if (effective) input.min = effective;
+      else input.removeAttribute('min');
+
+      const note = input.closest('.date-control').querySelector('.date-note');
+      if (!note) return;
+      const outside = Boolean(floor && input.value && input.value < floor);
+      note.textContent = outside ? floorMessage(floor) : '';
+      note.hidden = !outside;
+    });
+  }
+
+  function initTimelineCeiling() {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    if (readout) {
+      readout.addEventListener('input', applyTimelineCeiling);
+      readout.addEventListener('change', applyTimelineCeiling);
+    }
+    // Rows are added and removed after render, and a date typed into any of
+    // them has to be checked, so this listens at the field rather than wiring
+    // each input as it is built.
+    const table = doc.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    const wrap = table && table.closest('.field');
+    const both = () => { applyTimelineCeiling(); applyTimelineFloor(); };
+    if (wrap) {
+      // After the row's own listener, which bubbles first and may have just
+      // changed the minimum this reads.
+      wrap.addEventListener('change', both);
+      wrap.addEventListener('click', both);
+    }
+    both();
   }
 
   function initDraftPersistence() {
@@ -5535,6 +5684,7 @@
       evaluationBatches.clear();
       timelineVisible = false;
       lastUpdatedManual = false;
+      planCreatedAtExact = Boolean(draft.createdAt);
       planCreatedAt = draft.createdAt || draft.savedAt?.slice(0, 10) || todayIso();
       renderSchema(formSchema);
       initTextareas(doc);
@@ -5713,6 +5863,7 @@
     // the stages back. The loops above stripped the marks along with the
     // values, so this re-applies both.
     planCreatedAt = todayIso();
+    planCreatedAtExact = true;
     // Adding the rows back clicks the add button, and a click schedules a
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.
