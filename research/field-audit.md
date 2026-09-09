@@ -53,7 +53,7 @@ Digital and Approvals are *default labels the user can rename*, not questions
 the form asks. There is nothing to cut: a column someone can retitle is not a
 fixed question. It stays a single row, and its verdict is about the defaults.
 
-`Stage Timeline`, `Action Points` and `Previous Knowledge` have fixed columns.
+`Planned Schedule`, `Action Points` and `Previous Knowledge` have fixed columns.
 Every one of them is a question asked of every user, every time, so each is
 audited on its own line.
 
@@ -190,9 +190,9 @@ here, now?*
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Stage Timeline → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
-| **Stage Timeline → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. Proposed as optional under recommendation 5 and declined: a schedule is part of what makes a plan reviewable. |
-| **Stage Timeline → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
+| **Planned Schedule → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
+| **Planned Schedule → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. Proposed as optional under recommendation 5 and declined: a schedule is part of what makes a plan reviewable. |
+| **Planned Schedule → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
 | **Action Points → Action** | `prose` | ⚠ No in-app consumer *yet*. Overlaps what Jira already tracks — which is the argument for feeding Jira from it, not for asking twice. | Researcher. | Yes. | **keep — pending its consumer.** The plan is where the work is decided; Jira is where it is tracked. The integration below makes this column the input to creating the subtask, which is the consumer it lacks. |
 | **Action Points → Responsible** | `prose` | ⚠ No in-app consumer *yet*. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. | **keep — pending its consumer, and question 3 stays open.** An assignee is half of an action, so cutting it leaves work with no owner. The integration answers question 1 and **does not answer question 3**: creating a Jira subtask still commits someone who was not asked. It arguably raises the stakes — a name in a document is a note, a ticket in a queue is a claim on someone's time. The mitigation is that Jira makes the commitment visible and refusable, which a printed plan does not. Becoming a person picker is part of that work. |
 | **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — **done.** Removed from the template, so the table asks two questions. The only row so far to fail all three questions at once. The `status` column type stays part of the template language and keeps its coverage from a fixture. |
@@ -366,7 +366,7 @@ Action Points, Previous Knowledge and Feedback. Nothing further is added.
 
 This recommendation opened by predicting the opposite. It said 3 of 25 was "almost
 certainly understated" on a form of this length. Four more were put forward as
-candidates, each one flagged on question 3 — Project decision, Stage Timeline,
+candidates, each one flagged on question 3 — Project decision, Planned Schedule,
 Research readout and Goal — and Gus's answer was that all four are required.
 
 That is the third inference this audit drew from reading the template and had

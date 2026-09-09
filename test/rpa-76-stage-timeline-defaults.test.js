@@ -55,8 +55,12 @@ test('the stage names come from the template, not from app.js', async (t) => {
   // reordered stage has to flow through without touching code — otherwise the
   // list exists twice and the copies drift.
   const real = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8');
+  // Keyed on the field's key, not its label: the label is exactly the thing
+  // this test says can be reworded freely, so matching on it would have made
+  // the fixture a no-op the moment somebody did. Renaming Stage Timeline to
+  // Planned Schedule is what proved the point.
   const renamed = real.replace(
-    /^(Stage Timeline \([^)]*\): Stage:select=)[^|]*/m,
+    /^([A-Z][^(\n]*\([^)]*key=stageTimeline[^)]*\): Stage:select=)[^|]*/m,
     '$1Scoping,Fieldwork,Write-up '
   );
   assert.notEqual(renamed, real, 'the Stage column was not found to rewrite');
@@ -272,12 +276,38 @@ test('a half-typed date is not overwritten by a suggestion', async (t) => {
     'somebody is typing here, so the suggestion stays out of it');
 });
 
+test('the Add button names a row, not the table', async (t) => {
+  // The button text used to be the field's label with a trailing "s" stripped.
+  // That holds only while a table is named after its rows: "Stage Timeline"
+  // gave "+ Add stage timeline", and renaming it to "Planned Schedule" gave
+  // "+ Add planned schedule" — offering to add a schedule to a schedule. The
+  // template names the row itself now.
+  const app = await bootApp();
+  t.after(() => app.close());
+
+  const button = app.document.getElementById('stageTimeline-table')
+    .closest('.field').querySelector('.add-btn');
+  assert.equal(button.textContent, '+ Add stage');
+});
+
+test('a table that is named after its rows still needs no row noun', async (t) => {
+  // The fallback still works, so declaring row= stays optional rather than
+  // becoming something every table has to remember.
+  const app = await bootApp();
+  t.after(() => app.close());
+
+  const button = app.document.getElementById('actionPoints-table')
+    .closest('.field').querySelector('.add-btn');
+  assert.equal(button.textContent, '+ Add action point');
+});
+
 test('the hint says the defaults are suggestions', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
 
   const hint = app.document.getElementById('stageTimeline-table')
     .closest('.field').querySelector('.field-hint-text').textContent;
-  assert.match(hint, /suggested defaults/);
-  assert.match(hint, /adjust or remove/);
+  assert.match(hint, /Suggested stages/, 'it says where the five pre-filled rows came from');
+  assert.match(hint, /bounded by the plan start date and research readout/,
+    'and names the range they sit in');
 });

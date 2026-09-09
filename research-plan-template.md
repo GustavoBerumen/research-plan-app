@@ -40,7 +40,7 @@ Flags (comma-separated inside the parentheses):
                        text inputs instead of fixed labels, so users can
                        rename a column (e.g. "Physical" → something else)
                        directly in the UI. Off by default — other table
-                       fields (Stage Timeline, Action Points) keep fixed
+                       fields (Planned Schedule, Action Points) keep fixed
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
@@ -149,8 +149,8 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
      renaming or reordering a stage here is enough — app.js holds no copy of
      the list. Planning's start date is when the plan was started; Reporting's
      completion date follows Research readout until somebody edits it. -->
-Stage Timeline (table, prefill, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
-  Hint: The planned schedule for each stage of this research, from planning through reporting. Stages and dates are suggested defaults based on your plan details — feel free to adjust or remove them.
+Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date | Completion Date:date
+  Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
 Action Points (table, optional, key=actionPoints): Action:prose | Responsible:prose
   Hint: Tasks needed to move this research forward, and who owns each one.
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it

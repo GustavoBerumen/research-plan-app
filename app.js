@@ -157,6 +157,18 @@
       // five names in code, which is the coupling this template exists to
       // avoid (RPA-76).
       prefill: typeParts.includes('prefill'),
+      // "row=stage" names what one row of a table is, for the Add button. It
+      // used to be derived from the field's label by stripping a trailing
+      // "s", which works while a table is named after its rows and breaks the
+      // moment it is not: renaming Stage Timeline to Planned Schedule turned
+      // "+ Add stage timeline" into "+ Add planned schedule", and you do not
+      // add a schedule to a schedule. The label answers "what is this table",
+      // the row noun answers "what is one of these", and they are not always
+      // the same word.
+      rowLabel: (() => {
+        const part = typeParts.find((p) => /^row=[a-z][a-z-]*$/.test(p));
+        return part ? part.slice(4) : null;
+      })(),
       prose: typeParts.includes('prose'),
       // "rows=N" sets how tall a textarea starts — a hint about how much
       // answer the question expects, so it belongs with the question. Not a
@@ -3211,7 +3223,7 @@
     wrap.appendChild(tblWrap);
 
     const addBtn = el('button', 'add-btn', { type: 'button' });
-    const singular = field.label.replace(/s$/i, '').toLowerCase();
+    const singular = field.rowLabel || field.label.replace(/s$/i, '').toLowerCase();
     addBtn.textContent = '+ Add ' + singular;
     addBtn.addEventListener('click', () => addRow(table.id, field.columns));
     wrap.appendChild(addBtn);

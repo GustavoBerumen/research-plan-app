@@ -101,7 +101,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
       'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
-      'Stage Timeline', 'Action Points',
+      'Planned Schedule', 'Action Points',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
