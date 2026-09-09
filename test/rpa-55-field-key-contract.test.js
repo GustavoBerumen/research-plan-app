@@ -93,9 +93,10 @@ test('every table column key the application looks up by name exists', async (t)
   const keys = scan(APP_JS, COLUMN_KEY_PATTERNS);
   assert.ok(keys.length >= 3, `expected the timeline column lookups, found ${keys.length}`);
 
-  // Columns still derive their keys from their labels: unlike fields, there is
-  // no key= for a column, so renaming one silently breaks these lookups. This
-  // test is the whole of the protection for that.
+  // Columns can pin their keys now (RPA-74), so this is a guard rather than
+  // the whole of the protection it used to be. It still earns its place: the
+  // pin is optional, and a column added without one is back where the form
+  // was — its key following its label.
   const rendered = new Set(
     Array.from(app.document.querySelectorAll('th[data-col-key]')).map((th) => th.dataset.colKey)
   );
@@ -104,6 +105,65 @@ test('every table column key the application looks up by name exists', async (t)
   assert.deepEqual(missing, [],
     `app.js reads the columns ${missing.join(', ')} by key, but no table renders them. ` +
       'A column label was probably renamed: column keys still follow their labels.');
+});
+
+test('the template pins every table column key too', async (t) => {
+  // The companion to the field-key test below. Every live column declares its
+  // key, so a reworded heading cannot change it. The fallback to the label
+  // stays for columns added in a hurry, and this is what stops "in a hurry"
+  // becoming the norm.
+  const template = fs.readFileSync(
+    path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
+  );
+  const start = template.indexOf('\n-->') + 4;
+
+  const unpinned = [];
+  template.slice(start).split('\n')
+    .map((line) => line.replace(/^<!--\s*|\s*-->$/g, '').trim())
+    .filter((line) => /^[A-Z][^(]*\(table[,)]/.test(line))
+    .forEach((line) => {
+      const spec = line.slice(line.indexOf(':') + 1);
+      spec.split('|').map((c) => c.trim()).filter(Boolean).forEach((column) => {
+        const [labelType] = column.split('=');
+        const parts = labelType.split(':');
+        if (parts.length < 3 || !parts[2].trim()) {
+          unpinned.push(line.split('(')[0].trim() + ' → ' + parts[0].trim());
+        }
+      });
+    });
+
+  assert.deepEqual(unpinned, [],
+    'these columns still take their key from their label, so renaming the '
+      + 'heading would change the key underneath it: ' + unpinned.join(', '));
+});
+
+test('a renamed column heading keeps its key, and the timeline with it', async (t) => {
+  // The failure this ticket exists to remove. Renaming Start Date used to
+  // change its key from startDate to something else, and the timeline, the
+  // row-level date constraint and the RPA-59 anchors all read that key by
+  // name — so the form rendered perfectly and quietly stopped working.
+  const real = fs.readFileSync(
+    path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
+  );
+  const renamed = real.replace('Start Date:date:startDate', 'Fieldwork begins:date:startDate');
+  assert.notEqual(renamed, real, 'the Start Date column was not found to rename');
+
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': renamed } });
+  t.after(() => app.close());
+  const { document } = app;
+
+  const headers = Array.from(document.querySelectorAll('#stageTimeline-table thead th'));
+  const renamedHeader = headers.find((th) => th.textContent.trim() === 'Fieldwork begins');
+  assert.ok(renamedHeader, 'the new heading is shown');
+  assert.equal(renamedHeader.dataset.colKey, 'startDate', 'and the key underneath it did not move');
+
+  // And the things that read it by name still work: the first row's start date
+  // is still filled from the plan's creation date (RPA-76).
+  const firstStart = document
+    .querySelectorAll('#stageTimeline-table tbody tr')[0]
+    .querySelectorAll('input[type="date"]')[0];
+  assert.match(firstStart.value, /^\d{4}-\d{2}-\d{2}$/,
+    'the anchor still found the column it was looking for');
 });
 
 test('the template pins every field key, so labels can be reworded freely', async (t) => {
