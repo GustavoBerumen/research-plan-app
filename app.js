@@ -734,13 +734,17 @@
     if (error) error.hidden = true;
   }
 
-  function showDateError(nativeInput) {
+  function showDateError(nativeInput, message) {
     const segments = dateSegments(nativeInput);
     if (!segments) return;
     const error = segments.control.querySelector('.date-error');
-    segments.day.setCustomValidity('Enter a valid date.');
+    const text = message || 'Enter a valid date.';
+    segments.day.setCustomValidity(text);
     segments.control.setAttribute('aria-invalid', 'true');
-    if (error) error.hidden = false;
+    // The element carries role="alert", so replacing the text is what
+    // announces it. A range failure has to say which boundary was crossed and
+    // by what — "invalid" tells someone nothing they can act on.
+    if (error) { error.textContent = text; error.hidden = false; }
   }
 
   function setDateInputValue(nativeInput, isoValue) {
@@ -5242,6 +5246,9 @@
     // so the restore wrote the saved (empty) cells straight over the anchors
     // and a returning plan showed no dates at all.
     applyTimelineAnchors();
+    // A restored plan can hold dates that a later readout change put out of
+    // range, so the rule is re-checked rather than assumed to have held.
+    applyTimelineCeiling();
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
@@ -5283,10 +5290,85 @@
       readout.addEventListener('input', applyTimelineAnchors);
       readout.addEventListener('change', applyTimelineAnchors);
     }
+    // After the anchors, so a mirrored date is written before it is checked.
+    initTimelineCeiling();
     // The review step drew its summary during render, before any of this
     // existed. Redraw it so the first thing a reader sees is computed from the
     // form they are actually looking at, rather than being right by accident.
     refreshReviewSummary();
+  }
+
+  // ---------- Stage Timeline ceiling (RPA-59, part one) ----------
+  // No stage may finish after the readout: that date is when findings are
+  // shared, so work scheduled past it cannot belong to the plan it sits in.
+  //
+  // The floor — nothing before the plan started — is part two and needs the
+  // createdAt RPA-76 persisted. This half needs no new state at all.
+  //
+  // Nothing out of range is ever rewritten. The first instinct was to move a
+  // cell the form still owns and flag only the ones a person had edited — but
+  // the only form-owned cell that tracks anything is the last row's completion
+  // date, and RPA-76's mirror already moves that before this runs. What was
+  // left in that branch was the first row's start date, which holds when the
+  // plan began; clamping it to a readout set earlier than that would have
+  // silently claimed the plan started on a day it did not.
+  //
+  // So an out-of-range date is always kept and always flagged. A readout
+  // before the plan started is a real problem, and saying so is more use than
+  // quietly making the dates agree.
+  function timelineCeiling() {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    return readout && readout.value ? readout.value : '';
+  }
+
+  function ceilingMessage(ceiling) {
+    return 'This is after the research readout on ' + formatDateline(ceiling)
+      + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or change the readout date.';
+  }
+
+  // Both columns: a stage that starts after the readout is as wrong as one
+  // that ends after it.
+  function applyTimelineCeiling() {
+    const table = doc.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    if (!table) return;
+    const ceiling = timelineCeiling();
+
+    table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
+      // max= constrains the native picker, and is not enough on its own:
+      // typed, pasted and restored values never pass through it. Everything
+      // below is the fallback that actually holds the rule.
+      if (ceiling) input.max = ceiling;
+      else input.removeAttribute('max');
+
+      if (!ceiling || !input.value || input.value <= ceiling) {
+        if (input.dataset.ceilingFlagged) {
+          delete input.dataset.ceilingFlagged;
+          clearDateError(input);
+        }
+        return;
+      }
+
+      input.dataset.ceilingFlagged = '1';
+      showDateError(input, ceilingMessage(ceiling));
+    });
+  }
+
+  function initTimelineCeiling() {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    if (readout) {
+      readout.addEventListener('input', applyTimelineCeiling);
+      readout.addEventListener('change', applyTimelineCeiling);
+    }
+    // Rows are added and removed after render, and a date typed into any of
+    // them has to be checked, so this listens at the field rather than wiring
+    // each input as it is built.
+    const table = doc.querySelector('.dtbl[data-field-key="stageTimeline"]');
+    const wrap = table && table.closest('.field');
+    if (wrap) {
+      wrap.addEventListener('change', applyTimelineCeiling);
+      wrap.addEventListener('click', applyTimelineCeiling);
+    }
+    applyTimelineCeiling();
   }
 
   function initDraftPersistence() {
