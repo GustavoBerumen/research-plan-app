@@ -68,8 +68,8 @@ test('a restored draft comes back as a tag', async (t) => {
     'restoring dispatches input, so the tag state is rebuilt');
 });
 
-test('the field is still a combobox', async (t) => {
-  const app = await bootApp();
+test('the field is still a combobox when Jira is enabled', async (t) => {
+  const app = await bootApp({ jiraEnabled: true });
   t.after(() => app.close());
 
   const input = jira(app.document);

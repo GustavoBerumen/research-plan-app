@@ -27,18 +27,19 @@
     <p id="backup-help">Your browser saves a draft automatically, but clearing browser data may delete it. Download a backup to restore your plan here later.</p>
     <details>
       <summary>What does a backup include?</summary>
-      <p>A backup contains plan values and additional sections, including saved fields that are currently hidden. It does not include evaluation results or original attachments: file names and references are saved, but the referenced files must still be available separately.</p>
-      <p>PDF and Word exports are documents to read or edit, not backups you can restore here. Calibration Save records feedback on an evaluation; Finish / Send submits a plan. Downloading or restoring a backup keeps the backup file local and does not send it anywhere.</p>
+      <p>A backup contains plan values and additional sections, including saved fields that are currently hidden. It does not include evaluation results, calibration feedback or original attachments: file names and references are saved, but attachment contents are unavailable through this app.</p>
+      <p>Download backup saves a JSON file on your device. Downloading does not send your plan. To hand over a plan, deliberately share that file through the agreed private method and confirm receipt separately.</p>
+      <p>Restore backup replaces the current plan, including unsaved writing and hidden saved fields. Download a backup of your current plan first if you want to keep it. Cancel replacement if you have not done so. After restoration succeeds, edit the plan and download an updated backup to return privately.</p>
+      <p>Print / Save as PDF makes a readable copy; a PDF cannot be restored here. Browser autosave stays in this browser and site. Word export, Finish / Send and automatic synchronisation are unavailable.</p>
     </details>
     <p id="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p id="capability-status" role="status">Checking available features. Calibration feedback, uploads, library changes and integrations are unavailable until confirmed.</p>
   </aside>
   <div class="doc" id="doc">
     <div class="doc-loading">Loading form fields…</div>
   </div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="test-profiles.js"></script>
 <script src="score-classification.js"></script>
 <script src="textarea-autosize.js"></script>

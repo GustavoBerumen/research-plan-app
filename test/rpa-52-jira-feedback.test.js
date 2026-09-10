@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { bootApp, setValue, waitFor, DRAFT_KEY } = require('./app-harness');
 
-const unavailable = 'Jira suggestions are unavailable. You can still enter a ticket key manually, or ask your administrator to connect Jira.';
+const unavailable = 'Jira suggestions are unavailable. You can still enter a ticket key manually.';
 const failure = 'Jira search is temporarily unavailable. You can still enter a ticket key manually.';
 const empty = 'No matching Jira tickets. You can still enter a ticket key manually.';
 const response = (issues) => ({ ok: true, json: async () => ({ issues }) });

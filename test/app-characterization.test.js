@@ -53,8 +53,6 @@ test('renders the complete form from the real index, template, rubric, and metho
   const { document, window } = app;
 
   assert.deepEqual(app.scriptSources, [
-    'https://accounts.google.com/gsi/client',
-    'https://apis.google.com/js/api.js',
     'test-profiles.js',
     'score-classification.js',
     'textarea-autosize.js',
