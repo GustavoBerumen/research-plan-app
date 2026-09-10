@@ -2106,6 +2106,16 @@
     return m ? m[1].trim() : null;
   }
 
+  // All of an entry's references, verbatim. The field gets the first one
+  // condensed; the details block (RPA-91) shows every one in full.
+  function extractReferences(entryText) {
+    const m = String(entryText || '').match(/\*\*Key References:\*\*\s*\n([\s\S]*)$/);
+    if (!m) return [];
+    return m[1].split('\n')
+      .map((line) => line.replace(/^\s*\*\s*/, '').trim())
+      .filter((line) => line && !line.startsWith('#'));
+  }
+
   function extractFirstReference(entryText) {
     const m = entryText.match(/\*\*Key References:\*\*\s*\n\s*\*\s*(.+)/);
     return m ? m[1].trim() : null;
@@ -2162,6 +2172,81 @@
     txt.textContent = 'Suggest a framework';
     btn.append(spinner, txt);
 
+    // RPA-91. Accepting a suggestion used to keep two lines and discard the
+    // rest, so a chosen framework could not be read about again — the exact
+    // moment a person wants to re-read what it means is while writing the
+    // methodology it grounds. This is the way back: a GOV.UK-style details
+    // block, closed by default, filled from the library by the framework's
+    // name on the field's first line. It follows the field rather than the
+    // panel, so it survives a reload and works for a framework typed by hand.
+    //
+    // What it cannot hold is what the library does not: the rationale and the
+    // three application steps are generated for this plan and are accepted
+    // as lost once the panel is dismissed. That is the cost of the endpoint
+    // option over persisting a copy, and it is the one Gus chose.
+    const about = el('details', 'fw-about');
+    about.hidden = true;
+    const aboutSummary = el('summary', 'fw-about-summary');
+    const aboutBody = el('div', 'fw-about-body');
+    about.append(aboutSummary, aboutBody);
+
+    let aboutFor = null;      // the name the block currently describes
+    let aboutSeq = 0;         // discards a slow reply that a later edit overtook
+    function frameworkNameInField() {
+      return (fieldInput.value || '').split('\n')[0].trim();
+    }
+    function setButtonForState(hasFramework) {
+      txt.textContent = hasFramework ? 'Suggest a different framework' : 'Suggest a framework';
+    }
+    function clearAbout() {
+      about.hidden = true;
+      about.open = false;
+      aboutFor = null;
+      aboutBody.replaceChildren();
+      setButtonForState(false);
+    }
+    function renderAbout(name, entry) {
+      aboutFor = name;
+      aboutSummary.textContent = 'About ' + name;
+      aboutBody.replaceChildren();
+      const dl = el('dl', 'fw-detail');
+      [['Core focus', 'Core Focus'], ['Where it helps', 'UXR Application']].forEach(([label, key]) => {
+        const value = extractEntryField(entry, key);
+        if (!value) return;
+        const dt = el('dt'); dt.textContent = label;
+        const dd = el('dd'); dd.textContent = value;
+        dl.append(dt, dd);
+      });
+      if (dl.children.length) aboutBody.appendChild(dl);
+      const refs = extractReferences(entry);
+      if (refs.length) {
+        const h = el('p', 'fw-about-refs-head'); h.textContent = 'Key references';
+        const ul = el('ul', 'fw-about-refs');
+        refs.forEach((r) => { const li = el('li'); li.textContent = r; ul.appendChild(li); });
+        aboutBody.append(h, ul);
+      }
+      about.hidden = false;
+      setButtonForState(true);
+    }
+    function refreshAbout() {
+      const name = frameworkNameInField();
+      if (!name) { clearAbout(); return; }
+      if (name === aboutFor) return;
+      const seq = ++aboutSeq;
+      fetch('/api/framework?name=' + encodeURIComponent(name), { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (seq !== aboutSeq) return;
+          if (data && data.entry) renderAbout(data.name || name, data.entry);
+          else clearAbout();     // typed by hand, or not in the library: no error, no block
+        })
+        .catch(() => { if (seq === aboutSeq) clearAbout(); });
+    }
+    let aboutTimer = null;
+    fieldInput.addEventListener('input', () => {
+      window.clearTimeout(aboutTimer);
+      aboutTimer = window.setTimeout(refreshAbout, 400);
+    });
     const panel = el('div', 'eval-panel fw-panel');
     panel.hidden = true;
     const head = el('div', 'eval-head');
@@ -2262,6 +2347,11 @@
         // note before asking for a suggestion.
         fieldInput.value = existing ? existing + '\n\n' + suggestion : suggestion;
         dispatchFieldUpdate(fieldInput);
+        // The accepted entry is already in hand: no round trip, and the block
+        // appears in the same moment as the two lines in the field.
+        if (data.entry && (fieldInput.value || '').split('\n')[0].trim() === data.name) {
+          renderAbout(data.name, data.entry);
+        }
         useBtn.disabled = true;
         useBtn.textContent = 'Added ✓';
         fieldInput.focus();
@@ -2341,7 +2431,7 @@
       });
     });
 
-    return [btn, panel];
+    return [btn, about, panel];
   }
 
   // ---------- methods (grouped by research question) ----------
@@ -5542,6 +5632,8 @@
     // range, so the rule is re-checked rather than assumed to have held.
     applyTimelineCeiling();
     applyTimelineFloor();
+    // A restored Theory value fires no input event, so the framework details
+    // block would not know to look it up (RPA-91).
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
