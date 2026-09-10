@@ -2236,11 +2236,11 @@
       fetch('/api/framework?name=' + encodeURIComponent(name), { cache: 'no-store' })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (seq !== aboutSeq) return;
+          if (seq !== aboutSeq || name !== frameworkNameInField()) return;
           if (data && data.entry) renderAbout(data.name || name, data.entry);
           else clearAbout();     // typed by hand, or not in the library: no error, no block
         })
-        .catch(() => { if (seq === aboutSeq) clearAbout(); });
+        .catch(() => { if (seq === aboutSeq && name === frameworkNameInField()) clearAbout(); });
     }
     let aboutTimer = null;
     fieldInput.addEventListener('input', () => {
@@ -2427,7 +2427,9 @@
       }).finally(() => {
         btn.disabled = false;
         btn.classList.remove('loading');
-        txt.textContent = 'Suggest a framework';
+        // Only a confirmed framework still named in the field offers another.
+        // An edit may be waiting for its debounced lookup when this finishes.
+        setButtonForState(!!aboutFor && aboutFor.toLowerCase() === frameworkNameInField().toLowerCase());
       });
     });
 
