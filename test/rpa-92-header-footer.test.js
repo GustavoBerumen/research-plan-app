@@ -163,7 +163,7 @@ test('the aside above the form keeps only what is needed before starting', async
   assert.ok(document.getElementById('backup-help'), 'the sentence the buttons are described by');
   assert.ok(document.getElementById('backup-status'));
   assert.ok(document.getElementById('capability-status'));
-  assert.match(document.querySelector('footer').textContent, /Download backup saves/i, 'and what a backup does is in the footer');
+  assert.match(document.querySelector('footer').textContent, /A backup is a file/i, 'and what a backup is, is in the footer');
 });
 
 test('print is decided: the header and phase banner do not print, the footer prints one line', () => {
