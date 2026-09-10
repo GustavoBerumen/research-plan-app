@@ -2196,6 +2196,28 @@
       });
       if (detail.children.length) body.appendChild(detail);
 
+      // The half that was genuinely new (RPA-62). Core Focus says what the
+      // theory is and UXR Application says what it suits; neither says what
+      // to do. Three fixed slots — look for, ask, attend to in analysis — so
+      // it reads as instructions rather than a fourth paragraph of description.
+      // The server only forwards a complete set of three, so an incomplete
+      // answer renders nothing rather than a hollow list.
+      const guidance = Array.isArray(data.guidance) ? data.guidance.filter(Boolean) : [];
+      if (guidance.length === 3) {
+        const heading = el('p', 'fw-guidance-head');
+        heading.textContent = 'To apply it in this study';
+        const list = el('ol', 'fw-guidance');
+        const slots = ['Look for', 'Ask', 'In analysis'];
+        guidance.forEach((text, i) => {
+          const item = el('li');
+          const slot = el('b');
+          slot.textContent = slots[i];
+          item.append(slot, ' ', text);
+          list.appendChild(item);
+        });
+        body.append(heading, list);
+      }
+
       const rawRef = extractFirstReference(data.entry);
       const reference = rawRef ? formatFrameworkReference(rawRef) : '';
       if (reference) {

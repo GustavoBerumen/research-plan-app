@@ -536,6 +536,15 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .fw-detail dt{font-size:var(--text-sm);font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
 .fw-detail dd{margin:0 0 10px;font-size:var(--text);color:var(--ink);line-height:1.5}
 .fw-detail dd:last-child{margin-bottom:0}
+/* The application guidance: an ordered list because the three slots are a
+   fixed sequence — look for, ask, analyse — not a set. Numbered by the browser
+   so the count is visible, and the slot name is bold so the shape is scannable
+   before the sentence is read. */
+.fw-guidance-head{font-size:var(--text-sm);font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
+.fw-guidance{margin:0 0 15px;padding-left:1.4em;font-size:var(--text);color:var(--ink);line-height:1.5}
+.fw-guidance li{margin:0 0 6px}
+.fw-guidance li:last-child{margin-bottom:0}
+.fw-guidance b{font-weight:700}
 .fw-ref{font-size:var(--text-sm);color:var(--text-2);line-height:1.4;margin:0;padding-top:15px;border-top:1px solid var(--border)}
 .fw-warn{margin-top:12px}
 .fw-add-btn{margin-top:0}
