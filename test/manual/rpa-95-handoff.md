@@ -1,6 +1,6 @@
 # RPA-95 review handoff
 
-Reviewed on 10 September 2026. Max authorised committing and pushing RPA-95 and selected-task planning. PR creation, merge, Jira changes/comments, collaborator messages and deployment remain outside that authorisation.
+Reviewed on 10 September 2026. Max authorised committing and pushing RPA-95, then explicitly authorised PR creation/review, merging after successful checks, Jira closeout and preparation of a separate RPA-96 implementation prompt. Raw PDF/screenshot evidence stays local. Deployment and separate collaborator messages remain outside this closeout.
 
 - Ticket: https://turingtestable.atlassian.net/browse/RPA-95
 - Branch: `codex/rpa-95-narrow-timeline-week-labels`
