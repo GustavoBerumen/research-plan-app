@@ -343,6 +343,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .timeline-axis-track{min-width:0;flex:1;display:flex;justify-content:space-between}
 .timeline-axis-date{font-size:var(--text-sm);color:var(--text-2)}
 .timeline-weeks{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.timeline-weeks > .timeline-label{font-size:12px;line-height:14px}
 .timeline-weeks-grid{position:relative;min-width:0;flex:1;display:grid;height:14px;overflow:hidden}
 .timeline-week-mark{border-left:1px solid var(--border);padding-left:3px;font-size:12px;color:var(--text-2);white-space:nowrap;line-height:14px}
 .timeline-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}

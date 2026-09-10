@@ -3272,6 +3272,7 @@
 
     const weeksRow = el('div', 'timeline-weeks');
     const weeksSpacer = el('div', 'timeline-label');
+    weeksSpacer.textContent = 'Week';
     const weeksGrid = el('div', 'timeline-weeks-grid');
     const weeksDatesSpacer = el('div', 'timeline-dates');
     weeksGrid.style.gridTemplateColumns = 'repeat(' + cellCount + ', minmax(0, 1fr))';
@@ -3281,7 +3282,7 @@
       weekNum++;
       const mark = el('span', 'timeline-week-mark');
       mark.style.gridColumnStart = i + 1;
-      mark.textContent = weekNum === 1 ? 'week 1' : 'w ' + weekNum;
+      mark.textContent = String(weekNum);
       weeksGrid.appendChild(mark);
     });
     weeksRow.append(weeksSpacer, weeksGrid, weeksDatesSpacer);
