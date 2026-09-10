@@ -381,6 +381,8 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .file-name{font-size:var(--text-sm);color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-name a{color:var(--link);text-decoration:underline}
 .file-name a:hover{color:var(--link-hover)}
+.file-reference-only .file-add-wrap{display:none}
+.file-reference-only .file-name{min-width:0;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;overflow:visible}
 
 /* ---------- Combobox menus ---------- */
 .combo-menu{position:fixed;background:#fff;border:2px solid var(--ink);padding:4px;z-index:1000;max-height:280px;overflow-y:auto}
