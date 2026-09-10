@@ -805,6 +805,17 @@ const FRAMEWORK_MATCH_TOOL = {
         maxLength: 240,
         description: 'If matched=true: why it fits, grounded in specifics of this research (2 sentences max). If matched=false: what kind of theoretical lens is missing.',
       },
+      // Three fixed slots rather than a prose field, and each one bounded.
+      // The rationale is capped at two sentences and reliably uses both; a
+      // free paragraph here would do the same, and the two would merge back
+      // into the one long field this ticket set out to split (RPA-62).
+      guidance: {
+        type: 'array',
+        minItems: 3,
+        maxItems: 3,
+        items: { type: 'string', maxLength: 140 },
+        description: 'Only if matched=true. Exactly three short, concrete instructions for applying this framework to THIS study, in this order: (1) what to look for, (2) what to ask participants, (3) what to attend to in analysis. Each under 120 characters, each an instruction the researcher can act on — not a description of the theory.',
+      },
     },
     required: ['matched', 'rationale'],
   },
@@ -857,7 +868,11 @@ function buildFrameworkMatchPrompt(fieldsText, frameworksText) {
     'Decide if exactly one existing framework in the library is a strong, specific match for this research — not just ' +
     'tangentially related, but something that would genuinely help ground the study\'s design or analysis. If so, report ' +
     'matched=true with its exact name as it appears in a "### " heading, and a short rationale (2 sentences max) tied to ' +
-    'specifics of this research. If no existing framework is a strong fit, report matched=false and briefly note what ' +
+    'specifics of this research. When matched=true, also give guidance: exactly three short instructions for applying the ' +
+    'framework to this particular study — what to look for, what to ask participants, and what to attend to in analysis, ' +
+    'in that order. Each under 120 characters, each something the researcher can act on, and none beginning with the ' +
+    'words "look for", "ask" or "in analysis" — the panel labels each slot. Do not describe the theory: the ' +
+    'library entry already does that. If no existing framework is a strong fit, report matched=false and briefly note what ' +
     'kind of theoretical lens is missing. Use British English spelling throughout (e.g. "prioritise", "colour", "analyse").';
 }
 
@@ -940,7 +955,19 @@ async function handleSuggestFramework(req, res) {
       const entryText = extractFrameworkEntry(frameworksText, matchTool.input.name);
       if (!entryText) throw new Error('Model matched a framework not found in the library — please try again');
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ matched: true, name: matchTool.input.name, rationale: matchTool.input.rationale, entry: entryText }));
+      // Defensive on the way out: the schema asks for three, but a model can
+      // still return fewer or empty strings, and the panel treats absence as
+      // "nothing to show" rather than rendering a hollow list.
+      const guidance = Array.isArray(matchTool.input.guidance)
+        ? matchTool.input.guidance.map((g) => String(g || '').trim()).filter(Boolean).slice(0, 3)
+        : [];
+      res.end(JSON.stringify({
+        matched: true,
+        name: matchTool.input.name,
+        rationale: matchTool.input.rationale,
+        guidance: guidance.length === 3 ? guidance : [],
+        entry: entryText,
+      }));
       return;
     }
 
@@ -1487,4 +1514,7 @@ module.exports = {
   parseMethodsList,
   researchQuestionsEvalTool,
   scalarEvalTool,
+  // Exported so RPA-62's guidance shape can be tested without calling the API.
+  FRAMEWORK_MATCH_TOOL,
+  buildFrameworkMatchPrompt,
 };
