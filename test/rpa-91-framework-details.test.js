@@ -190,3 +190,154 @@ test('the block does not print', () => {
   const print = CSS.slice(CSS.indexOf('@media print{'));
   assert.match(print, /\.fw-about,/, 'the details block is in the print hide-list');
 });
+
+// RPA-96: completing a request must describe the field as it is now, even
+// when writing or a library lookup changed while the suggestion was pending.
+const ACTIVITY = 'Activity Theory';
+const ACTIVITY_ENTRY = [
+  '### Activity Theory',
+  '* **Core Focus:** How people use tools together.',
+  '* **UXR Application:** Studying collaborative work.',
+  '* **Key References:**',
+  '  * Example, A. (2026). Synthetic activity reference.',
+].join('\n');
+const twoFrameworks = (name) => name.trim().toLowerCase() === ACTIVITY.toLowerCase()
+  ? { name: ACTIVITY, entry: ACTIVITY_ENTRY } : library(name);
+const suggestion = { matched: true, name: NAME, entry: ENTRY, rationale: 'Fits this synthetic plan.',
+  guidance: ['Observe shared tools.', 'Ask about collaboration.', 'Compare roles.'] };
+const selectedLabel = 'Suggest a different framework';
+const emptyLabel = 'Suggest a framework';
+
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+async function pendingSuggestion(t, value = ACTIVITY, lookup = twoFrameworks) {
+  const request = deferred();
+  const app = await bootApp({
+    frameworkLookup: lookup,
+    suggestFramework: () => request.promise,
+    draft: { version: 7, fields: { theory: value }, lists: {}, tables: {} },
+  });
+  t.after(() => app.close());
+  openMethodology(app.document);
+  const th = theory(app);
+  if (value) await waitFor(() => !th.about.hidden);
+  th.input.focus();
+  th.button.click();
+  await waitFor(() => app.frameworkRequests.length === 1);
+  assert.equal(th.button.disabled, true);
+  return { app, th, request };
+}
+
+async function completeSuggestion(ui, outcome) {
+  if (outcome === 'success') ui.request.resolve(suggestion);
+  else ui.request.reject(new Error('Synthetic suggestion failure'));
+  await waitFor(() => !ui.th.button.disabled);
+  assert.equal(ui.th.button.classList.contains('loading'), false);
+  assert.equal(ui.app.frameworkRequests.length, 1, 'completion does not send another request');
+  assert.deepEqual(ui.app.alerts, outcome === 'success' ? []
+    : ['Framework suggestion failed: Synthetic suggestion failure']);
+  const panel = ui.th.field.querySelector('.fw-panel');
+  assert.equal(panel.hidden, outcome !== 'success');
+  if (outcome === 'success') panel.querySelector('.eval-x').click();
+  assert.equal(panel.hidden, true);
+}
+
+for (const outcome of ['success', 'failure']) {
+  test(`RPA-96: ${outcome} retains a restored framework and its About block after dismissal`, async (t) => {
+    const writing = ACTIVITY + '\nMy own reference and notes.';
+    const ui = await pendingSuggestion(t, writing);
+    ui.th.about.open = true;
+    const aboutBefore = ui.th.about.innerHTML;
+    await completeSuggestion(ui, outcome);
+    assert.equal(ui.th.input.value, writing);
+    assert.equal(ui.th.about.hidden, false);
+    assert.equal(ui.th.about.open, true);
+    assert.equal(ui.th.about.innerHTML, aboutBefore, 'library information remains unchanged');
+    assert.equal(ui.th.about.querySelector('.fw-guidance, .fw-rationale'), null);
+    assert.equal(ui.th.button.textContent, selectedLabel);
+    assert.equal(ui.app.document.activeElement, ui.th.input, 'completion does not steal editing focus');
+  });
+
+  test(`RPA-96: ${outcome} with an empty field still offers a first framework`, async (t) => {
+    const ui = await pendingSuggestion(t, '');
+    await completeSuggestion(ui, outcome);
+    assert.equal(ui.th.input.value, '');
+    assert.equal(ui.th.about.hidden, true);
+    assert.equal(ui.th.button.textContent, emptyLabel);
+  });
+
+  test(`RPA-96: ${outcome} follows a different known framework typed during the request`, async (t) => {
+    const ui = await pendingSuggestion(t);
+    const writing = NAME.toLowerCase() + '\nKeep my edited reference.';
+    setValue(ui.app.window, ui.th.input, writing);
+    await waitFor(() => ui.th.about.querySelector('summary').textContent === 'About ' + NAME);
+    await completeSuggestion(ui, outcome);
+    assert.equal(ui.th.input.value, writing, 'lookup canonicalisation does not rewrite the field');
+    assert.equal(ui.th.about.hidden, false);
+    assert.equal(ui.th.button.textContent, selectedLabel);
+  });
+
+  for (const writing of ['', 'My own unrecognised theory\nKeep this note.']) {
+    test(`RPA-96: ${outcome} respects ${writing ? 'unknown writing' : 'clearing'} before its lookup debounce`, async (t) => {
+      const ui = await pendingSuggestion(t);
+      setValue(ui.app.window, ui.th.input, writing);
+      await completeSuggestion(ui, outcome);
+      assert.equal(ui.th.input.value, writing);
+      assert.equal(ui.th.button.textContent, emptyLabel, 'the previous selection is no longer current');
+      await waitFor(() => ui.th.about.hidden);
+      assert.equal(ui.th.button.textContent, emptyLabel);
+    });
+  }
+
+  test(`RPA-96: ${outcome} waits for confirmation of an edited framework with a delayed lookup`, async (t) => {
+    const lookup = deferred();
+    const ui = await pendingSuggestion(t, ACTIVITY, (name) => name === NAME ? lookup.promise : twoFrameworks(name));
+    setValue(ui.app.window, ui.th.input, NAME);
+    await waitFor(() => ui.app.frameworkLookups.includes(NAME));
+    await completeSuggestion(ui, outcome);
+    assert.equal(ui.th.input.value, NAME);
+    assert.equal(ui.th.button.textContent, emptyLabel, 'nonempty text alone is not a confirmed framework');
+    lookup.resolve(library(NAME));
+    await waitFor(() => ui.th.about.querySelector('summary').textContent === 'About ' + NAME);
+    assert.equal(ui.th.button.textContent, selectedLabel);
+    assert.equal(ui.th.input.value, NAME);
+  });
+}
+
+for (const lateResult of ['found', 'missing', 'rejected']) {
+  test(`RPA-96: an obsolete ${lateResult} lookup cannot replace the retained selection after completion`, async (t) => {
+    const lookup = deferred();
+    const ui = await pendingSuggestion(t, ACTIVITY, (name) => name === NAME ? lookup.promise : twoFrameworks(name));
+    setValue(ui.app.window, ui.th.input, NAME);
+    await waitFor(() => ui.app.frameworkLookups.includes(NAME));
+    setValue(ui.app.window, ui.th.input, ACTIVITY + '\nRevised notes.');
+    await completeSuggestion(ui, 'success');
+    if (lateResult === 'rejected') lookup.reject(new Error('Synthetic lookup failure'));
+    else lookup.resolve(lateResult === 'found' ? library(NAME) : { status: 404 });
+    // Drain the already-resolved mock response without waiting for a new input debounce.
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(ui.th.input.value, ACTIVITY + '\nRevised notes.');
+    assert.equal(ui.th.about.hidden, false);
+    assert.equal(ui.th.about.querySelector('summary').textContent, 'About ' + ACTIVITY);
+    assert.equal(ui.th.button.textContent, selectedLabel);
+  });
+}
+
+test('RPA-96: a delayed lookup cannot revive a framework cleared during the request', async (t) => {
+  const lookup = deferred();
+  const ui = await pendingSuggestion(t, ACTIVITY, (name) => name === NAME ? lookup.promise : twoFrameworks(name));
+  setValue(ui.app.window, ui.th.input, NAME);
+  await waitFor(() => ui.app.frameworkLookups.includes(NAME));
+  setValue(ui.app.window, ui.th.input, '');
+  await waitFor(() => ui.th.about.hidden);
+  await completeSuggestion(ui, 'success');
+  lookup.resolve(library(NAME));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(ui.th.input.value, '');
+  assert.equal(ui.th.about.hidden, true);
+  assert.equal(ui.th.button.textContent, emptyLabel);
+});
