@@ -2212,7 +2212,14 @@
           const item = el('li');
           const slot = el('b');
           slot.textContent = slots[i];
-          item.append(slot, ' ', text);
+          // The prompt asks the model not to begin an item with its slot word
+          // and the first live run began one with "Ask" anyway. An instruction
+          // to a model is a request; this is the guarantee. Strip a leading
+          // slot word (and any colon or dash after it) so the panel never
+          // reads "Ask Ask each role…", and re-capitalise what is left.
+          const stripped = text.replace(new RegExp('^' + slots[i] + '\\s*[:\u2014-]?\\s*', 'i'), '');
+          const body = stripped ? stripped.charAt(0).toUpperCase() + stripped.slice(1) : text;
+          item.append(slot, ' ', body);
           list.appendChild(item);
         });
         body.append(heading, list);

@@ -93,6 +93,29 @@ test('an incomplete set renders nothing, not a hollow list', async (t) => {
   }
 });
 
+test('an item that begins with its slot word is not labelled twice', async (t) => {
+  // The prompt forbids it and the first live run did it anyway: item two came
+  // back "Ask each role what they think…" under a slot labelled "Ask". A
+  // request to a model is not a guarantee, so the strip is done here.
+  const app = await bootApp({ suggestFramework: () => match({ guidance: [
+    'Look for: where effort, not value, decides adoption.',
+    'ask each role what they think the others are doing.',
+    'In analysis — separate ease-of-use complaints from usefulness complaints.',
+  ] }) });
+  t.after(() => app.close());
+  const { panel } = await openTheory(app);
+
+  const items = Array.from(panel.querySelectorAll('.fw-guidance li')).map((li) => li.textContent);
+  assert.deepEqual(items, [
+    'Look for Where effort, not value, decides adoption.',
+    'Ask Each role what they think the others are doing.',
+    'In analysis Separate ease-of-use complaints from usefulness complaints.',
+  ]);
+  // And the slot label itself is untouched — it is the strip, not the label, that moved.
+  assert.deepEqual(Array.from(panel.querySelectorAll('.fw-guidance li b')).map((b) => b.textContent),
+    ['Look for', 'Ask', 'In analysis']);
+});
+
 test('the guidance is read, never written into the plan', async (t) => {
   // Decision 1: the field stays short. Writing three instructions into Theory
   // would make every plan longer, which is the opposite of RPA-55.
