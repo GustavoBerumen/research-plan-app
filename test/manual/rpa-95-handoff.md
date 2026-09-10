@@ -34,7 +34,7 @@ Before changing production code, headless Chrome reproduced the collision at 390
 
 The two targeted tests failed on the missing Week heading before implementation, as expected. Dependencies came from the unchanged lockfile using `npm ci --ignore-scripts --no-audit --no-fund`; an elevated retry resolved the initial sandbox npm-cache EPERM. These are deterministic and synthetic browser checks, not live AI, deployment or screen-reader evidence.
 
-## Native PDF inspection and remaining limit
+## Native PDF inspection and user-reported visibility check
 
 An earlier agent-saved native 38-day PDF was generated before the final CSS adjustment and remains intermediate evidence only. Computer Use subsequently stopped because it could not determine the current Windows browser URL confidently enough to enforce policy; no further native UI input was issued.
 
@@ -42,7 +42,7 @@ Max supplied two six-page Letter PDFs produced by Microsoft Print to PDF and rep
 
 Max then supplied a fresh 38-day PDF and requested inspection before pushing. Its native-driver metadata records 10 September 2026 at 13:21:48. The agent reopened it and visually inspected the complete page 4 rendered with Poppler at 160 dpi. Planning runs 15-17 August and Recruitment runs 17-21 September 2026. The final Week label and all numbers 1-6 are clear, the dates and stage gap are correct, and daily cells remain distinct. The final 38-day native saved-PDF appearance check passes.
 
-The PDF files cannot establish which visibility state was active before printing or whether it returned afterwards. Native restoration of both initially hidden and visible timelines remains unconfirmed by Max; automated restoration checks passed. No RPA-94 PDF evidence was reused.
+On 10 September 2026, Max confirmed from current manual tests that printing does not change the timeline's visibility in the browser. This closes the pending visibility check as a **user-reported manual pass**. The accompanying screenshot shows the 38-day schedule in Chrome's native print preview; the before/after visibility result comes from Max's report. Automated restoration checks also passed. No RPA-94 PDF evidence was reused.
 
 ## Local evidence and reproduction
 
