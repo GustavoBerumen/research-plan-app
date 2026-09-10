@@ -144,10 +144,11 @@ test('later questions do not stack warnings, and it stays at the bottom', async 
   assert.equal(questions(document).lastElementChild, warning(document));
 });
 
-// Outcomes warns the same way and through the same helper. It is created
-// one-per-question, so it usually fires alongside the question warning — but
-// Outcomes has its own Add button, so a plan can carry more outcomes than
-// questions, and then this is the only thing that says so.
+// Outcomes warns through the same helper, on a rule a person can state from
+// the screen (RPA-90): at four or more outcomes, unless the Questions warning
+// is already showing. One warning at a time, Questions first. The earlier rule
+// compared the two counts, which tied the warning to a difference nobody can
+// see — eight paired outcomes never warned, five against four warned at once.
 
 function outcomes(document) {
   return document.querySelector('.list-rows[data-list-key="outcomes"]');
@@ -192,11 +193,9 @@ test('outcomes added on their own are warned about on their own', async (t) => {
   assert.equal(warning(document).textContent, '', 'and the question list says nothing');
 });
 
-test('fewer outcomes than questions stays quiet too', async (t) => {
-  // The rule is "more outcomes than questions", not "a different number of
-  // them". With outcomes behind, the plan is already long and the question
-  // warning already says so — a second voice there would be the doubling this
-  // suppression exists to prevent, just in the other direction.
+test('while the questions warning shows, outcomes stays quiet whatever its count', async (t) => {
+  // Questions wins. With outcomes behind, the plan is already long and the
+  // question warning already says so.
   const app = await bootApp();
   t.after(() => app.close());
   const { document } = app;
@@ -210,6 +209,57 @@ test('fewer outcomes than questions stays quiet too', async (t) => {
   assert.match(warning(document).textContent, /three questions/i, 'the questions still say it');
   assert.equal(outcomeWarning(document).textContent, '',
     'and Outcomes, which is behind rather than ahead, does not repeat it');
+});
+
+test('eight paired outcomes are not silently exempt: the recommendation is on screen', async (t) => {
+  // The ticket's case B. Under the old rule this plan never saw the outcomes
+  // recommendation at all. Under "questions wins" it sees the Questions
+  // warning — one voice, not none — and that is the study-size guidance.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  addQuestions(document, 7);
+  assert.equal(listInputs(document, 'researchQuestions').length, 8);
+  assert.equal(listInputs(document, 'outcomes').length, 8);
+  assert.match(warning(document).textContent, /three questions/i, 'the recommendation is showing');
+  assert.equal(outcomeWarning(document).textContent, '', 'and only once');
+});
+
+test('four questions then a fifth outcome by hand: questions still wins', async (t) => {
+  // The ticket's case C, and the one state where the rule changed. This used
+  // to warn on Outcomes the instant it ran ahead. Now Questions is already
+  // showing, so Outcomes stays quiet: one warning at a time, predictable from
+  // the two counts on screen rather than from their difference.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  addQuestions(document, 3);
+  outcomes(document).closest('.field').querySelector('.add-btn').click();
+  assert.equal(listInputs(document, 'researchQuestions').length, 4);
+  assert.equal(listInputs(document, 'outcomes').length, 5);
+  assert.match(warning(document).textContent, /three questions/i);
+  assert.equal(outcomeWarning(document).textContent, '');
+});
+
+test('the handover: when questions drop below four, outcomes speaks if it has four', async (t) => {
+  // "Questions wins" is a precedence, not an exemption. Take the questions
+  // warning away and the outcomes warning it was masking appears.
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document } = app;
+
+  addQuestions(document, 3);
+  outcomes(document).closest('.field').querySelector('.add-btn').click();  // q=4 o=5
+  assert.equal(outcomeWarning(document).textContent, '', 'masked while questions shows');
+
+  // Removing a question removes its paired outcome: q=3 o=4.
+  field(document).querySelectorAll('.list-remove')[3].click();
+  assert.equal(listInputs(document, 'researchQuestions').length, 3);
+  assert.equal(listInputs(document, 'outcomes').length, 4);
+  assert.equal(warning(document).textContent, '', 'questions is quiet again');
+  assert.match(outcomeWarning(document).textContent, /three outcomes/i, 'so outcomes takes over');
 });
 
 test('removing the fourth outcome quiets it again', async (t) => {

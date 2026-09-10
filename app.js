@@ -3502,21 +3502,30 @@
   }
 
   // Outcomes are created one-per-question, so a fourth question makes a fourth
-  // outcome in the same breath. Warning on both would say nearly the same thing
-  // twice, about one action — so this speaks only when the outcomes list has
-  // run ahead on its own, which it can, because Outcomes has an Add button of
-  // its own.
+  // outcome in the same breath, and warning on both would say nearly the same
+  // thing twice about one click. The first rule for that compared the two
+  // counts — Outcomes spoke only when it had more rows than Questions — and it
+  // was wrong in a way RPA-90 measured: the trigger was a difference the user
+  // cannot see, so a plan with eight paired outcomes never warned while five
+  // against four warned at once.
   //
-  // The test is "more outcomes than questions" rather than "a different number
-  // of them". With fewer outcomes than questions the plan is already too long
-  // and the question warning already says so; a second voice adds nothing
-  // there either.
+  // The rule is now one a person can state from what is on screen: Outcomes
+  // warns at four or more, unless the Questions warning is already showing.
+  // One warning at a time, Questions first. Questions is checked before this
+  // runs, on every path that changes either list, so the handover works both
+  // ways — remove questions below four and Outcomes takes over if it has four.
   const updateOutcomesWarning = makeListWarning(
     'outcome-warning',
     'We recommend three outcomes for a balanced study. '
       + 'More outcomes make the study too long; consider whether you need more than one research study.',
-    (count) => count > questionsListEl().querySelectorAll('.list-row').length
+    () => !questionsWarningShowing()
   );
+
+  function questionsWarningShowing() {
+    const q = questionsListEl();
+    const w = q && q.querySelector ? q.querySelector('.rq-warning') : null;
+    return Boolean(w && w.textContent);
+  }
 
   function outcomesListEl() {
     return doc.querySelector('.list-rows[data-list-key="outcomes"]');
