@@ -417,6 +417,7 @@
   }
 
   function uploadFile(fileOrBlob, filename) {
+    if (!capabilities.uploads) return Promise.reject(new Error('Uploads are unavailable.'));
     return readFileAsBase64(fileOrBlob).then((dataBase64) => {
       return fetch('/api/upload', {
         method: 'POST',
@@ -433,9 +434,52 @@
 
   // ---------- Google Drive picker ----------
   let configPromise = null;
+  const unavailableCapabilities = Object.freeze({ calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
+  let capabilities = unavailableCapabilities;
   function getConfig() {
-    if (!configPromise) configPromise = fetch('/api/config').then((res) => res.json());
+    if (!configPromise) configPromise = Promise.resolve().then(() => fetch('/api/config', { cache: 'no-store' }))
+      .then(res => {
+        if (!res.ok) throw new Error('Configuration unavailable');
+        return res.json();
+      }).then(cfg => {
+        if (!cfg || typeof cfg.pilotMode !== 'boolean' || !cfg.capabilities ||
+            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean') ||
+            (cfg.pilotMode && Object.values(cfg.capabilities).some(value => value !== false)) ||
+            (cfg.capabilities.googleDrive && (!cfg.capabilities.uploads ||
+              typeof cfg.googleClientId !== 'string' || !cfg.googleClientId ||
+              typeof cfg.googleApiKey !== 'string' || !cfg.googleApiKey))) {
+          throw new Error('Invalid capabilities');
+        }
+        capabilities = Object.freeze(Object.fromEntries(Object.keys(unavailableCapabilities).map(key => [key, cfg.capabilities[key]])));
+        const status = document.getElementById('capability-status');
+        if (status) status.textContent = cfg.pilotMode
+          ? 'Pilot: calibration Save/Like/Dislike, uploads, framework library changes, Jira and Google Drive are unavailable. AI evaluation and suggestions remain available.'
+          : '';
+        return { ...cfg, capabilities };
+      }).catch(() => {
+        capabilities = unavailableCapabilities;
+        const status = document.getElementById('capability-status');
+        if (status) status.textContent = 'Feature availability could not be confirmed. Calibration feedback, uploads, library changes and integrations remain unavailable. You can still edit and back up your plan.';
+        return { capabilities, configurationUnavailable: true };
+      });
     return configPromise;
+  }
+
+  function restrictAction(button, capability) {
+    button.hidden = !capabilities[capability];
+    button.disabled = !capabilities[capability];
+    getConfig().then(() => {
+      button.hidden = !capabilities[capability];
+      button.disabled = !capabilities[capability];
+    });
+  }
+
+  function capabilityNote(capability, message) {
+    const note = el('span', 'capability-note');
+    note.textContent = message;
+    note.hidden = capabilities[capability];
+    getConfig().then(() => { note.hidden = capabilities[capability]; });
+    return note;
   }
 
   function waitFor(check, timeout, interval) {
@@ -454,6 +498,12 @@
   let pickerApiPromise = null;
   function loadPickerApi() {
     if (!pickerApiPromise) {
+      ['https://accounts.google.com/gsi/client', 'https://apis.google.com/js/api.js'].forEach(src => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        document.head.appendChild(script);
+      });
       pickerApiPromise = waitFor(() => window.gapi).then(() => new Promise((resolve) => gapi.load('picker', resolve)));
     }
     return pickerApiPromise;
@@ -511,6 +561,7 @@
 
   function addFromDrive() {
     return getConfig().then((cfg) => {
+      if (!capabilities.googleDrive || !capabilities.uploads) throw new Error('Google Drive is unavailable.');
       if (!cfg.googleClientId || !cfg.googleApiKey) {
         throw new Error('Google Drive is not configured for this app (missing GOOGLE_CLIENT_ID / GOOGLE_API_KEY).');
       }
@@ -534,12 +585,17 @@
     const addBtn = el('button', 'file-add-btn', { type: 'button' });
     addBtn.textContent = '+';
     addBtn.title = 'Add a file';
+    restrictAction(addBtn, 'uploads');
+    fileInp.disabled = !capabilities.uploads;
+    getConfig().then(() => { fileInp.disabled = !capabilities.uploads; });
     const menu = el('div', 'file-menu');
     menu.hidden = true;
     const uploadItem = el('button', 'file-menu-item', { type: 'button' });
     uploadItem.textContent = 'Upload file';
     const driveItem = el('button', 'file-menu-item', { type: 'button' });
     driveItem.textContent = 'Add from Drive';
+    restrictAction(uploadItem, 'uploads');
+    restrictAction(driveItem, 'googleDrive');
     menu.append(uploadItem, driveItem);
     addWrap.append(addBtn, menu);
 
@@ -557,6 +613,7 @@
       if (menu.parentNode === document.body) addWrap.appendChild(menu);
     }
     function openMenu() {
+      if (!capabilities.uploads) return;
       // Reparent to <body> with fixed positioning so the menu escapes any
       // ancestor with overflow:hidden (the table wrapper, the accordion body).
       const rect = addBtn.getBoundingClientRect();
@@ -597,16 +654,18 @@
       nameSpan.textContent = placeholder;
     }
     function finishUpload() {
-      addBtn.disabled = false;
+      addBtn.disabled = !capabilities.uploads;
       fileInp.value = '';
     }
 
     uploadItem.addEventListener('click', () => {
+      if (!capabilities.uploads) return;
       closeMenu();
       fileInp.click();
     });
 
     fileInp.addEventListener('change', () => {
+      if (!capabilities.uploads) { fileInp.value = ''; return; }
       const file = fileInp.files[0];
       if (!file) return;
       if (file.size > MAX_UPLOAD_BYTES) {
@@ -619,6 +678,7 @@
     });
 
     driveItem.addEventListener('click', () => {
+      if (!capabilities.googleDrive || !capabilities.uploads) return;
       closeMenu();
       addFromDrive().then(({ blob, name }) => {
         if (blob.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 15MB limit.');
@@ -629,7 +689,8 @@
       });
     });
 
-    wrap.append(fileInp, addWrap, nameSpan, valueInp);
+    wrap.append(fileInp, addWrap, nameSpan, valueInp,
+      capabilityNote('uploads', 'Uploads unavailable. Saved filenames are references only.'));
     return wrap;
   }
 
@@ -1406,6 +1467,7 @@
   }
 
   function saveForCalibration(field, text, data, feedback) {
+    if (!capabilities.calibration) return Promise.reject(new Error('Calibration feedback is unavailable.'));
     return fetch('/api/calibration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1604,7 +1666,15 @@
     const actions = el('div', 'eval-actions');
     actions.append(reevaluateBtn, likeBtn, dislikeBtn, saveBtn);
     const feedbackStatus = el('div', 'eval-feedback-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
-    panel.append(head, metrics, rlabel, recs, actions, feedbackStatus);
+    panel.append(head, metrics, rlabel, recs, actions, feedbackStatus,
+      capabilityNote('calibration', 'Calibration Save/Like/Dislike unavailable. Evaluation results are not saved in backups.'));
+    [saveBtn, likeBtn, dislikeBtn].forEach(button => {
+      button.hidden = !capabilities.calibration;
+      getConfig().then(() => {
+        button.hidden = !capabilities.calibration;
+        button.disabled = !capabilities.calibration || !lastResult || resultIsStale || !!pending;
+      });
+    });
     const progress = el('div', 'field-eval-progress', { role: 'status', 'aria-live': 'polite' });
     controls.append(resultSummary, progress, error, btn, panel);
     let pending = null;
@@ -1736,9 +1806,9 @@
           showResult(data);
           resetFeedbackActions();
           if (!resultIsStale) {
-            saveBtn.disabled = false;
-            likeBtn.disabled = false;
-            dislikeBtn.disabled = false;
+            saveBtn.disabled = !capabilities.calibration;
+            likeBtn.disabled = !capabilities.calibration;
+            dislikeBtn.disabled = !capabilities.calibration;
           }
           updateResultPresentation();
           requestState = 'success';
@@ -1812,7 +1882,7 @@
     quickReevaluateBtn.addEventListener('click', runEvaluation);
 
     saveBtn.addEventListener('click', () => {
-      if (!lastResult || resultIsStale) return;
+      if (!capabilities.calibration || !lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1829,9 +1899,9 @@
       }).catch((err) => {
         alert('Save failed: ' + err.message);
         if (!resultIsStale) {
-          saveBtn.disabled = false;
-          likeBtn.disabled = false;
-          dislikeBtn.disabled = false;
+          saveBtn.disabled = !capabilities.calibration;
+          likeBtn.disabled = !capabilities.calibration;
+          dislikeBtn.disabled = !capabilities.calibration;
         }
         saveBtn.title = 'Save';
         saveBtn.setAttribute('aria-busy', 'false');
@@ -1841,7 +1911,7 @@
     });
 
     likeBtn.addEventListener('click', () => {
-      if (!lastResult || resultIsStale) return;
+      if (!capabilities.calibration || !lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1858,9 +1928,9 @@
       }).catch((err) => {
         alert('Save failed: ' + err.message);
         if (!resultIsStale) {
-          saveBtn.disabled = false;
-          likeBtn.disabled = false;
-          dislikeBtn.disabled = false;
+          saveBtn.disabled = !capabilities.calibration;
+          likeBtn.disabled = !capabilities.calibration;
+          dislikeBtn.disabled = !capabilities.calibration;
         }
         likeBtn.title = 'Like';
         likeBtn.setAttribute('aria-busy', 'false');
@@ -1869,7 +1939,7 @@
     });
 
     dislikeBtn.addEventListener('click', () => {
-      if (!lastResult || resultIsStale) return;
+      if (!capabilities.calibration || !lastResult || resultIsStale) return;
       saveBtn.disabled = true;
       likeBtn.disabled = true;
       dislikeBtn.disabled = true;
@@ -1886,9 +1956,9 @@
       }).catch((err) => {
         alert('Save failed: ' + err.message);
         if (!resultIsStale) {
-          saveBtn.disabled = false;
-          likeBtn.disabled = false;
-          dislikeBtn.disabled = false;
+          saveBtn.disabled = !capabilities.calibration;
+          likeBtn.disabled = !capabilities.calibration;
+          dislikeBtn.disabled = !capabilities.calibration;
         }
         dislikeBtn.title = 'Dislike';
         dislikeBtn.setAttribute('aria-busy', 'false');
@@ -1981,6 +2051,7 @@
   }
 
   function addFrameworkEntry(draft) {
+    if (!capabilities.addFramework) return Promise.reject(new Error('Framework library changes are unavailable.'));
     return fetch('/api/add-framework', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2171,10 +2242,13 @@
       const actions = el('div', 'eval-actions');
       const addBtn = el('button', 'eval-btn fw-add-btn', { type: 'button' });
       addBtn.textContent = 'Add this to my framework library';
+      restrictAction(addBtn, 'addFramework');
       actions.appendChild(addBtn);
+      actions.appendChild(capabilityNote('addFramework', 'Library changes unavailable. You can still use this suggestion in your plan.'));
       body.appendChild(actions);
 
       addBtn.addEventListener('click', () => {
+        if (!capabilities.addFramework) return;
         addBtn.disabled = true;
         addBtn.textContent = 'Adding…';
         addFrameworkEntry({
@@ -3870,7 +3944,7 @@
     // stylesheet does not have to name the field key itself.
     input.classList.add('jira-input');
     const status = el('div', 'jira-status', { role: 'status', 'aria-atomic': 'true' });
-    const unavailableMessage = 'Jira suggestions are unavailable. You can still enter a ticket key manually, or ask your administrator to connect Jira.';
+    const unavailableMessage = 'Jira suggestions are unavailable. You can still enter a ticket key manually.';
     const failureMessage = 'Jira search is temporarily unavailable. You can still enter a ticket key manually.';
     const emptyMessage = 'No matching Jira tickets. You can still enter a ticket key manually.';
     const menu = el('div', 'combo-menu', { role: 'listbox' });
@@ -3982,10 +4056,15 @@
       window.addEventListener('scroll', onScroll, true);
     }
 
-    const configReady = getConfig().then(
-      (cfg) => { jiraEnabled = !!cfg.jiraEnabled; },
-      () => { jiraEnabled = null; }
-    );
+    input.removeAttribute('role');
+    input.removeAttribute('aria-autocomplete');
+    const configReady = getConfig().then(cfg => {
+      jiraEnabled = cfg.configurationUnavailable ? null : capabilities.jira;
+      if (jiraEnabled) {
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+      }
+    });
 
     async function runSearch(q, myId) {
       await configReady;
@@ -6104,13 +6183,13 @@
     const msg = el('div', 'doc-error');
     msg.textContent = 'Could not load "' + SCHEMA_URL + '" (' + err.message + '). ' +
       'If you opened this file directly from disk (file://), browsers block that fetch — ' +
-      'serve the folder over a local server instead, e.g. run `python3 -m http.server` here ' +
-      'and open http://localhost:8000/.';
+      'start the app with its Node server and open the address it reports.';
     doc.appendChild(msg);
     console.error('Failed to load field schema:', err);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    getConfig();
     Promise.all([
       fetchText(SCHEMA_URL),
       fetchText(RUBRIC_URL).catch((err) => {

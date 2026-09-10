@@ -142,7 +142,8 @@ async function bootApp(options = {}) {
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/config') {
-      return response({ googleClientId: '', googleApiKey: '', jiraEnabled: !!options.jiraEnabled });
+      if (options.configResponse) return options.configResponse();
+      return response({ pilotMode: false, capabilities: { calibration: true, uploads: true, addFramework: true, jira: !!options.jiraEnabled, googleDrive: false }, jiraEnabled: !!options.jiraEnabled });
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/jira/search') {

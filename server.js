@@ -11,7 +11,11 @@ const PORT = process.env.PORT || 8934;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const ROOT = __dirname;
 const UPLOAD_DIR = path.join(ROOT, 'uploads');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const pilotSetting = process.env.RPA_PILOT_MODE;
+if (pilotSetting !== undefined && pilotSetting !== 'true' && pilotSetting !== 'false') {
+  throw new Error('RPA_PILOT_MODE must be true or false');
+}
+const PILOT_MODE = pilotSetting === 'true';
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error(
@@ -27,7 +31,45 @@ const anthropic = new Anthropic();
 const JIRA_BASE_URL = (process.env.JIRA_BASE_URL || '').replace(/\/+$/, '');
 const JIRA_EMAIL = process.env.JIRA_EMAIL || '';
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || '';
-const JIRA_ENABLED = !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
+const JIRA_ENABLED = !PILOT_MODE && !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
+const CAPABILITIES = Object.freeze({
+  calibration: !PILOT_MODE,
+  uploads: !PILOT_MODE,
+  addFramework: !PILOT_MODE,
+  jira: JIRA_ENABLED,
+  googleDrive: !PILOT_MODE && !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_API_KEY),
+});
+
+// Only these exact public files may be read, in every mode. Never derive a
+// filesystem path from request text (including Windows separators/drive names).
+const PUBLIC_ASSETS = new Map([
+  ['/', 'index.html'],
+  ['/index.html', 'index.html'],
+  ['/style.css', 'style.css'],
+  ['/app.js', 'app.js'],
+  ['/score-classification.js', 'score-classification.js'],
+  ['/textarea-autosize.js', 'textarea-autosize.js'],
+  ['/test-profiles.js', 'test-profiles.js'],
+  ['/research-plan-template.md', 'research-plan-template.md'],
+  ['/research-plan-rubric.md', 'research-plan-rubric.md'],
+  ['/research-methods.md', 'research-methods.md'],
+]);
+
+function requestPath(url) {
+  // Check the raw target before URL parsers can normalise traversal away.
+  if (typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//') ||
+      /[\\\s#\x00-\x1f\x7f]/.test(url)) return null;
+  try { decodeURIComponent(url); } catch (_) { return null; }
+  const pathname = url.split('?')[0];
+  // Public/API paths are ASCII literals: encoded aliases are not supported.
+  if (pathname.includes('%') || pathname.split('/').some(p => p === '.' || p === '..')) return null;
+  return pathname;
+}
+
+function routeError(res, status, message, headers = {}) {
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers });
+  res.end(JSON.stringify({ error: message }));
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -36,15 +78,10 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
 };
 
-function serveStatic(req, res) {
-  let urlPath = decodeURIComponent(req.url.split('?')[0]);
-  if (urlPath === '/') urlPath = '/index.html';
-  const filePath = path.normalize(path.join(ROOT, urlPath));
-  if (!filePath.startsWith(ROOT)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
+function serveStatic(req, res, urlPath) {
+  const asset = PUBLIC_ASSETS.get(urlPath);
+  if (!asset) return routeError(res, 404, 'Not found');
+  const filePath = path.join(ROOT, asset);
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -884,7 +921,7 @@ async function handleSuggestFramework(req, res) {
     frameworksText = await fs.promises.readFile(FRAMEWORKS_FILE, 'utf8');
   } catch (err) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Could not read research-theoretical-frameworks.md: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Framework library is unavailable' }));
     return;
   }
 
@@ -985,7 +1022,7 @@ async function handleAddFramework(req, res) {
     frameworksText = await fs.promises.readFile(FRAMEWORKS_FILE, 'utf8');
   } catch (err) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Could not read research-theoretical-frameworks.md: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Framework library is unavailable' }));
     return;
   }
 
@@ -1031,7 +1068,7 @@ async function handleAddFramework(req, res) {
   } catch (err) {
     console.error('Saving framework entry failed:', err);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Saving framework entry failed: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Saving framework entry failed' }));
   }
 }
 
@@ -1197,7 +1234,7 @@ async function handleSuggestMethods(req, res) {
     methodsText = await fs.promises.readFile(METHODS_FILE, 'utf8');
   } catch (err) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Could not read research-methods.md: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Methods library is unavailable' }));
     return;
   }
   const methodNames = parseMethodsList(methodsText);
@@ -1289,7 +1326,7 @@ async function handleSaveCalibration(req, res) {
   } catch (err) {
     console.error('Saving calibration record failed:', err);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Saving calibration record failed: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Saving calibration record failed' }));
   }
 }
 
@@ -1334,21 +1371,26 @@ async function handleUpload(req, res) {
   const storedName = crypto.randomBytes(8).toString('hex') + ext;
 
   try {
+    await fs.promises.mkdir(UPLOAD_DIR, { recursive: true });
     await fs.promises.writeFile(path.join(UPLOAD_DIR, storedName), buffer);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ url: '/uploads/' + storedName, filename }));
   } catch (err) {
     console.error('Saving uploaded file failed:', err);
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Saving uploaded file failed: ' + err.message }));
+    res.end(JSON.stringify({ error: 'Saving uploaded file failed' }));
   }
 }
 
 function handleConfig(req, res) {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify({
-    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-    googleApiKey: process.env.GOOGLE_API_KEY || '',
+    pilotMode: PILOT_MODE,
+    capabilities: CAPABILITIES,
+    ...(CAPABILITIES.googleDrive ? {
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleApiKey: process.env.GOOGLE_API_KEY,
+    } : {}),
     jiraEnabled: JIRA_ENABLED,
   }));
 }
@@ -1394,45 +1436,32 @@ async function handleJiraSearch(req, res) {
   }
 }
 
+const API_ROUTES = new Map([
+  ['/api/evaluate', ['POST', handleEvaluate]],
+  ['/api/calibration', ['POST', handleSaveCalibration, 'calibration']],
+  ['/api/suggest-framework', ['POST', handleSuggestFramework]],
+  ['/api/add-framework', ['POST', handleAddFramework, 'addFramework']],
+  ['/api/suggest-methods', ['POST', handleSuggestMethods]],
+  ['/api/upload', ['POST', handleUpload, 'uploads']],
+  ['/api/config', ['GET', handleConfig]],
+  ['/api/jira/search', ['GET', handleJiraSearch, 'jira']],
+]);
+
 const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/api/evaluate') {
-    handleEvaluate(req, res);
+  const pathname = requestPath(req.url);
+  if (pathname === null) return routeError(res, 400, 'Invalid request path');
+  const route = API_ROUTES.get(pathname);
+  if (route) {
+    const [method, handler, capability] = route;
+    // This gate runs before any handler or body listeners, regardless of
+    // method, query parameters, request body or browser capability state.
+    if (capability && !CAPABILITIES[capability]) return routeError(res, 403, 'This feature is unavailable');
+    if (req.method !== method) return routeError(res, 405, 'Method not allowed', { Allow: method });
+    handler(req, res);
     return;
   }
-  if (req.method === 'POST' && req.url === '/api/calibration') {
-    handleSaveCalibration(req, res);
-    return;
-  }
-  if (req.method === 'POST' && req.url === '/api/suggest-framework') {
-    handleSuggestFramework(req, res);
-    return;
-  }
-  if (req.method === 'POST' && req.url === '/api/add-framework') {
-    handleAddFramework(req, res);
-    return;
-  }
-  if (req.method === 'POST' && req.url === '/api/suggest-methods') {
-    handleSuggestMethods(req, res);
-    return;
-  }
-  if (req.method === 'POST' && req.url === '/api/upload') {
-    handleUpload(req, res);
-    return;
-  }
-  if (req.method === 'GET' && req.url === '/api/config') {
-    handleConfig(req, res);
-    return;
-  }
-  if (req.method === 'GET' && req.url.startsWith('/api/jira/search')) {
-    handleJiraSearch(req, res);
-    return;
-  }
-  if (req.method === 'GET') {
-    serveStatic(req, res);
-    return;
-  }
-  res.writeHead(404);
-  res.end('Not found');
+  if (req.method !== 'GET') return routeError(res, 405, 'Method not allowed', { Allow: 'GET' });
+  serveStatic(req, res, pathname);
 });
 
 if (require.main === module) {

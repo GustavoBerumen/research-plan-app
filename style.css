@@ -372,7 +372,10 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .file-add-btn:hover{background:var(--btn-2-hover)}
 .file-add-btn:disabled{opacity:.5;cursor:not-allowed}
 .file-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:2px solid var(--ink);padding:4px;z-index:1000;min-width:170px}
-.file-menu[hidden]{display:none}
+.file-menu[hidden],.file-add-btn[hidden],.file-menu-item[hidden],.eval-fb-btn[hidden],.capability-note[hidden]{display:none}
+.capability-note{display:block;font-size:12px;line-height:1.5;color:var(--text-2);font-weight:400}
+.file-cell:has(.capability-note:not([hidden])){flex-wrap:wrap}
+.file-cell .capability-note{flex-basis:100%}
 .file-menu-item{display:block;width:100%;text-align:left;font-family:inherit;font-size:var(--text);color:var(--ink);background:none;border:none;padding:8px 10px;cursor:pointer}
 .file-menu-item:hover{background:var(--btn-2)}
 .file-name{font-size:var(--text-sm);color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -586,7 +589,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      ruler's column positions, without changing screen or long-plan charts. */
   .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
   .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
-  .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.toolbar,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}
