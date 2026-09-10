@@ -192,7 +192,12 @@ for (const [name, scale] of [['six-months', 'weeks'], ['monthly', 'months']]) {
       // blank, and the readout that fed the last row went with the reset.
       const afterReset = values(app);
       assert.equal(afterReset.length, 10);
-      assert.equal(afterReset[0], new Date().toISOString().slice(0, 10));
+      // The app uses the local calendar date, which can differ from UTC on
+      // Windows evening runs (for example, America/Mexico_City).
+      const today = new Date();
+      const localToday = [today.getFullYear(), today.getMonth() + 1, today.getDate()]
+        .map((part, index) => index === 0 ? String(part) : String(part).padStart(2, '0')).join('-');
+      assert.equal(afterReset[0], localToday);
       assert.ok(afterReset.slice(1).every(value => value === ''));
       await new Promise(resolve => setTimeout(resolve, 650));
       assert.equal(app.window.localStorage.getItem(DRAFT_KEY), null);

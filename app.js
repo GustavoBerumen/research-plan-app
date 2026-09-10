@@ -572,8 +572,21 @@
   }
 
   // ---------- dynamic table rows ----------
+  function renderFileReference(cell) {
+    const value = cell.querySelector('.file-value').value;
+    const name = cell.dataset.fileName;
+    const referenceOnly = !capabilities.uploads;
+    cell.classList.toggle('file-reference-only', referenceOnly);
+    // Display copy is never filename metadata. In particular, preserve an
+    // explicitly empty legacy name rather than saving the fallback wording.
+    cell.querySelector('.file-name').textContent = referenceOnly
+      ? ((!value && (!name || name === 'No file chosen')) ? 'No saved file reference' : (name || value))
+      : (name || 'No file chosen');
+  }
+
   function buildFileCell(placeholder) {
     const wrap = el('div', 'file-cell');
+    wrap.dataset.fileName = placeholder;
     const valueInp = document.createElement('input');
     valueInp.type = 'hidden';
     valueInp.className = 'cinput file-value';
@@ -641,6 +654,7 @@
     }
     function setUploaded(body) {
       valueInp.value = body.url;
+      wrap.dataset.fileName = body.filename;
       nameSpan.innerHTML = '';
       const link = document.createElement('a');
       link.href = body.url;
@@ -651,7 +665,7 @@
     }
     function setFailed(err) {
       alert('Adding file failed: ' + err.message);
-      nameSpan.textContent = placeholder;
+      renderFileReference(wrap);
     }
     function finishUpload() {
       addBtn.disabled = !capabilities.uploads;
@@ -690,7 +704,9 @@
     });
 
     wrap.append(fileInp, addWrap, nameSpan, valueInp,
-      capabilityNote('uploads', 'Uploads unavailable. Saved filenames are references only.'));
+      capabilityNote('uploads', 'Reference only. Attachment contents are unavailable through this app.'));
+    renderFileReference(wrap);
+    getConfig().then(() => { renderFileReference(wrap); });
     return wrap;
   }
 
@@ -3787,7 +3803,14 @@
     const text = field && field.hint;
     if (!text) return null;
     const hint = el('div', 'field-hint-text', { id: id });
-    appendHintText(hint, text);
+    const render = () => {
+      hint.replaceChildren();
+      appendHintText(hint, field.key === 'previousKnowledge' && !capabilities.uploads
+        ? 'Name prior research or documentation relevant to this study. Saved file references are kept; attachment contents are unavailable through this app.'
+        : text);
+    };
+    render();
+    if (field.key === 'previousKnowledge') getConfig().then(render);
     return hint;
   }
 
@@ -4945,7 +4968,7 @@
       return {
         t: 'file',
         v: fileCell.querySelector('.file-value').value,
-        n: fileCell.querySelector('.file-name').textContent,
+        n: fileCell.dataset.fileName,
       };
     }
     const selectCell = td.querySelector('.select-cell');
@@ -4993,7 +5016,8 @@
       const cell = td.querySelector('.file-cell');
       if (!cell) return;
       cell.querySelector('.file-value').value = snap.v || '';
-      cell.querySelector('.file-name').textContent = snap.n || 'No file chosen';
+      cell.dataset.fileName = snap.n ?? 'No file chosen';
+      renderFileReference(cell);
       return;
     }
     if (snap.t === 'select') {
@@ -6051,7 +6075,8 @@
     });
     doc.querySelectorAll('.file-cell').forEach((cell) => {
       cell.querySelector('.file-value').value = '';
-      cell.querySelector('.file-name').textContent = 'No file chosen';
+      cell.dataset.fileName = 'No file chosen';
+      renderFileReference(cell);
     });
 
     doc.querySelectorAll('.eval-panel').forEach((p) => { p.hidden = true; });

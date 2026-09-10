@@ -1,0 +1,4 @@
+# Generated synthetic fixtures, local test logs and review artifacts.
+# Recreate fixtures with node test/manual/rpa-41-fixtures.cjs.
+*
+!.gitignore
