@@ -41,7 +41,12 @@
        goes and what a backup contains moved to the footer (RPA-92); the
        status regions stay beside the actions they report on. -->
   <aside class="backup-help" aria-label="Plan backups">
-    <p id="backup-help">Your browser saves a draft automatically, but clearing browser data may delete it. Download a backup to restore your plan here later.</p>
+    <!-- Hidden, not removed (RPA-93): the Download and Restore buttons are
+         described by this sentence via aria-describedby, and the accessible
+         description is computed from hidden referenced content — so it keeps
+         doing that job for assistive technology while staying out of view.
+         Gus will present this information in a different format later. -->
+    <p id="backup-help" hidden>Your browser saves a draft automatically, but clearing browser data may delete it. Download a backup to restore your plan here later.</p>
     <p id="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
     <p id="capability-status" role="status">Checking available features. Calibration feedback, uploads, library changes and integrations are unavailable until confirmed.</p>
   </aside>
