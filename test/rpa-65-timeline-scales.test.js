@@ -25,7 +25,9 @@ for (const [end, days, scale] of [['2026-10-25', 55, 'days'], ['2026-10-26', 56,
     if (scale === 'days') {
       assert.equal(app.chart.querySelectorAll('.timeline-bar-cell').length, 56);
       assert.equal(app.chart.querySelectorAll('.timeline-bar-cell-on').length, days);
-      assert.deepEqual(Array.from(app.chart.querySelectorAll('.timeline-week-mark'), el => el.textContent), ['week 1', 'w 2', 'w 3', 'w 4', 'w 5', 'w 6', 'w 7', 'w 8']);
+      assert.equal(app.chart.querySelector('.timeline-weeks > .timeline-label').textContent, 'Week');
+      assert.deepEqual(Array.from(app.chart.querySelectorAll('.timeline-week-mark'), el => [el.textContent, el.style.gridColumnStart]),
+        ['1', '2', '3', '4', '5', '6', '7', '8'].map((label, i) => [label, String(i * 7 + 1)]));
     } else {
       assert.equal(app.chart.querySelectorAll('.timeline-period-mark').length, 9);
       assert.equal(app.chart.querySelectorAll('.timeline-bar-cell').length, 0);
@@ -33,6 +35,21 @@ for (const [end, days, scale] of [['2026-10-25', 55, 'days'], ['2026-10-26', 56,
     }
   });
 }
+
+test('RPA-95: sparse 38-day ruler keeps every plan-relative week and exact occupied days', async t => {
+  const app = await fixture(t, examples['38-days']);
+  assert.equal(app.chart.dataset.scale, 'days');
+  assert.equal(app.chart.querySelector('.timeline-weeks > .timeline-label').textContent, 'Week');
+  assert.deepEqual(Array.from(app.chart.querySelectorAll('.timeline-week-mark'), el => [el.textContent, el.style.gridColumnStart]),
+    [['1', '1'], ['2', '8'], ['3', '15'], ['4', '22'], ['5', '29'], ['6', '36']]);
+  const rows = Array.from(app.chart.querySelectorAll('.timeline-row'));
+  assert.deepEqual(rows.map(row => row.querySelector('.timeline-label').textContent), ['Planning', 'Recruitment']);
+  assert.deepEqual(rows.map(row => row.querySelectorAll('.timeline-bar-cell').length), [42, 42]);
+  assert.deepEqual(rows.map(row => Array.from(row.querySelectorAll('.timeline-bar-cell'))
+    .flatMap((cell, i) => cell.classList.contains('timeline-bar-cell-on') ? [i] : [])), [[0, 1, 2], [33, 34, 35, 36, 37]]);
+  assert.deepEqual(rows.map(row => row.querySelector('.timeline-bar-cell-on').style.background), ['rgb(99, 102, 241)', 'rgb(22, 163, 74)']);
+  assert.deepEqual(values(app), examples['38-days'].flatMap(row => row.slice(1)));
+});
 
 for (const [end, weeks, duration] of [['2026-10-31', 9, 61], ['2026-11-30', 13, 91], ['2027-02-28', 26, 181]]) {
   test(`two/three/six calendar months ending ${end} use weekly periods`, async t => {
@@ -152,9 +169,9 @@ test('adding, naming and deleting a dynamic stage refreshes the range and scale'
   assert.deepEqual(values(app), ['2026-09-01', '2026-10-26']);
 });
 
-for (const [name, scale] of [['six-months', 'weeks'], ['monthly', 'months']]) {
+for (const [name, scale] of [['38-days', 'days'], ['56-days', 'days'], ['six-months', 'weeks'], ['monthly', 'months']]) {
   for (const visible of [true, false]) {
-    test(`${scale}: toggle/save/reload/print/reset preserves dates, Other values and Last updated (${visible})`, async t => {
+    test(`${name}/${scale}: toggle/save/reload/print/reset preserves dates, Other values and Last updated (${visible})`, async t => {
       let accepted = false;
       const draft = draftFor(examples[name], visible);
       const app = await fixture(t, [], { draft, confirm: () => accepted });
