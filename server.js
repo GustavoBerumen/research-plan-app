@@ -928,6 +928,41 @@ function extractFrameworkEntry(text, name) {
   return text.slice(start, end).trim();
 }
 
+// RPA-91. The library is read server-side only — RPA-89 took it off the
+// public routes — and the entry text reached the browser once, inside the
+// suggestion response, then was thrown away. So a chosen framework could not
+// be read about again. This is the way back: one entry by name, from the same
+// file the suggester matches against, so the library stays the single source
+// and a framework typed by hand can be looked up as well as one accepted from
+// a suggestion. Read-only, no user data, no capability gate: allowed in pilot.
+async function handleFrameworkLookup(req, res) {
+  const name = (new URL(req.url, 'http://localhost').searchParams.get('name') || '').trim();
+  if (!name || name.length > 200) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'name is required' }));
+    return;
+  }
+  let frameworksText;
+  try {
+    frameworksText = await fs.promises.readFile(FRAMEWORKS_FILE, 'utf8');
+  } catch (e) {
+    // No path and no cause in the message: its reader is a browser, not an operator.
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'The framework library is unavailable' }));
+    return;
+  }
+  const entry = extractFrameworkEntry(frameworksText, name);
+  if (!entry) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No framework in the library is called that' }));
+    return;
+  }
+  // The library's own spelling of the heading, since the match is case-insensitive.
+  const heading = entry.split('\n')[0].replace(/^###\s*/, '').trim();
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify({ name: heading, entry }));
+}
+
 async function handleSuggestFramework(req, res) {
   let payload;
   try {
@@ -1488,6 +1523,7 @@ const API_ROUTES = new Map([
   ['/api/suggest-methods', ['POST', handleSuggestMethods]],
   ['/api/upload', ['POST', handleUpload, 'uploads']],
   ['/api/config', ['GET', handleConfig]],
+  ['/api/framework', ['GET', handleFrameworkLookup]],
   ['/api/jira/search', ['GET', handleJiraSearch, 'jira']],
 ]);
 

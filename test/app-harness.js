@@ -95,6 +95,7 @@ async function bootApp(options = {}) {
   const alerts = [];
   const evaluationRequests = [];
   const frameworkRequests = [];
+  const frameworkLookups = [];
   virtualConsole.on('jsdomError', (error) => jsdomErrors.push(error));
 
   const dom = new JSDOM(INDEX_HTML, {
@@ -165,6 +166,16 @@ async function bootApp(options = {}) {
       return response(await options.evaluate(request.body, request));
     }
 
+    // RPA-91: the library lookup the details block reads. Mocked like the
+    // suggestion — a test supplies the entry it wants back, or a status.
+    if (url.origin === window.location.origin && url.pathname === '/api/framework') {
+      const name = url.searchParams.get('name') || '';
+      frameworkLookups.push(name);
+      if (!options.frameworkLookup) throw new Error('No framework-lookup mock was configured');
+      const result = await options.frameworkLookup(name);
+      if (result && typeof result.status === 'number') return response(result.body || {}, result.status);
+      return response(result);
+    }
     if (url.origin === window.location.origin && url.pathname === '/api/suggest-framework') {
       const request = {
         method: init.method || 'GET',
@@ -212,6 +223,7 @@ async function bootApp(options = {}) {
     dom,
     evaluationRequests,
     frameworkRequests,
+    frameworkLookups,
     executedScripts,
     jsdomErrors,
     scriptSources,
