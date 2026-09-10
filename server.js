@@ -32,6 +32,21 @@ const JIRA_BASE_URL = (process.env.JIRA_BASE_URL || '').replace(/\/+$/, '');
 const JIRA_EMAIL = process.env.JIRA_EMAIL || '';
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN || '';
 const JIRA_ENABLED = !PILOT_MODE && !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
+
+// What the footer names in a bug report (RPA-92): the package version, and
+// the commit the running server was started from. Read once at boot — a
+// server does not change version while it runs — and "dev" when there is no
+// git checkout, which is what a deployed build directory looks like.
+const APP_VERSION = (() => {
+  try { return require('./package.json').version || 'unknown'; } catch (e) { return 'unknown'; }
+})();
+const APP_BUILD = (() => {
+  try {
+    return require('child_process')
+      .execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim() || 'dev';
+  } catch (e) { return 'dev'; }
+})();
 const CAPABILITIES = Object.freeze({
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
@@ -1419,6 +1434,8 @@ function handleConfig(req, res) {
       googleApiKey: process.env.GOOGLE_API_KEY,
     } : {}),
     jiraEnabled: JIRA_ENABLED,
+    version: APP_VERSION,
+    build: APP_BUILD,
   }));
 }
 

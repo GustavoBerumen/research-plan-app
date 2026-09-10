@@ -436,6 +436,16 @@
   let configPromise = null;
   const unavailableCapabilities = Object.freeze({ calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
   let capabilities = unavailableCapabilities;
+
+  function renderBuildMarker(cfg) {
+    const version = cfg && typeof cfg.version === 'string' ? cfg.version : '';
+    const build = cfg && typeof cfg.build === 'string' ? cfg.build : '';
+    const label = version || build ? ('v' + version + (build ? ' · ' + build : '')).trim() : 'version unavailable';
+    document.querySelectorAll('#app-version, .app-version-print').forEach((el) => { el.textContent = label; });
+    const date = document.querySelector('.print-date');
+    if (date) date.textContent = formatDateline(todayIso());
+  }
+
   function getConfig() {
     if (!configPromise) configPromise = Promise.resolve().then(() => fetch('/api/config', { cache: 'no-store' }))
       .then(res => {
@@ -451,6 +461,7 @@
           throw new Error('Invalid capabilities');
         }
         capabilities = Object.freeze(Object.fromEntries(Object.keys(unavailableCapabilities).map(key => [key, cfg.capabilities[key]])));
+        renderBuildMarker(cfg);
         const status = document.getElementById('capability-status');
         if (status) status.textContent = cfg.pilotMode
           ? 'Pilot: calibration Save/Like/Dislike, uploads, framework library changes, Jira and Google Drive are unavailable. AI evaluation and suggestions remain available.'
@@ -458,6 +469,7 @@
         return { ...cfg, capabilities };
       }).catch(() => {
         capabilities = unavailableCapabilities;
+        renderBuildMarker(null);
         const status = document.getElementById('capability-status');
         if (status) status.textContent = 'Feature availability could not be confirmed. Calibration feedback, uploads, library changes and integrations remain unavailable. You can still edit and back up your plan.';
         return { capabilities, configurationUnavailable: true };
