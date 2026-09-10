@@ -129,8 +129,8 @@ test('the footer says what this is, where the writing goes, and who to tell', as
   const text = footer.textContent;
 
   assert.match(text, /research plan for product teams/i, 'what it is and who for');
-  assert.match(text, /stay in this browser/i, 'where the writing goes');
-  assert.match(text, /never sent unless/i);
+  assert.match(text, /save in this browser/i, 'where drafts save');
+  assert.match(text, /evaluation and AI suggestions send relevant writing and context/i, 'when writing is sent');
   assert.match(text, /tell the person who sent you this link/i, 'how to report a problem');
   assert.equal(footer.querySelectorAll('h2').length, 3, 'three headed sections');
 });
@@ -163,7 +163,7 @@ test('the aside above the form keeps only what is needed before starting', async
   assert.ok(document.getElementById('backup-help'), 'the sentence the buttons are described by');
   assert.ok(document.getElementById('backup-status'));
   assert.ok(document.getElementById('capability-status'));
-  assert.match(document.querySelector('footer').textContent, /A backup is a file/i, 'and what a backup is, is in the footer');
+  assert.match(document.querySelector('footer').textContent, /backups stay on your device until you share them/i, 'and where backups stay is in the footer');
 });
 
 test('print is decided: the header and phase banner do not print, the footer prints one line', () => {
