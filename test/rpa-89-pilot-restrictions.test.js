@@ -66,7 +66,14 @@ test('pilot denies writes/proxy before body listeners with spoofed client state 
   const app = loadServer();
   const config = await app.request('/api/config');
   const data = JSON.parse(config.body);
-  assert.deepEqual(data, { ...pilotConfig, jiraEnabled: false });
+  // The pilot contract is the capability set and the jira flag — nothing
+  // enabled may leak through. /api/config also carries a version and build
+  // marker for the footer (RPA-92), which is informational and not part of
+  // that contract, so it is checked for shape rather than pinned by value.
+  const { version, build, ...contract } = data;
+  assert.deepEqual(contract, { ...pilotConfig, jiraEnabled: false });
+  assert.equal(typeof version, 'string');
+  assert.equal(typeof build, 'string');
   assert.equal(config.headers['Cache-Control'], 'no-store');
   for (const url of ['/api/calibration', '/api/upload', '/api/add-framework', '/api/jira/search']) {
     for (const suffix of ['', '?pilotMode=false&uploads=true', '/']) {
