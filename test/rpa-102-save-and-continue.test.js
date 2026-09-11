@@ -33,6 +33,52 @@ function savedDraft(window) {
   return null;
 }
 
+test('partial and impossible required dates stay on the step, and a completed correction saves', async (t) => {
+  const app = await bootApp(); t.after(() => app.close());
+  const { document: d, window } = app;
+  const step = await onPlanDetails(app);
+  completeStep(app, step);
+  const native = d.querySelector('[data-field="projectDecision"]');
+  const date = native.closest('.date-control');
+  const parts = ['day', 'month', 'year'].map(part => date.querySelector('.date-' + part));
+  const enter = values => {
+    native.value = '';
+    parts.forEach((part, i) => { part.value = values[i]; });
+    parts[2].dispatchEvent(new window.Event('input', { bubbles: true }));
+  };
+  for (const values of [['12', '', ''], ['31', 'Feb', '2026']]) {
+    enter(values);
+    step.querySelector('.step-continue').click();
+    assert.deepEqual(visible(d), ['plan-details']);
+    assert.equal(summaryOf(step).hidden, false);
+    assert.ok(linksOf(step).includes('Enter a complete, valid project decision date'));
+    assert.equal(d.activeElement, summaryOf(step));
+    step.querySelector('.step-all').click();
+    const task = Array.from(d.querySelectorAll('.task-item')).find(row => text(row.querySelector('.task-name')) === 'Plan details');
+    assert.equal(text(task.querySelector('.task-status')), 'Incomplete');
+    d.querySelector('.task-link').click();
+  }
+  enter(['12', 'Oct', '2026']);
+  step.querySelector('.step-continue').click();
+  assert.deepEqual(visible(d), ['context']);
+  assert.equal(savedDraft(window).fields.projectDecision, '2026-10-12');
+});
+
+test('Save and continue commits a complete date still buffered in its visible segments', async (t) => {
+  const app = await bootApp(); t.after(() => app.close());
+  const step = await onPlanDetails(app);
+  completeStep(app, step);
+  const input = app.document.querySelector('[data-field="projectDecision"]');
+  const group = input.closest('.date-control');
+  input.value = '';
+  group.querySelector('.date-day').value = '14';
+  group.querySelector('.date-month').value = 'Oct';
+  group.querySelector('.date-year').value = '2026';
+  step.querySelector('.step-continue').click();
+  assert.deepEqual(visible(app.document), ['context']);
+  assert.equal(savedDraft(app.window).fields.projectDecision, '2026-10-14');
+});
+
 test('the button says what it does, and nothing is judged before it is pressed', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
@@ -55,7 +101,7 @@ test('pressing it on an incomplete section shows the summary, takes focus there,
   assert.equal(summary.getAttribute('role'), 'alert');
   assert.equal(text(summary.querySelector('.error-summary-title')), 'There is a problem');
   assert.equal(d.activeElement, summary, 'focus moves to the summary');
-  assert.deepEqual(linksOf(step), ['Enter the jira project', 'Enter the lead researcher', 'Enter the project requester', 'Enter the project decision', 'Enter the research readout']);
+  assert.deepEqual(linksOf(step), ['Enter the jira project', 'Enter the lead researcher', 'Enter the project requester', 'Enter a complete, valid project decision date', 'Enter a complete, valid research readout date']);
   assert.deepEqual(errorsOf(step), linksOf(step), 'the same message at the field');
   const lead = d.querySelector('[data-field="leadResearcher"]');
   const group = lead.closest('.mf');
@@ -76,7 +122,7 @@ test('a summary link puts focus in the field; filling it takes its error away; t
   step.querySelectorAll('.error-summary-link')[1].click();
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus');
-  assert.deepEqual(linksOf(step), ['Enter the jira project', 'Enter the project requester', 'Enter the project decision', 'Enter the research readout']);
+  assert.deepEqual(linksOf(step), ['Enter the jira project', 'Enter the project requester', 'Enter a complete, valid project decision date', 'Enter a complete, valid research readout date']);
   assert.equal(d.querySelector('[data-field="leadResearcher"]').closest('.mf').classList.contains('field-invalid'), false);
   completeStep(app, step);
   assert.equal(summaryOf(step).hidden, true, 'nothing left to say');
