@@ -23,6 +23,47 @@ const rows = (d) => Array.from(d.querySelectorAll('.task-item')).map((li) => ({
 const statusOf = (d, name) => rows(d).find((r) => r.name === name);
 const settle = (d) => waitFor(() => d.querySelectorAll('.task-item').length === 6).then(() => new Promise((r) => setTimeout(r, 160)));
 
+test('editing an earlier answer preserves access to another completed section', async (t) => {
+  const app = await bootApp(); t.after(() => app.close());
+  const { document: d, window } = app;
+  d.querySelector('.task-link').click();
+  completeStep(app, steps(d)[1]);
+  steps(d)[1].querySelector('.step-continue').click();
+  completeStep(app, steps(d)[2]);
+  steps(d)[2].querySelector('.step-continue').click();
+  steps(d)[3].querySelector('.step-back').click();
+  steps(d)[2].querySelector('.step-back').click();
+  setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
+  steps(d)[1].querySelector('.step-all').click();
+  assert.equal(statusOf(d, 'Context').status, 'Completed');
+  assert.equal(statusOf(d, 'Context').linked, true);
+  Array.from(d.querySelectorAll('.task-link')).find(b => text(b) === 'Context').click();
+  assert.deepEqual(visible(d), ['context']);
+  assert.equal(statusOf(d, 'Research').linked, false, 'unfinished later work remains locked');
+});
+
+test('fresh blocked fragments return to the task list without creating a draft', async (t) => {
+  for (const slug of ['context', 'review']) {
+    const app = await bootApp({ url: 'https://research-plan.test/#' + slug });
+    t.after(() => app.close());
+    assert.deepEqual(visible(app.document), ['sections']);
+    assert.equal(app.window.location.hash, '#sections');
+    assert.equal(app.window.localStorage.getItem('research-plan-app:draft'), null);
+  }
+});
+
+test('an incoming unlocked link is resolved against the restored answers', async (t) => {
+  const source = await bootApp(); t.after(() => source.close());
+  source.document.querySelector('.task-link').click();
+  completeStep(source, steps(source.document)[1]);
+  steps(source.document)[1].querySelector('.step-continue').click();
+  const draft = JSON.parse(source.window.localStorage.getItem('research-plan-app:draft'));
+  draft.ui.section = 'plan-details';
+  const restored = await bootApp({ draft, url: 'https://research-plan.test/#context' });
+  t.after(() => restored.close());
+  assert.deepEqual(visible(restored.document), ['context']);
+});
+
 test('the list is first, names the six sections, and at the start only Plan details can be started', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());

@@ -5130,6 +5130,8 @@
     return sectionSummary(stepEl);
   }
   function stepLocked(i) {
+    // Earlier edits must not remove access to another completed section.
+    if (stepSummary(i).complete) return false;
     for (let k = 1; k < i; k++) if (!stepSummary(k).complete) return true;
     return false;
   }
@@ -5240,11 +5242,17 @@
       const i = stepIndexForSlug(location.hash.slice(1));
       if (i >= 0 && i !== currentStep) showStep(i, { fromHash: true });
     });
-    const fromHash = stepIndexForSlug(location.hash.slice(1));
-    // Arriving without a hash leaves the URL alone: writing one here would
-    // make the draft's remembered step, restored a moment later, look
-    // overruled by a URL nobody typed.
-    showStep(fromHash >= 0 ? fromHash : 0, { silent: true, keepUrl: fromHash < 0 });
+    // Resolve the URL after defaults and saved answers have been loaded.
+    showStep(0, { silent: true, keepUrl: true });
+  }
+  function restoreStepPosition(draft) {
+    const requested = stepIndexForSlug(location.hash.slice(1));
+    if (requested >= 0 && showStep(requested, { silent: true })) return;
+    const saved = stepIndexForSlug(draft?.ui?.section || '');
+    // Only an actual saved position gets the restoration exception. A new
+    // incoming fragment is checked against the same locks as a clicked link.
+    showStep(saved >= 0 ? saved : 0, { silent: true, force: saved >= 0,
+      keepUrl: requested < 0 && saved < 0 });
   }
   // silent: arriving (boot or restore) — no focus, no scroll, no save, and the
   // history entry is replaced rather than pushed. fromHash: the browser moved
@@ -5254,7 +5262,7 @@
     i = Math.max(0, Math.min(steps.length - 1, i));
     // A locked section cannot be entered by a link, a hash or Continue. A
     // restored draft may still land on it: it was reachable when saved.
-    if (!opts.silent && !opts.force && stepLocked(i)) return false;
+    if (!opts.force && stepLocked(i)) return false;
     steps.forEach((s, k) => { s.hidden = k !== i; });
     const stepEl = steps[i];
     currentStep = i;
@@ -5844,8 +5852,7 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
-    // Back to the step the plan was left on — unless the URL already says.
-    if (!location.hash.slice(1)) { const i = stepIndexForSlug(draft.ui?.section || ''); if (i >= 0) showStep(i, { silent: true }); }
+    restoreStepPosition(draft);
     if (syncCommentsReveal) syncCommentsReveal();
   }
 
@@ -6018,7 +6025,7 @@
   }
 
   function initDraftPersistence() {
-    restoreDraft();
+    if (!restoreDraft()) restoreStepPosition(null);
     bindDraftPersistence();
   }
 
