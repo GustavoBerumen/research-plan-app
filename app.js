@@ -3997,6 +3997,7 @@
       out.classList.toggle('char-count-over', used > recommended);
     }
     textarea.addEventListener('input', render);
+    textarea._refreshCharCount = render;
     render();
     return out;
   }
@@ -6201,6 +6202,7 @@
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
+      if (typeof el._refreshCharCount === 'function') el._refreshCharCount();
     });
     // Radios are neither text inputs nor textareas, so the loops above miss
     // them: a Sample Size chosen before the reset stayed selected and was
