@@ -5084,6 +5084,47 @@
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
   }
 
+  // ---------- the options menu (RPA-106) ----------
+  // One Menu button in the bar opens a panel: the plan's name, Save progress,
+  // and the four actions that used to sit in the bar. Escape and a click
+  // outside close it; an action closes it too, except Restore, which is
+  // about to open a file dialog. Save progress saves at the press and says
+  // so, because autosave is silent and people want to be sure.
+  function initOptionsMenu() {
+    const toggle = document.getElementById('menu-btn');
+    const menu = document.getElementById('options-menu');
+    if (!toggle || !menu) return;
+    const setOpen = (open) => {
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    toggle.addEventListener('click', () => setOpen(menu.hidden));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) { setOpen(false); toggle.focus(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (menu.hidden) return;
+      if (menu.contains(e.target) || toggle.contains(e.target)) return;
+      setOpen(false);
+    });
+    menu.querySelectorAll('button').forEach((b) => {
+      if (b.id === 'restore-backup-btn') return;
+      b.addEventListener('click', () => setOpen(false));
+    });
+    const name = document.getElementById('options-plan-name');
+    const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
+    const showName = () => { name.textContent = title().trim() || 'Untitled plan'; };
+    doc.addEventListener('input', (e) => { if (e.target && e.target.getAttribute('data-field') === 'researchTitle') showName(); });
+    showName();
+    const save = document.getElementById('save-progress-btn');
+    const status = document.getElementById('save-status');
+    save.addEventListener('click', () => {
+      saveDraft();
+      const now = new Date();
+      status.textContent = 'Saved at ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '.';
+    });
+  }
+
   // ---------- clear form ----------
   // ---------- draft persistence (localStorage) ----------
   // The whole form is snapshotted under one key, saved debounced behind
@@ -6397,6 +6438,7 @@
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
+        initOptionsMenu();
       })
       .catch(showLoadError);
   });

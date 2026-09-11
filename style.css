@@ -77,6 +77,17 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .service-name:hover{border-bottom-color:var(--link)}
 .service-name:focus-visible{outline:3px solid var(--focus);background:var(--focus);border-bottom-color:var(--ink)}
 .tb-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+/* The options menu (RPA-106): one Menu button, a panel under the bar. */
+.site-bar{position:relative}
+.menu-btn[aria-expanded="true"]{background:var(--ink);color:#fff}
+.options-menu{position:absolute;right:24px;top:100%;z-index:101;min-width:300px;max-width:calc(100% - 48px);background:#fff;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:16px;display:grid;gap:12px}
+.options-plan-name{margin:0;font-weight:700;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.menu-extra{display:grid;gap:6px;padding-bottom:12px;border-bottom:1px solid var(--border-light)}
+.menu-extra .btn{width:100%}
+#save-status{margin:0;font-size:var(--text-sm);color:var(--text-2);min-height:1.2em}
+.options-menu .tb-btns{flex-direction:column;align-items:stretch;justify-content:flex-start}
+.options-menu .tb-btns .btn{width:100%;text-align:left}
+@media screen and (max-width:600px){.options-menu{left:12px;right:12px;max-width:none}}
 /* Phase banner: same shape as GOV.UK's — a tag and a sentence under a rule —
    and a single element, so ending the pilot is one deletion. */
 .phase-banner{max-width:960px;margin:0 auto;padding:8px 24px 10px;border-top:1px solid var(--border);display:flex;align-items:baseline;gap:10px;font-size:var(--text-sm);color:var(--ink)}

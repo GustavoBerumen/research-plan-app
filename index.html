@@ -19,12 +19,24 @@
 <header class="site-header" role="banner">
   <div class="site-bar">
     <a class="service-name" href="./">Research Plan</a>
-    <div class="tb-btns">
-      <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
-      <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
-      <input id="backup-file" type="file" accept=".json,application/json" aria-label="Choose a plan backup" hidden>
-      <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
-      <button class="btn btn-dark" id="print-btn">↓ Print / Save as PDF</button>
+    <!-- RPA-106. The actions live in one menu, the way the model application
+         keeps them: a Menu button, then the plan's name, Save progress, and
+         the same four actions as before with the same ids, in the same order.
+         No sign out until there is a sign in (RPA-99). -->
+    <button class="btn btn-ghost menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="options-menu">Menu</button>
+    <div class="options-menu" id="options-menu" hidden>
+      <p class="options-plan-name" id="options-plan-name">Untitled plan</p>
+      <div class="menu-extra">
+        <button class="btn btn-ghost" id="save-progress-btn" type="button">Save progress</button>
+        <p id="save-status" role="status" aria-live="polite"></p>
+      </div>
+      <div class="tb-btns">
+        <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
+        <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
+        <input id="backup-file" type="file" accept=".json,application/json" aria-label="Choose a plan backup" hidden>
+        <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
+        <button class="btn btn-dark" id="print-btn">↓ Print / Save as PDF</button>
+      </div>
     </div>
   </div>
   <!-- Removable on its own: delete this one element when the pilot ends and
