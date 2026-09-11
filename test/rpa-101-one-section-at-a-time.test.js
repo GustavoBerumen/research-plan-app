@@ -86,7 +86,7 @@ test('Continue and Back walk the steps, the URL follows, and the browser can dri
   await waitFor(() => visible(d)[0] === 'research', { message: 'hashchange did not navigate' });
 });
 
-test('the step is remembered in the draft and comes back on reload; a hash in the URL wins over it', async (t) => {
+test('the saved step returns on reload; only an unlocked URL overrides it', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -102,7 +102,7 @@ test('the step is remembered in the draft and comes back on reload; a hash in th
 
   const hashed = await bootApp({ draft: { version: 7, fields: {}, lists: {}, tables: {}, ui: { section: 'methodology' } }, url: 'http://localhost/#execution' });
   t.after(() => hashed.close());
-  assert.deepEqual(visible(hashed.document), ['execution'], 'the URL is the more deliberate of the two');
+  assert.deepEqual(visible(hashed.document), ['methodology'], 'an incoming locked URL cannot override a legitimate saved position');
 });
 
 test('a section heading and the review step\'s Change both go to the step, and Change lands on its first control', async (t) => {
