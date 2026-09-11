@@ -109,7 +109,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.savedAt = saved.savedAt; expected.ui.timelineVisible = false;
   // RPA-101: the draft remembers the step it was left on, and every
   // section's Additional information hatch is written, empty or not.
-  expected.ui.section = 'plan-details';
+  expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
   Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');
 

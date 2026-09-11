@@ -4947,7 +4947,11 @@
     const title = sectionEl.querySelector('.acc-title').textContent.trim();
     // Additional information is a hatch, not a question: an empty one must
     // not hold a section at "incomplete".
-    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field:not(.field-custom)'));
+    // Nor is an optional field a question a section is incomplete without:
+    // with sections locked until the one before is complete (RPA-100), a
+    // required Hypothesis would hold everyone at Research.
+    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field:not(.field-custom)'))
+      .filter((f) => !f.querySelector('.fopt'));
     const answered = fields.filter(fieldHasContent).length;
 
     // Currency, only where evaluation exists at all.
@@ -5017,7 +5021,8 @@
         change.textContent = 'Change';
         change.addEventListener('click', () => {
           const i = steps.indexOf(sectionEl);
-          if (i >= 0) showStep(i);
+          // Change is a deliberate act from Review, past every lock.
+          if (i >= 0) showStep(i, { force: true });
           else {
             const body = sectionEl.querySelector('.acc-body');
             if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
@@ -5101,19 +5106,89 @@
   // Back button both land where they should.
   let steps = [];
   let currentStep = -1;
+
+  // ---------- the task list (RPA-100) ----------
+  // Step 0 is a hub: every section listed with its state, on the GOV.UK
+  // task-list pattern. A section is locked until every one before it is
+  // complete; a completed section can always be returned to.
+  function headerSummary(headerEl) {
+    const fields = Array.from(headerEl.querySelectorAll('.mf'))
+      .filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
+    const answered = fields.filter(fieldHasContent).length;
+    return { total: fields.length, answered, complete: fields.length > 0 && answered === fields.length };
+  }
+  function reviewSummaryOf(reviewEl) {
+    const fields = Array.from(reviewEl.querySelectorAll('.review-signoffs .field'));
+    const answered = fields.filter(fieldHasContent).length;
+    return { total: fields.length, answered, complete: fields.length > 0 && answered === fields.length };
+  }
+  function stepSummary(i) {
+    const stepEl = steps[i];
+    if (!stepEl || stepEl.classList.contains('task-list-step')) return { total: 0, answered: 0, complete: true };
+    if (stepEl.classList.contains('doc-header')) return headerSummary(stepEl);
+    if (stepEl.classList.contains('review-step')) return reviewSummaryOf(stepEl);
+    return sectionSummary(stepEl);
+  }
+  function stepLocked(i) {
+    for (let k = 1; k < i; k++) if (!stepSummary(k).complete) return true;
+    return false;
+  }
+  let taskListEl = null;
+  function renderTaskList() {
+    const hub = el('section', 'task-list-step', { 'aria-labelledby': 'task-list-heading' });
+    const h = el('h2', 'step-heading', { id: 'task-list-heading', tabindex: '-1' });
+    h.textContent = 'Your research plan';
+    const intro = el('p', 'task-list-intro');
+    intro.textContent = 'Complete the sections in order. You can return to a completed section at any time.';
+    const progress = el('p', 'task-list-progress', { 'aria-live': 'polite' });
+    const list = el('ul', 'task-list');
+    hub.append(h, intro, progress, list);
+    taskListEl = { hub, list, progress };
+    return hub;
+  }
+  function refreshTaskList() {
+    if (!taskListEl || !steps.length) return;
+    const { list, progress } = taskListEl;
+    list.replaceChildren();
+    let done = 0;
+    for (let i = 1; i < steps.length; i++) {
+      const s = stepSummary(i);
+      const locked = stepLocked(i);
+      if (s.complete) done++;
+      const item = el('li', 'task-item' + (locked ? ' task-item-locked' : ''));
+      const name = locked ? el('span', 'task-name') : el('button', 'task-name task-link', { type: 'button' });
+      name.textContent = steps[i].dataset.stepTitle;
+      if (!locked) name.addEventListener('click', () => showStep(i));
+      const status = el('strong', 'task-status');
+      let state;
+      if (locked) { state = 'Cannot start yet'; status.classList.add('task-status-locked'); }
+      else if (s.complete) { state = 'Completed'; status.classList.add('task-status-done'); }
+      else if (s.answered > 0) { state = 'Incomplete'; status.classList.add('task-tag'); }
+      else { state = 'Not yet started'; status.classList.add('task-tag'); }
+      status.textContent = state;
+      status.id = 'task-status-' + steps[i].dataset.stepSlug;
+      name.setAttribute('aria-describedby', status.id);
+      item.append(name, status);
+      list.appendChild(item);
+    }
+    progress.textContent = 'You have completed ' + done + ' of ' + (steps.length - 1) + ' sections.';
+  }
   function currentStepSlug() { return currentStep >= 0 && steps[currentStep] ? steps[currentStep].dataset.stepSlug : ''; }
   function stepIndexForSlug(slug) { return slug ? steps.findIndex((s) => s.dataset.stepSlug === slug) : -1; }
   function buildSteps() {
     const header = doc.querySelector('.doc-header');
     const sections = Array.from(doc.querySelectorAll('.acc'));
     const review = doc.querySelector('.review-step');
-    steps = [header, ...sections, review].filter(Boolean);
-    const total = steps.length;
+    const hub = renderTaskList();
+    doc.insertBefore(hub, header || doc.firstChild);
+    steps = [hub, header, ...sections, review].filter(Boolean);
+    const total = steps.length;   // the hub counts as a step, not as a section
     steps.forEach((stepEl, i) => {
       stepEl.classList.add('step');
       stepEl.dataset.step = String(i);
       let title;
-      if (stepEl === header) { title = 'Plan details'; stepEl.dataset.stepSlug = 'plan-details'; }
+      if (stepEl === hub) { title = 'Your research plan'; stepEl.dataset.stepSlug = 'sections'; }
+      else if (stepEl === header) { title = 'Plan details'; stepEl.dataset.stepSlug = 'plan-details'; }
       else if (stepEl === review) { title = (review.querySelector('.review-h') || {}).textContent || 'Review'; stepEl.dataset.stepSlug = 'review'; }
       else {
         title = stepEl.querySelector('.acc-title').textContent.trim();
@@ -5126,24 +5201,41 @@
       back.hidden = i === 0;
       back.addEventListener('click', () => showStep(i - 1));
       const caption = el('p', 'step-caption');
-      caption.textContent = 'Section ' + (i + 1) + ' of ' + total;
-      top.append(back, caption);
-      stepEl.insertBefore(top, stepEl.firstChild);
+      caption.textContent = 'Section ' + i + ' of ' + (total - 1);
+      const all = el('button', 'step-all', { type: 'button' });
+      all.textContent = 'All sections';
+      all.addEventListener('click', () => showStep(0));
+      top.append(back, caption, all);
+      if (stepEl !== hub) stepEl.insertBefore(top, stepEl.firstChild);
       if (stepEl === header) {
         const h = el('h2', 'step-heading', { tabindex: '-1' });
         h.textContent = title;
         top.after(h);
       }
-      if (i < total - 1) {
+      if (stepEl !== hub && i < total - 1) {
         const nav = el('div', 'step-nav');
         const next = el('button', 'btn btn-dark step-continue', { type: 'button' });
         next.textContent = 'Continue';
-        next.addEventListener('click', () => showStep(i + 1));
-        nav.appendChild(next);
+        // Until RPA-102 and RPA-113 bring the error summary, an incomplete
+        // section says why Continue stayed put, in a line, rather than a
+        // button that does nothing.
+        const note = el('p', 'step-note', { role: 'status' });
+        note.textContent = 'Complete this section to continue.';
+        note.hidden = true;
+        next.addEventListener('click', () => { note.hidden = showStep(i + 1) !== false; });
+        stepEl.addEventListener('input', () => { note.hidden = true; });
+        nav.append(next, note);
         stepEl.appendChild(nav);
       }
       stepEl.hidden = true;
     });
+    // The list is only true at the moment it is drawn: redraw as the plan
+    // changes, the way the review summary does.
+    let pendingTasks = null;
+    const refreshTasks = () => { if (pendingTasks) window.clearTimeout(pendingTasks); pendingTasks = window.setTimeout(refreshTaskList, 120); };
+    doc.addEventListener('input', refreshTasks);
+    doc.addEventListener('change', refreshTasks);
+    refreshTaskList();
     window.addEventListener('hashchange', () => {
       const i = stepIndexForSlug(location.hash.slice(1));
       if (i >= 0 && i !== currentStep) showStep(i, { fromHash: true });
@@ -5158,8 +5250,11 @@
   // history entry is replaced rather than pushed. fromHash: the browser moved
   // us, so the URL is already right.
   function showStep(i, opts = {}) {
-    if (!steps.length) return;
+    if (!steps.length) return false;
     i = Math.max(0, Math.min(steps.length - 1, i));
+    // A locked section cannot be entered by a link, a hash or Continue. A
+    // restored draft may still land on it: it was reachable when saved.
+    if (!opts.silent && !opts.force && stepLocked(i)) return false;
     steps.forEach((s, k) => { s.hidden = k !== i; });
     const stepEl = steps[i];
     currentStep = i;
@@ -5168,7 +5263,8 @@
     if (!opts.fromHash && !opts.keepUrl) {
       try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + stepEl.dataset.stepSlug); } catch (e) { /* no history here */ }
     }
-    if (opts.silent) return;
+    refreshTaskList();
+    if (opts.silent) return true;
     const focusTarget = stepEl.querySelector('.step-heading, .acc-head, .review-h');
     if (focusTarget) {
       if (focusTarget.tagName !== 'BUTTON' && !focusTarget.hasAttribute('tabindex')) focusTarget.setAttribute('tabindex', '-1');
@@ -5176,6 +5272,7 @@
     }
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
     saveDraft();
+    return true;
   }
 
   // ---------- clear form ----------

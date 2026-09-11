@@ -175,7 +175,26 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .acc.step .acc-chevron{display:none}
 .acc.step .acc-head{cursor:default}
 .acc.step .acc-head:hover .acc-title{color:var(--ink)}
-.step-nav{display:flex;gap:12px;padding:6px 0 30px}
+.step-nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:6px 0 30px}
+.step-note{margin:0;font-size:var(--text);color:var(--ink)}
+.step-all{margin-left:auto;background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.step-all:hover{color:var(--link-hover)}
+.step-top{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+.step-top .step-caption{flex-basis:100%;order:2}
+/* The task list (RPA-100), on the GOV.UK task-list pattern. */
+.task-list-step{padding-top:22px}
+.task-list-intro{margin:6px 0 4px;color:var(--text-2)}
+.task-list-progress{margin:0 0 18px;font-weight:700}
+.task-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--border)}
+.task-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--border)}
+.task-name{font-size:var(--text);color:var(--ink)}
+.task-link{background:none;border:0;padding:0;font-family:inherit;color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left}
+.task-link:hover{color:var(--link-hover)}
+.task-item-locked .task-name{color:var(--text-2)}
+.task-status{font-size:var(--text-sm);white-space:nowrap}
+.task-tag{display:inline-block;padding:3px 8px 2px;background:var(--btn-2);color:var(--ink);font-weight:700;letter-spacing:.02em;text-transform:uppercase;font-size:12px}
+.task-status-done{font-weight:400;color:var(--ink)}
+.task-status-locked{font-weight:400;color:var(--text-2)}
 .acc-body[hidden]{display:none}
 
 /* ---------- Fields ---------- */
@@ -681,4 +700,4 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
 
-@media print{.step[hidden]{display:block!important}.step-top,.step-nav{display:none!important}}
+@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step{display:none!important}}

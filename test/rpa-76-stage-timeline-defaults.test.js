@@ -162,7 +162,9 @@ test('editing a stage makes it count', async (t) => {
   await waitFor(() => {
     const row = Array.from(document.querySelectorAll('.review-row'))
       .find((r) => r.querySelector('.review-name').textContent === 'Execution');
-    return /^1 of \d+ fields$/.test(row.querySelector('.review-state').textContent);
+    // Since RPA-100 completeness counts required fields only, and Planned
+    // Schedule is Execution's only one: a real edit may complete it outright.
+    return /^(1 of \d+ fields|complete)$/.test(row.querySelector('.review-state').textContent);
   }, { message: 'a real edit should count, even in a pre-filled row' });
 });
 
