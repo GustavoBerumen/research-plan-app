@@ -3433,6 +3433,7 @@
     // draft needs, so a plan above the limit keeps every block it had.
     const cap = field.max || 0;
     const applyCap = () => { if (cap) addBtn.hidden = list.querySelectorAll('.custom-field-block').length >= cap; };
+    list._refreshCap = applyCap;
     applyCap();
     wrap.appendChild(addBtn);
 
@@ -6299,6 +6300,7 @@
     });
     doc.querySelectorAll('.custom-fields-list').forEach((list) => {
       list.querySelectorAll('.custom-field-block').forEach((block) => block.remove());
+      if (typeof list._refreshCap === 'function') list._refreshCap();
     });
     // Methods groups are rebuilt from scratch rather than trimmed row by row
     // like the lists above: the group count tracks Research Questions, so
