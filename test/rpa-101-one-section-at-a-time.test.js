@@ -24,6 +24,25 @@ const steps = (d) => Array.from(d.querySelectorAll('.step'));
 const visible = (d) => steps(d).filter((s) => !s.hidden).map((s) => s.dataset.stepSlug);
 const continueOn = (step) => step.querySelector('.step-continue');
 const backOn = (step) => step.querySelector('.step-back');
+
+test('Clear Form reopens every capped hatch for the next plan', async (t) => {
+  const app = await bootApp();
+  t.after(() => app.close());
+  const hatches = Array.from(app.document.querySelectorAll('.field-custom'));
+  for (const hatch of hatches) {
+    hatch.querySelector('.add-btn').click();
+    assert.equal(hatch.querySelector('.add-btn').hidden, true);
+  }
+  app.document.getElementById('clear-btn').click();
+  for (const hatch of hatches) {
+    assert.equal(hatch.querySelectorAll('.custom-field-block').length, 0);
+    const add = hatch.querySelector('.add-btn');
+    assert.equal(add.hidden, false, 'a cleared hatch can be used again');
+    add.click();
+    assert.equal(hatch.querySelectorAll('.custom-field-block').length, 1);
+    assert.equal(add.hidden, true, 'the one-block cap still applies');
+  }
+});
 function savedDraft(window) {
   const ls = window.localStorage;
   for (let i = 0; i < ls.length; i++) {
