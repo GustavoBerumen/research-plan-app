@@ -610,6 +610,8 @@
     const addBtn = el('button', 'file-add-btn', { type: 'button' });
     addBtn.textContent = '+';
     addBtn.title = 'Add a file';
+    addBtn.setAttribute('aria-label', 'Add a file');   // the row pass adds ", row N"
+    fileInp.setAttribute('aria-label', 'File');
     restrictAction(addBtn, 'uploads');
     fileInp.disabled = !capabilities.uploads;
     getConfig().then(() => { fileInp.disabled = !capabilities.uploads; });
@@ -736,6 +738,12 @@
       if (!col) return;
       const control = td.querySelector('.date-control, select, textarea, input.cinput:not(.select-other-input)');
       if (control) control.setAttribute('aria-label', col.label + ', row ' + rowNumber);
+      // A file cell's .cinput is the hidden value carrier. The native file input
+      // and its "+" button are what a person actually reaches, so name those too.
+      const fileInput = td.querySelector('input.file-native');
+      if (fileInput) fileInput.setAttribute('aria-label', col.label + ', row ' + rowNumber);
+      const fileAdd = td.querySelector('.file-add-btn');
+      if (fileAdd) fileAdd.setAttribute('aria-label', 'Add a file, row ' + rowNumber);
     });
   }
 
@@ -1142,7 +1150,7 @@
           placeholder: 'Type a custom value…',
           'aria-label': col.label,
         });
-        const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead' });
+        const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead', 'aria-label': 'Choose from the list instead' });
         backBtn.textContent = '▾';
         otherRow.append(otherInput, backBtn);
         otherRow.hidden = true;
@@ -2253,7 +2261,7 @@
     const badge = el('span', 'eval-badge');
     const hl = el('span', 'eval-hl');
     hl.textContent = 'Framework Suggestion';
-    const dismiss = el('button', 'eval-x', { type: 'button' });
+    const dismiss = el('button', 'eval-x', { type: 'button', 'aria-label': 'Close the framework suggestion', title: 'Close' });
     dismiss.textContent = '✕';
     head.append(badge, hl, dismiss);
 
@@ -2867,7 +2875,7 @@
     badge.textContent = 'SUGGESTED METHODS';
     const hl = el('span', 'eval-hl');
     hl.textContent = 'Methods Suggestion';
-    const dismiss = el('button', 'eval-x', { type: 'button' });
+    const dismiss = el('button', 'eval-x', { type: 'button', 'aria-label': 'Close the methods suggestion', title: 'Close' });
     dismiss.textContent = '✕';
     head.append(badge, hl, dismiss);
     const body = el('div', 'fw-body');
@@ -4467,7 +4475,7 @@
         type: 'text',
         placeholder: 'Type your own value…',
       });
-      const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead' });
+      const backBtn = el('button', 'select-other-back', { type: 'button', title: 'Choose from the list instead', 'aria-label': 'Choose from the list instead' });
       backBtn.textContent = '▾';
       otherRow.append(otherInput, backBtn);
       otherRow.hidden = true;
