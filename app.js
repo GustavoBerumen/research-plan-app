@@ -263,6 +263,14 @@
         return;
       }
 
+      // An indented "Guidance:" line is longer help, shown on demand behind a
+      // link under the hint (RPA-107). Several lines make several paragraphs.
+      const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
+      if (guideMatch && currentField) {
+        currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
+        return;
+      }
+
       const exMatch = raw.match(/^\s+(Good|Bad):\s*(.*)$/i);
       if (exMatch && currentField) {
         currentField.examples = currentField.examples || {};
@@ -3950,6 +3958,47 @@
     });
   }
 
+  // Guidance text allows *italics* like a hint, and [text](url) for a link
+  // to a page that says more, which is the other half of what RPA-107 asks.
+  function appendGuidanceText(target, text) {
+    text.split(/(\[[^\]\n]+\]\([^)\s]+\))/).forEach((part) => {
+      if (!part) return;
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      if (link) {
+        const a = el('a', 'field-guidance-link', { href: link[2], target: '_blank', rel: 'noopener' });
+        a.textContent = link[1];
+        target.appendChild(a);
+      } else {
+        appendHintText(target, part);
+      }
+    });
+  }
+
+  // The GOV.UK details component, closed, under the field's hint: guidance
+  // only some people need, read on demand as they answer (RPA-107). Not part
+  // of the control's description, so a screen reader is not read the whole
+  // essay on arrival; the summary is a link-styled disclosure they can open.
+  function renderGuidance(field) {
+    const details = el('details', 'field-guidance');
+    const summary = el('summary', 'field-guidance-summary');
+    summary.textContent = 'More about this question';
+    const body = el('div', 'field-guidance-body');
+    field.guidance.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    details.append(summary, body);
+    return details;
+  }
+
+  // After the document is built, so no hint call site has to know: each
+  // field with guidance gets its details right after its hint, found by the
+  // hint's id (single fields end in -hint, repeated fields in -label-hint).
+  function attachGuidance(schema) {
+    const fields = [].concat(...schema.sections.map((s) => s.fields));
+    fields.filter((f) => f.guidance && f.guidance.length).forEach((f) => {
+      const hint = doc.querySelector('#field-' + f.key + '-hint, #field-' + f.key + '-label-hint');
+      if (hint) hint.insertAdjacentElement('afterend', renderGuidance(f));
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
@@ -5082,6 +5131,7 @@
     loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
+    attachGuidance(schema);
   }
 
   // ---------- clear form ----------

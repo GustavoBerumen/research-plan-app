@@ -78,6 +78,11 @@ toggle panel under the field:
 Wrap words in *asterisks* inside a Hint to italicise them, e.g.
   Hint: structured as *If we do this, then this will happen.*
 
+An indented "Guidance:" line is longer help shown on demand, behind a
+"More about this question" link under the hint (RPA-107). Several
+Guidance lines make several paragraphs; *italics* work as in a Hint, and
+[text](url) makes a link to a page that says more.
+
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
@@ -103,18 +108,25 @@ Last updated (date, key=lastUpdated):
 
 Background (textarea, eval, rows=2, key=background):
   Hint: Relevant context and essential terms needed to understand the project.
+  Guidance: Say what the product or service is, who uses it, and what has changed or is about to. Two or three sentences a colleague outside the team could follow.
+  Guidance: Leave out what you plan to do about it; that is the goal.
 Goal (textarea, eval, rows=2, key=goal): 
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
 Problem Statement (textarea, eval, rows=2, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
+  Guidance: Name the problem as the people who have it would recognise it, and the evidence that it exists: support tickets, analytics, an earlier study.
+  Guidance: A problem statement does not contain a solution.
 # Research
 
 Objective (textarea, eval, rows=2, key=objective): 
   Hint: The purpose of the study: what must be learned to guide product decisions.
 Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
+  Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one.
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
+  Guidance: Ask what you need to learn, not what you plan to do. A good question can be answered by watching or asking people, has one subject, and would change a decision whichever way it comes out.
+  Guidance: Three is usually enough for one study; see the [the service manual on user research](https://www.gov.uk/service-manual/user-research).
 Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
 
@@ -145,6 +157,7 @@ User Groups (list, prose, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
+  Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 
 # Execution
 

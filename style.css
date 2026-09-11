@@ -550,6 +550,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 /* RPA-91: the way back to a chosen framework. GOV.UK's details pattern —
    closed, a summary that reads as a link, the body expanding in place. */
 .fw-about{margin:10px 0 0;font-size:var(--text)}
+/* Guidance on demand under a hint (RPA-107): the same disclosure as the framework's About block. */
+.field-guidance{margin:2px 0 8px;font-size:var(--text)}
+.field-guidance-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
+.field-guidance-summary:hover{color:var(--link-hover)}
+.field-guidance-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
+.field-guidance[open] .field-guidance-summary{margin-bottom:8px}
+.field-guidance-body{border-left:4px solid var(--border);padding:2px 0 2px 16px;color:var(--text-2)}
+.field-guidance-body p{margin:0 0 8px}.field-guidance-body p:last-child{margin-bottom:0}
 .fw-about-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
 .fw-about-summary:hover{color:var(--link-hover)}
 .fw-about-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
@@ -636,7 +644,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      ruler's column positions, without changing screen or long-plan charts. */
   .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
   .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
-  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.field-guidance,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}
