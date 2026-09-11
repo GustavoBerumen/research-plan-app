@@ -234,6 +234,34 @@ async function bootApp(options = {}) {
   };
 }
 
+// Fills every required control of one step (RPA-100): the cheapest true
+// answer per control type, so a section reads as complete and the one after
+// it unlocks. Optional fields and the Additional information hatch are
+// skipped, because completeness skips them too.
+function completeStep(app, stepEl) {
+  const { window } = app;
+  const groups = stepEl.classList.contains('doc-header')
+    ? Array.from(stepEl.querySelectorAll('.mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'))
+    : stepEl.classList.contains('review-step')
+      ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
+      : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
+  groups.forEach((g) => {
+    const radio = g.querySelector('input[type=radio]');
+    if (radio) { radio.click(); return; }
+    // Steps other than the current one are hidden by design, so hidden is no
+    // reason to skip. A date group is answered through its native date
+    // input, never by typing into a day segment.
+    const pick = (sel) => Array.from(g.querySelectorAll(sel)).find((c) => !c.disabled);
+    const ctl = pick('input[type=date][data-field]') || pick('textarea') || pick('input[type=text][data-field]') || pick('input[type=text]') || pick('input:not([type]):not([type=hidden])') || pick('select');
+    if (!ctl) return;
+    if (ctl.tagName === 'SELECT') {
+      if (ctl.options.length > 1) { ctl.value = ctl.options[1].value; ctl.dispatchEvent(new window.Event('change', { bubbles: true })); ctl.dispatchEvent(new window.Event('input', { bubbles: true })); }
+      return;
+    }
+    setValue(window, ctl, ctl.type === 'date' ? '2026-10-01' : 'Filled.');
+  });
+}
+
 module.exports = {
   DRAFT_KEY,
   withFieldFlag,
@@ -241,5 +269,4 @@ module.exports = {
   bootApp,
   listInputs,
   setValue,
-  waitFor,
-};
+  waitFor, completeStep };
