@@ -52,6 +52,9 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
+  count=N           — textarea fields only: shows a running character count
+                       against N, the length of a good answer. A
+                       recommendation, never a limit (RPA-114).
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -101,17 +104,17 @@ Last updated (date, key=lastUpdated):
 
 # Context {open}
 
-Background (textarea, eval, rows=2, key=background):
+Background (textarea, eval, rows=2, count=400, key=background):
   Hint: Relevant context and essential terms needed to understand the project.
-Goal (textarea, eval, rows=2, key=goal): 
+Goal (textarea, eval, rows=2, count=200, key=goal): 
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
-Problem Statement (textarea, eval, rows=2, key=problemStatement): 
+Problem Statement (textarea, eval, rows=2, count=300, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
-Objective (textarea, eval, rows=2, key=objective): 
+Objective (textarea, eval, rows=2, count=200, key=objective): 
   Hint: The purpose of the study: what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
+Hypothesis (textarea, optional, eval, rows=1, count=150, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
@@ -221,7 +224,7 @@ Additional information (custom-fields, key=additionalResources):
      sits above the approvals, because feedback offered after sign-off has
      missed its moment. It keeps the key `comments`: a key is an identifier,
      not a description, so no saved draft moves. -->
-Feedback (textarea, optional, key=comments):
+Feedback (textarea, optional, count=500, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
 Sign off: Lead researcher (text, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.

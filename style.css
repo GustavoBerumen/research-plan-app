@@ -187,6 +187,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    floor below. Autosize still grows it the moment anyone types. */
 textarea.finput.finput-rows{min-height:0}
 textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+.char-count{margin:4px 0 0;font-size:var(--text-sm);color:var(--text-2)}
+.char-count-over{color:var(--ink)}
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 
 /* ---------- Methods groups ---------- */
@@ -636,7 +638,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      ruler's column positions, without changing screen or long-plan charts. */
   .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
   .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
-  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.char-count,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}

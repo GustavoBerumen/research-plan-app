@@ -160,6 +160,10 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "count=N" says how long a good answer is, and the textarea shows a
+      // running character count against it (RPA-114). A recommendation,
+      // never a limit: nothing stops a longer answer.
+      count: (() => { const part = typeParts.find((t) => /^count=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
@@ -3975,6 +3979,28 @@
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
   }
 
+  // The GOV.UK character count, as a recommendation (RPA-114): the message
+  // says what a good answer is before anything is typed, then how much has
+  // been written against it. A live region, so a screen reader hears the
+  // count change without leaving the field; described-by, so the field
+  // announces it on arrival. Counted the way the design system counts:
+  // characters, spaces included.
+  function renderCharCount(textarea, recommended, controlId) {
+    const out = el('p', 'char-count', { id: controlId + '-count', 'aria-live': 'polite' });
+    const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    textarea.setAttribute('aria-describedby', describedBy.concat(out.id).join(' '));
+    function render() {
+      const used = textarea.value.length;
+      out.textContent = used === 0
+        ? 'A good answer is around ' + recommended + ' characters.'
+        : 'You have written ' + used + ' of around ' + recommended + ' characters.';
+      out.classList.toggle('char-count-over', used > recommended);
+    }
+    textarea.addEventListener('input', render);
+    render();
+    return out;
+  }
+
   // ---------- Methods combobox (search suggestions, still free text) ----------
   // Same reparent-to-<body>-with-fixed-position trick as the file-upload "+"
   // menu, so the dropdown escapes the Methodology accordion's overflow:hidden
@@ -4531,6 +4557,7 @@
     }
     input.id = controlId;
     describeControl(input, guidance);
+    if (isTextarea && field.count) wrap.appendChild(renderCharCount(input, field.count, controlId));
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
     const hint = signOffHint(field.key);
