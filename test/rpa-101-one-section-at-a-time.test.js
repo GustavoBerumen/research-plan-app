@@ -144,7 +144,7 @@ test('a section heading and the review step\'s Change both go to the step, and C
 test('every step prints, and the step chrome does not', () => {
   const print = CSS.slice(CSS.lastIndexOf('@media print'));
   assert.match(print, /\.step\[hidden\]\{display:block!important\}/);
-  assert.match(print, /\.step-top,\.step-nav,\.task-list-step\{display:none!important\}/);
+  assert.match(print, /\.step-top,\.step-nav,\.task-list-step,\.error-summary,\.field-error\{display:none!important\}/);
 });
 
 test('each section has one Additional information hatch, after its Evaluate control, and the head count leaves it out', async (t) => {

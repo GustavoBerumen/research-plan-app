@@ -4,10 +4,9 @@
 // GOV.UK task-list pattern: each with its state — Not yet started,
 // Incomplete, Completed — and locked ("Cannot start yet") until every
 // section before it is complete. A completed section can always be
-// returned to. A locked section refuses a link, a hash and Continue;
-// Continue says why it stayed, in a line, until RPA-102 and RPA-113 bring
-// the proper error summary. Completeness counts required fields only: an
-// optional Hypothesis must not hold everyone at Research.
+// returned to. A locked section refuses a link, a hash and Continue.
+// Completeness counts required fields only: an optional Hypothesis must not
+// hold everyone at Research.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -97,7 +96,8 @@ test('completing a section unlocks the next; starting one reads as Incomplete; t
   assert.equal(statusOf(d, 'Context').status, 'Incomplete');
 });
 
-test('a locked section refuses a link, a hash and Continue, and Continue says why in a line that goes when you type', async (t) => {
+test('a locked section refuses a link and a hash, and Save and continue holds an incomplete section', async (t) => {
+  // What Save and continue says when it holds is RPA-102 and RPA-113's, tested there.
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -108,18 +108,11 @@ test('a locked section refuses a link, a hash and Continue, and Continue says wh
   window.location.hash = '#plan-details';
   await waitFor(() => visible(d)[0] === 'plan-details');
   const nav = steps(d)[1];
-  const note = nav.querySelector('.step-note');
-  assert.equal(note.hidden, true);
   nav.querySelector('.step-continue').click();
-  assert.deepEqual(visible(d), ['plan-details'], 'incomplete: Continue stays');
-  assert.equal(note.hidden, false);
-  assert.equal(text(note), 'Complete this section to continue.');
-  assert.equal(note.getAttribute('role'), 'status');
-  setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'A');
-  assert.equal(note.hidden, true, 'typing takes the line away');
+  assert.deepEqual(visible(d), ['plan-details'], 'incomplete: it stays');
   completeStep(app, nav);
   nav.querySelector('.step-continue').click();
-  assert.deepEqual(visible(d), ['context'], 'complete: Continue goes on');
+  assert.deepEqual(visible(d), ['context'], 'complete: it goes on');
 });
 
 test('optional fields do not count: Research completes without a Hypothesis, and the review summary agrees', async (t) => {
