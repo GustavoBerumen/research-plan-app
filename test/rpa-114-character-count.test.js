@@ -19,6 +19,22 @@ const CSS = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 const TEMPLATE = fs.readFileSync(path.join(ROOT, 'research-plan-template.md'), 'utf8');
 const counterOf = (d, key) => d.querySelector('[data-field="' + key + '"]').closest('.field').querySelector('.char-count');
 
+test('Clear Form resets the count and over-recommendation styling without saving an empty draft', async (t) => {
+  const app = await bootApp();
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const textarea = d.querySelector('[data-field="background"]');
+  const counter = counterOf(d, 'background');
+  setValue(window, textarea, 'x'.repeat(450));
+  assert.equal(counter.classList.contains('char-count-over'), true);
+  d.getElementById('clear-btn').click();
+  assert.equal(textarea.value, '');
+  assert.equal(counter.textContent, 'A good answer is around 400 characters.');
+  assert.equal(counter.classList.contains('char-count-over'), false);
+  await new Promise(resolve => setTimeout(resolve, 550));
+  assert.equal(window.localStorage.getItem('research-plan-app:draft'), null);
+});
+
 test('exactly the fields the template gives a count to have one, with the recommended length in the message', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
