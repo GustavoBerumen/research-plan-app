@@ -4951,7 +4951,7 @@
     // with sections locked until the one before is complete (RPA-100), a
     // required Hypothesis would hold everyone at Research.
     const fields = requiredGroupsOf(sectionEl);
-    const answered = fields.filter(fieldHasContent).length;
+    const answered = fields.filter(requiredGroupComplete).length;
 
     // Currency, only where evaluation exists at all.
     const slug = (sectionEl.querySelector('.acc-body') || {}).id || '';
@@ -5121,7 +5121,7 @@
     return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
   }
   function groupsSummary(groups) {
-    const answered = groups.filter(fieldHasContent).length;
+    const answered = groups.filter(requiredGroupComplete).length;
     return { total: groups.length, answered, complete: groups.length > 0 && answered === groups.length };
   }
   function headerSummary(headerEl) { return groupsSummary(requiredGroupsOf(headerEl)); }
@@ -5149,6 +5149,7 @@
   }
   function groupMessage(g) {
     const label = groupLabel(g);
+    if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
     if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
     return 'Enter the ' + label.toLowerCase();
@@ -5156,7 +5157,16 @@
   function groupControl(g) {
     return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
   }
-  function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !fieldHasContent(g)); }
+  function requiredDateInput(g) {
+    // Tables retain their existing advisory completeness rule; a standalone
+    // required date must have all three valid segments, not merely one digit.
+    return g.querySelector('table') ? null : g.querySelector('.date-control input[type="date"]');
+  }
+  function requiredGroupComplete(g) {
+    const date = requiredDateInput(g);
+    return date ? Boolean(readDateSegments(date)) : fieldHasContent(g);
+  }
+  function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
   function clearGroupError(g) {
     const err = g.querySelector(':scope > .field-error');
     if (err) {
@@ -5308,6 +5318,11 @@
         top.insertAdjacentElement('afterend', summary);
         let errorsShowing = false;
         next.addEventListener('click', () => {
+          requiredGroupsOf(stepEl).forEach((g) => {
+            const input = requiredDateInput(g);
+            const parsed = input && readDateSegments(input);
+            if (parsed) setDateInputValue(input, parsed.iso);
+          });
           saveDraft();   // "Save" is a promise: kept even when the section is not done
           errorsShowing = showStepErrors(stepEl, summary, { focus: true });
           if (!errorsShowing) showStep(i + 1);
