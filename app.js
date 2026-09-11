@@ -4950,8 +4950,7 @@
     // Nor is an optional field a question a section is incomplete without:
     // with sections locked until the one before is complete (RPA-100), a
     // required Hypothesis would hold everyone at Research.
-    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field:not(.field-custom)'))
-      .filter((f) => !f.querySelector('.fopt'));
+    const fields = requiredGroupsOf(sectionEl);
     const answered = fields.filter(fieldHasContent).length;
 
     // Currency, only where evaluation exists at all.
@@ -5111,17 +5110,22 @@
   // Step 0 is a hub: every section listed with its state, on the GOV.UK
   // task-list pattern. A section is locked until every one before it is
   // complete; a completed section can always be returned to.
-  function headerSummary(headerEl) {
-    const fields = Array.from(headerEl.querySelectorAll('.mf'))
-      .filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
-    const answered = fields.filter(fieldHasContent).length;
-    return { total: fields.length, answered, complete: fields.length > 0 && answered === fields.length };
+  // The one rule for what a step requires. The task list, the review summary
+  // and the error summary all ask this, so they cannot disagree: required
+  // means not optional and not the Additional information hatch.
+  function requiredGroupsOf(stepEl) {
+    if (stepEl.classList.contains('doc-header')) {
+      return Array.from(stepEl.querySelectorAll('.mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
+    }
+    if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
   }
-  function reviewSummaryOf(reviewEl) {
-    const fields = Array.from(reviewEl.querySelectorAll('.review-signoffs .field'));
-    const answered = fields.filter(fieldHasContent).length;
-    return { total: fields.length, answered, complete: fields.length > 0 && answered === fields.length };
+  function groupsSummary(groups) {
+    const answered = groups.filter(fieldHasContent).length;
+    return { total: groups.length, answered, complete: groups.length > 0 && answered === groups.length };
   }
+  function headerSummary(headerEl) { return groupsSummary(requiredGroupsOf(headerEl)); }
+  function reviewSummaryOf(reviewEl) { return groupsSummary(requiredGroupsOf(reviewEl)); }
   function stepSummary(i) {
     const stepEl = steps[i];
     if (!stepEl || stepEl.classList.contains('task-list-step')) return { total: 0, answered: 0, complete: true };
@@ -5132,6 +5136,90 @@
   function stepLocked(i) {
     for (let k = 1; k < i; k++) if (!stepSummary(k).complete) return true;
     return false;
+  }
+  // ---------- errors on Save and continue (RPA-102, RPA-113) ----------
+  // The GOV.UK validation pattern: pressing Save and continue on a section
+  // with a required field empty shows an error summary at the top of the
+  // step — "There is a problem", one link per field — moves focus to it,
+  // and marks each field with a message above its control. Errors clear as
+  // the fields are filled; nothing is judged before the person asks to move.
+  function groupLabel(g) {
+    const l = g.querySelector('.flabel, .mlabel, .clbl, label');
+    return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
+  }
+  function groupMessage(g) {
+    const label = groupLabel(g);
+    if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
+    if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
+    return 'Enter the ' + label.toLowerCase();
+  }
+  function groupControl(g) {
+    return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
+  }
+  function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !fieldHasContent(g)); }
+  function clearGroupError(g) {
+    const err = g.querySelector(':scope > .field-error');
+    if (err) {
+      g.querySelectorAll('[aria-describedby]').forEach((c) => {
+        const ids = c.getAttribute('aria-describedby').split(/\s+/).filter((id) => id && id !== err.id);
+        if (ids.length) c.setAttribute('aria-describedby', ids.join(' ')); else c.removeAttribute('aria-describedby');
+      });
+      err.remove();
+    }
+    g.classList.remove('field-invalid');
+  }
+  let fieldErrorSeq = 0;
+  function markGroupError(g, message) {
+    if (g.querySelector(':scope > .field-error')) return;
+    const err = el('p', 'field-error', { id: 'field-error-' + (++fieldErrorSeq) });
+    const prefix = el('span', 'visually-hidden');
+    prefix.textContent = 'Error: ';
+    err.append(prefix, document.createTextNode(message));
+    // Above the control, below the hint: read in the order a person meets it.
+    const hint = g.querySelector(':scope > .field-hint-text, :scope > .field-guidance');
+    const anchor = g.querySelector(':scope > .field-guidance') || hint || g.querySelector(':scope > .flabel, :scope > .mlabel, :scope > label');
+    if (anchor) anchor.insertAdjacentElement('afterend', err); else g.insertBefore(err, g.firstChild);
+    const control = groupControl(g);
+    if (control) {
+      const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      control.setAttribute('aria-describedby', ids.concat(err.id).join(' '));
+    }
+    g.classList.add('field-invalid');
+  }
+  function renderErrorSummary() {
+    const box = el('div', 'error-summary', { role: 'alert', tabindex: '-1', 'aria-labelledby': 'error-summary-title-' + (++fieldErrorSeq) });
+    const title = el('h2', 'error-summary-title', { id: box.getAttribute('aria-labelledby') });
+    title.textContent = 'There is a problem';
+    const list = el('ul', 'error-summary-list');
+    box.append(title, list);
+    box.hidden = true;
+    return box;
+  }
+  // Draws the step's errors from scratch against what is missing now. With
+  // focus: the person just pressed the button, so the summary takes focus.
+  function showStepErrors(stepEl, summary, { focus }) {
+    const missing = missingGroups(stepEl);
+    requiredGroupsOf(stepEl).forEach(clearGroupError);
+    const list = summary.querySelector('.error-summary-list');
+    list.replaceChildren();
+    if (!missing.length) { summary.hidden = true; return false; }
+    missing.forEach((g) => {
+      const message = groupMessage(g);
+      markGroupError(g, message);
+      const item = el('li');
+      const a = el('a', 'error-summary-link', { href: '#' });
+      a.textContent = message;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const control = groupControl(g);
+        if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
+      });
+      item.appendChild(a);
+      list.appendChild(item);
+    });
+    summary.hidden = false;
+    if (focus) summary.focus();
+    return true;
   }
   let taskListEl = null;
   function renderTaskList() {
@@ -5215,16 +5303,21 @@
       if (stepEl !== hub && i < total - 1) {
         const nav = el('div', 'step-nav');
         const next = el('button', 'btn btn-dark step-continue', { type: 'button' });
-        next.textContent = 'Continue';
-        // Until RPA-102 and RPA-113 bring the error summary, an incomplete
-        // section says why Continue stayed put, in a line, rather than a
-        // button that does nothing.
-        const note = el('p', 'step-note', { role: 'status' });
-        note.textContent = 'Complete this section to continue.';
-        note.hidden = true;
-        next.addEventListener('click', () => { note.hidden = showStep(i + 1) !== false; });
-        stepEl.addEventListener('input', () => { note.hidden = true; });
-        nav.append(next, note);
+        next.textContent = 'Save and continue';
+        const summary = renderErrorSummary();
+        top.insertAdjacentElement('afterend', summary);
+        let errorsShowing = false;
+        next.addEventListener('click', () => {
+          saveDraft();   // "Save" is a promise: kept even when the section is not done
+          errorsShowing = showStepErrors(stepEl, summary, { focus: true });
+          if (!errorsShowing) showStep(i + 1);
+        });
+        // Once errors are showing, they follow the typing: a field filled in
+        // loses its message, and the summary goes when nothing is left.
+        const follow = () => { if (errorsShowing) errorsShowing = showStepErrors(stepEl, summary, { focus: false }); };
+        stepEl.addEventListener('input', follow);
+        stepEl.addEventListener('change', follow);
+        nav.appendChild(next);
         stepEl.appendChild(nav);
       }
       stepEl.hidden = true;
