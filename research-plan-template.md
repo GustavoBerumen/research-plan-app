@@ -52,6 +52,10 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
+  width=N           — text fields only: the input is sized to the answer it
+                       expects, in the GOV.UK width classes (2, 3, 4, 5, 10,
+                       20 or 30 characters). A ticket key is 10, a name 20.
+                       Dates are fixed already; textareas stay full width.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -86,11 +90,11 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
 
-Jira Project (text, key=jiraProject):
+Jira Project (text, width=10, key=jiraProject):
   Hint: Jira ticket for the initiative this research supports.
-Lead researcher (text, key=leadResearcher):
+Lead researcher (text, width=20, key=leadResearcher):
   Hint: Name of the person leading this research.
-Project requester (text, key=projectRequester):
+Project requester (text, width=20, key=projectRequester):
   Hint: Name of the person requesting this work.
 Project decision (date, key=projectDecision):
   Hint: Date of the decision informed by this research.
@@ -223,7 +227,7 @@ Additional information (custom-fields, key=additionalResources):
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
-Sign off: Lead researcher (text, key=signOffResearcher):
+Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
-Sign off: Project requester (text, key=signOffProjectOwner):
+Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.

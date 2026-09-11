@@ -160,6 +160,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "width=N" sizes a text input to the answer it expects, in the
+      // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
+      width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
@@ -4525,6 +4528,7 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    if (!isTextarea && field.width) input.classList.add('input-w-' + field.width);
     if (isTextarea && field.rows) {
       input.rows = field.rows;
       input.classList.add('finput-rows');
@@ -4699,6 +4703,7 @@
         control = dateControl.element;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
       const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
