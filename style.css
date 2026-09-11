@@ -165,6 +165,17 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .acc-chevron{width:18px;height:18px;flex-shrink:0;color:var(--text-2);transition:transform .18s}
 .acc[data-open="true"] .acc-chevron{transform:rotate(90deg)}
 .acc-body{padding:4px 0 30px}
+/* One section at a time (RPA-101): a step is the header block, a section, or the review step. */
+.step-top{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px 0 0}
+.step-back{background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.step-back::before{content:"\2039\00a0"}
+.step-back:hover{color:var(--link-hover)}
+.step-caption{margin:0;font-size:var(--text);color:var(--text-2)}
+.step-heading{margin:8px 0 18px;font-size:var(--heading);font-weight:700;line-height:1.1;color:var(--ink)}
+.acc.step .acc-chevron{display:none}
+.acc.step .acc-head{cursor:default}
+.acc.step .acc-head:hover .acc-title{color:var(--ink)}
+.step-nav{display:flex;gap:12px;padding:6px 0 30px}
 .acc-body[hidden]{display:none}
 
 /* ---------- Fields ---------- */
@@ -669,3 +680,5 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   .dtbl td,.dtbl th{border-color:#bbb!important}
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
+
+@media print{.step[hidden]{display:block!important}.step-top,.step-nav{display:none!important}}

@@ -59,7 +59,13 @@ for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
       .map(file => [file, read(file).replace(/\r\n?|\n/g, ending)]));
     const app = await bootApp({ textAssets, draft: baseline.draft, evaluate: body => evaluationFixture(body, 'ready') });
     t.after(() => app.close());
-    assert.deepEqual(keyContract(app.document), baseline.keys);
+    // Retained, not identical: RPA-101 added one Additional information
+    // hatch per section, so the contract grows; nothing pre-change may go.
+    const contract = keyContract(app.document);
+    for (const attr of ['data-field', 'data-list-key', 'data-field-key']) {
+      assert.deepEqual(baseline.keys[attr].filter((k) => !contract[attr].includes(k)), [], attr + ' keys retained');
+    }
+    assert.deepEqual(contract.tables, baseline.keys.tables);
     for (const button of app.document.querySelectorAll('.section-eval-btn')) button.click();
     await waitFor(() => app.evaluationRequests.length === 7);
     const bodies = app.evaluationRequests.map(r => r.body);
@@ -101,6 +107,10 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   });
   const expected = structuredClone(baseline.draft);
   expected.savedAt = saved.savedAt; expected.ui.timelineVisible = false;
+  // RPA-101: the draft remembers the step it was left on, and every
+  // section's Additional information hatch is written, empty or not.
+  expected.ui.section = 'plan-details';
+  Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');
 
   const reopened = await bootApp({ draft: saved }); t.after(() => reopened.close());

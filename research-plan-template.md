@@ -35,7 +35,7 @@ Types:
               silently, on a form that still renders (RPA-74). Saved drafts are
               unaffected either way: table cells are stored by position, never
               by column name.
-  custom-fields — "+ Add additional section" button that appends user-named blocks (an
+  custom-fields — "+ Add additional information" button that appends user-named blocks (an
               editable label plus a textarea each), for letting users add
               their own ad-hoc fields to a section instead of being limited
               to what's predefined here. Placeholder text becomes each new
@@ -107,6 +107,9 @@ Goal (textarea, eval, rows=2, key=goal):
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
 Problem Statement (textarea, eval, rows=2, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
+Additional information (custom-fields, max=1, key=additionalContext):
+  Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
+
 # Research
 
 Objective (textarea, eval, rows=2, key=objective): 
@@ -117,6 +120,9 @@ Research Questions (list, eval, key=researchQuestions):
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
 Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
+
+Additional information (custom-fields, max=1, key=additionalResearch):
+  Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
 # Methodology
 
@@ -145,6 +151,9 @@ User Groups (list, prose, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
+
+Additional information (custom-fields, max=1, key=additionalMethodology):
+  Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
 # Execution
 
@@ -181,20 +190,13 @@ Action Points (table, optional, key=actionPoints): Action:prose:action | Respons
 Previous Knowledge (table, optional, key=previousKnowledge): Name:prose:name | File:file:file
   Hint: Prior research or documentation relevant to this study, attached for reference. For example: Q3 Checkout Usability Study.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
-<!-- Declared here because a field has to live in some section, but it is not
-     an Execution field and does not render as one: renderSchema lifts every
-     custom-fields field out and renders it after the sections, always visible
-     rather than shut inside a collapsed accordion. It only sat in Execution
-     because the Resources section was folded there (RPA-55).
-
-     Renamed from "Additional Resources", which described neither what it does
-     nor what its button offered. GOV.UK has no pattern for a user-defined
-     field — every "Ask users for" pattern is for a known thing — so there is
-     exactly one of these and it is scoped to the whole plan. One escape hatch
-     also keeps the signal in one place: what people add here is evidence of
-     what the template is missing, and five per-section hatches would scatter
-     it. -->
-Additional information (custom-fields, key=additionalResources):
+<!-- One Additional information hatch per section, rendered in place at the
+     end of its section and capped at one block (max=1) — RPA-101 and
+     RPA-82. It used to be lifted out and shown after every section so it
+     would not sit inside a collapsed accordion; with one section on screen
+     at a time that reason is gone. The Execution one keeps the key
+     additionalResources so older drafts restore into it. -->
+Additional information (custom-fields, max=1, key=additionalResources):
   Hint: Anything this plan needs that the sections above have no place for. Each one you add becomes its own titled part of the document. To comment on the plan rather than add to it, use Feedback at the end.
 
 <!-- The review step, and the last thing in the document. Alignment became this

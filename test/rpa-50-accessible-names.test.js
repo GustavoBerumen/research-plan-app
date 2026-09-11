@@ -26,6 +26,11 @@ async function populated(t) {
   for (const b of Array.from(d.querySelectorAll('button'))) {
     if (/^\+?\s*add\b/i.test(text(b)) && !/drive|all for|library|suggest/i.test(text(b)) && !b.disabled) b.click();
   }
+  // One step is on screen at a time (RPA-101). The audit is of the whole
+  // form, so every step is revealed the way print reveals them; otherwise
+  // the reachability filter below would quietly skip five sixths of it.
+  d.querySelectorAll('.step').forEach((step) => { step.hidden = false; });
+  d.querySelectorAll('.acc-body').forEach((body) => { body.hidden = false; });
   await pause(60);
   return app;
 }

@@ -160,6 +160,8 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "max=N" caps how many blocks a custom-fields field may add (RPA-82).
+      max: (() => { const part = typeParts.find((t) => /^max=\d+$/.test(t)); return part ? parseInt(part.slice(4), 10) : 0; })(),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
@@ -394,6 +396,8 @@
   function initAccordion() {
     document.querySelectorAll('[data-acc-toggle]').forEach((head) => {
       head.addEventListener('click', () => {
+        const step = head.closest('.step');
+        if (step && steps.length) { showStep(Number(step.dataset.step)); return; }
         const isOpen = head.getAttribute('aria-expanded') === 'true';
         setAccOpen(head, !isOpen);
       });
@@ -3377,6 +3381,7 @@
     const guidance = renderFieldHint(field, labelId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
+    wrap.classList.add('field-custom');
     const list = el('div', 'custom-fields-list');
     let blockSeq = 0;
     list.dataset.listKey = field.key;
@@ -3397,7 +3402,7 @@
       const nameInp = el('input', 'th-input custom-field-name', { type: 'text', placeholder: 'Label', id: nameId });
       const removeBtn = el('button', 'list-remove', { type: 'button', 'aria-label': 'Remove section' });
       removeBtn.textContent = '✕';
-      removeBtn.addEventListener('click', () => block.remove());
+      removeBtn.addEventListener('click', () => { block.remove(); applyCap(); });
       // Say which section the button removes once it has a name.
       nameInp.addEventListener('input', () => {
         const name = nameInp.value.trim();
@@ -3421,8 +3426,14 @@
     }
 
     const addBtn = el('button', 'add-btn', { type: 'button' });
-    addBtn.textContent = '+ Add a section';
-    addBtn.addEventListener('click', () => addBlock(true));
+    addBtn.textContent = '+ Add additional information';
+    addBtn.addEventListener('click', () => { addBlock(true); applyCap(); });
+    // The cap (max=1 per section, RPA-82) hides the control at the limit and
+    // refuses nothing: a restore presses the hidden button as often as the
+    // draft needs, so a plan above the limit keeps every block it had.
+    const cap = field.max || 0;
+    const applyCap = () => { if (cap) addBtn.hidden = list.querySelectorAll('.custom-field-block').length >= cap; };
+    applyCap();
     wrap.appendChild(addBtn);
 
     return wrap;
@@ -4575,7 +4586,8 @@
     titleSpan.textContent = section.title;
     headLeft.append(renderChevron(), titleSpan);
     const count = el('span', 'acc-count');
-    count.textContent = section.fields.length + (section.fields.length === 1 ? ' field' : ' fields');
+    const counted = section.fields.filter((f) => f.type !== 'custom-fields').length;
+    count.textContent = counted + (counted === 1 ? ' field' : ' fields');
     head.append(headLeft, count);
     acc.appendChild(head);
 
@@ -4651,7 +4663,7 @@
       const fieldsWrap = el('div', 'fields');
       let groupWrap = null;
       let groupName = null;
-      section.fields.forEach((f) => {
+      section.fields.filter((f) => f.type !== 'custom-fields').forEach((f) => {
         if (f.group) {
           if (f.group !== groupName) {
             groupName = f.group;
@@ -4669,6 +4681,9 @@
         }
       });
       if (evaluationSections[section.slug]) fieldsWrap.appendChild(renderSectionEvaluation(section.slug));
+      // Additional information comes after the questions and their Evaluate
+      // control, and before Continue: it is extra, and not evaluated (RPA-101).
+      section.fields.filter((f) => f.type === 'custom-fields').forEach((f) => fieldsWrap.appendChild(renderField(f)));
       body.appendChild(fieldsWrap);
     }
 
@@ -4930,7 +4945,9 @@
 
   function sectionSummary(sectionEl) {
     const title = sectionEl.querySelector('.acc-title').textContent.trim();
-    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field'));
+    // Additional information is a hatch, not a question: an empty one must
+    // not hold a section at "incomplete".
+    const fields = Array.from(sectionEl.querySelectorAll('.acc-body .field:not(.field-custom)'));
     const answered = fields.filter(fieldHasContent).length;
 
     // Currency, only where evaluation exists at all.
@@ -4999,9 +5016,13 @@
         });
         change.textContent = 'Change';
         change.addEventListener('click', () => {
-          const body = sectionEl.querySelector('.acc-body');
-          if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
-          sectionEl.scrollIntoView({ block: 'start' });
+          const i = steps.indexOf(sectionEl);
+          if (i >= 0) showStep(i);
+          else {
+            const body = sectionEl.querySelector('.acc-body');
+            if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
+            sectionEl.scrollIntoView({ block: 'start' });
+          }
           const first = sectionEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select');
           if (first) first.focus();
         });
@@ -5061,27 +5082,100 @@
     );
     const reviewSection = reviewIdx !== -1 ? sections.splice(reviewIdx, 1)[0] : null;
 
-    // A custom-fields field belongs to the document, not to the section that
-    // happens to declare it. It is the escape hatch for what the template did
-    // not anticipate, and "what the template did not anticipate about
-    // Execution specifically" is not a question anyone is asking — it only
-    // sat in Execution because the Resources section was folded there.
-    //
-    // So it is lifted out and rendered after the sections, where it is always
-    // visible rather than hidden inside a collapsed accordion. Routed by type
-    // rather than by key or section title, for the same reason the review step
-    // is routed by its sign-off keys.
-    const loose = [];
-    sections.forEach((s) => {
-      const own = s.fields.filter((f) => f.type !== 'custom-fields');
-      loose.push(...s.fields.filter((f) => f.type === 'custom-fields'));
-      s.fields = own;
-    });
-
+    // Additional information renders inside its section, one hatch per
+    // section and capped at one block (RPA-101, RPA-82). It used to be lifted
+    // out and shown after every section so it would not sit inside a
+    // collapsed accordion; with one section on screen at a time that reason
+    // is gone, and the review step summarises what each section added.
     sections.forEach((s) => doc.appendChild(renderSection(s)));
-    loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
+    buildSteps();
+  }
+
+  // ---------- one section at a time (RPA-101) ----------
+  // The document is still one page and every step stays in the DOM, so
+  // autosave, the review summary and print see all of it. What a person
+  // sees is one step: Plan details, each section, then Review. The step is
+  // remembered in the URL hash and the draft, so a reload and the browser's
+  // Back button both land where they should.
+  let steps = [];
+  let currentStep = -1;
+  function currentStepSlug() { return currentStep >= 0 && steps[currentStep] ? steps[currentStep].dataset.stepSlug : ''; }
+  function stepIndexForSlug(slug) { return slug ? steps.findIndex((s) => s.dataset.stepSlug === slug) : -1; }
+  function buildSteps() {
+    const header = doc.querySelector('.doc-header');
+    const sections = Array.from(doc.querySelectorAll('.acc'));
+    const review = doc.querySelector('.review-step');
+    steps = [header, ...sections, review].filter(Boolean);
+    const total = steps.length;
+    steps.forEach((stepEl, i) => {
+      stepEl.classList.add('step');
+      stepEl.dataset.step = String(i);
+      let title;
+      if (stepEl === header) { title = 'Plan details'; stepEl.dataset.stepSlug = 'plan-details'; }
+      else if (stepEl === review) { title = (review.querySelector('.review-h') || {}).textContent || 'Review'; stepEl.dataset.stepSlug = 'review'; }
+      else {
+        title = stepEl.querySelector('.acc-title').textContent.trim();
+        stepEl.dataset.stepSlug = ((stepEl.querySelector('.acc-body') || {}).id || '').replace(/^body-/, '') || slugify(title);
+      }
+      stepEl.dataset.stepTitle = title;
+      const top = el('div', 'step-top');
+      const back = el('button', 'step-back', { type: 'button' });
+      back.textContent = 'Back';
+      back.hidden = i === 0;
+      back.addEventListener('click', () => showStep(i - 1));
+      const caption = el('p', 'step-caption');
+      caption.textContent = 'Section ' + (i + 1) + ' of ' + total;
+      top.append(back, caption);
+      stepEl.insertBefore(top, stepEl.firstChild);
+      if (stepEl === header) {
+        const h = el('h2', 'step-heading', { tabindex: '-1' });
+        h.textContent = title;
+        top.after(h);
+      }
+      if (i < total - 1) {
+        const nav = el('div', 'step-nav');
+        const next = el('button', 'btn btn-dark step-continue', { type: 'button' });
+        next.textContent = 'Continue';
+        next.addEventListener('click', () => showStep(i + 1));
+        nav.appendChild(next);
+        stepEl.appendChild(nav);
+      }
+      stepEl.hidden = true;
+    });
+    window.addEventListener('hashchange', () => {
+      const i = stepIndexForSlug(location.hash.slice(1));
+      if (i >= 0 && i !== currentStep) showStep(i, { fromHash: true });
+    });
+    const fromHash = stepIndexForSlug(location.hash.slice(1));
+    // Arriving without a hash leaves the URL alone: writing one here would
+    // make the draft's remembered step, restored a moment later, look
+    // overruled by a URL nobody typed.
+    showStep(fromHash >= 0 ? fromHash : 0, { silent: true, keepUrl: fromHash < 0 });
+  }
+  // silent: arriving (boot or restore) — no focus, no scroll, no save, and the
+  // history entry is replaced rather than pushed. fromHash: the browser moved
+  // us, so the URL is already right.
+  function showStep(i, opts = {}) {
+    if (!steps.length) return;
+    i = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach((s, k) => { s.hidden = k !== i; });
+    const stepEl = steps[i];
+    currentStep = i;
+    const head = stepEl.querySelector('.acc-head');
+    if (head) setAccOpen(head, true);
+    if (!opts.fromHash && !opts.keepUrl) {
+      try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + stepEl.dataset.stepSlug); } catch (e) { /* no history here */ }
+    }
+    if (opts.silent) return;
+    const focusTarget = stepEl.querySelector('.step-heading, .acc-head, .review-h');
+    if (focusTarget) {
+      if (focusTarget.tagName !== 'BUTTON' && !focusTarget.hasAttribute('tabindex')) focusTarget.setAttribute('tabindex', '-1');
+      focusTarget.focus({ preventScroll: true });
+    }
+    if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
+    saveDraft();
   }
 
   // ---------- clear form ----------
@@ -5283,14 +5377,18 @@
     const custom = {};
     doc.querySelectorAll('.custom-fields-list').forEach((list) => {
       if (!list.dataset.listKey) return;
-      custom[list.dataset.listKey] = Array.from(list.querySelectorAll('.custom-field-block')).map((block) => ({
+      const blocks = Array.from(list.querySelectorAll('.custom-field-block')).map((block) => ({
         label: (block.querySelector('.custom-field-name') || {}).value || '',
         body: (block.querySelector('.custom-field-body') || {}).value || '',
       }));
+      // Written even when empty. carryUnrendered treats an absent key as
+      // "not rendered" and carries the stored value forward, so leaving an
+      // empty hatch out would bring a removed block back on the next reload.
+      custom[list.dataset.listKey] = blocks;
     });
 
     return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual,
-      ui: { timelineVisible } };
+      ui: { timelineVisible, section: currentStepSlug() || undefined } };
   }
 
   // Everything about the plan except the stamp itself, so that re-dating the
@@ -5618,6 +5716,7 @@
 
     Object.entries(draft.custom || {}).forEach(([key, blocks]) => {
       const list = doc.querySelector('.custom-fields-list[data-list-key="' + key + '"]');
+      if (!list) return;   // a hatch this template does not declare
       if (!list) return;
       const addBtn = list.parentElement ? list.parentElement.querySelector('.add-btn') : null;
       growTo(() => list.querySelectorAll('.custom-field-block').length, blocks.length, addBtn);
@@ -5648,6 +5747,8 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
+    // Back to the step the plan was left on — unless the URL already says.
+    if (!location.hash.slice(1)) { const i = stepIndexForSlug(draft.ui?.section || ''); if (i >= 0) showStep(i, { silent: true }); }
     if (syncCommentsReveal) syncCommentsReveal();
   }
 
@@ -5930,8 +6031,9 @@
     }
     if ('lastUpdatedManual' in draft && typeof draft.lastUpdatedManual !== 'boolean') fail('lastUpdatedManual');
     if ('ui' in draft) {
-      record(draft.ui, 'ui', ['timelineVisible']);
+      record(draft.ui, 'ui', ['timelineVisible', 'section']);
       if ('timelineVisible' in draft.ui && typeof draft.ui.timelineVisible !== 'boolean') fail('ui.timelineVisible');
+      if ('section' in draft.ui && typeof draft.ui.section !== 'string') fail('ui.section');
     }
     ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
       if (!(section in draft)) return;

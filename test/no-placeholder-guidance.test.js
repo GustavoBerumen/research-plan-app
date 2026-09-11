@@ -146,17 +146,24 @@ test('the escape hatch says what it is, and is scoped to the plan', async (t) =>
   assert.ok(hint && hint.textContent.trim(), 'it explains what it is for');
   assert.match(hint.textContent, /Feedback/,
     'and points at Feedback for comments on the plan, which is the other thing');
-  assert.equal(wrap.querySelector('.add-btn').textContent, '+ Add a section');
+  assert.equal(wrap.querySelector('.add-btn').textContent, '+ Add additional information');
 
-  // Outside every accordion, so collapsing a section cannot hide it, and after
-  // them all rather than inside Execution.
-  assert.equal(wrap.closest('.acc'), null);
-  const sections = Array.from(document.querySelectorAll('.acc'));
-  const last = sections[sections.length - 1];
-  assert.equal(last.compareDocumentPosition(wrap) & 4 /* FOLLOWING */, 4);
-
-  // And exactly one of them, per the GOV.UK reasoning above.
-  assert.equal(document.querySelectorAll('.custom-fields-list').length, 1);
+  // RPA-101: one hatch per section, rendered inside it after the section's
+  // questions and Evaluate control. Execution keeps the original key so
+  // older drafts restore into it; the others are named for their section.
+  assert.equal(wrap.closest('.acc').querySelector('.acc-title').textContent, 'Execution');
+  assert.deepEqual(
+    Array.from(document.querySelectorAll('.custom-fields-list')).map((l) => l.dataset.listKey),
+    ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources']
+  );
+  // Capped at one block each (RPA-82): the control goes at the limit, and
+  // the block that exists stays editable and removable.
+  const add = wrap.querySelector('.add-btn');
+  add.click();
+  assert.equal(wrap.querySelectorAll('.custom-field-block').length, 1);
+  assert.equal(add.hidden, true, 'one is the limit');
+  wrap.querySelector('.custom-field-block .list-remove').click();
+  assert.equal(add.hidden, false, 'removing it brings the control back');
 });
 
 test('the examples that were placeholders now read as hints', async (t) => {

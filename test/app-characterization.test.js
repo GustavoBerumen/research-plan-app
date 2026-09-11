@@ -96,9 +96,10 @@ test('renders the complete form from the real index, template, rubric, and metho
     [
       'Last updated', 'Research title', 'Jira Project',
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
-      'Background', 'Goal', 'Problem Statement',
-      'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
-      'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
+      // One Additional information hatch closes each section (RPA-101).
+      'Background', 'Goal', 'Problem Statement', 'Additional information',
+      'Objective', 'Hypothesis', 'Research Questions', 'Outcomes', 'Additional information',
+      'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size', 'Additional information',
       'Planned Schedule', 'Action Points',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
@@ -129,7 +130,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.equal(
     document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
       .closest('.field').querySelector('.add-btn').textContent,
-    '+ Add a section'
+    '+ Add additional information'
   );
   assert.equal(document.querySelectorAll('.eval-controls').length, 7);
 
