@@ -27,6 +27,7 @@
   let timelineVisible = false;
   let updateTimelineVisibility = null;
   let syncCommentsReveal = null;
+  let refreshOptionsMenu = () => {};
   // When this plan was started, as opposed to when it was last saved
   // (draft.savedAt) or last changed (the lastUpdated field, which is
   // re-stamped on every edit and editable by hand). Nothing recorded it
@@ -5097,6 +5098,7 @@
     const setOpen = (open) => {
       menu.hidden = !open;
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open && menu.contains(document.activeElement)) toggle.focus();
     };
     toggle.addEventListener('click', () => setOpen(menu.hidden));
     document.addEventListener('keydown', (e) => {
@@ -5114,12 +5116,25 @@
     const name = document.getElementById('options-plan-name');
     const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
     const showName = () => { name.textContent = title().trim() || 'Untitled plan'; };
-    doc.addEventListener('input', (e) => { if (e.target && e.target.getAttribute('data-field') === 'researchTitle') showName(); });
-    showName();
     const save = document.getElementById('save-progress-btn');
     const status = document.getElementById('save-status');
+    refreshOptionsMenu = () => {
+      showName();
+      status.textContent = '';
+      delete status.dataset.error;
+    };
+    // Restore replaces doc. Delegate to a stable parent, and read the current
+    // form so neither a detached plan nor its save confirmation survives it.
+    document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    document.addEventListener('change', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    refreshOptionsMenu();
     save.addEventListener('click', () => {
-      saveDraft();
+      const saved = saveDraft();
+      status.dataset.error = String(!saved);
+      if (!saved) {
+        status.textContent = 'Could not save in this browser. Keep this page open and use Download backup to keep your writing.';
+        return;
+      }
       const now = new Date();
       status.textContent = 'Saved at ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '.';
     });
@@ -5365,7 +5380,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring) return;
+    if (!store || draftRestoring) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -5379,7 +5394,6 @@
         // attempt at this fix silently did nothing.
         draft = carryUnrendered(collectDraft());
       }
-      lastSavedSignature = signature;
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
@@ -5392,10 +5406,13 @@
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
       recoveredDraft = payload;
+      lastSavedSignature = signature;
+      return true;
     } catch (err) {
       // Most likely a quota error or storage blocked mid-session. Editing
       // must keep working, so this is reported and otherwise ignored.
       console.warn('Could not save draft:', err);
+      return false;
     }
   }
 
@@ -6151,6 +6168,7 @@
     draftTimer = null;
     original.formEvents.abort();
     resetEvaluationWork();
+    refreshOptionsMenu();
   }
 
   function readBackupFile(file) {
@@ -6291,6 +6309,7 @@
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.
     withoutDraftSave(applyTableDefaults);
+    refreshOptionsMenu();
   }
 
   // ---------- evaluation test profiles ----------
