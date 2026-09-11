@@ -78,10 +78,14 @@ test('only fields with Guidance get one; the template today gives it to five', a
 test('italics in guidance render as emphasis, and the block does not print', async (t) => {
   const print = CSS.slice(CSS.indexOf('@media print{'));
   assert.match(print, /\.field-guidance,/, 'in the print hide-list');
-  const tpl = TEMPLATE.replace('  Hint: The outcome you are trying to achieve, and the expected changes in the product.\n',
-    '  Hint: The outcome you are trying to achieve, and the expected changes in the product.\n  Guidance: Write it as *one sentence*.\n');
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': tpl } });
-  t.after(() => app.close());
-  const em = fieldOf(app.document, '[data-field="goal"]').querySelector('.field-guidance-body em');
-  assert.equal(em && em.textContent, 'one sentence');
+  for (const eol of ['\n', '\r\n']) {
+    const source = TEMPLATE.replace(/\r\n/g, '\n').replace(/\n/g, eol);
+    const tpl = source.replace(/^([^\r\n]*\bkey=goal\b[^\r\n]*)(\r?\n)/m,
+      '$1$2  Guidance: Write it as *one sentence*.$2');
+    assert.notEqual(tpl, source, 'the fixture must find the Goal field');
+    const app = await bootApp({ textAssets: { 'research-plan-template.md': tpl } });
+    t.after(() => app.close());
+    const em = fieldOf(app.document, '[data-field="goal"]').querySelector('.field-guidance-body em');
+    assert.equal(em && em.textContent, 'one sentence', JSON.stringify(eol));
+  }
 });
