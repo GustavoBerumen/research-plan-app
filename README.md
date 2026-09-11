@@ -87,6 +87,9 @@ but the public static map does not provide downloads for them.
    bypass the Node allowlist with a separate file server.
 2. Using synthetic data, directly POST to `/api/calibration`, `/api/upload` and
    `/api/add-framework`, and GET `/api/jira/search?q=synthetic`: expect 403.
+   GET `/api/framework?name=synthetic`, the read-only framework lookup added by
+   RPA-91, stays available in pilot mode: expect 404 for that name and 200 for
+   a library name. The library file itself must still not be served.
    Repeat with malformed bodies and query flags; verify no append, write or
    directory creation. Check synthetic private files/records/upload URLs return
    404; encoded or traversal paths return 400 or are rejected by the front proxy.
