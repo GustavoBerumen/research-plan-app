@@ -10,7 +10,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
+const fs = require('node:fs');
+const path = require('node:path');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+// Hypothesis is dormant (RPA-117); the optional-field test brings it back.
+const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const steps = (d) => Array.from(d.querySelectorAll('.step'));
@@ -116,7 +120,7 @@ test('a locked section refuses a link and a hash, and Save and continue holds an
 });
 
 test('optional fields do not count: Research completes without a Hypothesis, and the review summary agrees', async (t) => {
-  const app = await bootApp({});
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': WITH_HYPOTHESIS } });
   t.after(() => app.close());
   const d = app.document;
   for (const i of [1, 2, 3]) { app.window.location.hash = '#' + steps(d)[i].dataset.stepSlug; completeStep(app, steps(d)[i]); }

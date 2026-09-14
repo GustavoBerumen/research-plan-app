@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { createRequire } = require('node:module');
-const { bootApp, listInputs, waitFor, DRAFT_KEY } = require('./app-harness');
+const { bootApp, listInputs, waitFor, DRAFT_KEY, withFieldUncommented } = require('./app-harness');
 const { evaluationFixture } = require('./rpa-63-fixtures.cjs');
 const baseline = require('./fixtures/rpa-78-pre-change.json');
 const { classifyEvaluation } = require('../score-classification');
@@ -55,8 +55,9 @@ test('British document language, visible Methods hint and timeline button surviv
 
 for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
   test(`${name}: pre-change field/list/column keys and all seven rubric mappings are retained`, async t => {
+    // Hypothesis is one of the seven evaluated fields and dormant since RPA-117: brought back here.
     const textAssets = Object.fromEntries(['research-plan-template.md', 'research-plan-rubric.md', 'research-methods.md']
-      .map(file => [file, read(file).replace(/\r\n?|\n/g, ending)]));
+      .map(file => [file, (file === 'research-plan-template.md' ? withFieldUncommented(read(file), 'hypothesis') : read(file)).replace(/\r\n?|\n/g, ending)]));
     const app = await bootApp({ textAssets, draft: baseline.draft, evaluate: body => evaluationFixture(body, 'ready') });
     t.after(() => app.close());
     // Retained, not identical: RPA-101 added one Additional information
@@ -94,7 +95,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   const app = await bootApp({ draft: baseline.draft }); t.after(() => app.close());
   const { document, window } = app;
   for (const [key, value] of Object.entries(baseline.draft.fields)) {
-    if (key === 'theory') continue;   // dormant since RPA-117; carried in the draft, checked below
+    if (key === 'theory' || key === 'hypothesis') continue;   // dormant since RPA-117; carried in the draft, checked below
     assert.equal(document.querySelector('[data-field="' + key + '"]').value, value, key);
   }
   for (const [key, values] of Object.entries(baseline.draft.lists)) {

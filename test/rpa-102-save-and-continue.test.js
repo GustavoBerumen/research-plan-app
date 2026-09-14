@@ -13,7 +13,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+// Hypothesis is dormant (RPA-117); the optional-field test brings it back.
+const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -151,7 +153,7 @@ test('the research title counts: Plan details does not complete without it, and 
 });
 
 test('it saves either way, and a section\'s errors name only its required fields', async (t) => {
-  const app = await bootApp({});
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': WITH_HYPOTHESIS } });
   t.after(() => app.close());
   const { document: d, window } = app;
   const plan = await onPlanDetails(app);

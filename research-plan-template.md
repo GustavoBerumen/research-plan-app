@@ -137,9 +137,12 @@ Additional information (custom-fields, max=1, key=additionalContext):
 
 Objective (textarea, eval, rows=2, words=30, key=objective): 
   Hint: The purpose of the study: what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval, rows=1, words=30, key=hypothesis): 
-  Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
-  Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one.
+<!-- Dormant since RPA-117, 14 September 2026, the same day as Theory and
+     Action Points. Older drafts keep their text through carryUnrendered.
+     Uncomment the three lines to bring it back. -->
+<!-- Hypothesis (textarea, optional, eval, rows=1, words=30, key=hypothesis): -->
+<!-- Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.* -->
+<!-- Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one. -->
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
   Guidance: Ask what you need to learn, not what you plan to do. A good question can be answered by watching or asking people, has one subject, and would change a decision whichever way it comes out.
@@ -156,7 +159,8 @@ Additional information (custom-fields, max=1, key=additionalResearch):
      hidden at this stage of the plan — Theory added friction, and actions are
      tracked in Jira. Saved values in older drafts are carried forward
      untouched by carryUnrendered, and the framework suggestion code stays
-     for when Theory returns. Uncomment the two lines to bring it back. -->
+     for when Theory returns. Uncomment the two lines to bring it back.
+     Hypothesis joined them the same day; see Research above. -->
 <!-- Theory (textarea, optional, rows=2, key=theory): -->
 <!-- Hint: A framework to help ground the study design and analysis. -->
 Methods (list, width=20, key=methods):
