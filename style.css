@@ -417,6 +417,11 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .radio-input{width:24px;height:24px;margin:0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
 .radio-input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .radio-label{font-size:var(--text);color:var(--ink);cursor:pointer}
+/* A declaration to agree to (RPA-115): the design system's checkbox, one option, above the sign-offs. */
+.checkbox-item{display:flex;align-items:flex-start;gap:12px;min-height:40px;padding:4px 0}
+.checkbox-input{width:24px;height:24px;margin:2px 0 0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}
+.checkbox-input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.checkbox-label{font-size:var(--text);color:var(--ink);cursor:pointer;line-height:1.4}
 /* The conditional reveal sits under the option it belongs to, indented so the
    relationship is visible without a box around it. */
 .radio-other-row{margin-left:36px;max-width:320px}

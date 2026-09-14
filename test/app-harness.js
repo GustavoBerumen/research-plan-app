@@ -247,6 +247,8 @@ function completeStep(app, stepEl) {
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
       : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
   groups.forEach((g) => {
+    const box = g.querySelector('input[type=checkbox]');
+    if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');
     if (radio) { radio.click(); return; }
     // Steps other than the current one are hidden by design, so hidden is no

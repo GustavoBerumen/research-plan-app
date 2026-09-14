@@ -264,6 +264,13 @@ Additional information (custom-fields, max=1, key=additionalResources):
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, words=60, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
+<!-- The declaration closes the plan, RPA-115, 14 September 2026. One
+     required box the author ticks, the design system's single checkbox. It
+     sits above both sign-offs, which stay; whether it should replace the
+     lead researcher's is Gus's call. A "checkbox" line's text after the
+     colon is the statement the box agrees to. -->
+Declaration (checkbox, key=declaration): I confirm this plan is complete and current, and I am responsible for it.
+  Hint: Tick the box once every section is complete and current. The sign-offs below record who approved the plan.
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):

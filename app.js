@@ -207,6 +207,10 @@
       field.columns = parseColumns(m[3].trim());
     } else if (type === 'select' || type === 'radios') {
       field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (type === 'checkbox') {
+      // The text after the colon is the statement the box agrees to (RPA-115).
+      field.statement = m[3].trim();
+      field.placeholder = '';
     } else {
       field.placeholder = m[3].trim();
     }
@@ -4021,6 +4025,30 @@
   // and labelled by syncMethodsGroups, which runs whenever a Research
   // Question is added, removed or edited, and once from the wire-up below.
   let methodsFieldDef = null;
+  // A single checkbox with a statement to agree to: the design system's
+  // checkbox with one option, used for the declaration (RPA-115). The
+  // field's label names the group; the statement is the box's own label, so
+  // the whole sentence is the hit target and what a screen reader hears.
+  function renderCheckboxField(field) {
+    const wrap = el('div', 'field field-checkbox', { role: 'group' });
+    const controlId = fieldControlId(field.key);
+    const label = el('div', 'flabel', { id: controlId + '-label' });
+    label.textContent = field.label;
+    markOptional(label, field);
+    wrap.setAttribute('aria-labelledby', label.id);
+    wrap.appendChild(label);
+    const guidance = renderFieldHint(field, controlId + '-hint');
+    if (guidance) wrap.appendChild(guidance);
+    const item = el('div', 'checkbox-item');
+    const box = el('input', 'checkbox-input', { type: 'checkbox', id: controlId, 'data-field': field.key, value: 'yes' });
+    describeControl(box, guidance);
+    const statement = el('label', 'checkbox-label', { for: controlId });
+    statement.textContent = field.statement || field.label;
+    item.append(box, statement);
+    wrap.appendChild(item);
+    return wrap;
+  }
+
   function renderGroupedMethodsField(field) {
     const wrap = el('div', 'field field-methods', { role: 'group' });
     methodsFieldDef = field;
@@ -4604,6 +4632,7 @@
       return renderListField(field);
     }
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
+    if (field.type === 'checkbox') return renderCheckboxField(field);
 
     const wrap = el('div', 'field');
     const controlId = fieldControlId(field.key);
@@ -5427,6 +5456,7 @@
     if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
     if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
+    if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + label.toLowerCase();
     return 'Enter the ' + label.toLowerCase();
   }
   function groupControl(g) {
@@ -6199,7 +6229,9 @@
 
   function collectDraft() {
     const fields = {};
-    scalarFieldEls().forEach((elm) => { fields[elm.getAttribute('data-field')] = elm.value; });
+    scalarFieldEls().forEach((elm) => {
+      fields[elm.getAttribute('data-field')] = elm.type === 'checkbox' ? (elm.checked ? 'yes' : '') : elm.value;
+    });
 
     const selects = {};
     doc.querySelectorAll('.select-cell').forEach((cell) => {
@@ -6541,6 +6573,11 @@
       const value = draft.fields[key];
       if (elm.tagName === 'INPUT' && elm.type === 'date') {
         setDateInputValue(elm, value || '');
+        elm.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      if (elm.type === 'checkbox') {
+        elm.checked = value === 'yes';
         elm.dispatchEvent(new Event('change', { bubbles: true }));
         return;
       }
@@ -7192,6 +7229,7 @@
     // reveal is closed with them.
     doc.querySelectorAll('.radio-input').forEach((el) => { el.checked = false; });
     doc.querySelectorAll('.radio-group .select-other-row').forEach((row) => { row.hidden = true; });
+    doc.querySelectorAll('.checkbox-input').forEach((el) => { el.checked = false; });   // the declaration (RPA-115)
 
     tables.forEach(({ id }) => {
       const tbody = document.getElementById(id).querySelector('tbody');
@@ -7324,7 +7362,8 @@
       // Hypothesis: RPA-117). Nothing to fill, and no reason to stop the
       // rest of the profile from landing.
       if (!input) return;
-      input.value = value;
+      if (input.type === 'checkbox') input.checked = value === 'yes' || value === true;
+      else input.value = value;
       dispatchFieldUpdate(input);
     });
 
