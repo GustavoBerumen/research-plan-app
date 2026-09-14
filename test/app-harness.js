@@ -263,17 +263,37 @@ function completeStep(app, stepEl) {
   });
 }
 
-// Presses Save and continue and, when the section is complete, Continue on
-// the check page that follows (RPA-103), so "moves on" keeps its meaning.
+// Presses Save and continue through the step's pages (RPA-108) and, when the
+// section is complete, Continue on the check page that follows (RPA-103), so
+// "moves on" keeps its meaning. Stops where the person would: on errors, on
+// the check page, or on the step it returned to.
 function saveAndContinue(stepEl) {
-  stepEl.querySelector('.step-continue').click();
-  const check = Array.from(stepEl.children).find((c) => c.classList.contains('check-answers'));
-  if (check && !check.hidden) check.querySelector('.check-continue').click();
+  for (let presses = 0; presses < 20; presses++) {
+    stepEl.querySelector('.step-continue').click();
+    const summary = stepEl.querySelector('.error-summary');
+    if (summary && !summary.hidden) return;
+    const check = Array.from(stepEl.children).find((c) => c.classList.contains('check-answers'));
+    if (check && !check.hidden) { check.querySelector('.check-continue').click(); return; }
+    if (stepEl.hidden) return;
+  }
+}
+
+// Presses Save and continue through the step's pages until the check page
+// shows (RPA-103, RPA-108), or until a page refuses with errors.
+function toCheckPage(stepEl) {
+  for (let presses = 0; presses < 20; presses++) {
+    if (stepEl.classList.contains('step-checking')) return;
+    stepEl.querySelector('.step-continue').click();
+    const summary = stepEl.querySelector('.error-summary');
+    if (summary && !summary.hidden) return;
+    if (stepEl.hidden) return;
+  }
 }
 
 module.exports = {
   DRAFT_KEY,
   saveAndContinue,
+  toCheckPage,
   withFieldFlag,
   withFieldUncommented,
   bootApp,

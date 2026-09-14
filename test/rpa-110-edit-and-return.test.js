@@ -13,7 +13,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, toCheckPage } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -91,7 +91,7 @@ test('the return path is one-shot and only for that section: the next Save and c
   await waitFor(() => visible(d)[0] === 'context');
   const context = stepOf(d, 'context');   // a plain hash asks for the answers, not the check page
   assert.equal(checking(context), false);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   assert.deepEqual(visible(d), ['context'], 'no return path left: the check page, as usual');
   assert.ok(checking(context));
 });
@@ -109,7 +109,7 @@ test('leaving the section by Back, the list or a link forgets the return path', 
   await waitFor(() => visible(d)[0] === 'research');
   const research = stepOf(d, 'research');
   assert.equal(checking(research), false, 'a plain hash asks for the answers');
-  research.querySelector('.step-continue').click();
+  toCheckPage(research);
   assert.deepEqual(visible(d), ['research'], 'Back forgot the return path: the check page, not the review step');
   assert.ok(checking(research));
 });

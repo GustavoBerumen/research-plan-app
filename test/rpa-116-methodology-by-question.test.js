@@ -12,7 +12,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage } = require('./app-harness');
 
 const DRAFT_KEY = 'research-plan-app:draft';
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -129,16 +129,13 @@ test('Save and continue judges every question: a second question left blank list
   const methodology = steps(d)[4];
   const groups = groupsOf(d);
   fillGroup(app, groups[0], { method: 'Interviews', characteristic: 'Abandoned a basket', userGroup: 'New customers', sample: 0 });
-  methodology.querySelector('.step-continue').click();
+  // One question per page since RPA-108: the first question's four pages
+  // pass, and the second question's Methods page stops with its own error.
+  toCheckPage(methodology);
   assert.deepEqual(visible(d), ['methodology'], 'stays');
-  assert.deepEqual(linksOf(methodology), [
-    'Add to Methods for research question 2',
-    'Add to Characteristics for research question 2',
-    'Add to User Groups for research question 2',
-    'Select a sample size for research question 2',
-  ]);
+  assert.deepEqual(linksOf(methodology), ['Add to Methods for research question 2']);
   fillGroup(app, groups[1], { method: 'Survey', characteristic: 'Regular buyers', userGroup: 'Returning customers', sample: 2 });
-  methodology.querySelector('.step-continue').click();
+  toCheckPage(methodology);
   assert.ok(methodology.classList.contains('step-checking'), 'complete: the check page');
   const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.check-answers .summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
   assert.equal(rows['Methods for research question 1'], 'Interviews');

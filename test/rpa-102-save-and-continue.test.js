@@ -13,7 +13,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage, withFieldUncommented } = require('./app-harness');
 // Hypothesis is dormant (RPA-117); the optional-field test brings it back.
 const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
@@ -103,14 +103,15 @@ test('pressing it on an incomplete section shows the summary, takes focus there,
   assert.equal(summary.getAttribute('role'), 'alert');
   assert.equal(text(summary.querySelector('.error-summary-title')), 'There is a problem');
   assert.equal(d.activeElement, summary, 'focus moves to the summary');
-  assert.deepEqual(linksOf(step), ['Enter the research title', 'Enter the jira project', 'Enter the lead researcher', 'Enter the project requester', 'Enter a complete, valid project decision date', 'Enter a complete, valid research readout date']);
+  // One question per page since RPA-108: the first page judges the title alone.
+  assert.deepEqual(linksOf(step), ['Enter the research title']);
   assert.deepEqual(errorsOf(step), linksOf(step), 'the same message at the field');
-  const lead = d.querySelector('[data-field="leadResearcher"]');
-  const group = lead.closest('.mf');
+  const title = d.querySelector('[data-field="researchTitle"]');
+  const group = title.closest('.title-field');
   assert.ok(group.classList.contains('field-invalid'));
   const err = group.querySelector('.field-error');
   assert.ok(err.previousElementSibling.classList.contains('field-hint-text'), 'below the hint, above the control');
-  assert.ok((lead.getAttribute('aria-describedby') || '').split(/\s+/).includes(err.id), 'described by its error');
+  assert.ok((title.getAttribute('aria-describedby') || '').split(/\s+/).includes(err.id), 'described by its error');
   assert.match(text(err), /^Error: /, 'a screen reader hears that it is an error');
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -121,11 +122,11 @@ test('a summary link puts focus in the field; filling it takes its error away; t
   const { document: d, window } = app;
   const step = await onPlanDetails(app);
   saveAndContinue(step);
-  step.querySelectorAll('.error-summary-link')[2].click();
-  assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));
-  setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus');
-  assert.deepEqual(linksOf(step), ['Enter the research title', 'Enter the jira project', 'Enter the project requester', 'Enter a complete, valid project decision date', 'Enter a complete, valid research readout date']);
-  assert.equal(d.querySelector('[data-field="leadResearcher"]').closest('.mf').classList.contains('field-invalid'), false);
+  step.querySelector('.error-summary-link').click();
+  assert.equal(d.activeElement, d.querySelector('[data-field="researchTitle"]'));
+  setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
+  assert.deepEqual(linksOf(step), [], 'the page had one question, and it is answered');
+  assert.equal(d.querySelector('[data-field="researchTitle"]').closest('.title-field').classList.contains('field-invalid'), false);
   completeStep(app, step);
   assert.equal(summaryOf(step).hidden, true, 'nothing left to say');
   assert.deepEqual(errorsOf(step), []);
@@ -167,12 +168,18 @@ test('it saves either way, and a section\'s errors name only its required fields
   window.location.hash = '#context';
   const context = steps(d)[2];
   saveAndContinue(context);
-  assert.deepEqual(linksOf(context), ['Enter the background', 'Enter the goal', 'Enter the problem statement'], 'Additional information is not required');
+  // One question per page since RPA-108: the first page judges Background
+  // alone. Additional information is never a page in the flow.
+  assert.deepEqual(linksOf(context), ['Enter the background'], 'Additional information is not required');
   completeStep(app, context);
   saveAndContinue(context);
   await waitFor(() => visible(d)[0] === 'research');
-  saveAndContinue(steps(d)[3]);
-  const research = linksOf(steps(d)[3]);
+  const researchStep = steps(d)[3];
+  setValue(window, d.querySelector('[data-field="objective"]'), 'Learn why people leave.');
+  // Objective's page passes; Hypothesis's page, optional and empty, passes
+  // without a word; the questions' page stops.
+  saveAndContinue(researchStep);
+  const research = linksOf(researchStep);
   assert.ok(!research.some((m) => /hypothesis/i.test(m)), 'an optional field is never an error: ' + research.join(', '));
   assert.ok(research.includes('Add to Research Questions'), research.join(', '));
 });

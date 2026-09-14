@@ -5482,8 +5482,8 @@
   }
   // Draws the step's errors from scratch against what is missing now. With
   // focus: the person just pressed the button, so the summary takes focus.
-  function showStepErrors(stepEl, summary, { focus }) {
-    const missing = missingGroups(stepEl);
+  function showStepErrors(stepEl, summary, { focus, groups }) {
+    const missing = (groups || requiredGroupsOf(stepEl)).filter((g) => !requiredGroupComplete(g));
     requiredGroupsOf(stepEl).forEach(clearGroupError);
     const list = summary.querySelector('.error-summary-list');
     list.replaceChildren();
@@ -5496,6 +5496,8 @@
       a.textContent = message;
       a.addEventListener('click', (e) => {
         e.preventDefault();
+        showPageOf(stepEl, g);   // the field may sit on another page (RPA-108)
+        rememberPosition();
         const control = groupControl(g);
         if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
       });
@@ -5547,9 +5549,20 @@
     progress.textContent = 'You have completed ' + done + ' of ' + (steps.length - 1) + ' sections.';
   }
   // A slug may carry the check page: "context/check" (RPA-103).
-  function currentStepSlug() { const s = currentStep >= 0 && steps[currentStep]; return s ? s.dataset.stepSlug + (isChecking(s) ? '/check' : '') : ''; }
+  // A slug carries the check page ("context/check", RPA-103) or the page
+  // within the step ("context/2"; "context/more" for the review-only
+  // Additional information, RPA-108).
+  function currentStepSlug() {
+    const s = currentStep >= 0 && steps[currentStep];
+    if (!s) return '';
+    if (isChecking(s)) return s.dataset.stepSlug + '/check';
+    const page = pageOf(s);
+    if (page === 'more') return s.dataset.stepSlug + '/more';
+    return s.dataset.stepSlug + (page > 0 ? '/' + (page + 1) : '');
+  }
   function slugWantsCheck(slug) { return /\/check$/.test(slug || ''); }
-  function stepIndexForSlug(slug) { const bare = (slug || '').replace(/\/check$/, ''); return bare ? steps.findIndex((s) => s.dataset.stepSlug === bare) : -1; }
+  function slugPage(slug) { const m = /\/(\d+|more)$/.exec(slug || ''); return m ? (m[1] === 'more' ? 'more' : Math.max(0, parseInt(m[1], 10) - 1)) : 0; }
+  function stepIndexForSlug(slug) { const bare = (slug || '').replace(/\/(check|\d+|more)$/, ''); return bare ? steps.findIndex((s) => s.dataset.stepSlug === bare) : -1; }
   function buildSteps() {
     const header = doc.querySelector('.doc-header');
     const sections = Array.from(doc.querySelectorAll('.acc'));
@@ -5574,13 +5587,21 @@
       const back = el('button', 'step-back', { type: 'button' });
       back.textContent = 'Back';
       back.hidden = i === 0;
-      back.addEventListener('click', () => { if (isChecking(stepEl)) leaveCheck(stepEl); else showStep(i - 1); });
+      back.addEventListener('click', () => {
+        if (isChecking(stepEl)) { leaveCheck(stepEl); return; }
+        const page = pageOf(stepEl);
+        delete stepEl.dataset.backToCheck;
+        if (page === 'more') { showCheck(i); return; }   // the review-only page came from the check page
+        if (page > 0) { showPage(stepEl, page - 1, { focus: true }); rememberPosition(); return; }
+        showStep(i - 1);
+      });
       const caption = el('p', 'step-caption');
       caption.textContent = 'Section ' + i + ' of ' + (total - 1);
       const all = el('button', 'step-all', { type: 'button' });
       all.textContent = 'All sections';
       all.addEventListener('click', () => showStep(0));
-      top.append(back, caption, all);
+      const pageCaption = el('p', 'step-page-caption');
+      top.append(back, caption, pageCaption, all);
       if (stepEl !== hub) stepEl.insertBefore(top, stepEl.firstChild);
       if (stepEl === header) {
         const h = el('h2', 'step-heading', { tabindex: '-1' });
@@ -5594,6 +5615,7 @@
         const summary = renderErrorSummary();
         top.insertAdjacentElement('afterend', summary);
         let errorsShowing = false;
+        let judged = null;   // the groups the last press judged, for the follow-up
         next.addEventListener('click', () => {
           requiredGroupsOf(stepEl).forEach((g) => {
             const input = requiredDateInput(g);
@@ -5601,14 +5623,23 @@
             if (parsed) setDateInputValue(input, parsed.iso);
           });
           saveDraft();   // "Save" is a promise: kept even when the section is not done
-          errorsShowing = showStepErrors(stepEl, summary, { focus: true });
+          // A page judges its own questions; the last page judges the whole
+          // section; a page reached through Change goes back where it came
+          // from (RPA-108).
+          const pages = stepPages(stepEl);
+          const page = pageOf(stepEl);
+          const lastPage = !pages.length || page === 'more' || page >= pages.length - 1;
+          judged = lastPage ? requiredGroupsOf(stepEl) : requiredGroupsOf(stepEl).filter((g) => pages[page].includes(g));
+          errorsShowing = showStepErrors(stepEl, summary, { focus: true, groups: judged });
           if (errorsShowing) return;
           if (returnAfterSave && returnAfterSave.from === stepEl) { returnToReview(stepEl); return; }
-          showCheck(i);
+          if (lastPage || stepEl.dataset.backToCheck === 'true') { delete stepEl.dataset.backToCheck; showCheck(i); return; }
+          showPage(stepEl, page + 1, { focus: true });
+          rememberPosition();
         });
         // Once errors are showing, they follow the typing: a field filled in
         // loses its message, and the summary goes when nothing is left.
-        const follow = () => { if (errorsShowing) errorsShowing = showStepErrors(stepEl, summary, { focus: false }); };
+        const follow = () => { if (errorsShowing) errorsShowing = showStepErrors(stepEl, summary, { focus: false, groups: judged }); };
         stepEl.addEventListener('input', follow);
         stepEl.addEventListener('change', follow);
         nav.appendChild(next);
@@ -5628,8 +5659,9 @@
       const slug = location.hash.slice(1);
       const i = stepIndexForSlug(slug);
       if (i < 0) return;
-      if (i !== currentStep) showStep(i, { fromHash: true, check: slugWantsCheck(slug) });
+      if (i !== currentStep) showStep(i, { fromHash: true, check: slugWantsCheck(slug), page: slugPage(slug) });
       else if (slugWantsCheck(slug) !== isChecking(steps[i])) setChecking(steps[i], slugWantsCheck(slug));
+      else if (!slugWantsCheck(slug) && slugPage(slug) !== pageOf(steps[i])) showPage(steps[i], slugPage(slug), { focus: true });
     });
     // Resolve the URL after defaults and saved answers have been loaded.
     showStep(0, { silent: true, keepUrl: true });
@@ -5637,13 +5669,13 @@
   function restoreStepPosition(draft) {
     const hash = location.hash.slice(1);
     const requested = stepIndexForSlug(hash);
-    if (requested >= 0 && showStep(requested, { silent: true, check: slugWantsCheck(hash) })) return;
+    if (requested >= 0 && showStep(requested, { silent: true, check: slugWantsCheck(hash), page: slugPage(hash) })) return;
     const savedSlug = draft?.ui?.section || '';
     const saved = stepIndexForSlug(savedSlug);
     // Only an actual saved position gets the restoration exception. A new
     // incoming fragment is checked against the same locks as a clicked link.
     showStep(saved >= 0 ? saved : 0, { silent: true, force: saved >= 0,
-      keepUrl: requested < 0 && saved < 0, check: saved >= 0 && slugWantsCheck(savedSlug) });
+      keepUrl: requested < 0 && saved < 0, check: saved >= 0 && slugWantsCheck(savedSlug), page: saved >= 0 ? slugPage(savedSlug) : 0 });
   }
   // silent: arriving (boot or restore) — no focus, no scroll, no save, and the
   // history entry is replaced rather than pushed. fromHash: the browser moved
@@ -5661,6 +5693,10 @@
     // Asked for a mode, take it; otherwise the step is as it was left, so
     // Back from the next section lands on the check page (RPA-103).
     if ('check' in opts) setChecking(stepEl, !!opts.check);
+    // The page within the step: asked for, or as left, or the first (RPA-108).
+    // A page reached through Change on another step forgets that on leaving.
+    steps.forEach((s) => { if (s !== stepEl) delete s.dataset.backToCheck; });
+    if (!isChecking(stepEl)) showPage(stepEl, 'page' in opts ? opts.page : pageOf(stepEl), { silent: true });
     const head = stepEl.querySelector('.acc-head');
     if (head) setAccOpen(head, true);
     if (!opts.fromHash && !opts.keepUrl) {
@@ -5724,6 +5760,8 @@
   }
   function leaveCheck(stepEl, group) {
     setChecking(stepEl, false);
+    if (group) { showPageOf(stepEl, group); stepEl.dataset.backToCheck = 'true'; }
+    else showPage(stepEl, lastRegularPage(stepEl), { silent: true });
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     const target = group ? (groupControl(group) || group.querySelector('button')) : stepEl.querySelector('.step-heading, .acc-head');
     if (target) target.focus({ preventScroll: true });
@@ -5845,6 +5883,8 @@
     if (i < 0) return;
     // Change is a deliberate act from Review, past every lock, to the answers.
     showStep(i, { force: true, check: false });
+    if (group) showPageOf(stepEl, group); else showPage(stepEl, 0, { silent: true });
+    rememberPosition();
     returnAfterSave = { from: stepEl, row: rowSlug };
     const target = group
       ? (groupControl(group) || group.querySelector('button'))
@@ -5864,6 +5904,85 @@
     if (!row) return;
     row.focus({ preventScroll: true });
     if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'center' });
+  }
+
+  // ---------- one question per page (RPA-108) ----------
+  // Within a step, one question at a time, or one set whose answers depend
+  // on each other: the two plan dates, each research question with its
+  // outcomes. Methodology loops per research question, that question pinned
+  // above its pages. Additional information is not a page in the flow: it is
+  // reached from the check page's Change and shown on its own. Gus's
+  // field-placement table, 14 September 2026.
+  const PAGE_PAIRS = [['projectDecision', 'researchReadout'], ['researchQuestions', 'outcomes']];
+  function unitKey(unit) {
+    const keyed = unit.matches('[data-list-key], [data-field], [data-field-key]') ? unit
+      : unit.querySelector('[data-list-key], [data-field], [data-field-key]');
+    return keyed ? (keyed.dataset.listKey || keyed.dataset.field || keyed.dataset.fieldKey || '') : '';
+  }
+  // The questions of a step, in order: a header field, a section field, or
+  // one of a research question's fields inside its group.
+  function pageUnitsOf(stepEl) {
+    if (stepEl.classList.contains('doc-header')) {
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.querySelector('[data-field="lastUpdated"]'));
+    }
+    const units = [];
+    const walk = (container) => Array.from(container.children).forEach((c) => {
+      if (c.classList.contains('field-methods')) {
+        c.querySelectorAll('.methods-group').forEach((g) => units.push(...Array.from(g.children).filter((x) => x.classList.contains('field-per-question'))));
+      } else if (c.classList.contains('field')) units.push(c);
+      else if (c.classList.contains('field-group')) walk(c);
+    });
+    const fields = stepEl.querySelector('.acc-body .fields');
+    if (fields) walk(fields);
+    return units;
+  }
+  function stepPages(stepEl) {
+    const pages = [];
+    pageUnitsOf(stepEl).filter((u) => !u.classList.contains('field-custom')).forEach((u) => {
+      const key = unitKey(u);
+      const pair = PAGE_PAIRS.find((p) => p.includes(key));
+      const last = pages[pages.length - 1];
+      if (last && pair && last.some((x) => pair.includes(unitKey(x)) && unitKey(x) !== key)) last.push(u);
+      else pages.push([u]);
+    });
+    return pages;
+  }
+  function reviewOnlyUnits(stepEl) { return pageUnitsOf(stepEl).filter((u) => u.classList.contains('field-custom')); }
+  function pageOf(stepEl) { return stepEl.dataset.page === 'more' ? 'more' : (parseInt(stepEl.dataset.page || '0', 10) || 0); }
+  function lastRegularPage(stepEl) { return Math.max(0, stepPages(stepEl).length - 1); }
+  function showPage(stepEl, index, opts = {}) {
+    const pages = stepPages(stepEl);
+    if (!pages.length) return;
+    let current = null;
+    if (index === 'more') { current = reviewOnlyUnits(stepEl); if (!current.length) index = pages.length - 1; }
+    if (index !== 'more') { index = Math.max(0, Math.min(pages.length - 1, index)); current = pages[index]; }
+    stepEl.dataset.page = String(index);
+    const shown = new Set(current);
+    pageUnitsOf(stepEl).forEach((u) => u.classList.toggle('page-hidden', !shown.has(u)));
+    // A research question's group shows only while one of its pages does,
+    // so its pinned head travels with its fields (RPA-116).
+    stepEl.querySelectorAll('.methods-group').forEach((g) => g.classList.toggle('page-hidden', !current.some((u) => g.contains(u))));
+    const evaluation = stepEl.querySelector('.acc-body .section-evaluation');
+    if (evaluation) evaluation.classList.toggle('page-hidden', index !== 'more' && index !== pages.length - 1);
+    const caption = stepEl.querySelector('.step-page-caption');
+    if (caption) caption.textContent = index === 'more' ? 'Additional information' : 'Question ' + (index + 1) + ' of ' + pages.length;
+    if (opts.silent) return;
+    const label = current[0].querySelector('.flabel, .mlabel, label');
+    if (label) {
+      if (!label.hasAttribute('tabindex')) label.setAttribute('tabindex', '-1');
+      label.focus({ preventScroll: true });
+    }
+    if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
+  }
+  function showPageOf(stepEl, group) {
+    const idx = stepPages(stepEl).findIndex((p) => p.some((u) => u === group || u.contains(group)));
+    if (idx >= 0) showPage(stepEl, idx, { silent: true });
+    else if (reviewOnlyUnits(stepEl).some((u) => u === group || u.contains(group))) showPage(stepEl, 'more', { silent: true });
+  }
+  // The URL and the draft follow a page change the way they follow a step.
+  function rememberPosition() {
+    try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
+    saveDraft();
   }
 
   // ---------- the options menu (RPA-106) ----------

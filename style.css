@@ -219,6 +219,11 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 @media (max-width:600px){.summary-key{flex-basis:100%}}
 .step-top .step-caption{flex-basis:100%;order:2}
+/* One question per page (RPA-108): what is not on the page is hidden on screen only; every page prints. */
+@media screen{.page-hidden{display:none!important}}
+.step-page-caption{margin:0;font-size:var(--text);color:var(--text-2)}
+.step-top .step-page-caption{flex-basis:100%;order:3}
+.step-page-caption:empty{display:none}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
 .task-list-intro{margin:6px 0 4px;color:var(--text-2)}
