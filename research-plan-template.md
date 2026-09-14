@@ -52,6 +52,11 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
+  width=N           — text fields and list rows: the input is sized to the
+                       answer it expects, in the GOV.UK width classes (2, 3, 4,
+                       5, 10, 20 or 30 characters). A ticket key is 10, a name
+                       or a user group 20, a characteristic 30. Dates are fixed
+                       already; textareas and prose rows stay full width.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -86,11 +91,11 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
 
-Jira Project (text, key=jiraProject):
+Jira Project (text, width=10, key=jiraProject):
   Hint: Jira ticket for the initiative this research supports.
-Lead researcher (text, key=leadResearcher):
+Lead researcher (text, width=20, key=leadResearcher):
   Hint: Name of the person leading this research.
-Project requester (text, key=projectRequester):
+Project requester (text, width=20, key=projectRequester):
   Hint: Name of the person requesting this work.
 Project decision (date, key=projectDecision):
   Hint: Date of the decision informed by this research.
@@ -122,7 +127,7 @@ Outcomes (list, eval, key=outcomes):
 
 Theory (textarea, optional, rows=2, key=theory): 
   Hint: A framework to help ground the study design and analysis.
-Methods (list, key=methods):
+Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
 ## Participants
@@ -139,9 +144,9 @@ Methods (list, key=methods):
      Drafts saved while the fields were merged keep everything in
      Characteristics: which entries were segments was not recorded, so nothing
      can sort them back out. Splitting them is forward-looking only. -->
-Characteristics (list, prose, key=characteristics):
+Characteristics (list, prose, width=30, key=characteristics):
   Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
-User Groups (list, prose, key=userGroups):
+User Groups (list, prose, width=20, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
@@ -223,7 +228,7 @@ Additional information (custom-fields, key=additionalResources):
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
-Sign off: Lead researcher (text, key=signOffResearcher):
+Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
-Sign off: Project requester (text, key=signOffProjectOwner):
+Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.

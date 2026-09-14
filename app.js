@@ -160,6 +160,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "width=N" sizes a text input to the answer it expects, in the
+      // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
+      width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
@@ -2523,6 +2526,7 @@
       'data-field': 'methods',
       placeholder: list.dataset.placeholder || '',
     });
+    if (list.dataset.width) inp.classList.add('input-w-' + list.dataset.width);
     attachMethodsCombobox(inp, METHODS);
     inp.value = value || '';
     inp.addEventListener('input', refreshMethodsSuggestSelection);
@@ -2541,7 +2545,7 @@
     return row;
   }
 
-  function buildMethodsGroup(placeholder) {
+  function buildMethodsGroup(placeholder, width) {
     // role=group so the aria-label syncMethodsGroups sets (the full research
     // question) is actually announced — the visible heading is only the
     // abbreviated "RQ<n> · <keyword>".
@@ -2552,6 +2556,7 @@
     const list = el('div', 'list-rows');
     list.dataset.listKey = 'methods';
     list.dataset.placeholder = placeholder || '';
+    if (width) list.dataset.width = String(width);   // RPA-109: rows are sized when added
     group.appendChild(list);
     const addBtnRow = el('div', 'add-btn-row');
     const addBtn = el('button', 'add-btn', { type: 'button' });
@@ -2803,7 +2808,7 @@
 
     let groups = methodsGroupEls();
     while (groups.length < targetCount) {
-      container.appendChild(buildMethodsGroup(placeholder));
+      container.appendChild(buildMethodsGroup(placeholder, container.dataset.width));
       groups = methodsGroupEls();
     }
     // Incidental sync only trims empty trailing groups. Deliberate Question
@@ -3786,6 +3791,10 @@
       const inp = isGrowable
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
+      // A list row is sized like a text field when the template says so. A
+      // prose row too: it wraps inside the narrower box, which is the point
+      // for a short answer like a user group (RPA-109).
+      if (field.width) inp.classList.add('input-w-' + field.width);
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
       // Each question's Methods group is labelled with its text, so the label
@@ -3904,7 +3913,8 @@
 
     const container = el('div', 'methods-groups');
     container.dataset.placeholder = field.placeholder || '';
-    container.appendChild(buildMethodsGroup(field.placeholder || ''));
+    if (field.width) container.dataset.width = String(field.width);   // RPA-109: rows are sized when added
+    container.appendChild(buildMethodsGroup(field.placeholder || '', field.width));
     wrap.appendChild(container);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
@@ -4525,6 +4535,7 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    if (!isTextarea && field.width) input.classList.add('input-w-' + field.width);
     if (isTextarea && field.rows) {
       input.rows = field.rows;
       input.classList.add('finput-rows');
@@ -4699,6 +4710,7 @@
         control = dateControl.element;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
       const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
@@ -6205,7 +6217,7 @@
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
-      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || ''));
+      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || '', methodsContainer.dataset.width));
       syncMethodsGroups();
     }
     // Reset each dropdown to its own first option rather than hardcoding
