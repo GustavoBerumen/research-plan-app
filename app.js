@@ -2526,6 +2526,7 @@
       'data-field': 'methods',
       placeholder: list.dataset.placeholder || '',
     });
+    if (list.dataset.width) inp.classList.add('input-w-' + list.dataset.width);
     attachMethodsCombobox(inp, METHODS);
     inp.value = value || '';
     inp.addEventListener('input', refreshMethodsSuggestSelection);
@@ -2544,7 +2545,7 @@
     return row;
   }
 
-  function buildMethodsGroup(placeholder) {
+  function buildMethodsGroup(placeholder, width) {
     // role=group so the aria-label syncMethodsGroups sets (the full research
     // question) is actually announced — the visible heading is only the
     // abbreviated "RQ<n> · <keyword>".
@@ -2555,6 +2556,7 @@
     const list = el('div', 'list-rows');
     list.dataset.listKey = 'methods';
     list.dataset.placeholder = placeholder || '';
+    if (width) list.dataset.width = String(width);   // RPA-109: rows are sized when added
     group.appendChild(list);
     const addBtnRow = el('div', 'add-btn-row');
     const addBtn = el('button', 'add-btn', { type: 'button' });
@@ -3911,7 +3913,8 @@
 
     const container = el('div', 'methods-groups');
     container.dataset.placeholder = field.placeholder || '';
-    container.appendChild(buildMethodsGroup(field.placeholder || ''));
+    if (field.width) container.dataset.width = String(field.width);   // RPA-109: rows are sized when added
+    container.appendChild(buildMethodsGroup(field.placeholder || '', field.width));
     wrap.appendChild(container);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
@@ -6214,7 +6217,7 @@
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
-      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || ''));
+      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || '', methodsContainer.dataset.width));
       syncMethodsGroups();
     }
     // Reset each dropdown to its own first option rather than hardcoding

@@ -127,7 +127,7 @@ Outcomes (list, eval, key=outcomes):
 
 Theory (textarea, optional, rows=2, key=theory): 
   Hint: A framework to help ground the study design and analysis.
-Methods (list, key=methods):
+Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
 ## Participants

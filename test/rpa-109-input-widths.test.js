@@ -38,6 +38,12 @@ test('short-answer lists are sized too, row by row, including rows added later; 
   assert.deepEqual(rows('userGroups'), ['20']);
   Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add user group/i.test(b.textContent.trim())).click();
   assert.deepEqual(rows('userGroups'), ['20', '20'], 'a new row is sized like the first');
+  // Methods rows are built by the combobox code, not the list builder; the
+  // width travels through the list, so a row added later is sized too.
+  const methodRows = () => Array.from(d.querySelectorAll('.methods-groups .list-input')).map(widthClass);
+  assert.deepEqual(methodRows(), ['20']);
+  Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add method$/i.test(b.textContent.trim())).click();
+  assert.deepEqual(methodRows(), ['20', '20']);
   assert.deepEqual(rows('researchQuestions'), [''], 'a sentence keeps the line');
   assert.deepEqual(rows('outcomes'), ['']);
 });
