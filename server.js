@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { setTimeout: delay } = require('node:timers/promises');
 const Anthropic = require('@anthropic-ai/sdk');
+const { createPilotGuard, PilotAIError, PILOT_BODY_BYTES } = require('./pilot-guard');
 
 const PORT = process.env.PORT || 8934;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
@@ -16,6 +17,7 @@ if (pilotSetting !== undefined && pilotSetting !== 'true' && pilotSetting !== 'f
   throw new Error('RPA_PILOT_MODE must be true or false');
 }
 const PILOT_MODE = pilotSetting === 'true';
+const pilotGuard = createPilotGuard({ pilot: PILOT_MODE, env: process.env });
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error(
@@ -26,7 +28,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const anthropic = new Anthropic();
+const anthropic = pilotGuard.wrapClient(new Anthropic());
 
 const JIRA_BASE_URL = (process.env.JIRA_BASE_URL || '').replace(/\/+$/, '');
 const JIRA_EMAIL = process.env.JIRA_EMAIL || '';
@@ -111,22 +113,59 @@ function serveStatic(req, res, urlPath) {
   });
 }
 
-function readJsonBody(req, maxBytes = 1e6) {
+function readJsonBody(req, maxBytes = PILOT_MODE ? PILOT_BODY_BYTES : 1e6) {
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
+    let bytes = 0, settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (error) reject(error); else resolve(value);
+    };
+    const timer = PILOT_MODE ? setTimeout(() => finish(Object.assign(new Error('Request body timed out'), { status: 408 })), 15_000) : null;
+    timer?.unref?.();
+    const tooLarge = () => finish(Object.assign(new Error('Request body is too large'), { status: 413 }));
+    if (Number(req.headers['content-length']) > maxBytes) { tooLarge(); return; }
     req.on('data', (chunk) => {
-      body += chunk;
-      if (body.length > maxBytes) req.destroy(new Error('Request body too large'));
+      if (settled) return;
+      bytes += Buffer.byteLength(chunk);
+      if (bytes > maxBytes) { tooLarge(); return; }
+      chunks.push(Buffer.from(chunk));
     });
     req.on('end', () => {
+      if (settled) return;
       try {
-        resolve(body ? JSON.parse(body) : {});
+        const body = Buffer.concat(chunks).toString('utf8');
+        const value = body ? JSON.parse(body) : {};
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected an object');
+        finish(null, value);
       } catch (e) {
-        reject(e);
+        finish(e);
       }
     });
-    req.on('error', reject);
+    req.on('error', finish);
+    req.on('aborted', () => finish(new Error('Request aborted')));
   });
+}
+
+function bodyError(res, error) {
+  const status = [408, 413].includes(error.status) ? error.status : 400;
+  routeError(res, status, status === 413 ? 'This request is too large. Your writing is safe; shorten the content and try again.'
+    : status === 408 ? 'The request timed out. Your writing is safe; try again.' : 'Invalid JSON body',
+  status === 400 ? {} : { Connection: 'close' });
+}
+
+function aiError(res, error, label) {
+  if (error instanceof PilotAIError) {
+    return routeError(res, error.status, error.message, error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
+  }
+  if (PILOT_MODE) {
+    console.error(label, { status: Number.isInteger(error.status) ? error.status : 'unknown' });
+    return routeError(res, 502, 'The AI service could not complete this request. Your writing is safe; try again later.');
+  }
+  console.error(label, error);
+  routeError(res, 502, label + ' ' + error.message);
 }
 
 // Forces a structured response so we don't have to parse free-form model
@@ -556,6 +595,7 @@ async function evaluateWithRetries(tool, prompt, maxTokens, format, {
       log({ evaluationId, attempt, category: 'success' });
       return result;
     } catch (err) {
+      if (err instanceof PilotAIError) throw err;
       const category = signal?.aborted ? 'cancelled' : evaluationFailureCategory(err);
       log({ evaluationId, attempt, category, ...(err.rule ? { rule: err.rule } : {}),
         ...(Number.isInteger(err.status) ? { status: err.status } : {}) });
@@ -725,8 +765,7 @@ async function handleEvaluate(req, res, evaluationOptions = {}) {
   try {
     payload = await readJsonBody(req);
   } catch (e) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+    bodyError(res, e);
     return;
   }
 
@@ -797,6 +836,7 @@ async function handleEvaluate(req, res, evaluationOptions = {}) {
     res.end(JSON.stringify(result));
   } catch (err) {
     if (controller.signal.aborted) return;
+    if (err instanceof PilotAIError) return aiError(res, err, 'Evaluation failed:');
     res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   } finally {
@@ -968,8 +1008,7 @@ async function handleSuggestFramework(req, res) {
   try {
     payload = await readJsonBody(req);
   } catch (e) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+    bodyError(res, e);
     return;
   }
 
@@ -1057,9 +1096,7 @@ async function handleSuggestFramework(req, res) {
       },
     }));
   } catch (err) {
-    console.error('Framework suggestion failed:', err);
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Framework suggestion failed: ' + err.message }));
+    aiError(res, err, 'Framework suggestion failed:');
   }
 }
 
@@ -1280,6 +1317,11 @@ async function searchGapMethod(objective, question, methodNames) {
       unresolved: true,
     }];
   } catch (err) {
+    if (err instanceof PilotAIError) throw err;
+    if (PILOT_MODE) {
+      console.error('Gap method search failed:', { status: Number.isInteger(err.status) ? err.status : 'unknown' });
+      return [{ name: null, reason: 'Web search could not complete. Your writing is safe; try again later.', viaSearch: true, unresolved: true }];
+    }
     console.error('Gap method search failed:', err);
     return [{ name: null, reason: 'Web search failed: ' + err.message, source: null, viaSearch: true, unresolved: true }];
   }
@@ -1290,8 +1332,7 @@ async function handleSuggestMethods(req, res) {
   try {
     payload = await readJsonBody(req);
   } catch (e) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+    bodyError(res, e);
     return;
   }
 
@@ -1304,6 +1345,9 @@ async function handleSuggestMethods(req, res) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'objective and at least one research question are required' }));
     return;
+  }
+  if (PILOT_MODE && researchQuestions.length > 20) {
+    return routeError(res, 413, 'Method suggestions support up to 20 questions per pilot request. Your writing is safe.');
   }
 
   let methodsText;
@@ -1353,9 +1397,15 @@ async function handleSuggestMethods(req, res) {
 
     const gapIndexes = perQuestion.map((q, i) => (q.needsSearch ? i : -1)).filter((i) => i !== -1);
     if (gapIndexes.length > 0) {
-      const searchResults = await Promise.all(
-        gapIndexes.map((i) => searchGapMethod(objective, researchQuestions[i], methodNames))
-      );
+      const searchResults = [];
+      if (PILOT_MODE) {
+        // One request must not fan out and occupy every provider slot.
+        for (const i of gapIndexes) searchResults.push(await searchGapMethod(objective, researchQuestions[i], methodNames));
+      } else {
+        searchResults.push(...await Promise.all(
+          gapIndexes.map((i) => searchGapMethod(objective, researchQuestions[i], methodNames))
+        ));
+      }
       gapIndexes.forEach((i, j) => {
         perQuestion[i].methods = searchResults[j];
       });
@@ -1364,9 +1414,7 @@ async function handleSuggestMethods(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ perQuestion: perQuestion.map((q) => ({ methods: q.methods })) }));
   } catch (err) {
-    console.error('Methods suggestion failed:', err);
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Methods suggestion failed: ' + err.message }));
+    aiError(res, err, 'Methods suggestion failed:');
   }
 }
 
@@ -1530,6 +1578,13 @@ const API_ROUTES = new Map([
 const server = http.createServer((req, res) => {
   const pathname = requestPath(req.url);
   if (pathname === null) return routeError(res, 400, 'Invalid request path');
+  if (!pilotGuard.allowRequest(req, res, pathname)) return;
+  if (pathname === '/healthz') {
+    if (!['GET', 'HEAD'].includes(req.method)) return routeError(res, 405, 'Method not allowed', { Allow: 'GET, HEAD' });
+    res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+    res.end(req.method === 'HEAD' ? '' : 'ok');
+    return;
+  }
   const route = API_ROUTES.get(pathname);
   if (route) {
     const [method, handler, capability] = route;
@@ -1537,12 +1592,19 @@ const server = http.createServer((req, res) => {
     // method, query parameters, request body or browser capability state.
     if (capability && !CAPABILITIES[capability]) return routeError(res, 403, 'This feature is unavailable');
     if (req.method !== method) return routeError(res, 405, 'Method not allowed', { Allow: method });
-    handler(req, res);
+    Promise.resolve(pilotGuard.runRequest(req, res, handler)).catch(() => {
+      if (!res.headersSent && !res.destroyed) routeError(res, 500, 'The request could not be completed.');
+    });
     return;
   }
   if (req.method !== 'GET') return routeError(res, 405, 'Method not allowed', { Allow: 'GET' });
   serveStatic(req, res, pathname);
 });
+
+if (PILOT_MODE) {
+  server.requestTimeout = 15_000;
+  server.headersTimeout = 10_000;
+}
 
 if (require.main === module) {
   server.listen(PORT, () => {

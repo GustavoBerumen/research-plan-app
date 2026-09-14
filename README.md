@@ -42,24 +42,27 @@ The app takes a standard research plan document and turns it into a guided form:
 
 Optional: the `.env.example` file also documents how to enable the Google Drive picker (`GOOGLE_CLIENT_ID` / `GOOGLE_API_KEY`) and how to override the model used for evaluation (`ANTHROPIC_MODEL`, defaults to Claude Haiku 4.5).
 
-## JSON pilot configuration (RPA-89)
+## JSON pilot configuration (RPA-1 / RPA-89)
 
-Gustavo must set **`RPA_PILOT_MODE=true`** in the host's environment and start the
-reviewed build with **`node server.js`**. Restart/redeploy after changing the
+Max, the deployment owner, must set **`RPA_PILOT_MODE=true`** in the host's
+environment and start the reviewed build with **`node server.js`**. Restart/redeploy after changing the
 environment. Keep provider credentials in the host's secret settings. Local
 `npm start` loads `.env`; hosted startup should use injected variables directly.
 Only the exact strings `true` and `false` are accepted; other values stop startup.
-An absent flag or `false` retains nonpilot features, so verify the running
-configuration before allowing pilot access. This flag is server-side; browser
-storage, request bodies and query parameters cannot override it.
+On Render, an absent flag or `false` stops startup. Elsewhere it retains nonpilot
+features, so verify the running configuration before allowing pilot access.
+This flag is server-side; browser storage, request bodies and query parameters
+cannot override it.
 
 Pilot mode rejects calibration Save/Like/Dislike collection, uploads,
 framework-library writes and Jira proxy calls **before body parsing**. Google
 Drive is unavailable and its configuration/scripts are not sent/loaded. The UI
 also keeps these actions unavailable if capability configuration is missing,
-malformed, pending or failed. AI evaluation, recommendations and suggestions
-remain available with their existing behaviour. No uploads directory is created
-at startup; pilot requests never create it.
+malformed, pending or failed. AI evaluation and suggestions require
+`RPA_AI_ENABLED=true`; the initial hosted deployment keeps AI paused until the
+provider budget is verified. The server requires an API key even while AI is
+paused, and pilot mode requires the shared password described in the runbook.
+No uploads directory is created at startup; pilot requests never create it.
 
 In **every mode**, static serving accepts only `/`, `/index.html`, `/style.css`,
 `/app.js`, `/score-classification.js`, `/textarea-autosize.js`, `/test-profiles.js`,
@@ -118,6 +121,14 @@ Backups retain plan data and attachment references, but no attachment bytes,
 calibration records or evaluation results. **Print / Save as PDF** provides the
 readable copy, which cannot be imported as a backup. Word export, Finish/Send,
 email delivery and automatic synchronisation are deferred.
+
+## Invited pilot instructions
+
+Start with the [pilot instruction pack](research/pilot/README.md) for participant
+instructions, private JSON exchange, manual observations and release checks.
+Use [DEPLOYMENT.md](DEPLOYMENT.md) and [render.yaml](render.yaml) for hosting,
+password protection, bounded AI and rollback. Documentation and local tests do
+not establish a deployed release; record the actual candidate and acceptance.
 
 ## Project structure
 

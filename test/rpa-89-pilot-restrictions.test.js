@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { once } = require('node:events');
 const { JSDOM, VirtualConsole } = require('jsdom');
-const { loadServer, ASSETS, PRIVATE, ROOT } = require('./rpa-89-server-harness.cjs');
+const { loadServer, ASSETS, PRIVATE, ROOT, AUTHORIZATION } = require('./rpa-89-server-harness.cjs');
 const { bootApp, waitFor, setValue, DRAFT_KEY } = require('./app-harness');
 const { realisticBackup } = require('./rpa-40-fixtures.cjs');
 const disabled = { calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
@@ -140,18 +140,19 @@ test('allowed assets boot the complete form through real HTTP routing', async t 
   await once(app.server, 'listening');
   t.after(() => { app.server.closeAllConnections(); app.server.close(); });
   const origin = 'http://127.0.0.1:' + app.server.address().port;
+  const authenticatedFetch = (url, init = {}) => fetch(url, { ...init, headers: { ...init.headers, authorization: AUTHORIZATION } });
   const errors = [], requests = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', error => errors.push(error.message));
-  const dom = new JSDOM(await (await fetch(origin)).text(), { url: origin, runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole,
+  const dom = new JSDOM(await (await authenticatedFetch(origin)).text(), { url: origin, runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole,
     beforeParse(window) {
-      window.fetch = (url, init) => { requests.push(url); return fetch(new URL(url, origin), init); };
+      window.fetch = (url, init) => { requests.push(url); return authenticatedFetch(new URL(url, origin), init); };
       window.HTMLElement.prototype.scrollIntoView = () => {};
     } });
   t.after(() => dom.window.close());
   // Fetch every script via the real allowlist; no direct source loading here.
   for (const script of dom.window.document.querySelectorAll('script[src]')) {
-    const source = await fetch(new URL(script.getAttribute('src'), origin));
+    const source = await authenticatedFetch(new URL(script.getAttribute('src'), origin));
     assert.equal(source.status, 200);
     dom.window.eval(await source.text());
   }
