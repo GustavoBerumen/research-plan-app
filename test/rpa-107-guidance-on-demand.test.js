@@ -7,7 +7,9 @@
 // is the note; several lines are several paragraphs; *italics* work as in a
 // hint; [text](url) links to a page that says more. Only some people need
 // it, so it is not read to a screen reader on arrival (not part of the
-// control's description). Not printed. The words are a separate ticket.
+// control's description). Not printed. Every field has the link, title and
+// header fields included (Gus, later the same day); the words are RPA-119,
+// and until a field's note is written its link opens on one honest line.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -71,16 +73,26 @@ test('a repeated field gets it under its rows and add button, and a [text](url) 
   assert.equal(a.getAttribute('rel'), 'noopener');
 });
 
-test('only fields with Guidance get one, never an empty one; the template today gives it to five', async (t) => {
+test('every field has one, title and header included; a note not written yet opens on one honest line', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  assert.equal(d.querySelectorAll('.field-help').length, 5);
-  assert.equal(helpIn(fieldOf(d, '[data-field="goal"]')), null, 'Goal has no note yet, so no link');
-  const radios = d.getElementById('field-sampleSize-label') && d.getElementById('field-sampleSize-label').closest('.field');
-  assert.ok(radios, 'the fixture must find Sample Size');
-  assert.equal(radios.lastElementChild, helpIn(radios), 'under a radio group it is the last thing in the field');
-  assert.equal(d.querySelector('.field-help-body:empty'), null, 'no empty notes');
+  const labels = Array.from(d.querySelectorAll('[id^="field-"][id$="-label"]'));
+  assert.ok(labels.length > 20, 'the whole form is labelled: ' + labels.length);
+  const helpFor = (l) => {
+    const wrap = l.closest('.field, .mf');
+    const next = wrap ? helpIn(wrap) : (d.getElementById(l.id.replace(/-label$/, '')) || {}).nextElementSibling;
+    return next && next.classList.contains('field-help') ? next : null;
+  };
+  const missing = labels.filter((l) => !helpFor(l)).map((l) => l.id);
+  assert.deepEqual(missing, ['field-lastUpdated-label'], 'every labelled field but Last updated, a computed date nobody fills in');
+  assert.equal(d.querySelectorAll('.field-help').length, new Set(labels.map(helpFor).filter(Boolean)).size, 'one each, never two');
+  assert.equal(d.getElementById('field-researchTitle').nextElementSibling, helpFor(d.getElementById('field-researchTitle-label')), 'the title has no wrapper, so it follows the box');
+  const jira = d.getElementById('field-jiraProject-label').closest('.mf');
+  assert.equal(jira.lastElementChild, helpIn(jira), 'a header field has it last');
+  assert.equal(text(helpFor(d.getElementById('field-goal-label')).querySelector('.field-help-body')), 'No further help for this field yet.', 'Goal has no note yet and says so');
+  assert.doesNotMatch(text(helpFor(d.getElementById('field-background-label'))), /No further help/, 'a written note replaces the line');
+  assert.equal(d.querySelector('.field-help-body:empty'), null, 'never empty');
 });
 
 test('italics in a note render as emphasis, and the block does not print', async (t) => {

@@ -85,9 +85,11 @@ Wrap words in *asterisks* inside a Hint to italicise them, e.g.
 
 An indented "Guidance:" line is a longer note about the field, shown on
 demand behind a closed "Help with this section" link at the bottom of
-the field, under the box (RPA-107). Several Guidance lines make several
-paragraphs; *italics* work as in a Hint, and [text](url) makes a link to
-a page that says more. A field with no note has no link.
+the field, under the box (RPA-107). Every field has the link, the title
+and header fields included; a field with no Guidance line yet opens on
+"No further help for this field yet." (the notes are RPA-119). Several
+Guidance lines make several paragraphs; *italics* work as in a Hint, and
+[text](url) makes a link to a page that says more.
 
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
