@@ -160,6 +160,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "words=N": a good answer is up to about N words, shown under the box
+      // as "You have N words remaining" (RPA-114). Advisory: never a limit.
+      words: (() => { const part = typeParts.find((t) => /^words=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       // "width=N" sizes a text input to the answer it expects, in the
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
@@ -3985,6 +3988,38 @@
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
   }
 
+  // The design system's word count, under the box, in its own words: "You
+  // have 30 words remaining", counting down as the person types (RPA-114,
+  // Gus's review). Advisory all the way: past the top it turns to
+  // description, "You've written about 35 words", never "5 words too many",
+  // and it stays hint-grey. As in the component, the visible message is
+  // aria-hidden and the field is described by it, while a visually hidden
+  // polite live region repeats it on a one-second debounce, so a screen
+  // reader hears the count on arrival and hears it change without being
+  // flooded per keystroke.
+  function renderWordGuide(textarea, limit, controlId) {
+    const wrap = el('div', 'word-count-wrap');
+    const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
+    const spoken = el('p', 'word-count-status visually-hidden', { 'aria-live': 'polite' });
+    wrap.append(visible, spoken);
+    const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    textarea.setAttribute('aria-describedby', describedBy.concat(visible.id).join(' '));
+    const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
+    const message = () => {
+      const n = words();
+      if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
+      return "You've written about " + (Math.round(n / 5) * 5) + ' words';
+    };
+    const render = () => { visible.textContent = message(); };
+    const speak = () => { spoken.textContent = visible.textContent; };
+    let timer = null;
+    textarea.addEventListener('input', () => { render(); window.clearTimeout(timer); timer = window.setTimeout(speak, 1000); });
+    textarea._refreshCharCount = () => { render(); speak(); };   // Clear Form resets at once (Max, #74)
+    render();
+    speak();
+    return wrap;
+  }
+
   // ---------- Methods combobox (search suggestions, still free text) ----------
   // Same reparent-to-<body>-with-fixed-position trick as the file-upload "+"
   // menu, so the dropdown escapes the Methodology accordion's overflow:hidden
@@ -4544,6 +4579,7 @@
     describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
+    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     const hint = signOffHint(field.key);
     if (hint) wrap.appendChild(hint);
 
@@ -6186,6 +6222,7 @@
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
+      if (typeof el._refreshCharCount === 'function') el._refreshCharCount();
     });
     // Radios are neither text inputs nor textareas, so the loops above miss
     // them: a Sample Size chosen before the reset stayed selected and was
