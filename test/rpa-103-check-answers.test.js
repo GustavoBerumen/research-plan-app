@@ -15,7 +15,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage, withFieldUncommented } = require('./app-harness');
 // Hypothesis is dormant (RPA-117); the answers-as-given test brings it back for its optional row.
 const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
@@ -51,7 +51,7 @@ test('Save and continue on a complete section shows Check your answers on the sa
   t.after(() => app.close());
   const { document: d, window } = app;
   const context = await contextFilled(app);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   assert.deepEqual(visible(d), ['context'], 'the same step, not the next');
   assert.ok(checking(context));
   const panel = panelOf(context);
@@ -76,15 +76,15 @@ test('Change returns to the answers with focus on that field; the next Save and 
   t.after(() => app.close());
   const { document: d, window } = app;
   const context = await contextFilled(app);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   changeFor(context, 'Goal').click();
   assert.equal(checking(context), false);
   assert.equal(panelOf(context).hidden, true);
   assert.deepEqual(visible(d), ['context']);
   assert.equal(d.activeElement, d.querySelector('[data-field="goal"]'), 'focus lands in the field to change');
-  assert.equal(window.location.hash, '#context');
+  assert.equal(window.location.hash, '#context/2', 'the page that holds the answer (RPA-108)');
   setValue(window, d.querySelector('[data-field="goal"]'), 'Half the abandoned baskets.');
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   assert.ok(checking(context), 'back to the check page, not the start');
   assert.equal(rowsOf(context)[1][1], 'Half the abandoned baskets.');
 });
@@ -94,7 +94,7 @@ test('Continue moves on; Back from the next section returns to the check page; B
   t.after(() => app.close());
   const { document: d, window } = app;
   const context = await contextFilled(app);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   panelOf(context).querySelector('.check-continue').click();
   assert.deepEqual(visible(d), ['research']);
   assert.equal(window.location.hash, '#research');
@@ -105,16 +105,19 @@ test('Continue moves on; Back from the next section returns to the check page; B
   context.querySelector('.step-back').click();
   assert.equal(checking(context), false, 'Back on the check page shows the answers again');
   assert.deepEqual(visible(d), ['context']);
-  assert.equal(window.location.hash, '#context');
+  assert.equal(window.location.hash, '#context/3', 'the last page, where Save and continue was pressed (RPA-108)');
   context.querySelector('.step-back').click();
-  assert.deepEqual(visible(d), ['plan-details'], 'and from the answers, the section before');
+  context.querySelector('.step-back').click();
+  assert.equal(window.location.hash, '#context', 'Back walks the pages first (RPA-108)');
+  context.querySelector('.step-back').click();
+  assert.deepEqual(visible(d), ['plan-details'], 'and from the first page, the section before');
 });
 
 test('a reload lands on the check page, and the URL can ask for it', async (t) => {
   const source = await bootApp({});
   t.after(() => source.close());
   const context = await contextFilled(source);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   const draft = draftOf(source.window);
   assert.equal(draft.ui.section, 'context/check');
   const reloaded = await bootApp({ draft });
@@ -135,7 +138,7 @@ test('answers are shown as given: a date in words, a radio by its label, a list 
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
-  plan.querySelector('.step-continue').click();
+  toCheckPage(plan);
   const planRows = Object.fromEntries(rowsOf(plan));
   assert.equal(planRows['Research title'], 'Usability testing of checkout flow');
   assert.equal(planRows['Project decision'], '1 October 2026', 'a date in words');
@@ -150,14 +153,14 @@ test('answers are shown as given: a date in words, a radio by its label, a list 
   setValue(window, rq.querySelector('.list-input'), 'Why do people leave?');
   rq.closest('.field').querySelector('.add-btn').click();
   setValue(window, rq.querySelectorAll('.list-input')[1], 'What do they expect?');
-  research.querySelector('.step-continue').click();
+  toCheckPage(research);
   const researchRows = Object.fromEntries(rowsOf(research));
   assert.equal(researchRows['Research Questions'], 'Why do people leave? What do they expect?', 'a list by its rows');
   assert.equal(researchRows['Hypothesis'], 'Not provided', 'an optional field left blank says so');
   panelOf(research).querySelector('.check-continue').click();
   const methodology = steps(d)[4];
   completeStep(app, methodology);
-  methodology.querySelector('.step-continue').click();
+  toCheckPage(methodology);
   const methodologyRows = Object.fromEntries(rowsOf(methodology));
   // Since RPA-116 each research question has its own rows, named for the question.
   assert.equal(methodologyRows['Sample Size for research question 1'], 'Small (1–5)', 'a radio by its label');
@@ -172,7 +175,7 @@ test('the check page does not print, and Change from the review step lands on th
   t.after(() => app.close());
   const d = app.document;
   const context = await contextFilled(app);
-  context.querySelector('.step-continue').click();
+  toCheckPage(context);
   panelOf(context).querySelector('.check-continue').click();
   const change = Array.from(d.querySelectorAll('.review-change')).find((b) => b.getAttribute('aria-label') === 'Change Context');
   change.click();
