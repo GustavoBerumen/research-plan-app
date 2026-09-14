@@ -160,9 +160,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
-      // "words=LOW-HIGH" is the length of a good answer, in words, shown once
-      // as a hint under the textarea (RPA-114). Advisory: never a limit.
-      words: (() => { const part = typeParts.find((t) => /^words=\d+-\d+$/.test(t)); if (!part) return null; const [low, high] = part.slice(6).split('-').map(Number); return { low, high }; })(),
+      // "words=N": a good answer is up to about N words, shown under the box
+      // as "You have N words remaining" (RPA-114). Advisory: never a limit.
+      words: (() => { const part = typeParts.find((t) => /^words=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       // "width=N" sizes a text input to the answer it expects, in the
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
@@ -3988,41 +3988,35 @@
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
   }
 
-  // A word guide, advisory (RPA-114, reframed on Gus's review): a hint that
-  // sets the expectation once — "A good answer is around 40 to 60 words." —
-  // and a running count that stays silent while the answer is anywhere near
-  // the range, appearing only once it is well past, when it is informative.
-  // Worded as description, never judgement; styled as a hint, never as an
-  // error; a polite live region updated about once a second rather than per
-  // keystroke, so a screen reader is not flooded. The design system's own
-  // research is the reason: a visible running count reads as a rule even
-  // when nothing enforces it, and people edit to satisfy the number rather
-  // than to answer the question.
-  function renderWordGuide(textarea, range, controlId) {
-    const wrap = el('div', 'word-guide-wrap');
-    const guide = el('p', 'word-guide', { id: controlId + '-words' });
-    guide.textContent = 'A good answer is around ' + range.low + ' to ' + range.high + ' words.';
-    const count = el('p', 'word-count', { 'aria-live': 'polite' });
-    count.hidden = true;
-    wrap.append(guide, count);
+  // The design system's word count, under the box, in its own words: "You
+  // have 30 words remaining", counting down as the person types (RPA-114,
+  // Gus's review). Advisory all the way: past the top it turns to
+  // description, "You've written about 35 words", never "5 words too many",
+  // and it stays hint-grey. As in the component, the visible message is
+  // aria-hidden and the field is described by it, while a visually hidden
+  // polite live region repeats it on a one-second debounce, so a screen
+  // reader hears the count on arrival and hears it change without being
+  // flooded per keystroke.
+  function renderWordGuide(textarea, limit, controlId) {
+    const wrap = el('div', 'word-count-wrap');
+    const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
+    const spoken = el('p', 'word-count-status visually-hidden', { 'aria-live': 'polite' });
+    wrap.append(visible, spoken);
     const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
-    textarea.setAttribute('aria-describedby', describedBy.concat(guide.id).join(' '));
+    textarea.setAttribute('aria-describedby', describedBy.concat(visible.id).join(' '));
     const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
-    const silentUntil = Math.round(range.high * 1.25);
-    function render() {
+    const message = () => {
       const n = words();
-      if (n > silentUntil) {
-        count.textContent = "You've written about " + (Math.round(n / 5) * 5) + ' words.';
-        count.hidden = false;
-      } else {
-        count.textContent = '';
-        count.hidden = true;
-      }
-    }
+      if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
+      return "You've written about " + (Math.round(n / 5) * 5) + ' words';
+    };
+    const render = () => { visible.textContent = message(); };
+    const speak = () => { spoken.textContent = visible.textContent; };
     let timer = null;
-    textarea.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(render, 1000); });
-    textarea._refreshCharCount = render;   // Clear Form resets at once (Max, #74)
+    textarea.addEventListener('input', () => { render(); window.clearTimeout(timer); timer = window.setTimeout(speak, 1000); });
+    textarea._refreshCharCount = () => { render(); speak(); };   // Clear Form resets at once (Max, #74)
     render();
+    speak();
     return wrap;
   }
 
@@ -4583,9 +4577,9 @@
     }
     input.id = controlId;
     describeControl(input, guidance);
-    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
+    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     const hint = signOffHint(field.key);
     if (hint) wrap.appendChild(hint);
 

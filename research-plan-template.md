@@ -52,12 +52,12 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
-  words=LOW-HIGH    — textarea fields only: a hint under the box saying a
-                       good answer is around LOW to HIGH words, and a
-                       running word count that appears only once the
-                       answer is well past the range. Advisory, never a
-                       limit (RPA-114). Two tiers today: 40-60 for a long
-                       answer, 20-30 for a short one.
+  words=N           — textarea fields only: the design system's word count
+                       under the box, "You have N words remaining", counting
+                       down as the person types; past N it reads "You've
+                       written about M words". Advisory, never a limit
+                       (RPA-114). Two tiers today: 60 for a long answer, 30
+                       for a short one.
   width=N           — text fields and list rows: the input is sized to the
                        answer it expects, in the GOV.UK width classes (2, 3, 4,
                        5, 10, 20 or 30 characters). A ticket key is 10, a name
@@ -112,17 +112,17 @@ Last updated (date, key=lastUpdated):
 
 # Context {open}
 
-Background (textarea, eval, rows=2, words=40-60, key=background):
+Background (textarea, eval, rows=2, words=60, key=background):
   Hint: Relevant context and essential terms needed to understand the project.
-Goal (textarea, eval, rows=2, words=20-30, key=goal): 
+Goal (textarea, eval, rows=2, words=30, key=goal): 
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
-Problem Statement (textarea, eval, rows=2, words=40-60, key=problemStatement): 
+Problem Statement (textarea, eval, rows=2, words=60, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
 # Research
 
-Objective (textarea, eval, rows=2, words=20-30, key=objective): 
+Objective (textarea, eval, rows=2, words=30, key=objective): 
   Hint: The purpose of the study: what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval, rows=1, words=20-30, key=hypothesis): 
+Hypothesis (textarea, optional, eval, rows=1, words=30, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
@@ -239,7 +239,7 @@ Additional information (custom-fields, key=additionalResources):
      sits above the approvals, because feedback offered after sign-off has
      missed its moment. It keeps the key `comments`: a key is an identifier,
      not a description, so no saved draft moves. -->
-Feedback (textarea, optional, words=40-60, key=comments):
+Feedback (textarea, optional, words=60, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
