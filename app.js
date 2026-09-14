@@ -5143,7 +5143,7 @@
         change.addEventListener('click', () => {
           const i = steps.indexOf(sectionEl);
           // Change is a deliberate act from Review, past every lock.
-          if (i >= 0) showStep(i, { force: true });
+          if (i >= 0) showStep(i, { force: true, check: false });
           else {
             const body = sectionEl.querySelector('.acc-body');
             if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
@@ -5397,8 +5397,10 @@
     }
     progress.textContent = 'You have completed ' + done + ' of ' + (steps.length - 1) + ' sections.';
   }
-  function currentStepSlug() { return currentStep >= 0 && steps[currentStep] ? steps[currentStep].dataset.stepSlug : ''; }
-  function stepIndexForSlug(slug) { return slug ? steps.findIndex((s) => s.dataset.stepSlug === slug) : -1; }
+  // A slug may carry the check page: "context/check" (RPA-103).
+  function currentStepSlug() { const s = currentStep >= 0 && steps[currentStep]; return s ? s.dataset.stepSlug + (isChecking(s) ? '/check' : '') : ''; }
+  function slugWantsCheck(slug) { return /\/check$/.test(slug || ''); }
+  function stepIndexForSlug(slug) { const bare = (slug || '').replace(/\/check$/, ''); return bare ? steps.findIndex((s) => s.dataset.stepSlug === bare) : -1; }
   function buildSteps() {
     const header = doc.querySelector('.doc-header');
     const sections = Array.from(doc.querySelectorAll('.acc'));
@@ -5423,7 +5425,7 @@
       const back = el('button', 'step-back', { type: 'button' });
       back.textContent = 'Back';
       back.hidden = i === 0;
-      back.addEventListener('click', () => showStep(i - 1));
+      back.addEventListener('click', () => { if (isChecking(stepEl)) leaveCheck(stepEl); else showStep(i - 1); });
       const caption = el('p', 'step-caption');
       caption.textContent = 'Section ' + i + ' of ' + (total - 1);
       const all = el('button', 'step-all', { type: 'button' });
@@ -5451,7 +5453,7 @@
           });
           saveDraft();   // "Save" is a promise: kept even when the section is not done
           errorsShowing = showStepErrors(stepEl, summary, { focus: true });
-          if (!errorsShowing) showStep(i + 1);
+          if (!errorsShowing) showCheck(i);
         });
         // Once errors are showing, they follow the typing: a field filled in
         // loses its message, and the summary goes when nothing is left.
@@ -5460,6 +5462,7 @@
         stepEl.addEventListener('change', follow);
         nav.appendChild(next);
         stepEl.appendChild(nav);
+        stepEl.appendChild(renderCheckPanel(stepEl, i));
       }
       stepEl.hidden = true;
     });
@@ -5471,20 +5474,25 @@
     doc.addEventListener('change', refreshTasks);
     refreshTaskList();
     window.addEventListener('hashchange', () => {
-      const i = stepIndexForSlug(location.hash.slice(1));
-      if (i >= 0 && i !== currentStep) showStep(i, { fromHash: true });
+      const slug = location.hash.slice(1);
+      const i = stepIndexForSlug(slug);
+      if (i < 0) return;
+      if (i !== currentStep) showStep(i, { fromHash: true, check: slugWantsCheck(slug) });
+      else if (slugWantsCheck(slug) !== isChecking(steps[i])) setChecking(steps[i], slugWantsCheck(slug));
     });
     // Resolve the URL after defaults and saved answers have been loaded.
     showStep(0, { silent: true, keepUrl: true });
   }
   function restoreStepPosition(draft) {
-    const requested = stepIndexForSlug(location.hash.slice(1));
-    if (requested >= 0 && showStep(requested, { silent: true })) return;
-    const saved = stepIndexForSlug(draft?.ui?.section || '');
+    const hash = location.hash.slice(1);
+    const requested = stepIndexForSlug(hash);
+    if (requested >= 0 && showStep(requested, { silent: true, check: slugWantsCheck(hash) })) return;
+    const savedSlug = draft?.ui?.section || '';
+    const saved = stepIndexForSlug(savedSlug);
     // Only an actual saved position gets the restoration exception. A new
     // incoming fragment is checked against the same locks as a clicked link.
     showStep(saved >= 0 ? saved : 0, { silent: true, force: saved >= 0,
-      keepUrl: requested < 0 && saved < 0 });
+      keepUrl: requested < 0 && saved < 0, check: saved >= 0 && slugWantsCheck(savedSlug) });
   }
   // silent: arriving (boot or restore) — no focus, no scroll, no save, and the
   // history entry is replaced rather than pushed. fromHash: the browser moved
@@ -5498,14 +5506,17 @@
     steps.forEach((s, k) => { s.hidden = k !== i; });
     const stepEl = steps[i];
     currentStep = i;
+    // Asked for a mode, take it; otherwise the step is as it was left, so
+    // Back from the next section lands on the check page (RPA-103).
+    if ('check' in opts) setChecking(stepEl, !!opts.check);
     const head = stepEl.querySelector('.acc-head');
     if (head) setAccOpen(head, true);
     if (!opts.fromHash && !opts.keepUrl) {
-      try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + stepEl.dataset.stepSlug); } catch (e) { /* no history here */ }
+      try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     }
     refreshTaskList();
     if (opts.silent) return true;
-    const focusTarget = stepEl.querySelector('.step-heading, .acc-head, .review-h');
+    const focusTarget = isChecking(stepEl) ? checkPanelOf(stepEl).querySelector('.check-heading') : stepEl.querySelector('.step-heading, .acc-head, .review-h');
     if (focusTarget) {
       if (focusTarget.tagName !== 'BUTTON' && !focusTarget.hasAttribute('tabindex')) focusTarget.setAttribute('tabindex', '-1');
       focusTarget.focus({ preventScroll: true });
@@ -5513,6 +5524,157 @@
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
     saveDraft();
     return true;
+  }
+
+  // ---------- check your answers, per section (RPA-103) ----------
+  // Save and continue on a complete section does not leave it yet. The same
+  // step turns into the design system's check-answers page: a summary list
+  // of every question in the section, answered or not, with a Change link
+  // on each row, and Continue to move on. Change returns to the answers
+  // with focus on that field, and the next Save and continue brings the
+  // check page back (Gus's placement, 11 September 2026: after each
+  // section, before the next). The URL carries the mode ("#context/check"),
+  // as does the draft, so a reload lands on the check page too. Nothing
+  // leaves the DOM: autosave, the review summary and print see it all.
+  function checkPanelOf(stepEl) { return Array.from(stepEl.children).find((c) => c.classList.contains('check-answers')) || null; }
+  function isChecking(stepEl) { return !!stepEl && stepEl.classList.contains('step-checking'); }
+  function setChecking(stepEl, on) {
+    const panel = checkPanelOf(stepEl);
+    if (!panel) return false;
+    stepEl.classList.toggle('step-checking', on);
+    panel.hidden = !on;
+    if (on) drawCheckRows(stepEl, panel);
+    return true;
+  }
+  function renderCheckPanel(stepEl, i) {
+    const panel = el('div', 'check-answers');
+    const heading = el('h2', 'check-heading', { tabindex: '-1' });
+    heading.textContent = 'Check your answers';
+    const sub = el('p', 'check-sub');
+    sub.textContent = stepEl.dataset.stepTitle;
+    const list = el('dl', 'summary-list');
+    const nav = el('div', 'step-nav');
+    const next = el('button', 'btn btn-dark check-continue', { type: 'button' });
+    next.textContent = 'Continue';
+    next.addEventListener('click', () => showStep(i + 1));
+    nav.appendChild(next);
+    panel.append(heading, sub, list, nav);
+    panel.hidden = true;
+    return panel;
+  }
+  function showCheck(i) {
+    const stepEl = steps[i];
+    if (!setChecking(stepEl, true)) { showStep(i + 1); return; }
+    try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
+    checkPanelOf(stepEl).querySelector('.check-heading').focus({ preventScroll: true });
+    if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
+    saveDraft();
+  }
+  function leaveCheck(stepEl, group) {
+    setChecking(stepEl, false);
+    try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
+    const target = group ? (groupControl(group) || group.querySelector('button')) : stepEl.querySelector('.step-heading, .acc-head');
+    if (target) target.focus({ preventScroll: true });
+    const into = group || stepEl;
+    if (typeof into.scrollIntoView === 'function') into.scrollIntoView({ block: group ? 'center' : 'start' });
+    saveDraft();
+  }
+  // Every question of the step, optional ones and the hatch included: the
+  // check page shows what was answered and what was not.
+  function checkGroupsOf(stepEl) {
+    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.querySelector('[data-field="lastUpdated"]'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field'));
+  }
+  // The answer as the person gave it, one line or several: a radio by its
+  // label, a date in words, a list by its rows, a table by its rows, methods
+  // by their question, a hatch by its blocks.
+  function groupAnswer(g) {
+    const lines = [];
+    const push = (v) => { const t = String(v == null ? '' : v).trim(); if (t) lines.push(t); };
+    const optionText = (sel) => (sel.options[sel.selectedIndex] || {}).textContent || '';
+    const dateWords = (input) => {
+      const parsed = readDateSegments(input);
+      if (!parsed) return '';
+      const d = new Date(parsed.iso + 'T00:00:00');
+      return isNaN(d) ? parsed.iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    };
+    if (g.querySelector('.methods-group')) {
+      g.querySelectorAll('.methods-group').forEach((mg) => {
+        // The heading is abbreviated ("RQ1 · People"); its title carries the whole question.
+        const h = mg.querySelector('.methods-group-q');
+        const q = (h ? (h.title || h.textContent) : '').trim();
+        const ms = Array.from(mg.querySelectorAll('.list-input')).map((c) => c.value.trim()).filter(Boolean);
+        if (ms.length) push((q ? q + ': ' : '') + ms.join(', '));
+      });
+      return lines;
+    }
+    if (g.querySelector('table')) {
+      g.querySelectorAll('tbody tr').forEach((tr) => {
+        const cells = Array.from(tr.querySelectorAll('td')).map((td) => {
+          const file = td.querySelector('.file-cell');
+          if (file) return file.dataset.fileName || '';
+          const other = td.querySelector('.select-other-input');
+          if (other && !other.hidden) return other.value;
+          const sel = td.querySelector('select');
+          if (sel) return sel.hidden ? '' : optionText(sel);
+          const date = td.querySelector('input[type=date]');
+          if (date) return dateWords(date);
+          const c = td.querySelector('input:not([type=hidden]), textarea');
+          return c ? c.value : '';
+        }).map((v) => String(v || '').trim()).filter(Boolean);
+        if (cells.length) push(cells.join(' · '));
+      });
+      return lines;
+    }
+    if (g.querySelector('.custom-field-block')) {
+      g.querySelectorAll('.custom-field-block').forEach((b) => {
+        const name = ((b.querySelector('.custom-field-name') || {}).value || '').trim();
+        const body = ((b.querySelector('.custom-field-body') || {}).value || '').trim();
+        if (name || body) push(name && body ? name + ': ' + body : name || body);
+      });
+      return lines;
+    }
+    if (g.querySelector('.list-rows')) { g.querySelectorAll('.list-input').forEach((c) => push(c.value)); return lines; }
+    if (g.querySelector('input[type=radio]')) {
+      const radio = g.querySelector('input[type=radio]:checked');
+      if (!radio) return lines;
+      const other = radio.value === '__other__' ? g.querySelector('input[type=text]') : null;
+      const label = g.querySelector('label[for="' + radio.id + '"]');
+      push(other && other.value.trim() ? other.value : (label ? label.textContent : radio.value));
+      return lines;
+    }
+    const date = g.querySelector('.date-control input[type=date]');
+    if (date) { push(dateWords(date)); return lines; }
+    const sel = g.querySelector('select');
+    if (sel) { push(sel.selectedIndex > 0 ? optionText(sel) : ''); return lines; }
+    g.querySelectorAll('input[type=file]').forEach((f) => Array.from(f.files || []).forEach((file) => push(file.name)));
+    const c = g.querySelector('textarea, input:not([type=hidden]):not([type=file])');
+    if (c) push(c.value);
+    return lines;
+  }
+  function drawCheckRows(stepEl, panel) {
+    const list = panel.querySelector('.summary-list');
+    list.replaceChildren();
+    checkGroupsOf(stepEl).forEach((g) => {
+      const label = groupLabel(g);
+      const row = el('div', 'summary-row');
+      const key = el('dt', 'summary-key');
+      key.textContent = label;
+      const value = el('dd', 'summary-value');
+      const answer = groupAnswer(g);
+      if (!answer.length) { value.textContent = 'Not provided'; value.classList.add('summary-value-empty'); }
+      else if (answer.length === 1) value.textContent = answer[0];
+      else { const ul = el('ul', 'summary-items'); answer.forEach((a) => { const li = el('li'); li.textContent = a; ul.appendChild(li); }); value.appendChild(ul); }
+      const actions = el('dd', 'summary-actions');
+      const change = el('button', 'summary-change', { type: 'button' });
+      const named = el('span', 'visually-hidden');
+      named.textContent = ' ' + label;
+      change.append(document.createTextNode('Change'), named);
+      change.addEventListener('click', () => leaveCheck(stepEl, g));
+      actions.appendChild(change);
+      row.append(key, value, actions);
+      list.appendChild(row);
+    });
   }
 
   // ---------- the options menu (RPA-106) ----------
