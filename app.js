@@ -27,6 +27,7 @@
   let timelineVisible = false;
   let updateTimelineVisibility = null;
   let syncCommentsReveal = null;
+  let refreshOptionsMenu = () => {};
   // When this plan was started, as opposed to when it was last saved
   // (draft.savedAt) or last changed (the lastUpdated field, which is
   // re-stamped on every edit and editable by hand). Nothing recorded it
@@ -5201,6 +5202,44 @@
     attachFieldHelp(schema);
   }
 
+  // ---------- the options menu (RPA-106) ----------
+  // One Menu button in the bar opens a panel: the plan's name and the four
+  // actions that used to sit in the bar. Escape and a click outside close
+  // it; an action closes it too, except Restore, which is about to open a
+  // file dialog. The plan's name, not a person's: there is no sign-in yet.
+  // No Save progress: autosave already does it (Gus, 14 September 2026).
+  function initOptionsMenu() {
+    const toggle = document.getElementById('menu-btn');
+    const menu = document.getElementById('options-menu');
+    if (!toggle || !menu) return;
+    const setOpen = (open) => {
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open && menu.contains(document.activeElement)) toggle.focus();
+    };
+    toggle.addEventListener('click', () => setOpen(menu.hidden));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) { setOpen(false); toggle.focus(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (menu.hidden) return;
+      if (menu.contains(e.target) || toggle.contains(e.target)) return;
+      setOpen(false);
+    });
+    menu.querySelectorAll('button').forEach((b) => {
+      if (b.id === 'restore-backup-btn') return;
+      b.addEventListener('click', () => setOpen(false));
+    });
+    const name = document.getElementById('options-plan-name');
+    const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
+    refreshOptionsMenu = () => { name.textContent = title().trim() || 'Untitled plan'; };
+    // Restore replaces doc. Delegate to a stable parent, and read the current
+    // form so a detached plan's name does not survive it.
+    document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    document.addEventListener('change', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    refreshOptionsMenu();
+  }
+
   // ---------- clear form ----------
   // ---------- draft persistence (localStorage) ----------
   // The whole form is snapshotted under one key, saved debounced behind
@@ -5441,7 +5480,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring) return;
+    if (!store || draftRestoring) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -5455,7 +5494,6 @@
         // attempt at this fix silently did nothing.
         draft = carryUnrendered(collectDraft());
       }
-      lastSavedSignature = signature;
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
@@ -5468,10 +5506,13 @@
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
       recoveredDraft = payload;
+      lastSavedSignature = signature;
+      return true;
     } catch (err) {
       // Most likely a quota error or storage blocked mid-session. Editing
       // must keep working, so this is reported and otherwise ignored.
       console.warn('Could not save draft:', err);
+      return false;
     }
   }
 
@@ -6227,6 +6268,7 @@
     draftTimer = null;
     original.formEvents.abort();
     resetEvaluationWork();
+    refreshOptionsMenu();
   }
 
   function readBackupFile(file) {
@@ -6368,6 +6410,7 @@
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.
     withoutDraftSave(applyTableDefaults);
+    refreshOptionsMenu();
   }
 
   // ---------- evaluation test profiles ----------
@@ -6515,6 +6558,7 @@
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
+        initOptionsMenu();
       })
       .catch(showLoadError);
   });
