@@ -4957,9 +4957,13 @@
       'data-field': header.title.key,
     });
     describeControl(titleInput, titleHint);
-    wrap.appendChild(titleLabel);
-    if (titleHint) wrap.appendChild(titleHint);
-    wrap.appendChild(titleInput);
+    // One group, like a meta field, so the title can be judged and marked
+    // with the rest of Plan details: it is required (Gus, 14 September 2026).
+    const titleField = el('div', 'title-field');
+    titleField.appendChild(titleLabel);
+    if (titleHint) titleField.appendChild(titleHint);
+    titleField.appendChild(titleInput);
+    wrap.appendChild(titleField);
     if (identifier) wrap.appendChild(identifier);
     wrap.appendChild(metaGrid);
 
@@ -5234,7 +5238,8 @@
   // means not optional and not the Additional information hatch.
   function requiredGroupsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) {
-      return Array.from(stepEl.querySelectorAll('.mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
+      // The title counts too: the template does not mark it optional.
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
     }
     if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
     return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
