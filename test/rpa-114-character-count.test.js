@@ -43,7 +43,8 @@ test('exactly the fields the template gives a count to have one, with the recomm
   for (const [key, n] of Object.entries(expected)) {
     assert.equal(counterOf(d, key)?.textContent, 'A good answer is around ' + n + ' characters.', key);
   }
-  assert.equal(counterOf(d, 'theory'), null, 'Theory is filled from a suggestion; no count');
+  // Theory is dormant since RPA-117; when it returns it has no count, by design.
+  assert.equal(d.querySelector('[data-field="theory"]'), null);
   assert.equal(d.querySelectorAll('.char-count').length, Object.keys(expected).length, 'and nowhere else');
   assert.deepEqual(app.jsdomErrors, []);
 });
