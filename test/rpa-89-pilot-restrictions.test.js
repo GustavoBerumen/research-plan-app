@@ -1,11 +1,16 @@
 'use strict';
 const test = require('node:test');
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { once } = require('node:events');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { loadServer, ASSETS, PRIVATE, ROOT, AUTHORIZATION } = require('./rpa-89-server-harness.cjs');
-const { bootApp, waitFor, setValue, DRAFT_KEY } = require('./app-harness');
+const { bootApp, waitFor, setValue, DRAFT_KEY, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
 const { realisticBackup } = require('./rpa-40-fixtures.cjs');
 const disabled = { calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
 const pilotConfig = { pilotMode: true, capabilities: disabled };
@@ -158,7 +163,7 @@ test('allowed assets boot the complete form through real HTTP routing', async t 
   }
   dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
   await waitFor(() => dom.window.document.querySelector('.title-inp'));
-  const reference = await bootApp({ configResponse: async () => response(pilotConfig) });
+  const reference = await bootApp({ configResponse: async () => response(pilotConfig) });   // the real template, like the HTTP boot
   t.after(() => reference.close());
   const fields = doc => [...doc.querySelectorAll('[data-field]')].map(e => e.dataset.field);
   assert.deepEqual(fields(dom.window.document), fields(reference.document));
@@ -181,7 +186,7 @@ for (const [name, configResponse] of [
   ['pending configuration', () => new Promise(() => {})],
 ]) test(`${name}: restricted actions cannot be enabled by DOM/client state; results and references survive`, async t => {
   const draft = realisticBackup();
-  const app = await bootApp({ draft, configResponse,
+  const app = await bootApp({ textAssets: WITH_THEORY,  draft, configResponse,
     evaluate: async () => ({ label: 'Actionable', tone: 'good', metrics: [{ name: 'Clarity', score: 3, desc: 'Synthetic result' }], recommendations: ['Synthetic recommendation.'] }),
     suggestFramework: async () => ({ matched: false, draft: { name: 'Synthetic draft', category: 'Synthetic category', coreFocus: 'Synthetic focus', uxrApplication: 'Synthetic use', references: ['Synthetic ref'], rationale: 'Synthetic reason' } }),
   });
