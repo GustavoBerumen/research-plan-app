@@ -10,7 +10,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor, completeStep } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
 
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const steps = (d) => Array.from(d.querySelectorAll('.step'));
@@ -27,9 +27,9 @@ test('editing an earlier answer preserves access to another completed section', 
   const { document: d, window } = app;
   d.querySelector('.task-link').click();
   completeStep(app, steps(d)[1]);
-  steps(d)[1].querySelector('.step-continue').click();
+  saveAndContinue(steps(d)[1]);
   completeStep(app, steps(d)[2]);
-  steps(d)[2].querySelector('.step-continue').click();
+  saveAndContinue(steps(d)[2]);
   steps(d)[3].querySelector('.step-back').click();
   steps(d)[2].querySelector('.step-back').click();
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
@@ -55,7 +55,7 @@ test('an incoming unlocked link is resolved against the restored answers', async
   const source = await bootApp(); t.after(() => source.close());
   source.document.querySelector('.task-link').click();
   completeStep(source, steps(source.document)[1]);
-  steps(source.document)[1].querySelector('.step-continue').click();
+  saveAndContinue(steps(source.document)[1]);
   const draft = JSON.parse(source.window.localStorage.getItem('research-plan-app:draft'));
   draft.ui.section = 'plan-details';
   const restored = await bootApp({ draft, url: 'https://research-plan.test/#context' });
@@ -108,10 +108,10 @@ test('a locked section refuses a link and a hash, and Save and continue holds an
   window.location.hash = '#plan-details';
   await waitFor(() => visible(d)[0] === 'plan-details');
   const nav = steps(d)[1];
-  nav.querySelector('.step-continue').click();
+  saveAndContinue(nav);
   assert.deepEqual(visible(d), ['plan-details'], 'incomplete: it stays');
   completeStep(app, nav);
-  nav.querySelector('.step-continue').click();
+  saveAndContinue(nav);
   assert.deepEqual(visible(d), ['context'], 'complete: it goes on');
 });
 
@@ -134,7 +134,7 @@ test('every step has a way back to the list, and a completed section stays open 
   app.window.location.hash = '#plan-details';
   await waitFor(() => visible(d)[0] === 'plan-details');
   completeStep(app, steps(d)[1]);
-  steps(d)[1].querySelector('.step-continue').click();
+  saveAndContinue(steps(d)[1]);
   assert.deepEqual(visible(d), ['context']);
   steps(d)[2].querySelector('.step-all').click();
   assert.deepEqual(visible(d), ['sections']);

@@ -19,7 +19,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -89,18 +89,18 @@ test('Continue and Back walk the steps, the URL follows, and the browser can dri
   window.location.hash = '#plan-details';
   await waitFor(() => visible(d)[0] === 'plan-details');
   completeStep(app, steps(d)[1]);
-  continueOn(steps(d)[1]).click();
+  saveAndContinue(steps(d)[1]);
   assert.deepEqual(visible(d), ['context']);
   assert.equal(window.location.hash, '#context');
   // Context, not Plan details: only a section that starts closed proves
   // that showing a step also opens it.
   assert.equal(steps(d)[2].querySelector('.acc-body').hidden, false, 'the section is open, not merely on screen');
   completeStep(app, steps(d)[2]);
-  continueOn(steps(d)[2]).click();
+  saveAndContinue(steps(d)[2]);
   assert.deepEqual(visible(d), ['research']);
   backOn(steps(d)[3]).click();
   assert.deepEqual(visible(d), ['context']);
-  assert.equal(window.location.hash, '#context');
+  assert.equal(window.location.hash, '#context/check', 'Back lands on the check page it left (RPA-103)');
   // The browser moving us (Back button, a typed hash) is honoured too.
   window.location.hash = '#research';
   await waitFor(() => visible(d)[0] === 'research', { message: 'hashchange did not navigate' });
@@ -113,7 +113,7 @@ test('the saved step returns on reload; only an unlocked URL overrides it', asyn
   window.location.hash = '#plan-details';
   await waitFor(() => visible(d)[0] === 'plan-details');
   completeStep(app, steps(d)[1]);
-  continueOn(steps(d)[1]).click();
+  saveAndContinue(steps(d)[1]);
   await waitFor(() => savedDraft(window)?.ui?.section === 'context', { message: 'the step was not saved' });
 
   const again = await bootApp({ draft: { version: 7, fields: {}, lists: {}, tables: {}, ui: { section: 'methodology' } } });
@@ -144,7 +144,7 @@ test('a section heading and the review step\'s Change both go to the step, and C
 test('every step prints, and the step chrome does not', () => {
   const print = CSS.slice(CSS.lastIndexOf('@media print'));
   assert.match(print, /\.step\[hidden\]\{display:block!important\}/);
-  assert.match(print, /\.step-top,\.step-nav,\.task-list-step,\.error-summary,\.field-error\{display:none!important\}/);
+  assert.match(print, /\.step-top,\.step-nav,\.task-list-step,\.check-answers,\.error-summary,\.field-error\{display:none!important\}/);
 });
 
 test('each section has one Additional information hatch, after its Evaluate control, and the head count leaves it out', async (t) => {

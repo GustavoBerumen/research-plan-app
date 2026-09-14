@@ -262,8 +262,17 @@ function completeStep(app, stepEl) {
   });
 }
 
+// Presses Save and continue and, when the section is complete, Continue on
+// the check page that follows (RPA-103), so "moves on" keeps its meaning.
+function saveAndContinue(stepEl) {
+  stepEl.querySelector('.step-continue').click();
+  const check = Array.from(stepEl.children).find((c) => c.classList.contains('check-answers'));
+  if (check && !check.hidden) check.querySelector('.check-continue').click();
+}
+
 module.exports = {
   DRAFT_KEY,
+  saveAndContinue,
   withFieldFlag,
   withFieldUncommented,
   bootApp,
