@@ -160,10 +160,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
-      // "count=N" says how long a good answer is, and the textarea shows a
-      // running character count against it (RPA-114). A recommendation,
-      // never a limit: nothing stops a longer answer.
-      count: (() => { const part = typeParts.find((t) => /^count=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
+      // "words=LOW-HIGH" is the length of a good answer, in words, shown once
+      // as a hint under the textarea (RPA-114). Advisory: never a limit.
+      words: (() => { const part = typeParts.find((t) => /^words=\d+-\d+$/.test(t)); if (!part) return null; const [low, high] = part.slice(6).split('-').map(Number); return { low, high }; })(),
       // "width=N" sizes a text input to the answer it expects, in the
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
@@ -3989,27 +3988,42 @@
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
   }
 
-  // The GOV.UK character count, as a recommendation (RPA-114): the message
-  // says what a good answer is before anything is typed, then how much has
-  // been written against it. A live region, so a screen reader hears the
-  // count change without leaving the field; described-by, so the field
-  // announces it on arrival. Counted the way the design system counts:
-  // characters, spaces included.
-  function renderCharCount(textarea, recommended, controlId) {
-    const out = el('p', 'char-count', { id: controlId + '-count', 'aria-live': 'polite' });
+  // A word guide, advisory (RPA-114, reframed on Gus's review): a hint that
+  // sets the expectation once — "A good answer is around 40 to 60 words." —
+  // and a running count that stays silent while the answer is anywhere near
+  // the range, appearing only once it is well past, when it is informative.
+  // Worded as description, never judgement; styled as a hint, never as an
+  // error; a polite live region updated about once a second rather than per
+  // keystroke, so a screen reader is not flooded. The design system's own
+  // research is the reason: a visible running count reads as a rule even
+  // when nothing enforces it, and people edit to satisfy the number rather
+  // than to answer the question.
+  function renderWordGuide(textarea, range, controlId) {
+    const wrap = el('div', 'word-guide-wrap');
+    const guide = el('p', 'word-guide', { id: controlId + '-words' });
+    guide.textContent = 'A good answer is around ' + range.low + ' to ' + range.high + ' words.';
+    const count = el('p', 'word-count', { 'aria-live': 'polite' });
+    count.hidden = true;
+    wrap.append(guide, count);
     const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
-    textarea.setAttribute('aria-describedby', describedBy.concat(out.id).join(' '));
+    textarea.setAttribute('aria-describedby', describedBy.concat(guide.id).join(' '));
+    const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
+    const silentUntil = Math.round(range.high * 1.25);
     function render() {
-      const used = textarea.value.length;
-      out.textContent = used === 0
-        ? 'A good answer is around ' + recommended + ' characters.'
-        : 'You have written ' + used + ' of around ' + recommended + ' characters.';
-      out.classList.toggle('char-count-over', used > recommended);
+      const n = words();
+      if (n > silentUntil) {
+        count.textContent = "You've written about " + (Math.round(n / 5) * 5) + ' words.';
+        count.hidden = false;
+      } else {
+        count.textContent = '';
+        count.hidden = true;
+      }
     }
-    textarea.addEventListener('input', render);
-    textarea._refreshCharCount = render;
+    let timer = null;
+    textarea.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(render, 1000); });
+    textarea._refreshCharCount = render;   // Clear Form resets at once (Max, #74)
     render();
-    return out;
+    return wrap;
   }
 
   // ---------- Methods combobox (search suggestions, still free text) ----------
@@ -4569,7 +4583,7 @@
     }
     input.id = controlId;
     describeControl(input, guidance);
-    if (isTextarea && field.count) wrap.appendChild(renderCharCount(input, field.count, controlId));
+    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
     const hint = signOffHint(field.key);

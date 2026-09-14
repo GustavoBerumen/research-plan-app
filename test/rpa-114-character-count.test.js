@@ -1,96 +1,118 @@
 'use strict';
 
-// RPA-114. A running character count under a textarea, as a recommendation:
-// "A good answer is around 300 characters", then "You have written 120 of
-// around 300 characters". It tells people what is expected and gives them
-// confidence about what a good answer is; it never stops a longer one. The
-// template declares the number with count=N; the message is a polite live
-// region the field is described by, so a screen reader hears it on arrival
-// and hears it change without leaving the field.
+// RPA-114, reframed on Gus's review of 14 September. Not a character count:
+// a word guide. A hint under the box sets the expectation once — "A good
+// answer is around 40 to 60 words." — and a running count stays silent
+// while the answer is anywhere near the range, appearing only once it is
+// well past, worded as description ("You've written about 80 words."),
+// never judgement, styled as a hint, never red, and announced through a
+// polite live region about once a second rather than per keystroke. The
+// design system's own research is the reason: a visible running count reads
+// as a rule even when nothing enforces it. Two tiers: 40-60 words for a long
+// answer, 20-30 for a short one; nothing is ever blocked.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue } = require('./app-harness');
+const { bootApp, setValue, waitFor } = require('./app-harness');
 
 const ROOT = path.join(__dirname, '..');
 const CSS = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 const TEMPLATE = fs.readFileSync(path.join(ROOT, 'research-plan-template.md'), 'utf8');
-const counterOf = (d, key) => d.querySelector('[data-field="' + key + '"]').closest('.field').querySelector('.char-count');
+const wrapOf = (d, key) => d.querySelector('[data-field="' + key + '"]').closest('.field');
+const guideOf = (d, key) => wrapOf(d, key).querySelector('.word-guide');
+const countOf = (d, key) => wrapOf(d, key).querySelector('.word-count');
+const words = (n) => Array.from({ length: n }, (_, i) => 'word' + i).join(' ');
+const settle = () => new Promise((r) => setTimeout(r, 1150));
 
-test('Clear Form resets the count and over-recommendation styling without saving an empty draft', async (t) => {
-  const app = await bootApp();
-  t.after(() => app.close());
-  const { document: d, window } = app;
-  const textarea = d.querySelector('[data-field="background"]');
-  const counter = counterOf(d, 'background');
-  setValue(window, textarea, 'x'.repeat(450));
-  assert.equal(counter.classList.contains('char-count-over'), true);
-  d.getElementById('clear-btn').click();
-  assert.equal(textarea.value, '');
-  assert.equal(counter.textContent, 'A good answer is around 280 characters.');
-  assert.equal(counter.classList.contains('char-count-over'), false);
-  await new Promise(resolve => setTimeout(resolve, 550));
-  assert.equal(window.localStorage.getItem('research-plan-app:draft'), null);
-});
-
-test('exactly the fields the template gives a count to have one, with the recommended length in the message', async (t) => {
+test('each free-text field states its range once, as a hint the field is described by; the count is silent at rest', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  // Gus's numbers, 14 September: two tiers, 280 for a long answer and 140 for a short one.
-  const expected = { background: 280, goal: 140, problemStatement: 280, objective: 140, hypothesis: 140, comments: 280 };
-  for (const [key, n] of Object.entries(expected)) {
-    assert.equal(counterOf(d, key)?.textContent, 'A good answer is around ' + n + ' characters.', key);
+  const tiers = { background: '40 to 60', problemStatement: '40 to 60', comments: '40 to 60', goal: '20 to 30', objective: '20 to 30', hypothesis: '20 to 30' };
+  for (const [key, range] of Object.entries(tiers)) {
+    assert.equal(guideOf(d, key).textContent, 'A good answer is around ' + range + ' words.', key);
+    assert.equal(countOf(d, key).hidden, true, key + ': nothing to say yet');
+    const ids = (d.querySelector('[data-field="' + key + '"]').getAttribute('aria-describedby') || '').split(/\s+/);
+    assert.ok(ids.includes(guideOf(d, key).id), key + ': the guide is part of the description');
+    assert.ok(!ids.includes(countOf(d, key).id || '__none__'), key + ': the count is not, it announces itself');
   }
-  // Theory is dormant since RPA-117; when it returns it has no count, by design.
-  assert.equal(d.querySelector('[data-field="theory"]'), null);
-  assert.equal(d.querySelectorAll('.char-count').length, Object.keys(expected).length, 'and nowhere else');
+  assert.equal(d.querySelectorAll('.word-guide').length, 6, 'and nowhere else');
+  assert.equal(d.querySelector('[data-field="theory"]'), null, 'Theory is dormant (RPA-117)');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the count follows what is written, counts spaces, and going over is said, not stopped', async (t) => {
+test('the count stays silent anywhere near the range and speaks only once well past it, as description', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const ta = d.querySelector('[data-field="goal"]');   // 20 to 30 words
+  setValue(window, ta, words(30));
+  await settle();
+  assert.equal(countOf(d, 'goal').hidden, true, 'at the top of the range: silent');
+  setValue(window, ta, words(37));
+  await settle();
+  assert.equal(countOf(d, 'goal').hidden, true, 'a little past: still silent');
+  setValue(window, ta, words(48));
+  await waitFor(() => !countOf(d, 'goal').hidden, { message: 'well past the range, it should appear' });
+  assert.equal(countOf(d, 'goal').textContent, "You've written about 50 words.");
+  assert.doesNotMatch(countOf(d, 'goal').textContent, /over|too|limit|remaining/i, 'description, not judgement');
+  assert.equal(ta.value.split(/\s+/).length, 48, 'never a limit');
+  setValue(window, ta, words(25));
+  await waitFor(() => countOf(d, 'goal').hidden, { message: 'back in range, it goes' });
+});
+
+test('it is a hint, never an error: no red, no border, no error class, not in the print hide-list; the count does not print', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  setValue(window, d.querySelector('[data-field="goal"]'), words(60));
+  await waitFor(() => !countOf(d, 'goal').hidden);
+  for (const el of [guideOf(d, 'goal'), countOf(d, 'goal')]) {
+    assert.ok(!Array.from(el.classList).some((c) => /error|over|invalid|warn/i.test(c)), el.className);
+  }
+  assert.equal(wrapOf(d, 'goal').classList.contains('field-invalid'), false);
+  assert.match(CSS, /\.word-guide,\.word-count\{[^}]*color:var\(--text-2\)/, 'hint colour, the same as a hint');
+  assert.doesNotMatch(CSS, /\.word-(guide|count)[^{]*\{[^}]*--red/, 'never red');
+  // The print hide-list is the one selector list that starts with .section-evaluation.
+  const hideList = CSS.slice(CSS.indexOf('.section-evaluation,.field-eval-progress')).split('{')[0];
+  assert.ok(hideList.includes('.word-count,'), 'the running count does not print');
+  assert.ok(!hideList.includes('.word-guide'), 'the guide prints like any hint');
+});
+
+test('a screen reader is told calmly: a polite live region, updated on a debounce rather than per keystroke', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
   const ta = d.querySelector('[data-field="goal"]');
-  const out = counterOf(d, 'goal');
-  setValue(window, ta, 'Ship the new checkout.');
-  assert.equal(out.textContent, 'You have written 22 of around 140 characters.');
-  assert.equal(out.classList.contains('char-count-over'), false);
-  setValue(window, ta, 'x'.repeat(250));
-  assert.equal(out.textContent, 'You have written 250 of around 140 characters.');
-  assert.equal(out.classList.contains('char-count-over'), true);
-  assert.equal(ta.value.length, 250, 'a recommendation, never a limit');
-  setValue(window, ta, '');
-  assert.equal(out.textContent, 'A good answer is around 140 characters.', 'back to the recommendation when empty');
+  assert.equal(countOf(d, 'goal').getAttribute('aria-live'), 'polite');
+  setValue(window, ta, words(60));
+  assert.equal(countOf(d, 'goal').hidden, true, 'not on the keystroke');
+  await waitFor(() => !countOf(d, 'goal').hidden, { message: 'after the debounce' });
 });
 
-test('a screen reader hears it: a polite live region the field is described by, alongside its hint', async (t) => {
-  const app = await bootApp({});
+test('Clear Form silences the count at once, without saving an empty draft', async (t) => {
+  // Max's case from #74, in the new shape.
+  const app = await bootApp();
   t.after(() => app.close());
-  const d = app.document;
-  const ta = d.querySelector('[data-field="background"]');
-  const out = counterOf(d, 'background');
-  assert.equal(out.getAttribute('aria-live'), 'polite');
-  const ids = (ta.getAttribute('aria-describedby') || '').split(/\s+/);
-  assert.ok(ids.includes(out.id), 'described by the count');
-  assert.ok(ids.includes(ta.closest('.field').querySelector('.field-hint-text').id), 'and still by the hint');
+  const { document: d, window } = app;
+  const ta = d.querySelector('[data-field="background"]');   // 40 to 60 words
+  setValue(window, ta, words(90));
+  await waitFor(() => !countOf(d, 'background').hidden);
+  d.getElementById('clear-btn').click();
+  assert.equal(ta.value, '');
+  assert.equal(countOf(d, 'background').hidden, true, 'reset immediately, not after the debounce');
+  await new Promise((resolve) => setTimeout(resolve, 550));
+  assert.equal(window.localStorage.getItem('research-plan-app:draft'), null);
 });
 
-test('a restored draft shows the count of what came back', async (t) => {
-  const app = await bootApp({ draft: { version: 7, fields: { background: 'y'.repeat(60) }, lists: {}, tables: {} } });
+test('a restored draft well past the range gets its count after the debounce, and words= on anything but a textarea is ignored', async (t) => {
+  const app = await bootApp({ draft: { version: 7, fields: { goal: words(80) }, lists: {}, tables: {} } });
   t.after(() => app.close());
-  assert.equal(counterOf(app.document, 'background').textContent, 'You have written 60 of around 280 characters.');
-});
-
-test('the count does not print, and count= on anything but a textarea is ignored', async (t) => {
-  const print = CSS.slice(CSS.indexOf('@media print{'));
-  assert.match(print, /\.char-count,/, 'in the print hide-list');
-  // A sign-off is a plain text input built by the same code as a textarea,
-  // so this is the guard itself being tested, not a different builder.
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('(text, key=signOffResearcher)', '(text, count=20, key=signOffResearcher)') } });
-  t.after(() => app.close());
-  assert.equal(app.document.querySelector('[data-field="signOffResearcher"]').closest('.field').querySelector('.char-count'), null);
+  await waitFor(() => !countOf(app.document, 'goal').hidden, { message: 'the count for a restored answer' });
+  assert.equal(countOf(app.document, 'goal').textContent, "You've written about 80 words.");
+  const other = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('(text, width=20, key=signOffResearcher)', '(text, width=20, words=20-30, key=signOffResearcher)') } });
+  t.after(() => other.close());
+  assert.equal(other.document.querySelector('[data-field="signOffResearcher"]').closest('.field').querySelector('.word-guide'), null);
 });
