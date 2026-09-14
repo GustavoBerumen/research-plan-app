@@ -269,6 +269,15 @@
         return;
       }
 
+      // An indented "Guidance:" line is a longer note about the field, shown
+      // on demand behind a "Help with this section" link at the bottom of the
+      // field (RPA-107). Several lines make several paragraphs.
+      const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
+      if (guideMatch && currentField) {
+        currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
+        return;
+      }
+
       const exMatch = raw.match(/^\s+(Good|Bad):\s*(.*)$/i);
       if (exMatch && currentField) {
         currentField.examples = currentField.examples || {};
@@ -3963,6 +3972,65 @@
     });
   }
 
+  // Guidance text allows *italics* like a hint, and [text](url) for a link
+  // to a page that says more, which is the other half of what RPA-107 asks.
+  function appendGuidanceText(target, text) {
+    text.split(/(\[[^\]\n]+\]\([^)\s]+\))/).forEach((part) => {
+      if (!part) return;
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      if (link) {
+        const a = el('a', 'field-help-link', { href: link[2], target: '_blank', rel: 'noopener' });
+        a.textContent = link[1];
+        target.appendChild(a);
+      } else {
+        appendHintText(target, part);
+      }
+    });
+  }
+
+  // The GOV.UK details component, closed, at the bottom of the field: a
+  // longer note for the people who want more than the hint, opened as they
+  // answer (RPA-107; Gus, 14 September 2026: one on every field, under the
+  // box, "Help with this section" as its link). Not part of the control's
+  // description, so a screen reader is not read the note on arrival. The
+  // words are their own ticket (RPA-119); until a field's note is written
+  // its link opens on one honest line rather than nothing.
+  const NO_HELP_YET = 'No further help for this field yet.';
+  function renderFieldHelp(field) {
+    const details = el('details', 'field-help');
+    const summary = el('summary', 'field-help-summary');
+    summary.textContent = 'Help with this section';
+    const body = el('div', 'field-help-body');
+    const lines = field.guidance && field.guidance.length ? field.guidance : [NO_HELP_YET];
+    lines.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    details.append(summary, body);
+    return details;
+  }
+
+  // After the document is built, so no field builder has to know. Every
+  // field has the link, the title and the header fields included; only Last
+  // updated, a computed date nobody fills in, has none. The block goes under
+  // the field's control, after everything that belongs to the answer (rows,
+  // the add button, a word count) and before the evaluation controls. Found
+  // by the label's id: a section or header field has a wrapper to append to,
+  // the title has none, so its block follows its box directly.
+  function attachFieldHelp(schema) {
+    const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
+    fields.filter((f) => f && f.key !== 'lastUpdated').forEach((f) => {
+      const id = fieldControlId(f.key);
+      const label = doc.querySelector('#' + id + '-label');
+      if (!label) return;
+      const wrap = label.closest('.field, .mf');
+      if (wrap) {
+        const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
+        wrap.insertBefore(renderFieldHelp(f), evaluation || null);
+        return;
+      }
+      const control = doc.querySelector('#' + id);
+      if (control) control.insertAdjacentElement('afterend', renderFieldHelp(f));
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
@@ -5130,6 +5198,7 @@
     loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
+    attachFieldHelp(schema);
   }
 
   // ---------- clear form ----------
