@@ -55,6 +55,11 @@ Flags (comma-separated inside the parentheses):
   count=N           — textarea fields only: shows a running character count
                        against N, the length of a good answer. A
                        recommendation, never a limit (RPA-114).
+  width=N           — text fields and list rows: the input is sized to the
+                       answer it expects, in the GOV.UK width classes (2, 3, 4,
+                       5, 10, 20 or 30 characters). A ticket key is 10, a name
+                       or a user group 20, a characteristic 30. Dates are fixed
+                       already; textareas and prose rows stay full width.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -89,11 +94,11 @@ next "#" heading) become the header's meta fields (owner, dates, etc).
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
 
-Jira Project (text, key=jiraProject):
+Jira Project (text, width=10, key=jiraProject):
   Hint: Jira ticket for the initiative this research supports.
-Lead researcher (text, key=leadResearcher):
+Lead researcher (text, width=20, key=leadResearcher):
   Hint: Name of the person leading this research.
-Project requester (text, key=projectRequester):
+Project requester (text, width=20, key=projectRequester):
   Hint: Name of the person requesting this work.
 Project decision (date, key=projectDecision):
   Hint: Date of the decision informed by this research.
@@ -123,9 +128,14 @@ Outcomes (list, eval, key=outcomes):
 
 # Methodology
 
-Theory (textarea, optional, rows=2, key=theory): 
-  Hint: A framework to help ground the study design and analysis.
-Methods (list, key=methods):
+<!-- Dormant since RPA-117, 14 September 2026. Theory and Action Points are
+     hidden at this stage of the plan — Theory added friction, and actions are
+     tracked in Jira. Saved values in older drafts are carried forward
+     untouched by carryUnrendered, and the framework suggestion code stays
+     for when Theory returns. Uncomment the two lines to bring it back. -->
+<!-- Theory (textarea, optional, rows=2, key=theory): -->
+<!-- Hint: A framework to help ground the study design and analysis. -->
+Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
 ## Participants
@@ -142,9 +152,9 @@ Methods (list, key=methods):
      Drafts saved while the fields were merged keep everything in
      Characteristics: which entries were segments was not recorded, so nothing
      can sort them back out. Splitting them is forward-looking only. -->
-Characteristics (list, prose, key=characteristics):
+Characteristics (list, prose, width=30, key=characteristics):
   Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
-User Groups (list, prose, key=userGroups):
+User Groups (list, prose, width=20, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
@@ -162,8 +172,10 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
      completion date follows Research readout until somebody edits it. -->
 Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
   Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
-Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible
-  Hint: Tasks needed to move this research forward, and who owns each one.
+<!-- Dormant since RPA-117, see Theory above. RPA-69, Jira subtasks from
+     Action Points, loses its source while this is hidden. -->
+<!-- Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible -->
+<!-- Hint: Tasks needed to move this research forward, and who owns each one. -->
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
      cannot also be a live tracker, so any status it claims is wrong the day
      after sign-off. Nothing has happened yet at the point the question is
@@ -226,7 +238,7 @@ Additional information (custom-fields, key=additionalResources):
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, count=500, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
-Sign off: Lead researcher (text, key=signOffResearcher):
+Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
-Sign off: Project requester (text, key=signOffProjectOwner):
+Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.

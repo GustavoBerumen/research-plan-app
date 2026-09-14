@@ -12,8 +12,10 @@
 // placeholder vanishes on typing, which is the failure RPA-58 removed.
 
 const test = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 const assert = require('node:assert/strict');
-const { bootApp } = require('./app-harness');
+const { bootApp, withFieldUncommented } = require('./app-harness');
 
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -88,10 +90,13 @@ test('every dismiss cross says what it closes', async (t) => {
   const app = await populated(t);
   const d = app.document;
   const names = Array.from(d.querySelectorAll('.eval-x')).map((b) => b.getAttribute('aria-label') || '');
-  assert.ok(names.length >= 3, 'evaluation, framework and methods crosses exist');
+  assert.ok(names.length >= 2, 'evaluation and methods crosses exist');
   assert.ok(names.every((n) => /\p{L}/u.test(n)), 'none is left to the glyph: ' + JSON.stringify(names));
-  assert.ok(names.includes('Close the framework suggestion'));
   assert.ok(names.includes('Close the methods suggestion'));
+  // The framework panel is dormant with Theory (RPA-117); its cross is named too.
+  const withTheory = await bootApp({ textAssets: { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') } });
+  t.after(() => withTheory.close());
+  assert.ok(Array.from(withTheory.document.querySelectorAll('.eval-x')).map((b) => b.getAttribute('aria-label')).includes('Close the framework suggestion'));
 });
 
 test('the list-fallback chevron is named, not only titled', async (t) => {

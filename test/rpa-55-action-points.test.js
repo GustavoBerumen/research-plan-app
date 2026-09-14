@@ -25,9 +25,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, DRAFT_KEY, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_ACTIONS = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'actionPoints') };
 
 const TEMPLATE = path.join(__dirname, '..', 'research-plan-template.md');
+// The declaration is dormant since RPA-117 (commented out); these tests read it
+// live, since they are about the line itself.
 
 function headers(document) {
   return Array.from(document.querySelectorAll('#actionPoints-table thead th'))
@@ -36,7 +42,7 @@ function headers(document) {
 }
 
 test('the table asks for the work and its owner, and nothing else', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document } = app;
 
@@ -61,7 +67,7 @@ test('the table is optional, and says so', () => {
   // Not covered by optional-marker.test.js: that file checks the form agrees
   // with the template, so removing the flag from both would keep it green.
   // This asserts the decision itself.
-  const line = fs.readFileSync(TEMPLATE, 'utf8')
+  const line = withFieldUncommented(fs.readFileSync(TEMPLATE, 'utf8'), 'actionPoints')
     .split('\n')
     .find((l) => l.startsWith('Action Points ('));
   const flags = /\(([^)]*)\)/.exec(line)[1].split(',').map((f) => f.trim());
@@ -71,7 +77,7 @@ test('the table is optional, and says so', () => {
 });
 
 test('and shows the marker in the form', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const wrap = app.document.getElementById('actionPoints-table').closest('.field');
@@ -85,7 +91,7 @@ test('the template itself no longer declares a status column', () => {
   // content file rather than worked around in code. Reading it here means a
   // reinstated column fails as a cut that came back, not as a puzzling
   // rendering difference three tests away.
-  const line = fs.readFileSync(TEMPLATE, 'utf8')
+  const line = withFieldUncommented(fs.readFileSync(TEMPLATE, 'utf8'), 'actionPoints')
     .split('\n')
     .find((l) => l.startsWith('Action Points ('));
   assert.ok(line, 'the template still declares Action Points');
@@ -96,7 +102,7 @@ test('the template itself no longer declares a status column', () => {
 
 test('both surviving columns still save and come back', async (t) => {
   // The keep half. A verdict of keep is only real if the data round-trips.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   const { document, window } = app;
 
   const cells = document.querySelectorAll('#actionPoints-table tbody tr:first-child textarea');
@@ -112,7 +118,7 @@ test('both surviving columns still save and come back', async (t) => {
   );
   app.close();
 
-  const reopened = await bootApp({ draft: saved });
+  const reopened = await bootApp({ textAssets: WITH_ACTIONS,  draft: saved });
   t.after(() => reopened.close());
   const restored = reopened.document
     .querySelectorAll('#actionPoints-table tbody tr:first-child textarea');
@@ -157,7 +163,7 @@ test('a draft saved before the cut still opens, minus the status', async (t) => 
     custom: {},
   };
 
-  const app = await bootApp({ draft });
+  const app = await bootApp({ textAssets: WITH_ACTIONS,  draft });
   t.after(() => app.close());
   const { document } = app;
 
@@ -180,7 +186,7 @@ test('the status column type still works, for any template that asks for one', a
   // them would have turned an exact match into a silent no-op that still went
   // green. Adding `optional` and dropping a column placeholder did exactly
   // that the first time.
-  const real = fs.readFileSync(TEMPLATE, 'utf8');
+  const real = withFieldUncommented(fs.readFileSync(TEMPLATE, 'utf8'), 'actionPoints');
   const restored = real.replace(
     /^(Action Points \([^)]*key=actionPoints\):.*)$/m,
     '$1 | Status:status'
