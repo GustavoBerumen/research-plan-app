@@ -64,7 +64,8 @@ for (const [name, configResponse] of [
   }
   assert.deepEqual(downloaded.lists, source.lists);
   assert.deepEqual(downloaded.methods, source.methods);
-  assert.deepEqual(downloaded.custom, source.custom);
+  // RPA-101 gave every section a hatch; each is written, empty or not.
+  assert.deepEqual(downloaded.custom, { ...source.custom, additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.equal(downloaded.createdAt, source.createdAt);
   assert.equal(downloaded.fields.lastUpdated, source.fields.lastUpdated);
   assert.equal(downloaded.evaluations, undefined);
