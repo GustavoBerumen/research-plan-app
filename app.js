@@ -5203,11 +5203,11 @@
   }
 
   // ---------- the options menu (RPA-106) ----------
-  // One Menu button in the bar opens a panel: the plan's name, Save progress,
-  // and the four actions that used to sit in the bar. Escape and a click
-  // outside close it; an action closes it too, except Restore, which is
-  // about to open a file dialog. Save progress saves at the press and says
-  // so, because autosave is silent and people want to be sure.
+  // One Menu button in the bar opens a panel: the plan's name and the four
+  // actions that used to sit in the bar. Escape and a click outside close
+  // it; an action closes it too, except Restore, which is about to open a
+  // file dialog. The plan's name, not a person's: there is no sign-in yet.
+  // No Save progress: autosave already does it (Gus, 14 September 2026).
   function initOptionsMenu() {
     const toggle = document.getElementById('menu-btn');
     const menu = document.getElementById('options-menu');
@@ -5232,29 +5232,12 @@
     });
     const name = document.getElementById('options-plan-name');
     const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
-    const showName = () => { name.textContent = title().trim() || 'Untitled plan'; };
-    const save = document.getElementById('save-progress-btn');
-    const status = document.getElementById('save-status');
-    refreshOptionsMenu = () => {
-      showName();
-      status.textContent = '';
-      delete status.dataset.error;
-    };
+    refreshOptionsMenu = () => { name.textContent = title().trim() || 'Untitled plan'; };
     // Restore replaces doc. Delegate to a stable parent, and read the current
-    // form so neither a detached plan nor its save confirmation survives it.
+    // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
     document.addEventListener('change', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
     refreshOptionsMenu();
-    save.addEventListener('click', () => {
-      const saved = saveDraft();
-      status.dataset.error = String(!saved);
-      if (!saved) {
-        status.textContent = 'Could not save in this browser. Keep this page open and use Download backup to keep your writing.';
-        return;
-      }
-      const now = new Date();
-      status.textContent = 'Saved at ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '.';
-    });
   }
 
   // ---------- clear form ----------

@@ -20,15 +20,13 @@
   <div class="site-bar">
     <a class="service-name" href="./">Research Plan</a>
     <!-- RPA-106. The actions live in one menu, the way the model application
-         keeps them: a Menu button, then the plan's name, Save progress, and
-         the same four actions as before with the same ids, in the same order.
-         No sign out until there is a sign in (RPA-99). -->
+         keeps them: a Menu button, then the plan's name and the same four
+         actions as before with the same ids, in the same order. No sign out
+         until there is a sign in (RPA-99), and no Save progress: autosave
+         already does it (Gus, 14 September 2026). -->
     <button class="btn btn-ghost menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="options-menu">Menu</button>
     <div class="options-menu" id="options-menu" hidden>
       <p class="options-plan-name" id="options-plan-name">Untitled plan</p>
-      <div class="menu-extra">
-        <button class="btn btn-ghost" id="save-progress-btn" type="button">Save progress</button>
-      </div>
       <div class="tb-btns">
         <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
         <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
@@ -38,7 +36,6 @@
       </div>
     </div>
   </div>
-  <p id="save-status" role="status" aria-live="polite"></p>
   <!-- Removable on its own: delete this one element when the pilot ends and
        nothing else in the header needs to change. -->
   <div class="phase-banner" data-phase="beta">
