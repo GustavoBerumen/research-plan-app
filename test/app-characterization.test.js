@@ -25,7 +25,8 @@ function addListRow(document, key) {
 }
 
 function methodValues(group) {
-  return Array.from(group.querySelectorAll('.list-input')).map((input) => input.value);
+  // The group also holds the question's participant lists since RPA-116.
+  return Array.from(group.querySelectorAll('.list-rows[data-list-key="methods"] .list-input')).map((input) => input.value);
 }
 
 function evaluationResult() {
@@ -156,7 +157,10 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['comments', 2, false],
     ]
   );
-  assert.equal(document.querySelector('.field-group-title').textContent, 'Participants');
+  // The Participants group is gone: its three fields are asked per research
+  // question, inside the question's group under Methods (RPA-116).
+  assert.equal(document.querySelector('.field-group-title'), null);
+  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Methods', 'Characteristics', 'User Groups', 'Sample Size']);
 
   const methodInput = document.querySelector('.methods-group .list-input');
   assert.equal(methodInput.getAttribute('role'), 'combobox');
@@ -258,7 +262,7 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
     message: 'The v7 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 7);
+  assert.equal(saved.version, 8);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;

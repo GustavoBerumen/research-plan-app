@@ -45,7 +45,7 @@ test('renders one radio per option plus Other, with the reveal put away', async 
   // The group names itself, since there is no single control to label.
   assert.equal(g.el.getAttribute('role'), 'radiogroup');
   const labelledBy = document.getElementById(g.el.getAttribute('aria-labelledby'));
-  assert.equal(labelledBy.textContent.trim(), 'Sample Size');
+  assert.equal(labelledBy.textContent.trim(), 'Sample Size for research question 1', 'named for its question since RPA-116');
 
   // Every radio has a real label bound to it, so the text is a hit target.
   g.radios.forEach((radio) => {
@@ -80,7 +80,7 @@ test('the choice is saved and restored in the shape a dropdown used', async (t) 
     message: 'the draft was never saved',
   });
   const saved = JSON.parse(raw);
-  assert.deepEqual(saved.selects.sampleSize, { v: 'Large (13–29)', o: '' });
+  assert.deepEqual(saved.methods[0].sampleSize, { v: 'Large (13–29)', o: '' }, 'saved with its research question since RPA-116');
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());

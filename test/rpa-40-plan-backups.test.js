@@ -173,14 +173,14 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     assert.equal(stored(app).fields.problemStatement, 'Legacy problem');
     assert.equal(stored(app).fields.leadResearcher, 'Ana');
     assert.equal(stored(app).fields.title, undefined);
-    assert.equal(stored(app).version, 7);
+    assert.equal(stored(app).version, 8);
     assert.equal(stored(app).ui.timelineVisible, false);
     if (version === 1) assert.deepEqual(stored(app).methods[0].methods, ['Interviews']);
   });
 }
 
 const invalidCases = {
-  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 8, fields: {} },
+  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 9, fields: {} },
   'string version': { version: '7', fields: {} }, 'zero version': { version: 0, fields: {} },
   'field nested object': { version: 7, fields: { project: {} } },
   'list wrong nested type': { version: 7, fields: {}, lists: { researchQuestions: ['Valid', null] } },
@@ -330,7 +330,8 @@ test('an imported plan retains inactive Other text and custom property order is 
   draft.custom.additionalResources = [{ body: 'Body first in JSON', label: 'Label second' }];
   assert.match(await importBackup(app, draft), /^Backup restored and saved/);
   const result = (await interceptDownload(app)()).data;
-  assert.equal(result.selects.sampleSize.o, 'Retained Other text');
+  // Since RPA-116 a plan-level sample size migrates into every question's group.
+  assert.equal(result.methods[0].sampleSize.o, 'Retained Other text');
   assert.equal(result.tables['stageTimeline-table'][0][0].o, 'Retained stage text');
   assert.deepEqual(result.custom.additionalResources, draft.custom.additionalResources);
 });

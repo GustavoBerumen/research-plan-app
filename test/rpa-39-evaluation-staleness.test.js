@@ -32,7 +32,8 @@ function deferred() {
 function controlsForField(document, key) {
   const input = document.querySelector('[data-field="' + key + '"]');
   const list = document.querySelector('.list-rows[data-list-key="' + key + '"]');
-  const field = (input || list).closest('.field');
+  // Methods' controls sit on the container of the question groups (RPA-116).
+  const field = (input || list).closest('.field-methods') || (input || list).closest('.field');
   return field.querySelector('.eval-controls');
 }
 

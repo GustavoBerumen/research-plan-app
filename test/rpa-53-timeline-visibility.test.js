@@ -58,7 +58,7 @@ for (const visible of [true, false]) {
     assertChoice(app, !visible);
     timeline(app).button.click();
     const saved = await savedChoice(app, visible);
-    assert.equal(saved.version, 7);
+    assert.equal(saved.version, 8);
     assert.deepEqual(saved.tables, draft.tables);
     assert.equal(saved.fields.lastUpdated, '2020-01-01');
     assert.equal(saved.lastUpdatedManual, false);
@@ -79,7 +79,7 @@ test('older and current drafts without a preference default to hidden and save i
     assertChoice(app, false);
     timeline(app).button.click();
     const saved = await savedChoice(app, true);
-    assert.equal(saved.version, 7);
+    assert.equal(saved.version, 8);
   }
 });
 

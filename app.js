@@ -161,6 +161,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "perQuestion": asked once per research question, inside that
+      // question's group under Methods, and saved per question (RPA-116).
+      perQuestion: typeParts.includes('perquestion'),   // typeParts are lowercased
       // "max=N" caps how many blocks a custom-fields field may add (RPA-82).
       max: (() => { const part = typeParts.find((t) => /^max=\d+$/.test(t)); return part ? parseInt(part.slice(4), 10) : 0; })(),
       // "words=N": a good answer is up to about N words, shown under the box
@@ -2565,27 +2568,109 @@
     return row;
   }
 
+  // The fields asked once per research question (RPA-116): set by the
+  // section that declares them, read when a group is built.
+  let perQuestionFields = [];
+  let methodsGroupSeq = 0;
+  function perQuestionSuffix() {
+    const s = el('span', 'visually-hidden per-question-of');
+    s.textContent = ' for research question 1';
+    return s;
+  }
   function buildMethodsGroup(placeholder, width) {
     // role=group so the aria-label syncMethodsGroups sets (the full research
     // question) is actually announced — the visible heading is only the
-    // abbreviated "RQ<n> · <keyword>".
+    // abbreviated "RQ<n> · <keyword>". The head is pinned while the group's
+    // fields are answered, and carries the whole question (RPA-116).
     const group = el('div', 'methods-group', { role: 'group' });
+    const seq = ++methodsGroupSeq;
+    group.dataset.groupSeq = String(seq);
+    const head = el('div', 'methods-group-head');
+    head.hidden = true;
     const qLabel = el('div', 'methods-group-q');
     qLabel.hidden = true;
-    group.appendChild(qLabel);
+    const qText = el('p', 'methods-group-text');
+    qText.hidden = true;
+    head.append(qLabel, qText);
+    group.appendChild(head);
+    // Methods for this question is a group of its own, so it is judged and
+    // marked per question like the participant fields that follow it.
+    const methodsField = el('div', 'field field-per-question field-question-methods', { role: 'group' });
+    const mLabel = el('div', 'flabel', { id: 'field-methods-g' + seq + '-label' });
+    mLabel.append(document.createTextNode(methodsFieldDef ? methodsFieldDef.label : 'Methods'), perQuestionSuffix());
+    methodsField.setAttribute('aria-labelledby', mLabel.id);
+    methodsField.appendChild(mLabel);
+    const mHint = methodsFieldDef ? renderFieldHint(methodsFieldDef, 'field-methods-g' + seq + '-hint') : null;
+    if (mHint) { methodsField.appendChild(mHint); describeControl(methodsField, mHint); }
     const list = el('div', 'list-rows');
     list.dataset.listKey = 'methods';
     list.dataset.placeholder = placeholder || '';
     if (width) list.dataset.width = String(width);   // RPA-109: rows are sized when added
-    group.appendChild(list);
+    methodsField.appendChild(list);
     const addBtnRow = el('div', 'add-btn-row');
     const addBtn = el('button', 'add-btn', { type: 'button' });
     addBtn.textContent = '+ Add method';
     addBtn.addEventListener('click', () => addMethodRowTo(group, '', true));
     addBtnRow.appendChild(addBtn);
-    group.appendChild(addBtnRow);
+    methodsField.appendChild(addBtnRow);
+    if (methodsFieldDef) placeFieldHelp(methodsField, methodsFieldDef);
+    group.appendChild(methodsField);
     addMethodRowTo(group, '', false);
+    perQuestionFields.forEach((f) => group.appendChild(renderPerQuestionField(f, seq)));
     return group;
+  }
+  // One copy of a per-question field for one group: the same renderer as
+  // anywhere else, then every id inside made unique to the group. Keys stay,
+  // so drafts, widths and the key contract see the same field N times.
+  function renderPerQuestionField(field, seq) {
+    const wrap = renderField(field);
+    wrap.classList.add('field-per-question');
+    const suffix = '-g' + seq;
+    const suffixed = (id) => (id.endsWith('-label') ? id.slice(0, -6) + suffix + '-label'
+      : id.endsWith('-hint') ? id.slice(0, -5) + suffix + '-hint' : id + suffix);
+    [wrap].concat(Array.from(wrap.querySelectorAll('*'))).forEach((n) => {
+      if (n.id) n.id = suffixed(n.id);
+      if (n.hasAttribute('for')) n.setAttribute('for', suffixed(n.getAttribute('for')));
+      ['aria-labelledby', 'aria-describedby', 'aria-controls'].forEach((attr) => {
+        if (n.hasAttribute(attr)) n.setAttribute(attr, n.getAttribute(attr).split(/\s+/).filter(Boolean).map(suffixed).join(' '));
+      });
+      if (n.tagName === 'INPUT' && n.type === 'radio') n.name = n.name + suffix;
+    });
+    const label = wrap.querySelector('.flabel');
+    if (label) label.appendChild(perQuestionSuffix());
+    placeFieldHelp(wrap, field);
+    return wrap;
+  }
+  // What a group holds beyond its methods: any participant answer.
+  function groupHasParticipants(group) {
+    return perQuestionFields.some((f) => {
+      const v = perQuestionValue(group, f);
+      return Array.isArray(v) ? v.some((x) => x.trim()) : Boolean(v && v.v);
+    });
+  }
+  function groupHasContent(group) { return methodsGroupValues(group).length > 0 || groupHasParticipants(group); }
+  // The answer to one per-question field in one group, in the draft's shape.
+  function perQuestionValue(group, field) {
+    if (field.type === 'radios') {
+      const cell = group.querySelector('.select-cell[data-field-key="' + field.key + '"]');
+      return cell ? choiceSnapshot(cell) : { v: '', o: '' };
+    }
+    const list = group.querySelector('.list-rows[data-list-key="' + field.key + '"]');
+    return list ? Array.from(list.querySelectorAll('.list-input')).map((i) => i.value) : [];
+  }
+  function restorePerQuestionValue(group, field, value) {
+    if (field.type === 'radios') {
+      const cell = group.querySelector('.select-cell[data-field-key="' + field.key + '"]');
+      if (cell && value) applyChoice(cell, value);
+      return;
+    }
+    const list = group.querySelector('.list-rows[data-list-key="' + field.key + '"]');
+    if (!list) return;
+    const values = Array.isArray(value) ? value : [];
+    const addBtn = list.closest('.field') ? list.closest('.field').querySelector('.add-btn') : null;
+    growTo(() => list.querySelectorAll('.list-row').length, values.length, addBtn);
+    const inputs = Array.from(list.querySelectorAll('.list-input'));
+    values.forEach((v, j) => { if (inputs[j]) { inputs[j].value = v; inputs[j].dispatchEvent(new Event('input', { bubbles: true })); } });
   }
 
   // Fills any blank rows already in this group before adding new ones, and
@@ -2835,7 +2920,7 @@
     // deletion confirms linked content and removes the exact indexed group.
     while (groups.length > targetCount) {
       const last = groups[groups.length - 1];
-      if (methodsGroupValues(last).length) break;
+      if (groupHasContent(last)) break;
       last.remove();
       groups = methodsGroupEls();
     }
@@ -2844,6 +2929,11 @@
       const label = group.querySelector('.methods-group-q');
       if (!label) return;
       const text = questions[i] || '';
+      const head = group.querySelector('.methods-group-head');
+      if (head) head.hidden = !hasAnyQuestion;
+      const full = group.querySelector('.methods-group-text');
+      if (full) { full.textContent = text; full.hidden = !text; }
+      group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ' for research question ' + (i + 1); });
       label.hidden = !hasAnyQuestion;
       label.textContent = hasAnyQuestion ? shortQuestionLabel(text, i) : '';
       label.classList.toggle('methods-group-q-empty', hasAnyQuestion && !text);
@@ -3735,11 +3825,13 @@
     const hasOutcome = !!(outcomeInput && outcomeInput.value.trim());
     const methodsGroup = methodsGroupAt(index);
     const hasMethods = !!(methodsGroup && methodsGroupValues(methodsGroup).length);
+    const hasParticipants = !!(methodsGroup && groupHasParticipants(methodsGroup));
 
-    if (!hasOutcome && !hasMethods) return true;
+    if (!hasOutcome && !hasMethods && !hasParticipants) return true;
     const linkedContent = [];
     if (hasOutcome) linkedContent.push('Outcome ' + number);
     if (hasMethods) linkedContent.push('Methods RQ' + number);
+    if (hasParticipants) linkedContent.push('Participants RQ' + number);
     return window.confirm(
       'Deleting Research Question ' + number + ' will also delete:\n\n' +
       linkedContent.map((item) => '- ' + item).join('\n')
@@ -3928,16 +4020,25 @@
   // list. Only the first group is built here — the rest are created, removed
   // and labelled by syncMethodsGroups, which runs whenever a Research
   // Question is added, removed or edited, and once from the wire-up below.
+  let methodsFieldDef = null;
   function renderGroupedMethodsField(field) {
-    const wrap = el('div', 'field', { role: 'group' });
-    const labelId = fieldControlId(field.key) + '-label';
-    const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
-    markOptional(label, field);
-    wrap.setAttribute('aria-labelledby', labelId);
-    wrap.appendChild(label);
-    const guidance = renderFieldHint(field, labelId + '-hint');
-    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
+    const wrap = el('div', 'field field-methods', { role: 'group' });
+    methodsFieldDef = field;
+    if (!perQuestionFields.length) {
+      const labelId = fieldControlId(field.key) + '-label';
+      const label = el('div', 'flabel', { id: labelId });
+      label.textContent = field.label;
+      markOptional(label, field);
+      wrap.setAttribute('aria-labelledby', labelId);
+      wrap.appendChild(label);
+      const guidance = renderFieldHint(field, labelId + '-hint');
+      if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
+    } else {
+      // With the participant fields asked per question (RPA-116), each
+      // question's group presents Methods itself, label, hint and help; the
+      // outer field is only the container of the groups.
+      wrap.setAttribute('aria-label', field.label + ' by research question');
+    }
 
     const container = el('div', 'methods-groups');
     container.dataset.placeholder = field.placeholder || '';
@@ -4032,19 +4133,19 @@
   // the title has none, so its block follows its box directly.
   function attachFieldHelp(schema) {
     const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
-    fields.filter((f) => f && f.key !== 'lastUpdated').forEach((f) => {
+    fields.filter((f) => f && f.key !== 'lastUpdated' && !f.perQuestion).forEach((f) => {
       const id = fieldControlId(f.key);
       const label = doc.querySelector('#' + id + '-label');
       if (!label) return;
       const wrap = label.closest('.field, .mf');
-      if (wrap) {
-        const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
-        wrap.insertBefore(renderFieldHelp(f), evaluation || null);
-        return;
-      }
+      if (wrap) { placeFieldHelp(wrap, f); return; }
       const control = doc.querySelector('#' + id);
       if (control) control.insertAdjacentElement('afterend', renderFieldHelp(f));
     });
+  }
+  function placeFieldHelp(wrap, f) {
+    const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
+    wrap.insertBefore(renderFieldHelp(f), evaluation || null);
   }
 
   function renderFieldHint(field, id) {
@@ -4783,7 +4884,9 @@
       const fieldsWrap = el('div', 'fields');
       let groupWrap = null;
       let groupName = null;
+      if (section.fields.some((f) => f.perQuestion)) perQuestionFields = section.fields.filter((f) => f.perQuestion);
       section.fields.filter((f) => f.type !== 'custom-fields').forEach((f) => {
+        if (f.perQuestion) return;   // rendered inside each research question's group (RPA-116)
         if (f.group) {
           if (f.group !== groupName) {
             groupName = f.group;
@@ -5286,7 +5389,9 @@
       return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
     }
     if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
-    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
+    // The outer Methods field holds one group per research question; the
+    // fields inside the groups are the questions to judge (RPA-116).
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom):not(.field-methods)')).filter((f) => !f.querySelector('.fopt'));
   }
   function groupsSummary(groups) {
     const answered = groups.filter(requiredGroupComplete).length;
@@ -5630,7 +5735,7 @@
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.querySelector('[data-field="lastUpdated"]'));
-    return Array.from(stepEl.querySelectorAll('.acc-body .field'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
   // label, a date in words, a list by its rows, a table by its rows, methods
@@ -5767,6 +5872,17 @@
   // it; an action closes it too, except Restore, which is about to open a
   // file dialog. The plan's name, not a person's: there is no sign-in yet.
   // No Save progress: autosave already does it (Gus, 14 September 2026).
+  // The pinned research question sits under the sticky site header, so the
+  // header's height is published for the stylesheet (RPA-116).
+  function initStickyOffsets() {
+    const set = () => {
+      const header = document.querySelector('.site-header');
+      document.documentElement.style.setProperty('--site-header-h', (header ? header.offsetHeight : 0) + 'px');
+    };
+    set();
+    window.addEventListener('resize', set);
+  }
+
   function initOptionsMenu() {
     const toggle = document.getElementById('menu-btn');
     const menu = document.getElementById('options-menu');
@@ -5810,7 +5926,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 7;
+  const DRAFT_VERSION = 8;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -5938,29 +6054,39 @@
     });
   }
 
+  // One choice (a dropdown or a radio group) in the draft's { v, o } shape,
+  // and the same shape put back. Radios report what a dropdown does, so the
+  // format never forked and a draft saved either way restores.
+  function choiceSnapshot(cell) {
+    const sel = cell.querySelector('.ssel');
+    const other = cell.querySelector('.select-other-input');
+    if (!sel) {
+      const checked = cell.querySelector('.radio-input:checked');
+      return { v: checked ? checked.value : '', o: other ? other.value : '' };
+    }
+    return { v: sel.hidden ? '__other__' : sel.value, o: other ? other.value : '' };
+  }
+  function applyChoice(cell, snap) {
+    const otherRow = cell.querySelector('.select-other-row');
+    const other = cell.querySelector('.select-other-input');
+    const radios = Array.from(cell.querySelectorAll('.radio-input'));
+    radios.forEach((r) => { r.checked = false; });
+    const match = radios.find((r) => r.value === snap.v);
+    if (match) match.checked = true;
+    const wantsOther = snap.v === '__other__';
+    if (otherRow) otherRow.hidden = !wantsOther;
+    if (other) other.value = snap.o || '';
+  }
+
   function collectDraft() {
     const fields = {};
     scalarFieldEls().forEach((elm) => { fields[elm.getAttribute('data-field')] = elm.value; });
 
     const selects = {};
     doc.querySelectorAll('.select-cell').forEach((cell) => {
-      if (cell.closest('table') || !cell.dataset.fieldKey) return;
-      const sel = cell.querySelector('.ssel');
-      const other = cell.querySelector('.select-other-input');
-      if (!sel) {
-        // Radio group: reports the same { v, o } a dropdown does, so the draft
-        // format does not fork and an old draft still restores.
-        const checked = cell.querySelector('.radio-input:checked');
-        selects[cell.dataset.fieldKey] = {
-          v: checked ? checked.value : '',
-          o: other ? other.value : '',
-        };
-        return;
-      }
-      selects[cell.dataset.fieldKey] = {
-        v: sel.hidden ? '__other__' : sel.value,
-        o: other ? other.value : '',
-      };
+      // A choice inside a research question's group is saved with the group.
+      if (cell.closest('table') || cell.closest('.methods-groups') || !cell.dataset.fieldKey) return;
+      selects[cell.dataset.fieldKey] = choiceSnapshot(cell);
     });
 
     const lists = {};
@@ -5981,10 +6107,13 @@
       : [];
     const methods = methodsGroupEls().map((group, i) => {
       const list = methodsListIn(group);
-      return {
+      const entry = {
         question: rqDraftTexts[i] || '',
         methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i2) => i2.value) : [],
       };
+      // The participant answers for this question, under their own keys (RPA-116).
+      perQuestionFields.forEach((f) => { entry[f.key] = perQuestionValue(group, f); });
+      return entry;
     });
 
     const tableData = {};
@@ -6031,7 +6160,10 @@
   // forward untouched. A rendered-but-empty field still wins: collectDraft
   // reports it as empty, and an empty answer is an answer. Clear Form removes
   // the stored draft before resetting, so nothing is resurrected there.
-  function carryUnrendered(draft, stored = readDraft()) {
+  // The stored draft is read through the migrations, so a key a migration
+  // has moved (the plan-level participant lists, RPA-116) is not carried
+  // back as an unrendered leftover.
+  function carryUnrendered(draft, stored = migrateDraft(readDraft())) {
     if (!stored) return draft;
     ['fields', 'selects', 'lists', 'tables', 'custom'].forEach((section) => {
       const kept = stored[section];
@@ -6191,6 +6323,31 @@
         delete migrated.fields[oldKey];
       });
     }
+    // v8 (RPA-116), last, after the shapes above are settled: Characteristics, User Groups and Sample Size are asked
+    // per research question and saved in each methods group. A plan-level
+    // answer described the whole study, so it goes to every question the
+    // plan had; a plan with an answer but no groups gets one group to hold it.
+    if (version < 8) {
+      const lists = Object.assign({}, migrated.lists);
+      const selects = Object.assign({}, migrated.selects);
+      const characteristics = Array.isArray(lists.characteristics) ? lists.characteristics : [];
+      const userGroups = Array.isArray(lists.userGroups) ? lists.userGroups : [];
+      const sampleSize = selects.sampleSize && typeof selects.sampleSize === 'object' ? selects.sampleSize : { v: '', o: '' };
+      let groups = Array.isArray(migrated.methods) ? migrated.methods.map((g) => Object.assign({}, g)) : [];
+      const hasAnswer = characteristics.some((x) => String(x).trim()) || userGroups.some((x) => String(x).trim()) || Boolean(sampleSize.v);
+      if (!groups.length && hasAnswer) groups = [{ question: '', methods: [] }];
+      groups.forEach((g) => {
+        if (!('characteristics' in g)) g.characteristics = characteristics.slice();
+        if (!('userGroups' in g)) g.userGroups = userGroups.slice();
+        if (!('sampleSize' in g)) g.sampleSize = Object.assign({ v: '', o: '' }, sampleSize);
+      });
+      migrated.methods = groups;
+      delete lists.characteristics;
+      delete lists.userGroups;
+      delete selects.sampleSize;
+      migrated.lists = lists;
+      migrated.selects = selects;
+    }
     return migrated;
   }
 
@@ -6256,6 +6413,7 @@
       const inputs = Array.from(list.querySelectorAll('.list-input'));
       values.forEach((v, j) => { if (inputs[j]) inputs[j].value = v; });
       renumberMethodsGroup(group);
+      perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, saved[f.key]));
     });
 
     scalarFieldEls().forEach((elm) => {
@@ -6278,21 +6436,13 @@
     // the cell itself is the element we already hold.
     Object.entries(draft.selects || {}).forEach(([key, snap]) => {
       const cell = Array.from(doc.querySelectorAll('.select-cell'))
-        .find((c) => !c.closest('table') && c.dataset.fieldKey === key);
+        .find((c) => !c.closest('table') && !c.closest('.methods-groups') && c.dataset.fieldKey === key);
       if (!cell || !snap) return;
       const sel = cell.querySelector('.ssel');
       const otherRow = cell.querySelector('.select-other-row');
       const other = cell.querySelector('.select-other-input');
       if (!sel) {
-        // Radio group. A draft saved while this was a dropdown has the same
-        // shape, so it restores here with no migration.
-        const radios = Array.from(cell.querySelectorAll('.radio-input'));
-        radios.forEach((r) => { r.checked = false; });
-        const match = radios.find((r) => r.value === snap.v);
-        if (match) match.checked = true;
-        const wantsOther = snap.v === '__other__';
-        if (otherRow) otherRow.hidden = !wantsOther;
-        if (other) other.value = snap.o || '';
+        applyChoice(cell, snap);
         return;
       }
       if (snap.v === '__other__') {
@@ -6683,9 +6833,12 @@
       });
     });
     if ('methods' in draft) array(draft.methods, 'methods', (group, path) => {
-      record(group, path, ['question', 'methods']);
+      record(group, path, ['question', 'methods', 'characteristics', 'userGroups', 'sampleSize']);
       string(group.question, path + '.question');
       array(group.methods, path + '.methods', string);
+      if ('characteristics' in group) array(group.characteristics, path + '.characteristics', string);
+      if ('userGroups' in group) array(group.userGroups, path + '.userGroups', string);
+      if ('sampleSize' in group) choice(group.sampleSize, path + '.sampleSize');
     });
     const renames = version < 5 ? { title: 'researchTitle' } : {};
     if (version < 4) Object.assign(renames, { researcher: 'leadResearcher', projectOwner: 'projectRequester', reportResearch: 'researchReadout' });
@@ -6766,6 +6919,19 @@
       const values = actual.methods[i].methods;
       if (group.methods.length && group.methods.length !== values.length) fail('methods[' + i + ']');
       group.methods.forEach((value, j) => equal(value, values[j], 'methods[' + i + '].methods[' + j + ']'));
+      // The question's participant answers (RPA-116): a list that lost rows
+      // or a sample size the radios cannot show is not a faithful restore.
+      ['characteristics', 'userGroups'].forEach((key) => {
+        if (!Array.isArray(group[key])) return;
+        const got = actual.methods[i][key] || [];
+        if (group[key].length && group[key].length !== got.length) fail('methods[' + i + '].' + key);
+        group[key].forEach((value, j) => equal(value, got[j], 'methods[' + i + '].' + key + '[' + j + ']'));
+      });
+      if (group.sampleSize && typeof group.sampleSize === 'object') {
+        const got = actual.methods[i].sampleSize || { v: '', o: '' };
+        equal(group.sampleSize.v || '', got.v || '', 'methods[' + i + '].sampleSize');
+        equal(group.sampleSize.o || '', got.o || '', 'methods[' + i + '].sampleSize.o');
+      }
     });
   }
 
@@ -7000,24 +7166,26 @@
   function applyTestProfileList(key, values) {
     if (!values.length) throw new Error('Test profile list "' + key + '" cannot be empty');
 
-    const list = doc.querySelector('.list-rows[data-list-key="' + key + '"]');
-    if (!list) throw new Error('Could not find list field "' + key + '"');
-    const addBtn = list.closest('.field').querySelector('.add-btn');
-    if (!addBtn) throw new Error('Could not find add control for list field "' + key + '"');
-
-    const rows = () => Array.from(list.querySelectorAll('.list-row'));
-    while (rows().length < values.length) addBtn.click();
-    while (rows().length > values.length) {
-      const currentRows = rows();
-      const removeBtn = currentRows[currentRows.length - 1].querySelector('.list-remove');
-      if (!removeBtn || removeBtn.disabled) throw new Error('Could not resize list field "' + key + '"');
-      removeBtn.click();
-    }
-
-    rows().forEach((row, index) => {
-      const input = row.querySelector('.list-input');
-      input.value = values[index];
-      dispatchFieldUpdate(input);
+    const lists = Array.from(doc.querySelectorAll('.list-rows[data-list-key="' + key + '"]'));
+    if (!lists.length) throw new Error('Could not find list field "' + key + '"');
+    // A per-question list exists once per research question; the profile's
+    // answer lands in every copy.
+    lists.forEach((list) => {
+      const addBtn = list.closest('.field').querySelector('.add-btn');
+      if (!addBtn) throw new Error('Could not find add control for list field "' + key + '"');
+      const rows = () => Array.from(list.querySelectorAll('.list-row'));
+      while (rows().length < values.length) addBtn.click();
+      while (rows().length > values.length) {
+        const currentRows = rows();
+        const removeBtn = currentRows[currentRows.length - 1].querySelector('.list-remove');
+        if (!removeBtn || removeBtn.disabled) throw new Error('Could not resize list field "' + key + '"');
+        removeBtn.click();
+      }
+      rows().forEach((row, index) => {
+        const input = row.querySelector('.list-input');
+        input.value = values[index];
+        dispatchFieldUpdate(input);
+      });
     });
   }
 
@@ -7129,6 +7297,7 @@
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
         initOptionsMenu();
+        initStickyOffsets();
       })
       .catch(showLoadError);
   });

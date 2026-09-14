@@ -227,7 +227,8 @@ for (const [name, configResponse] of [
   assert.deepEqual(saved.tables['previousKnowledge-table'][0][1], draft.tables['previousKnowledge-table'][0][1]);
   assert.deepEqual(saved.tables['requirements-table'], draft.tables['requirements-table']);
   assert.deepEqual(saved.lists.researchQuestions, draft.lists.researchQuestions);
-  assert.deepEqual(saved.methods, draft.methods);
+  // RPA-116: a version 7 plan's participant answers land in every question's group.
+  assert.deepEqual(saved.methods, draft.methods.map((g) => ({ ...g, characteristics: draft.lists.characteristics || [], userGroups: draft.lists.userGroups || [], sampleSize: draft.selects.sampleSize || { v: '', o: '' } })));
   assert.equal(saved.createdAt, draft.createdAt);
   assert.equal(saved.fields.project, draft.fields.project);
   assert.equal(saved.evaluations, undefined);

@@ -91,10 +91,12 @@ test('repeat first deletion to one, add again, preserve unrelated list and Metho
   add(app); assert.equal(lone.disabled, false); assert.equal(lone.classList.contains('list-remove-spacer'), false);
   assert.equal(inputs(app, 'outcomes').length, 2); assert.equal(groups(app).length, 2);
   assert.equal(unrelated.innerHTML, before);
+  // The group also holds the question's participant lists since RPA-116, so the Methods list is named.
   const methodGroup = groups(app)[0]; methodGroup.querySelector('.add-btn').click();
-  assert.equal(methodGroup.querySelectorAll('.list-input').length, 2);
-  methodGroup.querySelectorAll('.list-remove')[1].click();
-  assert.equal(methodGroup.querySelectorAll('.list-input').length, 1);
+  const methodInputs = () => methodGroup.querySelectorAll('.list-rows[data-list-key="methods"] .list-input');
+  assert.equal(methodInputs().length, 2);
+  methodGroup.querySelectorAll('.list-rows[data-list-key="methods"] .list-remove')[1].click();
+  assert.equal(methodInputs().length, 1);
 });
 
 test('first deletion stales evaluations and saves/reloads positional payloads; profile and Clear Form rebuild controls', async t => {

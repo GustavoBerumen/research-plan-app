@@ -166,8 +166,9 @@ Additional information (custom-fields, max=1, key=additionalResearch):
 Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
-## Participants
-
+<!-- Since RPA-116, 14 September 2026, the three participant fields below
+     are asked once per research question, inside that question's group
+     under Methods, and saved per question. "perQuestion" marks them. -->
 <!-- These were merged into one field earlier in RPA-55, on the grounds that
      both wanted a short noun phrase naming a kind of person. That was true of
      the format and wrong about the function, and Gus reversed it: a screener
@@ -180,11 +181,11 @@ Methods (list, width=20, key=methods):
      Drafts saved while the fields were merged keep everything in
      Characteristics: which entries were segments was not recorded, so nothing
      can sort them back out. Splitting them is forward-looking only. -->
-Characteristics (list, prose, width=30, key=characteristics):
+Characteristics (list, prose, width=30, perQuestion, key=characteristics):
   Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
-User Groups (list, prose, width=20, key=userGroups):
+User Groups (list, prose, width=20, perQuestion, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
-Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
+Sample Size (radios, perQuestion, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
   Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 

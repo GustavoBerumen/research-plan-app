@@ -62,8 +62,13 @@ for (const [name, configResponse] of [
   for (const key of ['previousKnowledge-table', 'requirements-table', 'customReferences-table']) {
     assert.deepEqual(downloaded.tables[key].map(row => row[1]), source.tables[key].map(row => row[1]));
   }
-  assert.deepEqual(downloaded.lists, source.lists);
-  assert.deepEqual(downloaded.methods, source.methods);
+  // Since RPA-116 the plan-level participant answers live in every question's group.
+  const perQuestion = (src) => ({
+    lists: Object.fromEntries(Object.entries(src.lists).filter(([k]) => k !== 'characteristics' && k !== 'userGroups')),
+    methods: src.methods.map((g) => ({ ...g, characteristics: src.lists.characteristics || [], userGroups: src.lists.userGroups || [], sampleSize: src.selects.sampleSize || { v: '', o: '' } })),
+  });
+  assert.deepEqual(downloaded.lists, perQuestion(source).lists);
+  assert.deepEqual(downloaded.methods, perQuestion(source).methods);
   // RPA-101 gave every section a hatch; each is written, empty or not.
   assert.deepEqual(downloaded.custom, { ...source.custom, additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.equal(downloaded.createdAt, source.createdAt);

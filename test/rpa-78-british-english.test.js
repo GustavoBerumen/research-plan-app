@@ -99,10 +99,18 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
     assert.equal(document.querySelector('[data-field="' + key + '"]').value, value, key);
   }
   for (const [key, values] of Object.entries(baseline.draft.lists)) {
+    // Characteristics and User Groups are asked per research question since
+    // RPA-116: a plan-level answer lands in every question's group, checked below.
+    if (key === 'characteristics' || key === 'userGroups') continue;
     assert.deepEqual(listInputs(document, key).map(e => e.value), values, key);
   }
   const groups = () => [...document.querySelectorAll('.methods-group')];
-  assert.deepEqual(groups().map(g => [...g.querySelectorAll('.list-input')].map(e => e.value)), baseline.draft.methods.map(g => g.methods));
+  const inGroup = (g, key) => [...g.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')].map(e => e.value);
+  assert.deepEqual(groups().map(g => inGroup(g, 'methods')), baseline.draft.methods.map(g => g.methods));
+  for (const key of ['characteristics', 'userGroups']) {
+    if (!baseline.draft.lists[key]) continue;
+    groups().forEach((g, i) => assert.deepEqual(inGroup(g, key), baseline.draft.lists[key], key + ' for question ' + (i + 1)));
+  }
   assert.deepEqual(groups().map(g => g.querySelector('.methods-group-q').title), baseline.draft.lists.researchQuestions);
   assert.equal(document.querySelector('.timeline-chart').hidden, false);
   assert.equal(document.querySelectorAll('.timeline-row').length, 2);
@@ -118,6 +126,10 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   // section's Additional information hatch is written, empty or not.
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
   Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
+  // RPA-116: the plan-level participant answers now live in every question's group, in draft version 8.
+  expected.version = 8;
+  expected.methods = expected.methods.map((g) => ({ ...g, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
+  delete expected.lists.characteristics; delete expected.lists.userGroups; delete expected.selects.sampleSize;
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');
 
   const reopened = await bootApp({ draft: saved }); t.after(() => reopened.close());
@@ -131,7 +143,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
       assert.match(e.getAttribute('aria-label'), new RegExp(` ${i + 1}$`));
     });
   }
-  assert.deepEqual([...reopened.document.querySelectorAll('.methods-group .list-input')].map(e => e.value), ['Unassigned method', 'Data Visualization']);
+  assert.deepEqual([...reopened.document.querySelectorAll('.methods-group .list-rows[data-list-key="methods"] .list-input')].map(e => e.value), ['Unassigned method', 'Data Visualization']);
   assert.equal(reopened.document.activeElement, listInputs(reopened.document, 'researchQuestions')[0]);
 });
 
