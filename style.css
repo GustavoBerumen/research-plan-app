@@ -203,6 +203,21 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .step-all{margin-left:auto;background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .step-all:hover{color:var(--link-hover)}
 .step-top{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+/* Check your answers, per section (RPA-103): the design system's summary list, on the same step once Save and continue finds it complete. */
+@media screen{.step-checking>:not(.step-top):not(.check-answers){display:none!important}}
+.check-heading{margin:8px 0 6px;font-size:var(--heading);font-weight:700;line-height:1.1;color:var(--ink)}
+.check-sub{margin:0 0 20px;font-size:var(--text);color:var(--text-2)}
+.summary-list{margin:0 0 24px;padding:0}
+.summary-row{display:flex;flex-wrap:wrap;gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--border)}
+.summary-key{flex:0 0 30%;min-width:0;margin:0;font-weight:700;color:var(--ink)}
+.summary-value{flex:1;min-width:0;margin:0;white-space:pre-line;overflow-wrap:anywhere;color:var(--ink)}
+.summary-value-empty{color:var(--text-2)}
+.summary-items{margin:0;padding-left:18px}
+.summary-actions{flex:0 0 auto;margin:0}
+.summary-change{font-family:inherit;font-size:var(--text);color:var(--link);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.summary-change:hover{color:var(--link-hover)}
+.summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
+@media (max-width:600px){.summary-key{flex-basis:100%}}
 .step-top .step-caption{flex-basis:100%;order:2}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
@@ -733,4 +748,4 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
 
-@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}
+@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.check-answers,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}

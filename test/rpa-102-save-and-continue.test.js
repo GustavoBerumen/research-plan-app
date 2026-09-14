@@ -13,7 +13,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -48,7 +48,7 @@ test('partial and impossible required dates stay on the step, and a completed co
   };
   for (const values of [['12', '', ''], ['31', 'Feb', '2026']]) {
     enter(values);
-    step.querySelector('.step-continue').click();
+    saveAndContinue(step);
     assert.deepEqual(visible(d), ['plan-details']);
     assert.equal(summaryOf(step).hidden, false);
     assert.ok(linksOf(step).includes('Enter a complete, valid project decision date'));
@@ -59,7 +59,7 @@ test('partial and impossible required dates stay on the step, and a completed co
     d.querySelector('.task-link').click();
   }
   enter(['12', 'Oct', '2026']);
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(d), ['context']);
   assert.equal(savedDraft(window).fields.projectDecision, '2026-10-12');
 });
@@ -74,7 +74,7 @@ test('Save and continue commits a complete date still buffered in its visible se
   group.querySelector('.date-day').value = '14';
   group.querySelector('.date-month').value = 'Oct';
   group.querySelector('.date-year').value = '2026';
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(app.document), ['context']);
   assert.equal(savedDraft(app.window).fields.projectDecision, '2026-10-14');
 });
@@ -94,7 +94,7 @@ test('pressing it on an incomplete section shows the summary, takes focus there,
   t.after(() => app.close());
   const d = app.document;
   const step = await onPlanDetails(app);
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(d), ['plan-details'], 'stays');
   const summary = summaryOf(step);
   assert.equal(summary.hidden, false);
@@ -118,7 +118,7 @@ test('a summary link puts focus in the field; filling it takes its error away; t
   t.after(() => app.close());
   const { document: d, window } = app;
   const step = await onPlanDetails(app);
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   step.querySelectorAll('.error-summary-link')[2].click();
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus');
@@ -127,7 +127,7 @@ test('a summary link puts focus in the field; filling it takes its error away; t
   completeStep(app, step);
   assert.equal(summaryOf(step).hidden, true, 'nothing left to say');
   assert.deepEqual(errorsOf(step), []);
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(d), ['context'], 'and now it moves on');
 });
 
@@ -138,7 +138,7 @@ test('the research title counts: Plan details does not complete without it, and 
   const step = await onPlanDetails(app);
   completeStep(app, step);
   setValue(window, d.querySelector('[data-field="researchTitle"]'), '');
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(d), ['plan-details'], 'stays: the template does not mark the title optional (Gus, 14 September 2026)');
   assert.deepEqual(linksOf(step), ['Enter the research title']);
   const group = d.querySelector('[data-field="researchTitle"]').closest('.title-field');
@@ -146,7 +146,7 @@ test('the research title counts: Plan details does not complete without it, and 
   assert.ok(group.querySelector('.field-error').previousElementSibling.classList.contains('field-hint-text'), 'below the hint, above the box');
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
   assert.equal(summaryOf(step).hidden, true, 'the error goes as the title is typed');
-  step.querySelector('.step-continue').click();
+  saveAndContinue(step);
   assert.deepEqual(visible(d), ['context']);
 });
 
@@ -156,20 +156,20 @@ test('it saves either way, and a section\'s errors name only its required fields
   const { document: d, window } = app;
   const plan = await onPlanDetails(app);
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus');
-  plan.querySelector('.step-continue').click();
+  saveAndContinue(plan);
   // Read at once, before the autosave timer could: the press itself saves.
   assert.equal(savedDraft(window)?.fields?.leadResearcher, 'Gus', 'saved at the press, not on the autosave timer');
   completeStep(app, plan);
-  plan.querySelector('.step-continue').click();
+  saveAndContinue(plan);
   await waitFor(() => visible(d)[0] === 'context');
   window.location.hash = '#context';
   const context = steps(d)[2];
-  context.querySelector('.step-continue').click();
+  saveAndContinue(context);
   assert.deepEqual(linksOf(context), ['Enter the background', 'Enter the goal', 'Enter the problem statement'], 'Additional information is not required');
   completeStep(app, context);
-  context.querySelector('.step-continue').click();
+  saveAndContinue(context);
   await waitFor(() => visible(d)[0] === 'research');
-  steps(d)[3].querySelector('.step-continue').click();
+  saveAndContinue(steps(d)[3]);
   const research = linksOf(steps(d)[3]);
   assert.ok(!research.some((m) => /hypothesis/i.test(m)), 'an optional field is never an error: ' + research.join(', '));
   assert.ok(research.includes('Add to Research Questions'), research.join(', '));
