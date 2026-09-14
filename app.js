@@ -466,7 +466,9 @@
 
   // ---------- Google Drive picker ----------
   let configPromise = null;
-  const unavailableCapabilities = Object.freeze({ calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
+  // Feedback on the tool is the one capability a pilot advertises (RPA-98);
+  // every other write stays closed there, and the check below holds it to that.
+  const unavailableCapabilities = Object.freeze({ feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
   let capabilities = unavailableCapabilities;
 
   function renderBuildMarker(cfg) {
@@ -485,14 +487,15 @@
         return res.json();
       }).then(cfg => {
         if (!cfg || typeof cfg.pilotMode !== 'boolean' || !cfg.capabilities ||
-            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean') ||
-            (cfg.pilotMode && Object.values(cfg.capabilities).some(value => value !== false)) ||
+            // feedback may be absent from an older server's map: absent means unavailable, not invalid.
+            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (key === 'feedback' && cfg.capabilities[key] === undefined)) ||
+            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => key !== 'feedback' && value !== false)) ||
             (cfg.capabilities.googleDrive && (!cfg.capabilities.uploads ||
               typeof cfg.googleClientId !== 'string' || !cfg.googleClientId ||
               typeof cfg.googleApiKey !== 'string' || !cfg.googleApiKey))) {
           throw new Error('Invalid capabilities');
         }
-        capabilities = Object.freeze(Object.fromEntries(Object.keys(unavailableCapabilities).map(key => [key, cfg.capabilities[key]])));
+        capabilities = Object.freeze(Object.fromEntries(Object.keys(unavailableCapabilities).map(key => [key, cfg.capabilities[key] === true])));
         renderBuildMarker(cfg);
         const status = document.getElementById('capability-status');
         if (status) status.textContent = cfg.pilotMode
@@ -5123,6 +5126,143 @@
   // .add-btn pattern used everywhere else. The field element itself is
   // always in the DOM from first render, never lazily created — see the
   // print override below for why that matters.
+  // ---------- feedback on the tool (RPA-98) ----------
+  // Three questions and a score, asked where people finish: what they were
+  // trying to do, what got in the way, what they would change first, and
+  // how useful the tool was. The answers go to the people building the
+  // tool, not into the plan: nothing here carries data-field, so the draft,
+  // the backup and the print never see them. Sent to the server as one
+  // record; when that fails, offered as a file so nothing is lost.
+  function renderToolFeedback() {
+    const wrap = el('section', 'tool-feedback', { 'aria-labelledby': 'tool-feedback-h' });
+    const h = el('h3', 'tool-feedback-h', { id: 'tool-feedback-h' });
+    h.textContent = 'Feedback on this tool';
+    const sub = el('p', 'tool-feedback-sub');
+    sub.textContent = 'Three questions and a score, for the people building this tool. Your answers are not part of your plan.';
+    wrap.append(h, sub);
+
+    const questions = [
+      { id: 'tool-feedback-trying', key: 'tryingTo', label: 'What were you trying to do?', hint: 'For example: plan a usability study of the checkout.' },
+      { id: 'tool-feedback-in-the-way', key: 'inTheWay', label: 'What got in the way?', hint: 'Anything that slowed you down, confused you or stopped you.' },
+      { id: 'tool-feedback-change', key: 'changeFirst', label: 'What would you change first?', hint: 'One thing, if you could.' },
+    ];
+    const controls = {};
+    questions.forEach((q) => {
+      const field = el('div', 'field tool-feedback-field');
+      const label = el('label', 'tf-label', { for: q.id });
+      label.textContent = q.label;
+      const hint = el('div', 'field-hint-text', { id: q.id + '-hint' });
+      hint.textContent = q.hint;
+      const ta = el('textarea', 'finput field-ta tool-feedback-answer', { id: q.id, rows: '2', maxlength: '2000', 'aria-describedby': hint.id });
+      bindTextarea(ta);
+      field.append(label, hint, ta);
+      wrap.appendChild(field);
+      controls[q.key] = ta;
+    });
+
+    // The score, in the design system's radios: a fieldset whose legend asks.
+    const score = el('fieldset', 'field field-radios tool-feedback-field');
+    const legend = el('legend', 'tf-label');
+    legend.textContent = 'How useful was this tool overall?';
+    const scoreHint = el('div', 'field-hint-text', { id: 'tool-feedback-usefulness-hint' });
+    scoreHint.textContent = '1 is not useful, 5 is very useful.';
+    score.setAttribute('aria-describedby', scoreHint.id);
+    const group = el('div', 'radio-group tool-feedback-score');
+    // Every option carries words, not only a number: a screen reader user
+    // hears a scale, and the accessible-name check asks for letters.
+    const words = { 1: 'Not useful', 2: 'Slightly useful', 3: 'Somewhat useful', 4: 'Useful', 5: 'Very useful' };
+    for (let n = 1; n <= 5; n++) {
+      const item = el('div', 'radio-item');
+      const id = 'tool-feedback-usefulness-' + n;
+      const radio = el('input', 'radio-input', { type: 'radio', id, name: 'tool-feedback-usefulness', value: String(n) });
+      const optLabel = el('label', 'radio-label', { for: id });
+      optLabel.textContent = n + ' ' + words[n];
+      item.append(radio, optLabel);
+      group.appendChild(item);
+    }
+    score.append(legend, scoreHint, group);
+    wrap.appendChild(score);
+
+    const actions = el('div', 'tool-feedback-actions');
+    const send = el('button', 'btn btn-dark', { type: 'button', id: 'tool-feedback-send' });
+    send.textContent = 'Send feedback';
+    const download = el('button', 'btn btn-ghost', { type: 'button', id: 'tool-feedback-download' });
+    download.textContent = 'Download your feedback';
+    download.hidden = true;
+    actions.append(send, download);
+    const status = el('p', 'tool-feedback-status', { id: 'tool-feedback-status', role: 'status', 'aria-live': 'polite' });
+    wrap.append(actions, status);
+
+    const read = () => {
+      const chosen = group.querySelector('.radio-input:checked');
+      return {
+        tryingTo: controls.tryingTo.value.trim(),
+        inTheWay: controls.inTheWay.value.trim(),
+        changeFirst: controls.changeFirst.value.trim(),
+        usefulness: chosen ? parseInt(chosen.value, 10) : null,
+      };
+    };
+    const empty = (a) => !a.tryingTo && !a.inTheWay && !a.changeFirst && a.usefulness === null;
+    const say = (text, error) => { status.textContent = text; if (error) status.dataset.error = 'true'; else delete status.dataset.error; };
+    const clear = () => {
+      Object.values(controls).forEach((ta) => { ta.value = ''; resizeTa(ta); });
+      group.querySelectorAll('.radio-input').forEach((r) => { r.checked = false; });
+    };
+    const planName = () => ((doc.querySelector('[data-field="researchTitle"]') || {}).value || '').trim();
+    let lastAnswers = null;
+
+    download.addEventListener('click', () => {
+      const answers = lastAnswers || read();
+      let url;
+      try {
+        const record = Object.assign({}, answers, { plan: planName(), savedAt: new Date().toISOString() });
+        const blob = new Blob([JSON.stringify(record, null, 2) + '\n'], { type: 'application/json' });
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Feedback on Research Plan - ' + todayIso() + '.json';
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        say('Download started. Send the file to the person who shared this link.');
+      } catch (err) {
+        say('Could not download your feedback. ' + err.message, true);
+      } finally {
+        if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    });
+
+    send.addEventListener('click', async () => {
+      const answers = read();
+      if (empty(answers)) { say('Answer at least one question first.', true); return; }
+      lastAnswers = answers;
+      if (capabilities.feedback === false) {
+        download.hidden = false;
+        say('Sending is unavailable here. Download your feedback and send it to the person who shared this link.', true);
+        return;
+      }
+      send.disabled = true;
+      say('Sending your feedback…');
+      try {
+        const cfg = await getConfig().catch(() => null);
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, answers, { plan: planName(), build: cfg && typeof cfg.build === 'string' ? cfg.build : '', section: currentStepSlug() })),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        clear();
+        download.hidden = true;
+        say('Thank you. Your feedback is saved for the people building this tool.');
+      } catch (err) {
+        download.hidden = false;
+        say('Could not send your feedback. Download it and send it to the person who shared this link.', true);
+      } finally {
+        send.disabled = false;
+      }
+    });
+    return wrap;
+  }
+
   function renderCommentsReveal(field) {
     const wrap = el('div', 'comments-block');
 
@@ -5356,6 +5496,9 @@
     step.appendChild(signOffs);
 
     if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
+    // Where people finish: feedback on the tool itself, after the plan is
+    // signed (RPA-98). Not part of the plan, so not in the draft or print.
+    step.appendChild(renderToolFeedback());
 
     // The summary is only true at the moment it is drawn, so redraw it
     // whenever the plan changes rather than once at render.
