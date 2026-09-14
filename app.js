@@ -2808,7 +2808,7 @@
 
     let groups = methodsGroupEls();
     while (groups.length < targetCount) {
-      container.appendChild(buildMethodsGroup(placeholder));
+      container.appendChild(buildMethodsGroup(placeholder, container.dataset.width));
       groups = methodsGroupEls();
     }
     // Incidental sync only trims empty trailing groups. Deliberate Question

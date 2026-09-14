@@ -9,7 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp } = require('./app-harness');
+const { bootApp, setValue, waitFor } = require('./app-harness');
 
 const ROOT = path.join(__dirname, '..');
 const CSS = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
@@ -44,8 +44,15 @@ test('short-answer lists are sized too, row by row, including rows added later; 
   assert.deepEqual(methodRows(), ['20']);
   Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add method$/i.test(b.textContent.trim())).click();
   assert.deepEqual(methodRows(), ['20', '20']);
-  assert.deepEqual(rows('researchQuestions'), [''], 'a sentence keeps the line');
-  assert.deepEqual(rows('outcomes'), ['']);
+  // Gus's review, 14 September: the group for a second research question
+  // is built by the code that keeps one group per question, a third path.
+  setValue(app.window, d.querySelector('.list-rows[data-list-key="researchQuestions"] .list-input'), 'Payment method');
+  Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add research question$/i.test(b.textContent.trim())).click();
+  setValue(app.window, d.querySelectorAll('.list-rows[data-list-key="researchQuestions"] .list-input')[1], 'Mobile shoppers');
+  await waitFor(() => d.querySelectorAll('.methods-group').length === 2, { message: 'a second group for the second question' });
+  assert.deepEqual(methodRows(), ['20', '20', '20'], 'the second question\'s group is sized too');
+  assert.deepEqual(rows('researchQuestions'), ['', ''], 'a sentence keeps the line, both questions');
+  assert.deepEqual(rows('outcomes'), ['', ''], 'one outcome per question, both full width');
 });
 
 test('open-ended and fixed controls carry no width: textareas, dates and the document title', async (t) => {
