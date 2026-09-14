@@ -21,7 +21,11 @@
   --text-2:#505a5f;
   --border:#b1b4b6;
   --border-light:#d9d9d9;
-  --canvas:#f3f2f1;
+  /* The page is white edge to edge, as the model application is (RPA-104,
+     Gus, 14 September 2026), which overrides the grey canvas RPA-60 had
+     recorded as settled. The grey stays for panels inside the form. */
+  --canvas:#fff;
+  --panel:#f3f2f1;
   --focus:#ffdd00;
   --link:#1d70b8;
   --link-hover:#003078;
@@ -438,7 +442,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .timeline-period-mark{min-width:0;border-left:1px solid var(--border);font-size:12px;line-height:1.4;text-align:center;white-space:nowrap}
 .timeline-period-year{display:block;font-size:10px;color:var(--text-2)}
 .timeline-period-grid-dense .timeline-period-mark:nth-child(even) .timeline-period-name{visibility:hidden}
-.timeline-continuous-track{position:relative;display:grid;flex:1;min-width:0;height:20px;background:var(--canvas)}
+.timeline-continuous-track{position:relative;display:grid;flex:1;min-width:0;height:20px;background:var(--panel)}
 .timeline-period-grid,.timeline-continuous-track{width:var(--timeline-band-width)}
 .timeline-period-cell{border-left:1px solid var(--border);min-width:0}
 .timeline-period-cell:nth-last-child(2){border-right:1px solid var(--border)}
@@ -570,7 +574,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    Scope these styles to evaluations: suggestions also use .eval-panel. */
 .eval-controls{min-width:0}
 .eval-controls .eval-panel{border:1px solid var(--border);border-top:3px solid var(--ink);overflow-wrap:anywhere}
-.eval-controls .eval-head{gap:12px;flex-wrap:wrap;padding:16px;background:var(--canvas);color:var(--ink);border-bottom:1px solid var(--border-light)}
+.eval-controls .eval-head{gap:12px;flex-wrap:wrap;padding:16px;background:var(--panel);color:var(--ink);border-bottom:1px solid var(--border-light)}
 .eval-controls .eval-hl{flex:1 1 180px;min-width:0;font-size:var(--text);line-height:var(--lh);color:var(--ink)}
 .eval-controls .eval-badge{font-size:var(--text-sm);line-height:var(--lh);padding:2px 8px;color:var(--tag-blue-text);background:var(--tag-blue-bg)}
 .eval-controls .eval-tone-problem .eval-badge{color:var(--tag-red-text);background:var(--tag-red-bg)}
