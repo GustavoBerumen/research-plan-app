@@ -29,7 +29,7 @@ test('Clear Form resets the count and over-recommendation styling without saving
   assert.equal(counter.classList.contains('char-count-over'), true);
   d.getElementById('clear-btn').click();
   assert.equal(textarea.value, '');
-  assert.equal(counter.textContent, 'A good answer is around 400 characters.');
+  assert.equal(counter.textContent, 'A good answer is around 280 characters.');
   assert.equal(counter.classList.contains('char-count-over'), false);
   await new Promise(resolve => setTimeout(resolve, 550));
   assert.equal(window.localStorage.getItem('research-plan-app:draft'), null);
@@ -39,7 +39,8 @@ test('exactly the fields the template gives a count to have one, with the recomm
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  const expected = { background: 400, goal: 200, problemStatement: 300, objective: 200, hypothesis: 150, comments: 500 };
+  // Gus's numbers, 14 September: about 30 percent under the first proposal.
+  const expected = { background: 280, goal: 140, problemStatement: 210, objective: 140, hypothesis: 100, comments: 350 };
   for (const [key, n] of Object.entries(expected)) {
     assert.equal(counterOf(d, key)?.textContent, 'A good answer is around ' + n + ' characters.', key);
   }
@@ -56,14 +57,14 @@ test('the count follows what is written, counts spaces, and going over is said, 
   const ta = d.querySelector('[data-field="goal"]');
   const out = counterOf(d, 'goal');
   setValue(window, ta, 'Ship the new checkout.');
-  assert.equal(out.textContent, 'You have written 22 of around 200 characters.');
+  assert.equal(out.textContent, 'You have written 22 of around 140 characters.');
   assert.equal(out.classList.contains('char-count-over'), false);
   setValue(window, ta, 'x'.repeat(250));
-  assert.equal(out.textContent, 'You have written 250 of around 200 characters.');
+  assert.equal(out.textContent, 'You have written 250 of around 140 characters.');
   assert.equal(out.classList.contains('char-count-over'), true);
   assert.equal(ta.value.length, 250, 'a recommendation, never a limit');
   setValue(window, ta, '');
-  assert.equal(out.textContent, 'A good answer is around 200 characters.', 'back to the recommendation when empty');
+  assert.equal(out.textContent, 'A good answer is around 140 characters.', 'back to the recommendation when empty');
 });
 
 test('a screen reader hears it: a polite live region the field is described by, alongside its hint', async (t) => {
@@ -81,7 +82,7 @@ test('a screen reader hears it: a polite live region the field is described by, 
 test('a restored draft shows the count of what came back', async (t) => {
   const app = await bootApp({ draft: { version: 7, fields: { background: 'y'.repeat(60) }, lists: {}, tables: {} } });
   t.after(() => app.close());
-  assert.equal(counterOf(app.document, 'background').textContent, 'You have written 60 of around 400 characters.');
+  assert.equal(counterOf(app.document, 'background').textContent, 'You have written 60 of around 280 characters.');
 });
 
 test('the count does not print, and count= on anything but a textarea is ignored', async (t) => {
