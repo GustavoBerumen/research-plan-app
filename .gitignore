@@ -1,7 +1,7 @@
 .claude/
 .DS_Store
 Notes Progress.md
-node_modules/
+node_modules
 .env
 calibration-data.jsonl
 uploads/

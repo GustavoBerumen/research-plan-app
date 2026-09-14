@@ -77,6 +77,15 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .service-name:hover{border-bottom-color:var(--link)}
 .service-name:focus-visible{outline:3px solid var(--focus);background:var(--focus);border-bottom-color:var(--ink)}
 .tb-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+/* The options menu (RPA-106): one Menu button, a panel under the bar. */
+.site-bar{position:relative}
+.menu-btn[aria-expanded="true"]{background:var(--ink);color:#fff}
+.options-menu{position:absolute;right:24px;top:100%;z-index:101;min-width:300px;max-width:calc(100% - 48px);background:#fff;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:16px;display:grid;gap:12px}
+.options-menu[hidden]{display:none}
+.options-plan-name{margin:0;font-weight:700;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.options-menu .tb-btns{flex-direction:column;align-items:stretch;justify-content:flex-start}
+.options-menu .tb-btns .btn{width:100%;text-align:left}
+@media screen and (max-width:600px){.options-menu{left:12px;right:12px;max-width:none}}
 /* Phase banner: same shape as GOV.UK's — a tag and a sentence under a rule —
    and a single element, so ending the pilot is one deletion. */
 .phase-banner{max-width:960px;margin:0 auto;padding:8px 24px 10px;border-top:1px solid var(--border);display:flex;align-items:baseline;gap:10px;font-size:var(--text-sm);color:var(--ink)}
@@ -133,6 +142,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .mlabel{font-size:var(--text);font-weight:400;color:var(--ink)}
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
 .minput::placeholder{color:var(--text-2)}
+/* Inputs sized to the answer they expect (RPA-109), the GOV.UK width classes. A date is already fixed; a textarea is open-ended and stays full width. */
+.input-w-2{max-width:2.5em}.input-w-3{max-width:3.5em}.input-w-4{max-width:4.5em}.input-w-5{max-width:5.5em}.input-w-10{max-width:11.5em}.input-w-20{max-width:20.5em}.input-w-30{max-width:29.5em}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
 /* The ticket reference sits under the title on its own row, matching its
@@ -225,6 +236,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    floor below. Autosize still grows it the moment anyone types. */
 textarea.finput.finput-rows{min-height:0}
 textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+/* The word count under a box (RPA-114): hint-grey, never an error. */
+.word-count{margin:4px 0 0;font-size:var(--text);line-height:1.4;color:var(--text-2)}
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 
 /* ---------- Methods groups ---------- */
@@ -588,6 +601,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 /* RPA-91: the way back to a chosen framework. GOV.UK's details pattern —
    closed, a summary that reads as a link, the body expanding in place. */
 .fw-about{margin:10px 0 0;font-size:var(--text)}
+/* Help on demand at the bottom of a field (RPA-107): the same disclosure as the framework's About block. */
+.field-help{margin:8px 0 4px;font-size:var(--text)}
+.field-help-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
+.field-help-summary:hover{color:var(--link-hover)}
+.field-help-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
+.field-help[open] .field-help-summary{margin-bottom:8px}
+.field-help-body{border-left:4px solid var(--border);padding:2px 0 2px 16px;color:var(--text-2)}
+.field-help-body p{margin:0 0 8px}.field-help-body p:last-child{margin-bottom:0}
 .fw-about-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
 .fw-about-summary:hover{color:var(--link-hover)}
 .fw-about-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
@@ -674,7 +695,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      ruler's column positions, without changing screen or long-plan charts. */
   .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
   .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
-  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.field-help,.word-count,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}

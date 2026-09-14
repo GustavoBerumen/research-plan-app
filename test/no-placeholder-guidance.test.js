@@ -18,7 +18,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp } = require('./app-harness');
+const { bootApp, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_ACTIONS = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'actionPoints') };
 
 // Format masks on the segmented date control.
 const DATE_SEGMENTS = ['DD', 'MM', 'YYYY'];
@@ -35,7 +39,7 @@ function placeholders(document) {
 }
 
 test('no control carries guidance in its placeholder', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const stray = placeholders(app.document).filter((p) =>
@@ -48,7 +52,7 @@ test('no control carries guidance in its placeholder', async (t) => {
 test('the two survivors are still there, so this is not passing by accident', async (t) => {
   // If the date editor or the "Other…" input lost its placeholder, the test
   // above would go green for the wrong reason. Both are asserted present.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const all = placeholders(app.document).map((p) => p.placeholder);
 
@@ -60,7 +64,7 @@ test('a table cell with no declared placeholder gets none', async (t) => {
   // The regression that made the change incomplete the first time: dropping a
   // column's placeholder from the template left the cell falling back to
   // "Enter text…" in code, so the guidance was gone and a placeholder was not.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const cells = Array.from(app.document.querySelectorAll('#actionPoints-table tbody textarea'));
@@ -87,7 +91,7 @@ test('guidance is never hidden behind a tooltip either', async (t) => {
   // The icon is gone and the advice is in the hint. Nothing in the template
   // can produce a tooltip, so renderInfoTip and its stylesheet rules went with
   // it rather than being left unreachable.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   assert.equal(app.document.querySelectorAll('.info-tip, .info-tip-bubble').length, 0);
@@ -108,7 +112,7 @@ test('controls that only exist once revealed are swept too', async (t) => {
   // demand is invisible to it. Two things are: the custom section block, whose
   // body carried the field's placeholder, and the Feedback textarea. Both are
   // opened here first.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document } = app;
 
@@ -134,7 +138,7 @@ test('the escape hatch says what it is, and is scoped to the plan', async (t) =>
   // hint, sitting at the bottom of Execution because that is where the
   // Resources section was folded. GOV.UK has no pattern for a user-defined
   // field, so there is exactly one of these and it belongs to the document.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document } = app;
 
@@ -167,7 +171,7 @@ test('the escape hatch says what it is, and is scoped to the plan', async (t) =>
 });
 
 test('the examples that were placeholders now read as hints', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document } = app;
 
@@ -185,7 +189,7 @@ test('the examples that were placeholders now read as hints', async (t) => {
 test('no hint was lost when its placeholder went', async (t) => {
   // Every field that had guidance in a placeholder must still explain itself
   // somewhere. Derived from the template so it covers fields added later.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const body = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8')
