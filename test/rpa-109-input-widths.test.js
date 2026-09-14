@@ -28,11 +28,26 @@ test('the identifier-like fields are sized to their answers, in the header and i
   assert.equal(sized('signOffProjectOwner'), '20');
 });
 
+test('short-answer lists are sized too, row by row, including rows added later; sentence lists are not', async (t) => {
+  // Gus's review, 14 September: "New customers" does not need a whole line.
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const d = app.document;
+  const rows = (key) => Array.from(d.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')).map(widthClass);
+  assert.deepEqual(rows('characteristics'), ['30']);
+  assert.deepEqual(rows('userGroups'), ['20']);
+  Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add user group/i.test(b.textContent.trim())).click();
+  assert.deepEqual(rows('userGroups'), ['20', '20'], 'a new row is sized like the first');
+  assert.deepEqual(rows('researchQuestions'), [''], 'a sentence keeps the line');
+  assert.deepEqual(rows('outcomes'), ['']);
+});
+
 test('open-ended and fixed controls carry no width: textareas, dates and the document title', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  for (const el of d.querySelectorAll('textarea[data-field], input[type=date]')) assert.equal(widthClass(el), '', el.dataset.field || 'date');
+  // List rows are sized on purpose (see above); the open-ended textareas are the fields.
+  for (const el of d.querySelectorAll('textarea[data-field]:not(.list-input), input[type=date]')) assert.equal(widthClass(el), '', el.dataset.field || 'date');
   assert.equal(widthClass(d.querySelector('[data-field="researchTitle"]')), '', 'the title is the page heading');
   assert.deepEqual(app.jsdomErrors, []);
 });

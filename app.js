@@ -3789,6 +3789,10 @@
       const inp = isGrowable
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
+      // A list row is sized like a text field when the template says so. A
+      // prose row too: it wraps inside the narrower box, which is the point
+      // for a short answer like a user group (RPA-109).
+      if (field.width) inp.classList.add('input-w-' + field.width);
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
       // Each question's Methods group is labelled with its text, so the label

@@ -52,10 +52,11 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
-  width=N           — text fields only: the input is sized to the answer it
-                       expects, in the GOV.UK width classes (2, 3, 4, 5, 10,
-                       20 or 30 characters). A ticket key is 10, a name 20.
-                       Dates are fixed already; textareas stay full width.
+  width=N           — text fields and list rows: the input is sized to the
+                       answer it expects, in the GOV.UK width classes (2, 3, 4,
+                       5, 10, 20 or 30 characters). A ticket key is 10, a name
+                       or a user group 20, a characteristic 30. Dates are fixed
+                       already; textareas and prose rows stay full width.
 
 Exception: "Methods" rows are special-cased in code to be searchable
 comboboxes — suggestions come from research-methods.md (one method per
@@ -143,9 +144,9 @@ Methods (list, key=methods):
      Drafts saved while the fields were merged keep everything in
      Characteristics: which entries were segments was not recorded, so nothing
      can sort them back out. Splitting them is forward-looking only. -->
-Characteristics (list, prose, key=characteristics):
+Characteristics (list, prose, width=30, key=characteristics):
   Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
-User Groups (list, prose, key=userGroups):
+User Groups (list, prose, width=20, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
