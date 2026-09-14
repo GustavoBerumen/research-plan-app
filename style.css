@@ -142,6 +142,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .title-inp{width:100%;font-family:inherit;font-size:var(--title);font-weight:700;line-height:1.2;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:0;padding:5px;outline:none;resize:none;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
 .title-inp::placeholder{color:var(--text-2)}
 .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:24px}
+/* A page reads down (RPA-122): on screen, questions asked together stack one under the other, so Project decision sits above Research readout. Print keeps the two-column header of the document. */
+@media screen{.step .meta-grid{grid-template-columns:1fr;gap:20px}}
 .mf{display:flex;flex-direction:column;gap:5px}
 .mlabel{font-size:var(--text);font-weight:400;color:var(--ink)}
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
