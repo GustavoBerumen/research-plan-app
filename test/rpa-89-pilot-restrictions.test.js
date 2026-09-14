@@ -12,7 +12,8 @@ const { bootApp, waitFor, setValue, DRAFT_KEY, withFieldUncommented } = require(
 // so the fixture brings it back the way a future template line would.
 const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
 const { realisticBackup } = require('./rpa-40-fixtures.cjs');
-const disabled = { calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
+// Feedback on the tool is the one write a pilot advertises (RPA-98); everything else stays closed.
+const disabled = { feedback: true, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
 const pilotConfig = { pilotMode: true, capabilities: disabled };
 const response = data => ({ ok: true, json: async () => data });
 

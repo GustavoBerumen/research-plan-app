@@ -199,7 +199,9 @@ test('Feedback is offered here, and closes the step', async (t) => {
     signOffs.compareDocumentPosition(block) & 4 /* DOCUMENT_POSITION_FOLLOWING */, 4,
     'Feedback comes after the approvals'
   );
-  assert.equal(block, el.lastElementChild, 'and is the last thing in the step');
+  // The last thing of the plan. Feedback on the tool itself follows it (RPA-98), about the app, not the plan.
+  assert.ok(block.nextElementSibling && block.nextElementSibling.classList.contains('tool-feedback'), 'and is the last thing of the plan in the step');
+  assert.equal(block.nextElementSibling.nextElementSibling, null, 'only the feedback on the tool follows it');
 
   // It also stays out of the way until wanted, as it did before the move, and
   // is not counted as an unanswered field by the summary above it.

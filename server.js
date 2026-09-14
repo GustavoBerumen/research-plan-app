@@ -50,6 +50,9 @@ const APP_BUILD = (() => {
   } catch (e) { return 'dev'; }
 })();
 const CAPABILITIES = Object.freeze({
+  // Feedback on the tool is the one record a pilot exists to collect, so it
+  // is written in every mode (RPA-98). Everything else stays closed in pilot.
+  feedback: true,
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
   addFramework: !PILOT_MODE,
@@ -1419,6 +1422,53 @@ async function handleSuggestMethods(req, res) {
 }
 
 const CALIBRATION_FILE = path.join(ROOT, 'calibration-data.jsonl');
+const FEEDBACK_FILE = path.join(ROOT, 'feedback-data.jsonl');
+
+// Feedback on the tool from the review step (RPA-98): three short answers
+// and a score, appended one line per submission. Nothing from the plan is
+// stored beyond its name, so a reader can tell submissions apart.
+const FEEDBACK_ANSWER_MAX = 2000;
+async function handleSaveFeedback(req, res) {
+  let payload;
+  try {
+    payload = await readJsonBody(req);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+    return;
+  }
+  const answer = (key) => (typeof payload[key] === 'string' ? payload[key].trim() : '');
+  const tryingTo = answer('tryingTo');
+  const inTheWay = answer('inTheWay');
+  const changeFirst = answer('changeFirst');
+  const usefulness = Number.isInteger(payload.usefulness) && payload.usefulness >= 1 && payload.usefulness <= 5 ? payload.usefulness : null;
+  if ([tryingTo, inTheWay, changeFirst].some((a) => a.length > FEEDBACK_ANSWER_MAX)) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Each answer must be ' + FEEDBACK_ANSWER_MAX + ' characters or fewer' }));
+    return;
+  }
+  if (!tryingTo && !inTheWay && !changeFirst && usefulness === null) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Answer at least one question' }));
+    return;
+  }
+  const record = {
+    tryingTo, inTheWay, changeFirst, usefulness,
+    plan: answer('plan').slice(0, 200),
+    section: answer('section').slice(0, 40),
+    build: answer('build').slice(0, 40),
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    await fs.promises.appendFile(FEEDBACK_FILE, JSON.stringify(record) + '\n');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error('Saving feedback failed:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Saving feedback failed' }));
+  }
+}
 
 async function handleSaveCalibration(req, res) {
   let payload;
@@ -1566,6 +1616,7 @@ async function handleJiraSearch(req, res) {
 const API_ROUTES = new Map([
   ['/api/evaluate', ['POST', handleEvaluate]],
   ['/api/calibration', ['POST', handleSaveCalibration, 'calibration']],
+  ['/api/feedback', ['POST', handleSaveFeedback, 'feedback']],
   ['/api/suggest-framework', ['POST', handleSuggestFramework]],
   ['/api/add-framework', ['POST', handleAddFramework, 'addFramework']],
   ['/api/suggest-methods', ['POST', handleSuggestMethods]],
