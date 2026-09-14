@@ -273,7 +273,15 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .methods-groups{display:flex;flex-direction:column;gap:10px}
 .methods-groups.methods-grouped{gap:32px}
 .methods-group{min-width:0}
-.methods-group-q{font-size:var(--text);font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:10px;overflow-wrap:anywhere}
+/* Each research question's group holds its Methods and its participant fields (RPA-116); the question stays pinned above them while they are answered. */
+.methods-grouped .methods-group{border-left:4px solid var(--border);padding-left:16px}
+.methods-group-head{position:sticky;top:var(--site-header-h,0px);z-index:2;background:#fff;padding:6px 0 8px;margin-bottom:10px;border-bottom:1px solid var(--border-light)}
+.methods-group-head[hidden]{display:none}
+.methods-group-text{margin:2px 0 0;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.methods-group-text[hidden]{display:none}
+.methods-group .field-per-question{margin-top:18px}
+.methods-group .field-question-methods{margin-top:0}
+.methods-group-q{font-size:var(--text);font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:0;overflow-wrap:anywhere}
 .methods-group-q-empty{color:var(--text-2);font-weight:400}
 .methods-group-q[hidden]{display:none}
 

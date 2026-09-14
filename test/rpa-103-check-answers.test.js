@@ -159,8 +159,10 @@ test('answers are shown as given: a date in words, a radio by its label, a list 
   completeStep(app, methodology);
   methodology.querySelector('.step-continue').click();
   const methodologyRows = Object.fromEntries(rowsOf(methodology));
-  assert.equal(methodologyRows['Sample Size'], 'Small (1–5)', 'a radio by its label');
-  assert.equal(methodologyRows['Methods'], 'Why do people leave?: Filled.', 'methods by their whole question, not the abbreviated group heading');
+  // Since RPA-116 each research question has its own rows, named for the question.
+  assert.equal(methodologyRows['Sample Size for research question 1'], 'Small (1–5)', 'a radio by its label');
+  assert.equal(methodologyRows['Methods for research question 1'], 'Filled.', 'methods for that question');
+  assert.equal(methodologyRows['Methods for research question 2'], 'Filled.', 'the second question has rows of its own');
 });
 
 test('the check page does not print, and Change from the review step lands on the answers, not the check page', async (t) => {
