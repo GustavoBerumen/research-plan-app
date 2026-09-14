@@ -77,8 +77,9 @@ test('summarises every section, with a Change action on each row', async (t) => 
 
   const sections = Array.from(document.querySelectorAll('.acc-title')).map((e) => e.textContent);
   const summary = rows(document);
-  assert.deepEqual(summary.map((r) => r.name), sections,
-    'one row per section, in the same order');
+  // Plan details leads since RPA-110: any answer can be changed from here.
+  assert.deepEqual(summary.map((r) => r.name), ['Plan details', ...sections],
+    'one row per part of the plan, in the same order');
 
   summary.forEach((r) => {
     assert.ok(r.change, `${r.name} has a Change action`);

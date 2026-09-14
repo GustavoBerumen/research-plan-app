@@ -1546,6 +1546,9 @@
   // finishing an evaluation fires no input event and the summary would
   // otherwise keep saying nothing until the next keystroke.
   let refreshReviewSummary = () => {};
+  // The same redraw at once, for the moment a person returns to the review
+  // step from a Change: what they see must already be what they edited.
+  let redrawReviewNow = () => {};
   const evaluationBatches = new Map();
   let evaluationEpoch = 0;
   let activeEvaluations = 0;
@@ -5109,11 +5112,44 @@
     const list = el('div', 'review-list');
     step.appendChild(list);
 
+    // A redraw replaces every element. Whatever in the list had focus, the
+    // equivalent element gets it back: the row a person just returned to,
+    // the "Show answers" they just pressed, a Change they tabbed to.
+    function focusedPlace() {
+      const active = document.activeElement;
+      if (!active || !list.contains(active)) return null;
+      const item = active.closest('.review-item');
+      const slug = item ? item.querySelector('.review-row').dataset.slug : null;
+      if (!slug) return null;
+      if (active.classList.contains('review-row')) return { slug, sel: '.review-row' };
+      if (active.classList.contains('review-change')) return { slug, sel: '.review-change' };
+      if (active.classList.contains('review-answers-summary')) return { slug, sel: '.review-answers-summary' };
+      if (active.classList.contains('summary-change')) return { slug, sel: '.summary-change', index: Array.from(item.querySelectorAll('.summary-change')).indexOf(active) };
+      return { slug, sel: '.review-row' };
+    }
+    function restoreFocus(place) {
+      if (!place) return;
+      const item = Array.from(list.querySelectorAll('.review-item')).find((it) => it.querySelector('.review-row').dataset.slug === place.slug);
+      if (!item) return;
+      const target = place.index >= 0 ? item.querySelectorAll(place.sel)[place.index] : item.querySelector(place.sel);
+      if (target) target.focus({ preventScroll: true });
+    }
     function draw() {
+      // Redrawn as the plan changes. A section whose answers were revealed
+      // stays revealed, its rows drawn afresh, and focus stays put (RPA-110).
+      const revealed = new Set(Array.from(list.querySelectorAll('.review-answers')).filter((d) => d.open).map((d) => d.dataset.slug));
+      const place = focusedPlace();
       list.innerHTML = '';
+      const items = [];
+      const header = doc.querySelector('.doc-header');
+      // Plan details belongs here too: any answer, not only the sections'.
+      if (header) items.push({ stepEl: header, slug: 'plan-details', s: Object.assign({ title: 'Plan details' }, headerSummary(header)) });
       Array.from(doc.querySelectorAll('.acc')).forEach((sectionEl) => {
-        const s = sectionSummary(sectionEl);
-        const row = el('div', 'review-row');
+        items.push({ stepEl: sectionEl, slug: ((sectionEl.querySelector('.acc-body') || {}).id || '').replace(/^body-/, ''), s: sectionSummary(sectionEl) });
+      });
+      items.forEach(({ stepEl, slug, s }) => {
+        const item = el('div', 'review-item');
+        const row = el('div', 'review-row', { 'data-slug': slug, tabindex: '-1' });
 
         const tick = el('span', 'review-tick' + (s.complete ? ' review-tick-done' : ''));
         tick.textContent = s.complete ? '✓' : '•';
@@ -5135,27 +5171,34 @@
 
         // Every row gets a Change action — the part of check-your-answers that
         // makes the summary useful rather than just a verdict on your work.
+        // It lands on the section's first control, and Save and continue
+        // there comes back here (RPA-110).
         const change = el('button', 'review-change', {
           type: 'button',
           'aria-label': 'Change ' + s.title,
         });
         change.textContent = 'Change';
-        change.addEventListener('click', () => {
-          const i = steps.indexOf(sectionEl);
-          // Change is a deliberate act from Review, past every lock.
-          if (i >= 0) showStep(i, { force: true, check: false });
-          else {
-            const body = sectionEl.querySelector('.acc-body');
-            if (body && body.hidden) sectionEl.querySelector('.acc-head').click();
-            sectionEl.scrollIntoView({ block: 'start' });
-          }
-          const first = sectionEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select');
-          if (first) first.focus();
-        });
-
+        change.addEventListener('click', () => changeFromReview(stepEl, null, slug));
         row.append(tick, name, state, note, change);
-        list.appendChild(row);
+        // The answers themselves, on demand, in the check page's shape, with
+        // a Change on each row: edit any answer from here and come back here.
+        const answers = el('details', 'review-answers', { 'data-slug': slug });
+        const reveal = el('summary', 'review-answers-summary');
+        const revealText = document.createTextNode('');
+        const revealName = el('span', 'visually-hidden');
+        revealName.textContent = ' for ' + s.title;
+        reveal.append(revealText, revealName);
+        const rows = el('dl', 'summary-list');
+        const drawRows = () => renderSummaryRows(stepEl, rows, (g) => changeFromReview(stepEl, g, slug));
+        const wording = () => { revealText.textContent = (answers.open ? 'Hide' : 'Show') + ' answers'; };
+        answers.addEventListener('toggle', () => { wording(); if (answers.open) drawRows(); });
+        answers.append(reveal, rows);
+        if (revealed.has(slug)) { answers.open = true; drawRows(); }
+        wording();
+        item.append(row, answers);
+        list.appendChild(item);
       });
+      restoreFocus(place);
     }
 
     // Feedback closes the document, below the approvals. It was briefly above
@@ -5184,6 +5227,7 @@
     doc.addEventListener('change', refresh);
     doc.addEventListener('click', refresh);
     refreshReviewSummary = refresh;
+    redrawReviewNow = draw;
     draw();
 
     return step;
@@ -5453,7 +5497,9 @@
           });
           saveDraft();   // "Save" is a promise: kept even when the section is not done
           errorsShowing = showStepErrors(stepEl, summary, { focus: true });
-          if (!errorsShowing) showCheck(i);
+          if (errorsShowing) return;
+          if (returnAfterSave && returnAfterSave.from === stepEl) { returnToReview(stepEl); return; }
+          showCheck(i);
         });
         // Once errors are showing, they follow the typing: a field filled in
         // loses its message, and the summary goes when nothing is left.
@@ -5503,6 +5549,7 @@
     // A locked section cannot be entered by a link, a hash or Continue. A
     // restored draft may still land on it: it was reachable when saved.
     if (!opts.force && stepLocked(i)) return false;
+    if (returnAfterSave && steps[i] !== returnAfterSave.from) returnAfterSave = null;
     steps.forEach((s, k) => { s.hidden = k !== i; });
     const stepEl = steps[i];
     currentStep = i;
@@ -5653,7 +5700,11 @@
     return lines;
   }
   function drawCheckRows(stepEl, panel) {
-    const list = panel.querySelector('.summary-list');
+    renderSummaryRows(stepEl, panel.querySelector('.summary-list'), (g) => leaveCheck(stepEl, g));
+  }
+  // The design system's summary list for one step: a row per question, the
+  // answer as given, and a Change that does whatever the caller needs.
+  function renderSummaryRows(stepEl, list, onChange) {
     list.replaceChildren();
     checkGroupsOf(stepEl).forEach((g) => {
       const label = groupLabel(g);
@@ -5670,11 +5721,44 @@
       const named = el('span', 'visually-hidden');
       named.textContent = ' ' + label;
       change.append(document.createTextNode('Change'), named);
-      change.addEventListener('click', () => leaveCheck(stepEl, g));
+      change.addEventListener('click', () => onChange(g));
       actions.appendChild(change);
       row.append(key, value, actions);
       list.appendChild(row);
     });
+  }
+
+  // ---------- edit any answer, and come back (RPA-110) ----------
+  // A Change from the review step remembers where it came from: the next
+  // Save and continue on that section goes back to the review step and to
+  // that section's row, not onward to the check page. Leaving the section
+  // any other way (Back, the list, a link) forgets it, so the return path
+  // is never a surprise later.
+  let returnAfterSave = null;
+  function changeFromReview(stepEl, group, rowSlug) {
+    const i = steps.indexOf(stepEl);
+    if (i < 0) return;
+    // Change is a deliberate act from Review, past every lock, to the answers.
+    showStep(i, { force: true, check: false });
+    returnAfterSave = { from: stepEl, row: rowSlug };
+    const target = group
+      ? (groupControl(group) || group.querySelector('button'))
+      : stepEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select, .title-field textarea');
+    if (target) target.focus({ preventScroll: true });
+    const into = group || null;
+    if (into && typeof into.scrollIntoView === 'function') into.scrollIntoView({ block: 'center' });
+  }
+  function returnToReview(stepEl) {
+    const back = returnAfterSave;
+    returnAfterSave = null;
+    setChecking(stepEl, true);   // left the way a completed section is left: on its check page
+    const review = steps.findIndex((s) => s.classList.contains('review-step'));
+    if (review < 0 || !showStep(review, { force: true })) return;
+    redrawReviewNow();   // current at once, not after the debounce
+    const row = steps[review].querySelector('.review-row[data-slug="' + back.row + '"]');
+    if (!row) return;
+    row.focus({ preventScroll: true });
+    if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'center' });
   }
 
   // ---------- the options menu (RPA-106) ----------
