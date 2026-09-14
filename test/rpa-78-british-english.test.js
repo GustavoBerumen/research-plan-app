@@ -128,7 +128,8 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   // RPA-116: the plan-level participant answers now live in every question's group, in draft version 8.
   expected.version = 8;
-  expected.fields.declaration = '';   // the declaration box, unticked (RPA-115)
+  expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
+  expected.fields.declarationRequester = '';
   expected.methods = expected.methods.map((g) => ({ ...g, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
   delete expected.lists.characteristics; delete expected.lists.userGroups; delete expected.selects.sampleSize;
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');
