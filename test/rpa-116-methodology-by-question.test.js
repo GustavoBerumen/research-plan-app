@@ -52,7 +52,7 @@ test('each research question carries its own Methods, Characteristics, User Grou
   groups.forEach((g, i) => {
     const n = i + 1;
     assert.deepEqual(Array.from(g.querySelectorAll('.field-per-question > .flabel')).map(text),
-      ['Methods for research question ' + n, 'Characteristics for research question ' + n, 'User Groups for research question ' + n, 'Sample Size for research question ' + n]);
+      ['Methods for research question ' + n, 'Characteristics for research question ' + n, 'User Groups for research question ' + n, 'How many participants do you need? for research question ' + n]);
     assert.equal(g.querySelector('.methods-group-head').hidden, false, 'the head shows once there is a question');
     assert.equal(text(g.querySelector('.methods-group-text')), i === 0 ? 'Why do people leave?' : 'What do they expect?', 'the whole question, not the abbreviation');
     assert.equal(g.querySelectorAll('.field-per-question .field-hint-text').length, 4, 'hints travel with the fields');

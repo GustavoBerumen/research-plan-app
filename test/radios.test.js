@@ -43,9 +43,10 @@ test('renders one radio per option plus Other, with the reveal put away', async 
   assert.equal(g.radios.filter((r) => r.checked).length, 0, 'nothing is preselected');
 
   // The group names itself, since there is no single control to label.
-  assert.equal(g.el.getAttribute('role'), 'radiogroup');
-  const labelledBy = document.getElementById(g.el.getAttribute('aria-labelledby'));
-  assert.equal(labelledBy.textContent.trim(), 'Sample Size for research question 1', 'named for its question since RPA-116');
+  // The design system's shape since RPA-118: a fieldset whose legend asks the question.
+  const fieldset = g.el.closest('fieldset');
+  assert.ok(fieldset && fieldset.classList.contains('field'), 'a fieldset');
+  assert.equal(fieldset.querySelector('legend').textContent.trim(), 'How many participants do you need? for research question 1', 'the question as legend, named for its research question since RPA-116');
 
   // Every radio has a real label bound to it, so the text is a hit target.
   g.radios.forEach((radio) => {
