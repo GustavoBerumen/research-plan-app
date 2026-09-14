@@ -17,7 +17,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor } = require('./app-harness');
+const { bootApp, setValue, waitFor, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 
@@ -53,7 +57,7 @@ function openMethodology(document) {
 }
 
 test('an empty field shows no block and offers a suggestion', async (t) => {
-  const app = await bootApp({ frameworkLookup: library });
+  const app = await bootApp({ textAssets: WITH_THEORY,  frameworkLookup: library });
   t.after(() => app.close());
   const th = theory(app);
   assert.ok(th.about, 'the details element exists');
@@ -63,7 +67,7 @@ test('an empty field shows no block and offers a suggestion', async (t) => {
 });
 
 test('typing a known framework fills the block, closed, and changes what the button offers', async (t) => {
-  const app = await bootApp({ frameworkLookup: library });
+  const app = await bootApp({ textAssets: WITH_THEORY,  frameworkLookup: library });
   t.after(() => app.close());
   const { document, window } = app;
   openMethodology(document);
@@ -80,7 +84,7 @@ test('typing a known framework fills the block, closed, and changes what the but
 });
 
 test('the block carries what the library holds: focus, application, and every reference in full', async (t) => {
-  const app = await bootApp({ frameworkLookup: library });
+  const app = await bootApp({ textAssets: WITH_THEORY,  frameworkLookup: library });
   t.after(() => app.close());
   const { document, window } = app;
   openMethodology(document);
@@ -105,7 +109,7 @@ test('it survives a reload: a saved draft names the framework, and the block com
   // that needed its own hook. The acceptance criterion the ticket cares most
   // about: available on returning to a saved draft, not only in the session
   // where the suggestion was made.
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_THEORY, 
     frameworkLookup: library,
     draft: { version: 7, fields: { theory: NAME + '\nDavis (1989). Perceived usefulness.' }, lists: {}, tables: {} },
   });
@@ -117,7 +121,7 @@ test('it survives a reload: a saved draft names the framework, and the block com
 });
 
 test('a framework typed by hand that the library does not know is handled without an error', async (t) => {
-  const app = await bootApp({ frameworkLookup: library });
+  const app = await bootApp({ textAssets: WITH_THEORY,  frameworkLookup: library });
   t.after(() => app.close());
   const { document, window } = app;
   openMethodology(document);
@@ -133,7 +137,7 @@ test('a framework typed by hand that the library does not know is handled withou
 });
 
 test('clearing the field takes the block away again', async (t) => {
-  const app = await bootApp({ frameworkLookup: library });
+  const app = await bootApp({ textAssets: WITH_THEORY,  frameworkLookup: library });
   t.after(() => app.close());
   const { document, window } = app;
   openMethodology(document);
@@ -148,7 +152,7 @@ test('clearing the field takes the block away again', async (t) => {
 
 test('a different suggestion is still possible once one is chosen', async (t) => {
   // Not a one-way door: the button's label changes, its job does not.
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_THEORY, 
     frameworkLookup: library,
     suggestFramework: () => ({ matched: true, name: NAME, rationale: 'Fits.', guidance: ['a', 'b', 'c'], entry: ENTRY }),
   });
@@ -165,7 +169,7 @@ test('a different suggestion is still possible once one is chosen', async (t) =>
 });
 
 test('accepting a suggestion fills the block at once, without a round trip', async (t) => {
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_THEORY, 
     frameworkLookup: library,
     suggestFramework: () => ({ matched: true, name: NAME, rationale: 'Fits.', guidance: ['a', 'b', 'c'], entry: ENTRY }),
   });
@@ -216,7 +220,7 @@ function deferred() {
 
 async function pendingSuggestion(t, value = ACTIVITY, lookup = twoFrameworks) {
   const request = deferred();
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_THEORY, 
     frameworkLookup: lookup,
     suggestFramework: () => request.promise,
     draft: { version: 7, fields: { theory: value }, lists: {}, tables: {} },

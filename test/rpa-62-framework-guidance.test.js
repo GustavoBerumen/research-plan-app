@@ -13,9 +13,14 @@
 // unverified theory is advice built on sand.
 
 const test = require('node:test');
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { bootApp } = require('./app-harness');
+const { bootApp, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
 
 const TAM_ENTRY = [
   '### Technology Acceptance Model (TAM) & UTAUT',
@@ -55,7 +60,7 @@ async function openTheory(app) {
 }
 
 test('a match carries three instructions, in the order the ticket names', async (t) => {
-  const app = await bootApp({ suggestFramework: () => match() });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => match() });
   t.after(() => app.close());
   const { panel } = await openTheory(app);
 
@@ -70,7 +75,7 @@ test('a match carries three instructions, in the order the ticket names', async 
 test('it sits between what the library says and the citation', async (t) => {
   // The panel's order is an argument: why it fits, what it is, what to do,
   // where to read more. Guidance is the third step, not a footnote.
-  const app = await bootApp({ suggestFramework: () => match() });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => match() });
   t.after(() => app.close());
   const { panel } = await openTheory(app);
 
@@ -84,7 +89,7 @@ test('an incomplete set renders nothing, not a hollow list', async (t) => {
   // two-item list with a labelled empty third slot would look like the model
   // had run out of things to say.
   for (const guidance of [undefined, [], GUIDANCE.slice(0, 2), ['', '', '']]) {
-    const app = await bootApp({ suggestFramework: () => match({ guidance }) });
+    const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => match({ guidance }) });
     const { panel } = await openTheory(app);
     assert.equal(panel.querySelector('.fw-guidance'), null, 'no list for ' + JSON.stringify(guidance));
     assert.equal(panel.querySelector('.fw-guidance-head'), null);
@@ -97,7 +102,7 @@ test('an item that begins with its slot word is not labelled twice', async (t) =
   // The prompt forbids it and the first live run did it anyway: item two came
   // back "Ask each role what they think…" under a slot labelled "Ask". A
   // request to a model is not a guarantee, so the strip is done here.
-  const app = await bootApp({ suggestFramework: () => match({ guidance: [
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => match({ guidance: [
     'Look for: where effort, not value, decides adoption.',
     'ask each role what they think the others are doing.',
     'In analysis — separate ease-of-use complaints from usefulness complaints.',
@@ -119,7 +124,7 @@ test('an item that begins with its slot word is not labelled twice', async (t) =
 test('the guidance is read, never written into the plan', async (t) => {
   // Decision 1: the field stays short. Writing three instructions into Theory
   // would make every plan longer, which is the opposite of RPA-55.
-  const app = await bootApp({ suggestFramework: () => match() });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => match() });
   t.after(() => app.close());
   const { panel, input } = await openTheory(app);
 

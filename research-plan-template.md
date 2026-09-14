@@ -125,8 +125,13 @@ Outcomes (list, eval, key=outcomes):
 
 # Methodology
 
-Theory (textarea, optional, rows=2, key=theory): 
-  Hint: A framework to help ground the study design and analysis.
+<!-- Dormant since RPA-117, 14 September 2026. Theory and Action Points are
+     hidden at this stage of the plan — Theory added friction, and actions are
+     tracked in Jira. Saved values in older drafts are carried forward
+     untouched by carryUnrendered, and the framework suggestion code stays
+     for when Theory returns. Uncomment the two lines to bring it back. -->
+<!-- Theory (textarea, optional, rows=2, key=theory): -->
+<!-- Hint: A framework to help ground the study design and analysis. -->
 Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
@@ -164,8 +169,10 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
      completion date follows Research readout until somebody edits it. -->
 Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
   Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
-Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible
-  Hint: Tasks needed to move this research forward, and who owns each one.
+<!-- Dormant since RPA-117, see Theory above. RPA-69, Jira subtasks from
+     Action Points, loses its source while this is hidden. -->
+<!-- Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible -->
+<!-- Hint: Tasks needed to move this research forward, and who owns each one. -->
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
      cannot also be a live tracker, so any status it claims is wrong the day
      after sign-off. Nothing has happened yet at the point the question is

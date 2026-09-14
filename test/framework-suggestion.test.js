@@ -13,8 +13,14 @@
 // overwrite something the researcher already wrote.
 
 const test = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor } = require('./app-harness');
+const { bootApp, setValue, waitFor, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
 
 // Shaped like a real entry in the library: extractFirstReference reads the
 // first bullet under "Key References".
@@ -77,7 +83,7 @@ test('a match shows what the library already knows about the framework', async (
   // The fix costs nothing at the API: the server already sends the matched
   // entry whole, and the client already parses it — for one citation, then
   // discarded the rest.
-  const app = await bootApp({ suggestFramework: () => MATCH });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => MATCH });
   t.after(() => app.close());
 
   const ui = await openTheory(app);
@@ -102,7 +108,7 @@ test('an entry missing those lines renders without them, not emptily', async (t)
   // Library entries are hand-edited Markdown, so one can be missing a line.
   // A blank labelled row would look like the library had nothing to say.
   const bare = ['### Sparse Framework', '* **Key References:**', '  * Someone, A. (2020). A title.'].join('\n');
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_THEORY, 
     suggestFramework: () => ({ matched: true, name: 'Sparse Framework', rationale: 'It fits.', entry: bare }),
   });
   t.after(() => app.close());
@@ -116,7 +122,7 @@ test('an entry missing those lines renders without them, not emptily', async (t)
 test('the detail is read, not written into the plan', async (t) => {
   // Decision 1 in the ticket: the guidance stays panel-side. Writing it into
   // Theory would make every plan longer, which is the opposite of RPA-55.
-  const app = await bootApp({ suggestFramework: () => MATCH });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => MATCH });
   t.after(() => app.close());
 
   const ui = await openTheory(app);
@@ -128,7 +134,7 @@ test('the detail is read, not written into the plan', async (t) => {
 });
 
 test('a matched framework can be taken straight into the Theory field', async (t) => {
-  const app = await bootApp({ suggestFramework: () => MATCH });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => MATCH });
   t.after(() => app.close());
 
   const ui = await openTheory(app);
@@ -152,7 +158,7 @@ test('a matched framework can be taken straight into the Theory field', async (t
 });
 
 test('accepting appends to an existing note instead of replacing it', async (t) => {
-  const app = await bootApp({ suggestFramework: () => MATCH });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => MATCH });
   t.after(() => app.close());
   const { window } = app;
 
@@ -167,7 +173,7 @@ test('accepting appends to an existing note instead of replacing it', async (t) 
 });
 
 test('accepting notifies the field so it resizes and the draft saves', async (t) => {
-  const app = await bootApp({ suggestFramework: () => MATCH });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => MATCH });
   t.after(() => app.close());
 
   const ui = await openTheory(app);
@@ -183,7 +189,7 @@ test('accepting notifies the field so it resizes and the draft saves', async (t)
 });
 
 test('a drafted framework still offers the library action, not the field one', async (t) => {
-  const app = await bootApp({ suggestFramework: () => DRAFT });
+  const app = await bootApp({ textAssets: WITH_THEORY,  suggestFramework: () => DRAFT });
   t.after(() => app.close());
 
   const ui = await openTheory(app);
