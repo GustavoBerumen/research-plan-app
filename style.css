@@ -375,7 +375,15 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .review-h{font-size:var(--heading);font-weight:700;color:var(--ink);margin:0 0 6px;line-height:1.1}
 .review-sub{font-size:var(--text);color:var(--text-2);margin:0 0 20px}
 .review-list{border-top:1px solid var(--border);margin-bottom:28px}
-.review-row{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.review-item{border-bottom:1px solid var(--border)}
+.review-row{display:flex;align-items:baseline;gap:12px;padding:10px 0}
+.review-row:focus{outline:3px solid var(--focus);outline-offset:0}
+/* Any answer, from the review step (RPA-110): the answers on demand, in the check page's shape, with Change on each row. */
+.review-answers{margin:-4px 0 8px 30px;font-size:var(--text)}
+.review-answers-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:4px 0}
+.review-answers-summary:hover{color:var(--link-hover)}
+.review-answers-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
+.review-answers .summary-list{margin:4px 0 8px}
 .review-tick{width:18px;flex-shrink:0;color:var(--text-2);font-weight:700}
 .review-tick-done{color:var(--green)}
 .review-name{flex:1;min-width:0;font-weight:700;color:var(--ink)}
@@ -748,4 +756,4 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
 
-@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.check-answers,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}
+@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.check-answers,.review-answers,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}
