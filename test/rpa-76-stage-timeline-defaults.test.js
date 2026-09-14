@@ -19,7 +19,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, DRAFT_KEY, withFieldUncommented } = require('./app-harness');
+
+// RPA-117 made this field dormant in the template; these tests are about it,
+// so the fixture brings it back the way a future template line would.
+const WITH_ACTIONS = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'actionPoints') };
 
 const STAGES = ['Planning', 'Recruitment', 'Data Collection', 'Analysis', 'Reporting'];
 
@@ -42,7 +46,7 @@ function today() {
 }
 
 test('opens with the five stages, in order', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const tl = timeline(app.document);
@@ -65,7 +69,7 @@ test('the stage names come from the template, not from app.js', async (t) => {
   );
   assert.notEqual(renamed, real, 'the Stage column was not found to rewrite');
 
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': renamed } });
+  const app = await bootApp({ textAssets: WITH_ACTIONS,  textAssets: { 'research-plan-template.md': withFieldUncommented(renamed, 'actionPoints') } });
   t.after(() => app.close());
 
   const tl = timeline(app.document);
@@ -77,7 +81,7 @@ test('the stage names come from the template, not from app.js', async (t) => {
 });
 
 test('Planning starts when the plan started, and nothing else is filled in', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const tl = timeline(app.document);
@@ -90,7 +94,7 @@ test('the last stage follows Research readout until somebody edits it', async (t
   // The readout is a header field filled long after this table renders, so
   // writing it once at render would mean it was always empty and the feature
   // never fired.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -115,7 +119,7 @@ test('typing into a date segment counts as editing it', async (t) => {
   // A date is three visible segment inputs in front of one real input[type=date].
   // Clearing the mark on the segment alone would leave the date still flagged
   // as a default, and the next readout change would overwrite what was typed.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -132,7 +136,7 @@ test('typing into a date segment counts as editing it', async (t) => {
 });
 
 test('a pre-filled timeline is not an answered field', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -152,7 +156,7 @@ test('a pre-filled timeline is not an answered field', async (t) => {
 });
 
 test('editing a stage makes it count', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -171,7 +175,7 @@ test('editing a stage makes it count', async (t) => {
 test('removed stages stay removed across a save and reload', async (t) => {
   // Restore could only grow a table. With one starting row that never showed;
   // with five it hands back every stage the researcher deleted.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   const { document, window } = app;
 
   const tl = timeline(document);
@@ -185,14 +189,14 @@ test('removed stages stay removed across a save and reload', async (t) => {
   assert.equal(saved.tables['stageTimeline-table'].length, 3);
   app.close();
 
-  const reopened = await bootApp({ draft: saved });
+  const reopened = await bootApp({ textAssets: WITH_ACTIONS,  draft: saved });
   t.after(() => reopened.close());
   assert.deepEqual(timeline(reopened.document).stages,
     ['Planning', 'Recruitment', 'Data Collection']);
 });
 
 test('a plan records when it was started, once', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   const { document, window } = app;
 
   setValue(window, document.querySelector('[data-field="background"]'), 'First edit');
@@ -203,7 +207,7 @@ test('a plan records when it was started, once', async (t) => {
 
   // Reopened on a later day, the start date is the one it was given.
   const older = Object.assign({}, first, { createdAt: '2026-07-01' });
-  const reopened = await bootApp({ draft: older });
+  const reopened = await bootApp({ textAssets: WITH_ACTIONS,  draft: older });
   t.after(() => reopened.close());
   setValue(reopened.window, reopened.document.querySelector('[data-field="goal"]'), 'Later edit');
   await new Promise((resolve) => setTimeout(resolve, 700));
@@ -216,7 +220,7 @@ test('a plan saved before this feature is not stamped with today', async (t) => 
   // The failure that would be worst: telling somebody their six-week-old plan
   // started this morning. savedAt is not the creation date, but it is a date
   // the plan demonstrably existed on, which is the most we can honestly claim.
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_ACTIONS, 
     draft: {
       version: 7,
       savedAt: '2026-07-14T09:30:00.000Z',
@@ -237,7 +241,7 @@ test('a plan already in progress gets the suggestions too', async (t) => {
   // showing an entirely blank timeline: the anchors ran at the top of
   // applyDraft, so the restore wrote the saved empty cells straight over them,
   // and the marked-only rule meant nothing refilled afterwards.
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_ACTIONS, 
     draft: {
       version: 7,
       savedAt: '2026-07-14T09:30:00.000Z',
@@ -263,7 +267,7 @@ test('a half-typed date is not overwritten by a suggestion', async (t) => {
   // An empty cell accepts a suggestion, which is what rescues the plans above.
   // A date being typed reads as empty until all three segments are filled, so
   // "empty" alone would let the readout overwrite someone mid-keystroke.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -284,7 +288,7 @@ test('the Add button names a row, not the table', async (t) => {
   // gave "+ Add stage timeline", and renaming it to "Planned Schedule" gave
   // "+ Add planned schedule" — offering to add a schedule to a schedule. The
   // template names the row itself now.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const button = app.document.getElementById('stageTimeline-table')
@@ -295,7 +299,7 @@ test('the Add button names a row, not the table', async (t) => {
 test('a table that is named after its rows still needs no row noun', async (t) => {
   // The fallback still works, so declaring row= stays optional rather than
   // becoming something every table has to remember.
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const button = app.document.getElementById('actionPoints-table')
@@ -304,7 +308,7 @@ test('a table that is named after its rows still needs no row noun', async (t) =
 });
 
 test('the hint says the defaults are suggestions', async (t) => {
-  const app = await bootApp();
+  const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
 
   const hint = app.document.getElementById('stageTimeline-table')

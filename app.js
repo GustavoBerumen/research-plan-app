@@ -27,6 +27,7 @@
   let timelineVisible = false;
   let updateTimelineVisibility = null;
   let syncCommentsReveal = null;
+  let refreshOptionsMenu = () => {};
   // When this plan was started, as opposed to when it was last saved
   // (draft.savedAt) or last changed (the lastUpdated field, which is
   // re-stamped on every edit and editable by hand). Nothing recorded it
@@ -162,6 +163,12 @@
       optional: typeParts.includes('optional'),
       // "max=N" caps how many blocks a custom-fields field may add (RPA-82).
       max: (() => { const part = typeParts.find((t) => /^max=\d+$/.test(t)); return part ? parseInt(part.slice(4), 10) : 0; })(),
+      // "words=N": a good answer is up to about N words, shown under the box
+      // as "You have N words remaining" (RPA-114). Advisory: never a limit.
+      words: (() => { const part = typeParts.find((t) => /^words=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
+      // "width=N" sizes a text input to the answer it expects, in the
+      // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
+      width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
@@ -262,6 +269,15 @@
       const hintMatch = raw.match(/^\s+Hint:\s*(.*)$/i);
       if (hintMatch && currentField) {
         currentField.hint = hintMatch[1].trim();
+        return;
+      }
+
+      // An indented "Guidance:" line is a longer note about the field, shown
+      // on demand behind a "Help with this section" link at the bottom of the
+      // field (RPA-107). Several lines make several paragraphs.
+      const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
+      if (guideMatch && currentField) {
+        currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
         return;
       }
 
@@ -2527,6 +2543,7 @@
       'data-field': 'methods',
       placeholder: list.dataset.placeholder || '',
     });
+    if (list.dataset.width) inp.classList.add('input-w-' + list.dataset.width);
     attachMethodsCombobox(inp, METHODS);
     inp.value = value || '';
     inp.addEventListener('input', refreshMethodsSuggestSelection);
@@ -2545,7 +2562,7 @@
     return row;
   }
 
-  function buildMethodsGroup(placeholder) {
+  function buildMethodsGroup(placeholder, width) {
     // role=group so the aria-label syncMethodsGroups sets (the full research
     // question) is actually announced — the visible heading is only the
     // abbreviated "RQ<n> · <keyword>".
@@ -2556,6 +2573,7 @@
     const list = el('div', 'list-rows');
     list.dataset.listKey = 'methods';
     list.dataset.placeholder = placeholder || '';
+    if (width) list.dataset.width = String(width);   // RPA-109: rows are sized when added
     group.appendChild(list);
     const addBtnRow = el('div', 'add-btn-row');
     const addBtn = el('button', 'add-btn', { type: 'button' });
@@ -2807,7 +2825,7 @@
 
     let groups = methodsGroupEls();
     while (groups.length < targetCount) {
-      container.appendChild(buildMethodsGroup(placeholder));
+      container.appendChild(buildMethodsGroup(placeholder, container.dataset.width));
       groups = methodsGroupEls();
     }
     // Incidental sync only trims empty trailing groups. Deliberate Question
@@ -3798,6 +3816,10 @@
       const inp = isGrowable
         ? el('textarea', 'finput list-input', { rows: '1', 'data-field': field.key, placeholder: field.placeholder || '' })
         : el('input', 'finput list-input', { type: 'text', 'data-field': field.key, placeholder: field.placeholder || '' });
+      // A list row is sized like a text field when the template says so. A
+      // prose row too: it wraps inside the narrower box, which is the point
+      // for a short answer like a user group (RPA-109).
+      if (field.width) inp.classList.add('input-w-' + field.width);
       if (field.prose) inp.classList.add('prose-input');
       if (isGrowable) bindTextarea(inp);
       // Each question's Methods group is labelled with its text, so the label
@@ -3916,7 +3938,8 @@
 
     const container = el('div', 'methods-groups');
     container.dataset.placeholder = field.placeholder || '';
-    container.appendChild(buildMethodsGroup(field.placeholder || ''));
+    if (field.width) container.dataset.width = String(field.width);   // RPA-109: rows are sized when added
+    container.appendChild(buildMethodsGroup(field.placeholder || '', field.width));
     wrap.appendChild(container);
 
     if (field.examples) wrap.append(...renderExamplePanel(field));
@@ -3962,6 +3985,65 @@
     });
   }
 
+  // Guidance text allows *italics* like a hint, and [text](url) for a link
+  // to a page that says more, which is the other half of what RPA-107 asks.
+  function appendGuidanceText(target, text) {
+    text.split(/(\[[^\]\n]+\]\([^)\s]+\))/).forEach((part) => {
+      if (!part) return;
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      if (link) {
+        const a = el('a', 'field-help-link', { href: link[2], target: '_blank', rel: 'noopener' });
+        a.textContent = link[1];
+        target.appendChild(a);
+      } else {
+        appendHintText(target, part);
+      }
+    });
+  }
+
+  // The GOV.UK details component, closed, at the bottom of the field: a
+  // longer note for the people who want more than the hint, opened as they
+  // answer (RPA-107; Gus, 14 September 2026: one on every field, under the
+  // box, "Help with this section" as its link). Not part of the control's
+  // description, so a screen reader is not read the note on arrival. The
+  // words are their own ticket (RPA-119); until a field's note is written
+  // its link opens on one honest line rather than nothing.
+  const NO_HELP_YET = 'No further help for this field yet.';
+  function renderFieldHelp(field) {
+    const details = el('details', 'field-help');
+    const summary = el('summary', 'field-help-summary');
+    summary.textContent = 'Help with this section';
+    const body = el('div', 'field-help-body');
+    const lines = field.guidance && field.guidance.length ? field.guidance : [NO_HELP_YET];
+    lines.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    details.append(summary, body);
+    return details;
+  }
+
+  // After the document is built, so no field builder has to know. Every
+  // field has the link, the title and the header fields included; only Last
+  // updated, a computed date nobody fills in, has none. The block goes under
+  // the field's control, after everything that belongs to the answer (rows,
+  // the add button, a word count) and before the evaluation controls. Found
+  // by the label's id: a section or header field has a wrapper to append to,
+  // the title has none, so its block follows its box directly.
+  function attachFieldHelp(schema) {
+    const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
+    fields.filter((f) => f && f.key !== 'lastUpdated').forEach((f) => {
+      const id = fieldControlId(f.key);
+      const label = doc.querySelector('#' + id + '-label');
+      if (!label) return;
+      const wrap = label.closest('.field, .mf');
+      if (wrap) {
+        const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
+        wrap.insertBefore(renderFieldHelp(f), evaluation || null);
+        return;
+      }
+      const control = doc.querySelector('#' + id);
+      if (control) control.insertAdjacentElement('afterend', renderFieldHelp(f));
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
@@ -3985,6 +4067,38 @@
 
   function describeControl(control, hint) {
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
+  }
+
+  // The design system's word count, under the box, in its own words: "You
+  // have 30 words remaining", counting down as the person types (RPA-114,
+  // Gus's review). Advisory all the way: past the top it turns to
+  // description, "You've written about 35 words", never "5 words too many",
+  // and it stays hint-grey. As in the component, the visible message is
+  // aria-hidden and the field is described by it, while a visually hidden
+  // polite live region repeats it on a one-second debounce, so a screen
+  // reader hears the count on arrival and hears it change without being
+  // flooded per keystroke.
+  function renderWordGuide(textarea, limit, controlId) {
+    const wrap = el('div', 'word-count-wrap');
+    const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
+    const spoken = el('p', 'word-count-status visually-hidden', { 'aria-live': 'polite' });
+    wrap.append(visible, spoken);
+    const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    textarea.setAttribute('aria-describedby', describedBy.concat(visible.id).join(' '));
+    const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
+    const message = () => {
+      const n = words();
+      if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
+      return "You've written about " + (Math.round(n / 5) * 5) + ' words';
+    };
+    const render = () => { visible.textContent = message(); };
+    const speak = () => { spoken.textContent = visible.textContent; };
+    let timer = null;
+    textarea.addEventListener('input', () => { render(); window.clearTimeout(timer); timer = window.setTimeout(speak, 1000); });
+    textarea._refreshCharCount = () => { render(); speak(); };   // Clear Form resets at once (Max, #74)
+    render();
+    speak();
+    return wrap;
   }
 
   // ---------- Methods combobox (search suggestions, still free text) ----------
@@ -4537,6 +4651,7 @@
       placeholder: field.placeholder || '',
     });
     if (!isTextarea) input.type = 'text';
+    if (!isTextarea && field.width) input.classList.add('input-w-' + field.width);
     if (isTextarea && field.rows) {
       input.rows = field.rows;
       input.classList.add('finput-rows');
@@ -4545,6 +4660,7 @@
     describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
+    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     const hint = signOffHint(field.key);
     if (hint) wrap.appendChild(hint);
 
@@ -4715,6 +4831,7 @@
         control = dateControl.element;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
+        if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
       const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
@@ -5096,6 +5213,7 @@
     sections.forEach((s) => doc.appendChild(renderSection(s)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
+    attachFieldHelp(schema);
     buildSteps();
   }
 
@@ -5282,6 +5400,44 @@
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
     saveDraft();
     return true;
+  }
+
+  // ---------- the options menu (RPA-106) ----------
+  // One Menu button in the bar opens a panel: the plan's name and the four
+  // actions that used to sit in the bar. Escape and a click outside close
+  // it; an action closes it too, except Restore, which is about to open a
+  // file dialog. The plan's name, not a person's: there is no sign-in yet.
+  // No Save progress: autosave already does it (Gus, 14 September 2026).
+  function initOptionsMenu() {
+    const toggle = document.getElementById('menu-btn');
+    const menu = document.getElementById('options-menu');
+    if (!toggle || !menu) return;
+    const setOpen = (open) => {
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open && menu.contains(document.activeElement)) toggle.focus();
+    };
+    toggle.addEventListener('click', () => setOpen(menu.hidden));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) { setOpen(false); toggle.focus(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (menu.hidden) return;
+      if (menu.contains(e.target) || toggle.contains(e.target)) return;
+      setOpen(false);
+    });
+    menu.querySelectorAll('button').forEach((b) => {
+      if (b.id === 'restore-backup-btn') return;
+      b.addEventListener('click', () => setOpen(false));
+    });
+    const name = document.getElementById('options-plan-name');
+    const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
+    refreshOptionsMenu = () => { name.textContent = title().trim() || 'Untitled plan'; };
+    // Restore replaces doc. Delegate to a stable parent, and read the current
+    // form so a detached plan's name does not survive it.
+    document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    document.addEventListener('change', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
+    refreshOptionsMenu();
   }
 
   // ---------- clear form ----------
@@ -5528,7 +5684,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring) return;
+    if (!store || draftRestoring) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -5542,7 +5698,6 @@
         // attempt at this fix silently did nothing.
         draft = carryUnrendered(collectDraft());
       }
-      lastSavedSignature = signature;
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
@@ -5555,10 +5710,13 @@
       );
       store.setItem(DRAFT_KEY, JSON.stringify(payload));
       recoveredDraft = payload;
+      lastSavedSignature = signature;
+      return true;
     } catch (err) {
       // Most likely a quota error or storage blocked mid-session. Editing
       // must keep working, so this is reported and otherwise ignored.
       console.warn('Could not save draft:', err);
+      return false;
     }
   }
 
@@ -6317,6 +6475,7 @@
     draftTimer = null;
     original.formEvents.abort();
     resetEvaluationWork();
+    refreshOptionsMenu();
   }
 
   function readBackupFile(file) {
@@ -6381,6 +6540,7 @@
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
+      if (typeof el._refreshCharCount === 'function') el._refreshCharCount();
     });
     // Radios are neither text inputs nor textareas, so the loops above miss
     // them: a Sample Size chosen before the reset stayed selected and was
@@ -6413,7 +6573,7 @@
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
-      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || ''));
+      methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || '', methodsContainer.dataset.width));
       syncMethodsGroups();
     }
     // Reset each dropdown to its own first option rather than hardcoding
@@ -6458,6 +6618,7 @@
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.
     withoutDraftSave(applyTableDefaults);
+    refreshOptionsMenu();
   }
 
   // ---------- evaluation test profiles ----------
@@ -6605,6 +6766,7 @@
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('print-btn').addEventListener('click', () => window.print());
+        initOptionsMenu();
       })
       .catch(showLoadError);
   });
