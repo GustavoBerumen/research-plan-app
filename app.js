@@ -266,8 +266,9 @@
         return;
       }
 
-      // An indented "Guidance:" line is longer help, shown on demand behind a
-      // link under the hint (RPA-107). Several lines make several paragraphs.
+      // An indented "Guidance:" line is a longer note about the field, shown
+      // on demand behind a "Help with this section" link at the bottom of the
+      // field (RPA-107). Several lines make several paragraphs.
       const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
       if (guideMatch && currentField) {
         currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
@@ -3975,7 +3976,7 @@
       if (!part) return;
       const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
       if (link) {
-        const a = el('a', 'field-guidance-link', { href: link[2], target: '_blank', rel: 'noopener' });
+        const a = el('a', 'field-help-link', { href: link[2], target: '_blank', rel: 'noopener' });
         a.textContent = link[1];
         target.appendChild(a);
       } else {
@@ -3984,28 +3985,35 @@
     });
   }
 
-  // The GOV.UK details component, closed, under the field's hint: guidance
-  // only some people need, read on demand as they answer (RPA-107). Not part
-  // of the control's description, so a screen reader is not read the whole
-  // essay on arrival; the summary is a link-styled disclosure they can open.
-  function renderGuidance(field) {
-    const details = el('details', 'field-guidance');
-    const summary = el('summary', 'field-guidance-summary');
-    summary.textContent = 'More about this question';
-    const body = el('div', 'field-guidance-body');
+  // The GOV.UK details component, closed, at the bottom of the field: a
+  // longer note for the people who want more than the hint, opened as they
+  // answer (RPA-107; Gus, 14 September 2026: one per field, under the box,
+  // "Help with this section" as its link). Not part of the control's
+  // description, so a screen reader is not read the note on arrival. A field
+  // without Guidance gets no block: an empty disclosure is worse than none.
+  // The words themselves are their own ticket.
+  function renderFieldHelp(field) {
+    const details = el('details', 'field-help');
+    const summary = el('summary', 'field-help-summary');
+    summary.textContent = 'Help with this section';
+    const body = el('div', 'field-help-body');
     field.guidance.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
     details.append(summary, body);
     return details;
   }
 
-  // After the document is built, so no hint call site has to know: each
-  // field with guidance gets its details right after its hint, found by the
-  // hint's id (single fields end in -hint, repeated fields in -label-hint).
-  function attachGuidance(schema) {
+  // After the document is built, so no field builder has to know: the block
+  // goes under the field's control, after everything that belongs to the
+  // answer (rows, the add button, a word count) and before the evaluation
+  // controls. Found by the label's id; header fields have no room and none.
+  function attachFieldHelp(schema) {
     const fields = [].concat(...schema.sections.map((s) => s.fields));
     fields.filter((f) => f.guidance && f.guidance.length).forEach((f) => {
-      const hint = doc.querySelector('#field-' + f.key + '-hint, #field-' + f.key + '-label-hint');
-      if (hint) hint.insertAdjacentElement('afterend', renderGuidance(f));
+      const label = doc.querySelector('#' + fieldControlId(f.key) + '-label');
+      const wrap = label && label.closest('.field');
+      if (!wrap) return;
+      const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
+      wrap.insertBefore(renderFieldHelp(f), evaluation || null);
     });
   }
 
@@ -5143,7 +5151,7 @@
     loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
-    attachGuidance(schema);
+    attachFieldHelp(schema);
   }
 
   // ---------- clear form ----------

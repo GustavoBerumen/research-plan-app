@@ -83,10 +83,11 @@ toggle panel under the field:
 Wrap words in *asterisks* inside a Hint to italicise them, e.g.
   Hint: structured as *If we do this, then this will happen.*
 
-An indented "Guidance:" line is longer help shown on demand, behind a
-"More about this question" link under the hint (RPA-107). Several
-Guidance lines make several paragraphs; *italics* work as in a Hint, and
-[text](url) makes a link to a page that says more.
+An indented "Guidance:" line is a longer note about the field, shown on
+demand behind a closed "Help with this section" link at the bottom of
+the field, under the box (RPA-107). Several Guidance lines make several
+paragraphs; *italics* work as in a Hint, and [text](url) makes a link to
+a page that says more. A field with no note has no link.
 
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
@@ -131,7 +132,7 @@ Hypothesis (textarea, optional, eval, rows=1, key=hypothesis):
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
   Guidance: Ask what you need to learn, not what you plan to do. A good question can be answered by watching or asking people, has one subject, and would change a decision whichever way it comes out.
-  Guidance: Three is usually enough for one study; see the [the service manual on user research](https://www.gov.uk/service-manual/user-research).
+  Guidance: Three is usually enough for one study; see the [service manual on user research](https://www.gov.uk/service-manual/user-research).
 Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
 
