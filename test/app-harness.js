@@ -241,7 +241,7 @@ async function bootApp(options = {}) {
 function completeStep(app, stepEl) {
   const { window } = app;
   const groups = stepEl.classList.contains('doc-header')
-    ? Array.from(stepEl.querySelectorAll('.mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'))
+    ? Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'))
     : stepEl.classList.contains('review-step')
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
       : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
