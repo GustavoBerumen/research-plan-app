@@ -59,7 +59,12 @@ for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
       .map(file => [file, read(file).replace(/\r\n?|\n/g, ending)]));
     const app = await bootApp({ textAssets, draft: baseline.draft, evaluate: body => evaluationFixture(body, 'ready') });
     t.after(() => app.close());
-    assert.deepEqual(keyContract(app.document), baseline.keys);
+    // Theory and Action Points are dormant since RPA-117: their keys are carried
+    // in the draft, not rendered, so the baseline minus those two is the contract.
+    const contract = structuredClone(baseline.keys);
+    for (const attr of ['data-field', 'data-list-key', 'data-field-key']) contract[attr] = contract[attr].filter((k) => !/theory|actionPoints/.test(k));
+    contract.tables = contract.tables.filter((t) => t.id !== 'actionPoints-table');
+    assert.deepEqual(keyContract(app.document), contract);
     for (const button of app.document.querySelectorAll('.section-eval-btn')) button.click();
     await waitFor(() => app.evaluationRequests.length === 7);
     const bodies = app.evaluationRequests.map(r => r.body);
@@ -83,6 +88,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   const app = await bootApp({ draft: baseline.draft }); t.after(() => app.close());
   const { document, window } = app;
   for (const [key, value] of Object.entries(baseline.draft.fields)) {
+    if (key === 'theory') continue;   // dormant since RPA-117; carried in the draft, checked below
     assert.equal(document.querySelector('[data-field="' + key + '"]').value, value, key);
   }
   for (const [key, values] of Object.entries(baseline.draft.lists)) {

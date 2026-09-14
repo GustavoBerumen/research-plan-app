@@ -76,7 +76,13 @@ test('every field key the application looks up by name exists in the form', asyn
       .map((el) => el.getAttribute('data-field-key')),
   ]);
 
-  const missing = keys.filter((key) => !rendered.has(key));
+  // Theory and Action Points are dormant (RPA-117): app.js still looks Theory
+
+  // up by name, behind a guard, for the day the field returns.
+
+  const DORMANT = ['theory', 'actionPoints'];
+
+  const missing = keys.filter((key) => !rendered.has(key) && !DORMANT.includes(key));
   assert.deepEqual(
     missing,
     [],
