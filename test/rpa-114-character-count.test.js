@@ -39,8 +39,8 @@ test('exactly the fields the template gives a count to have one, with the recomm
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  // Gus's numbers, 14 September: about 30 percent under the first proposal.
-  const expected = { background: 280, goal: 140, problemStatement: 210, objective: 140, hypothesis: 100, comments: 350 };
+  // Gus's numbers, 14 September: two tiers, 280 for a long answer and 140 for a short one.
+  const expected = { background: 280, goal: 140, problemStatement: 280, objective: 140, hypothesis: 140, comments: 280 };
   for (const [key, n] of Object.entries(expected)) {
     assert.equal(counterOf(d, key)?.textContent, 'A good answer is around ' + n + ' characters.', key);
   }
