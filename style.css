@@ -133,6 +133,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .mlabel{font-size:var(--text);font-weight:400;color:var(--ink)}
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
 .minput::placeholder{color:var(--text-2)}
+/* Inputs sized to the answer they expect (RPA-109), the GOV.UK width classes. A date is already fixed; a textarea is open-ended and stays full width. */
+.input-w-2{max-width:2.5em}.input-w-3{max-width:3.5em}.input-w-4{max-width:4.5em}.input-w-5{max-width:5.5em}.input-w-10{max-width:11.5em}.input-w-20{max-width:20.5em}.input-w-30{max-width:29.5em}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
 /* The ticket reference sits under the title on its own row, matching its
