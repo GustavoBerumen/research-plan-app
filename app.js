@@ -6949,7 +6949,10 @@
         return;
       }
       const input = doc.querySelector('[data-field="' + key + '"]');
-      if (!input) throw new Error('Could not find field "' + key + '"');
+      // A profile may name a field the template has made dormant (Theory,
+      // Hypothesis: RPA-117). Nothing to fill, and no reason to stop the
+      // rest of the profile from landing.
+      if (!input) return;
       input.value = value;
       dispatchFieldUpdate(input);
     });

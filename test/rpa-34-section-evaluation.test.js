@@ -1,7 +1,13 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, listInputs, waitFor } = require('./app-harness');
+const { bootApp: bootPlain, setValue, listInputs, waitFor, withFieldUncommented } = require('./app-harness');
+const fs = require('node:fs');
+const path = require('node:path');
+// These tests evaluate Hypothesis among the Research fields; it is dormant
+// since RPA-117, so every boot here brings it back.
+const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
+const bootApp = (opts = {}) => bootPlain({ ...opts, textAssets: Object.assign({ 'research-plan-template.md': WITH_HYPOTHESIS }, opts.textAssets || {}) });
 
 const result = (name = 'Clarity', score = 3) => ({
   metrics: [{ name, score, desc: 'Detailed explanation for ' + name }],

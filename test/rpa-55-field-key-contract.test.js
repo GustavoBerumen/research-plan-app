@@ -80,7 +80,7 @@ test('every field key the application looks up by name exists in the form', asyn
 
   // up by name, behind a guard, for the day the field returns.
 
-  const DORMANT = ['theory', 'actionPoints'];
+  const DORMANT = ['theory', 'actionPoints', 'hypothesis'];
 
   const missing = keys.filter((key) => !rendered.has(key) && !DORMANT.includes(key));
   assert.deepEqual(

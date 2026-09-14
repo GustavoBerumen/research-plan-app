@@ -31,18 +31,19 @@ function withFieldFlag(template, key, flag) {
   return template.replace(pattern, (whole, open, spec, close) => open + spec + ', ' + flag + close);
 }
 
-// Brings a dormant (commented-out) field back, with its Hint line.
+// Brings a dormant (commented-out) field back, with its Hint and Guidance
+// lines, however many follow it.
 function withFieldUncommented(template, key) {
   const pattern = new RegExp(
     '^<!--\\s*([^\\n]*\\bkey=' + key + '[^\\n]*?)\\s*-->$'
-      + '(\\n<!--\\s*(Hint:[^\\n]*?)\\s*-->$)?',
+      + '((?:\\n<!--\\s*(?:Hint|Guidance):[^\\n]*?\\s*-->$)*)',
     'm'
   );
   if (!pattern.test(template)) {
     throw new Error(`No dormant field declares key=${key}, so the fixture cannot enable it`);
   }
-  return template.replace(pattern, (whole, field, hintLine, hint) =>
-    hint ? field + '\n  ' + hint : field);
+  return template.replace(pattern, (whole, field, notes) =>
+    field + notes.replace(/\n<!--\s*((?:Hint|Guidance):[^\n]*?)\s*-->$/gm, '\n  $1'));
 }
 
 function response(body, status = 200) {

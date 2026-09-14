@@ -15,7 +15,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+// Hypothesis is dormant (RPA-117); the answers-as-given test brings it back for its optional row.
+const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -127,7 +129,7 @@ test('a reload lands on the check page, and the URL can ask for it', async (t) =
 });
 
 test('answers are shown as given: a date in words, a radio by its label, a list by its rows, methods by their question, an optional field left blank', async (t) => {
-  const app = await bootApp({});
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': WITH_HYPOTHESIS } });
   t.after(() => app.close());
   const { document: d, window } = app;
   const plan = await onStep(app, 'plan-details');

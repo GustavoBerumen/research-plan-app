@@ -89,7 +89,8 @@ test('renders the complete form from the real index, template, rubric, and metho
     // Execution counts 3, not 4: Additional information is declared there but
     // belongs to the document, so renderSchema lifts it out of the accordion
     // and renders it after the sections (RPA-55).
-    ['3 fields', '4 fields', '4 fields', '2 fields']
+    // Research reads 3 with Hypothesis dormant (RPA-117).
+    ['3 fields', '3 fields', '4 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -98,7 +99,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       // One Additional information hatch closes each section (RPA-101).
       'Background', 'Goal', 'Problem Statement', 'Additional information',
-      'Objective', 'Hypothesis', 'Research Questions', 'Outcomes', 'Additional information',
+      // Hypothesis is dormant too (RPA-117, later the same day).
+      'Objective', 'Research Questions', 'Outcomes', 'Additional information',
       // Theory and Action Points are dormant (RPA-117).
       'Methods', 'Characteristics', 'User Groups', 'Sample Size', 'Additional information',
       'Planned Schedule',
@@ -130,13 +132,14 @@ test('renders the complete form from the real index, template, rubric, and metho
       .closest('.field').querySelector('.add-btn').textContent,
     '+ Add additional information'
   );
-  assert.equal(document.querySelectorAll('.eval-controls').length, 7);
+  // Six, not seven: Hypothesis is an evaluated field and dormant (RPA-117).
+  assert.equal(document.querySelectorAll('.eval-controls').length, 6);
 
   // RPA-55: a textarea can declare how tall it starts, in the template, as a
   // hint about how much answer its question expects. Autosize grows it from
   // there; a field that declares nothing keeps the shared default.
   assert.deepEqual(
-    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'comments'].map((key) => {
+    ['background', 'goal', 'problemStatement', 'objective', 'comments'].map((key) => {
       const ta = document.querySelector(`[data-field="${key}"]`);
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
@@ -145,7 +148,6 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['goal', 2, true],
       ['problemStatement', 2, true],
       ['objective', 2, true],
-      ['hypothesis', 1, true],
       // Declares nothing, so it keeps the shared default. 2 is the browser's
       // own default for a textarea with no rows attribute, not a declared one,
       // which is why the class matters more than the number here. Comments is
