@@ -264,7 +264,17 @@ Additional information (custom-fields, max=1, key=additionalResources):
      not a description, so no saved draft moves. -->
 Feedback (textarea, optional, words=60, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
+<!-- Two declarations close the plan, RPA-115, 14 September 2026, one per
+     role in Gus's words: the lead researcher conducts the research, the
+     project requester is responsible for the project. Each is a required
+     box, the design system's single checkbox, directly above that person's
+     sign-off. A "checkbox" line's text after the colon is the statement the
+     box agrees to. -->
+Declaration: Lead researcher (checkbox, key=declarationResearcher): I confirm this plan is complete and current, and I will conduct the research as it describes.
+  Hint: Tick the box once every section is complete and current, then add your initials below.
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
+Declaration: Project requester (checkbox, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
+  Hint: Tick the box to approve the plan for your project, then add your initials below.
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.

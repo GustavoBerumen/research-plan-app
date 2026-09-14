@@ -109,7 +109,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
       // whole plan (RPA-55).
-      'Sign off: Lead researcher', 'Sign off: Project requester',
+      // Two declarations close the plan, one per role, each above its approval (RPA-115).
+      'Declaration: Lead researcher', 'Sign off: Lead researcher', 'Declaration: Project requester', 'Sign off: Project requester',
       'Feedback',
     ]
   );
