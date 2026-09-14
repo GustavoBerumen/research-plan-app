@@ -156,8 +156,13 @@
       .map((part) => /^key=([A-Za-z][A-Za-z0-9]*)$/.exec(part))
       .filter(Boolean)
       .map((match) => match[1])[0];
+    // "question=…" asks the question in a radios field's legend while the
+    // label stays the field's name (RPA-118). Read raw, like key=.
+    const question = m[2].split(',').map((part) => part.trim())
+      .map((part) => /^question=(.+)$/.exec(part)).filter(Boolean).map((match) => match[1].trim())[0] || '';
     const field = {
       label,
+      question,
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
@@ -4025,6 +4030,61 @@
   // and labelled by syncMethodsGroups, which runs whenever a Research
   // Question is added, removed or edited, and once from the wire-up below.
   let methodsFieldDef = null;
+  // Radios in the design system's shape (RPA-118): a fieldset whose legend
+  // asks the question, the hint beneath it, the options stacked with a
+  // conditional "Other" reveal under the last. The fieldset carries the hint
+  // for assistive technology. The field's name can differ from the question
+  // asked: "question=" in the template sets the legend, and the name stays
+  // what messages and the check page say. The group keeps the .select-cell
+  // wrapper and its data-field-key on purpose: collectDraft and applyDraft
+  // look for it, so a radio field saves in the { v, o } shape a select did.
+  function renderRadiosField(field) {
+    const wrap = el('fieldset', 'field field-radios');
+    const controlId = fieldControlId(field.key);
+    const legend = el('legend', 'flabel', { id: controlId + '-label' });
+    legend.textContent = field.question || field.label;
+    markOptional(legend, field);
+    if (field.question) wrap.dataset.fieldName = field.label;
+    wrap.appendChild(legend);
+    const guidance = renderFieldHint(field, controlId + '-hint');
+    if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
+
+    const group = el('div', 'select-cell radio-group');
+    group.dataset.fieldKey = field.key;
+
+    const otherRow = el('div', 'select-other-row radio-other-row');
+    const otherInput = el('input', 'finput select-other-input', {
+      type: 'text',
+      placeholder: 'Type your own value…',
+      'aria-label': field.label + ' — other',
+    });
+    otherRow.appendChild(otherInput);
+    otherRow.hidden = true;
+
+    const options = (field.options || []).concat(['__other__']);
+    options.forEach((value, i) => {
+      const item = el('div', 'radio-item');
+      const id = controlId + '-opt-' + i;
+      const radio = el('input', 'radio-input', { type: 'radio', id: id, name: controlId, value: value });
+      const optLabel = el('label', 'radio-label', { for: id });
+      optLabel.textContent = value === '__other__' ? 'Other' : value;
+      radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+        const isOther = radio.value === '__other__';
+        otherRow.hidden = !isOther;
+        if (isOther) otherInput.focus(); else otherInput.value = '';
+      });
+      item.append(radio, optLabel);
+      group.appendChild(item);
+      // The conditional reveal belongs directly under the option it belongs
+      // to, which is the last one.
+      if (value === '__other__') group.appendChild(otherRow);
+    });
+
+    wrap.appendChild(group);
+    return wrap;
+  }
+
   // A single checkbox with a statement to agree to: the design system's
   // checkbox with one option, used for the declaration (RPA-115). The
   // field's label names the group; the statement is the box's own label, so
@@ -4633,6 +4693,7 @@
     }
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
     if (field.type === 'checkbox') return renderCheckboxField(field);
+    if (field.type === 'radios') return renderRadiosField(field);
 
     const wrap = el('div', 'field');
     const controlId = fieldControlId(field.key);
@@ -4658,58 +4719,6 @@
     // purpose. That is what collectDraft and applyDraft look for, and what
     // scalarFieldEls skips, so a radio field saves and restores in exactly the
     // { v, o } shape a select did — old drafts restore with no migration.
-    if (field.type === 'radios') {
-      const group = el('div', 'select-cell radio-group', {
-        role: 'radiogroup',
-        'aria-labelledby': label.id,
-      });
-      group.dataset.fieldKey = field.key;
-      describeControl(group, guidance);
-      // No single control to point at, so the heading names the group.
-      label.removeAttribute('for');
-
-      const otherRow = el('div', 'select-other-row radio-other-row');
-      const otherInput = el('input', 'finput select-other-input', {
-        type: 'text',
-        placeholder: 'Type your own value…',
-        'aria-label': field.label + ' — other',
-      });
-      otherRow.appendChild(otherInput);
-      otherRow.hidden = true;
-
-      const options = (field.options || []).concat(['__other__']);
-      options.forEach((value, i) => {
-        const item = el('div', 'radio-item');
-        const id = controlId + '-opt-' + i;
-        const radio = el('input', 'radio-input', {
-          type: 'radio',
-          id: id,
-          name: controlId,
-          value: value,
-        });
-        const optLabel = el('label', 'radio-label', { for: id });
-        optLabel.textContent = value === '__other__' ? 'Other' : value;
-        radio.addEventListener('change', () => {
-          if (!radio.checked) return;
-          const isOther = radio.value === '__other__';
-          otherRow.hidden = !isOther;
-          if (isOther) {
-            otherInput.focus();
-          } else {
-            otherInput.value = '';
-          }
-        });
-        item.append(radio, optLabel);
-        group.appendChild(item);
-        // The conditional reveal belongs directly under the option it belongs
-        // to, which is the last one.
-        if (value === '__other__') group.appendChild(otherRow);
-      });
-
-      wrap.appendChild(group);
-      return wrap;
-    }
-
     if (field.type === 'select') {
       const selectCell = el('div', 'select-cell');
       selectCell.dataset.fieldKey = field.key;
@@ -5448,6 +5457,13 @@
   // and marks each field with a message above its control. Errors clear as
   // the fields are filled; nothing is judged before the person asks to move.
   function groupLabel(g) {
+    // A legend may ask a question while the field keeps its name for
+    // messages and the check page (RPA-118); the name still carries the
+    // research question it belongs to.
+    if (g.dataset && g.dataset.fieldName) {
+      const of = g.querySelector('.per-question-of');
+      return (g.dataset.fieldName + (of ? of.textContent : '')).replace(/\s+/g, ' ').trim();
+    }
     const l = g.querySelector('.flabel, .mlabel, .clbl, label');
     return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
   }

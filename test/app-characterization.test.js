@@ -103,7 +103,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // Hypothesis is dormant too (RPA-117, later the same day).
       'Objective', 'Research Questions', 'Outcomes', 'Additional information',
       // Theory and Action Points are dormant (RPA-117).
-      'Methods', 'Characteristics', 'User Groups', 'Sample Size', 'Additional information',
+      // Sample Size asks its question in its legend (RPA-118).
+      'Methods', 'Characteristics', 'User Groups', 'How many participants do you need?', 'Additional information',
       'Planned Schedule',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
@@ -161,7 +162,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // The Participants group is gone: its three fields are asked per research
   // question, inside the question's group under Methods (RPA-116).
   assert.equal(document.querySelector('.field-group-title'), null);
-  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Methods', 'Characteristics', 'User Groups', 'Sample Size']);
+  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Methods', 'Characteristics', 'User Groups', 'How many participants do you need?']);
 
   const methodInput = document.querySelector('.methods-group .list-input');
   assert.equal(methodInput.getAttribute('role'), 'combobox');

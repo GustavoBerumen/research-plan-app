@@ -185,8 +185,11 @@ Characteristics (list, prose, width=30, perQuestion, key=characteristics):
   Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
 User Groups (list, prose, width=20, perQuestion, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
-Sample Size (radios, perQuestion, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
-  Hint: The number of participants needed for this study.
+<!-- "question=" sets the legend of a radios field: the question as a
+     person reads it, while the label stays the field's name for messages
+     and the check page (RPA-118). -->
+Sample Size (radios, perQuestion, question=How many participants do you need?, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
+  Hint: The number of people this question's methods need.
   Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 
 Additional information (custom-fields, max=1, key=additionalMethodology):

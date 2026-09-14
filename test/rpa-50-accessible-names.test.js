@@ -40,6 +40,7 @@ async function populated(t) {
 // Only sources a screen reader reliably uses: aria-labelledby, aria-label,
 // an associated <label>, or (for buttons and links) visible content and alt.
 function accName(d, el) {
+  if (el.tagName === 'FIELDSET') { const legend = el.querySelector(':scope > legend'); if (legend) return legend.textContent.trim(); }
   const lb = el.getAttribute('aria-labelledby');
   if (lb) return lb.split(/\s+/).map((i) => text(d.getElementById(i))).filter(Boolean).join(' ');
   const al = el.getAttribute('aria-label');
@@ -134,7 +135,8 @@ test('the sample-size radios are a group named by the visible label', async (t) 
   const group = radios[0].closest('[role=radiogroup], fieldset');
   assert.ok(group, 'radios sit in a radiogroup');
   const name = accName(d, group);
-  assert.match(name, /Sample Size/);
+  // Since RPA-118 the group is a fieldset named by its legend, which asks the question.
+  assert.match(name, /^How many participants do you need\?/);
   for (const r of radios) assert.ok(/\p{L}/u.test(accName(d, r)), 'each radio is named: ' + r.value);
 });
 
