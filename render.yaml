@@ -1,0 +1,29 @@
+# One invited-pilot service. Review billing and secrets before creating it.
+services:
+  - type: web
+    name: research-plan-pilot
+    runtime: node
+    repo: https://github.com/GustavoBerumen/research-plan-app
+    branch: main
+    region: oregon
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "24.19.0"
+      - key: NODE_ENV
+        value: production
+      - key: RPA_PILOT_MODE
+        value: "true"
+      - key: RPA_AI_ENABLED
+        value: "false"
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5-20251001
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RPA_PILOT_PASSWORD
+        generateValue: true
