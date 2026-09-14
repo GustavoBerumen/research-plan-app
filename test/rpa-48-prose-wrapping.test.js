@@ -11,6 +11,10 @@ const {
   withFieldUncommented,
 } = require('./app-harness');
 
+// RPA-117 made Action Points dormant; these tests are about its prose cells,
+// so the fixture brings it back the way a future template line would.
+const WITH_ACTIONS = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'actionPoints') };
+
 const LONG_PROSE =
   'A deliberately long research-planning value that describes affected participants, ' +
   'workflow constraints, dependencies, evidence needs, and the decision this work must ' +
@@ -49,7 +53,7 @@ function textSnapshot(value) {
 }
 
 test('classifies prose controls without changing genuinely compact controls', async (t) => {
-  const app = await bootApp({ textareaScrollHeight });
+  const app = await bootApp({ textAssets: WITH_ACTIONS,  textareaScrollHeight });
   t.after(() => app.close());
   const { document } = app;
 
@@ -103,7 +107,7 @@ test('classifies prose controls without changing genuinely compact controls', as
 });
 
 test('prose rows grow independently after typing or pasting and shrink after deletion', async (t) => {
-  const app = await bootApp({ textareaScrollHeight });
+  const app = await bootApp({ textAssets: WITH_ACTIONS,  textareaScrollHeight });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -165,7 +169,7 @@ test('prose rows grow independently after typing or pasting and shrink after del
 });
 
 test('timeline date ranges stay contained without changing compact date editors', async (t) => {
-  const app = await bootApp({ textareaScrollHeight });
+  const app = await bootApp({ textAssets: WITH_ACTIONS,  textareaScrollHeight });
   t.after(() => app.close());
   const { document, window } = app;
 
@@ -192,7 +196,7 @@ test('timeline date ranges stay contained without changing compact date editors'
 });
 
 test('initial binding and draft restoration autosize all RPA-48 prose paths', async (t) => {
-  const initial = await bootApp({ textareaScrollHeight });
+  const initial = await bootApp({ textAssets: WITH_ACTIONS,  textareaScrollHeight });
   for (const textarea of initial.document.querySelectorAll('textarea.prose-input')) {
     assert.ok(heightOf(textarea) >= 44);
   }
@@ -224,7 +228,7 @@ test('initial binding and draft restoration autosize all RPA-48 prose paths', as
     custom: {},
   };
 
-  const restored = await bootApp({ draft, textareaScrollHeight });
+  const restored = await bootApp({ textAssets: WITH_ACTIONS,  draft, textareaScrollHeight });
   t.after(() => restored.close());
   const { document } = restored;
 
@@ -272,13 +276,13 @@ function templateWithRequirements() {
   );
   // Keyed on the field, not on its exact text, so a reworded hint or a new
   // flag does not quietly turn this test into a no-op.
-  const restored = withFieldUncommented(real, 'requirements');
+  const restored = withFieldUncommented(withFieldUncommented(real, 'requirements'), 'actionPoints');
   assert.notEqual(restored, real, 'the dormant Requirements lines were not found to restore');
   return restored;
 }
 
 test('an editable-headers table renders prose cells under renameable headings', async (t) => {
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_ACTIONS, 
     textareaScrollHeight,
     textAssets: { 'research-plan-template.md': templateWithRequirements() },
   });
@@ -328,7 +332,7 @@ test('a grid cell renders prose that grows, when a grid field is a textarea', as
   const restored = real.replace('# Review', gridSection + '# Review');
   assert.notEqual(restored, real, 'the fixture section was not inserted');
 
-  const app = await bootApp({
+  const app = await bootApp({ textAssets: WITH_ACTIONS, 
     textareaScrollHeight,
     textAssets: { 'research-plan-template.md': restored },
   });

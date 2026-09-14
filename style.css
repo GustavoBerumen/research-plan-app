@@ -203,6 +203,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
    floor below. Autosize still grows it the moment anyone types. */
 textarea.finput.finput-rows{min-height:0}
 textarea.finput{min-height:96px;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+/* The word count under a box (RPA-114): hint-grey, never an error. */
+.word-count{margin:4px 0 0;font-size:var(--text);line-height:1.4;color:var(--text-2)}
 textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize:none;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;line-height:1.5}
 
 /* ---------- Methods groups ---------- */
@@ -566,6 +568,14 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 /* RPA-91: the way back to a chosen framework. GOV.UK's details pattern —
    closed, a summary that reads as a link, the body expanding in place. */
 .fw-about{margin:10px 0 0;font-size:var(--text)}
+/* Help on demand at the bottom of a field (RPA-107): the same disclosure as the framework's About block. */
+.field-help{margin:8px 0 4px;font-size:var(--text)}
+.field-help-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
+.field-help-summary:hover{color:var(--link-hover)}
+.field-help-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
+.field-help[open] .field-help-summary{margin-bottom:8px}
+.field-help-body{border-left:4px solid var(--border);padding:2px 0 2px 16px;color:var(--text-2)}
+.field-help-body p{margin:0 0 8px}.field-help-body p:last-child{margin-bottom:0}
 .fw-about-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
 .fw-about-summary:hover{color:var(--link-hover)}
 .fw-about-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
@@ -652,7 +662,7 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
      ruler's column positions, without changing screen or long-plan charts. */
   .timeline-chart[data-scale="days"] .timeline-row-grid{column-gap:0}
   .timeline-chart[data-scale="days"] .timeline-bar-cell{border-right:2px solid #fff}
-  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
+  .section-evaluation,.field-eval-progress,.site-header,.skip-link,.fw-about,.field-help,.word-count,.add-btn,.eval-btn,.eval-result-summary,.eval-error,.eval-x,.eval-actions,.ex-toggle,.file-add-wrap,.capability-note,.timeline-viz-btn,.list-remove,.row-remove-cell,.row-remove-th,.combo-menu,.select-other-back,.date-picker-native,.date-error,.ms-add-all,.ms-method-tick{display:none!important}
   /* One column on paper too, so a method name has the full content width and
      cannot be clipped by a narrow track. */
   .methods-groups.methods-grouped{gap:20px}

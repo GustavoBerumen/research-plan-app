@@ -52,6 +52,12 @@ Flags (comma-separated inside the parentheses):
                        headers unless they also set this flag.
   prose             — list fields only: rows render as wrapping,
                        auto-expanding textareas instead of compact inputs.
+  words=N           — textarea fields only: the design system's word count
+                       under the box, "You have N words remaining", counting
+                       down as the person types; past N it reads "You've
+                       written about M words". Advisory, never a limit
+                       (RPA-114). Two tiers today: 60 for a long answer, 30
+                       for a short one.
   width=N           — text fields and list rows: the input is sized to the
                        answer it expects, in the GOV.UK width classes (2, 3, 4,
                        5, 10, 20 or 30 characters). A ticket key is 10, a name
@@ -83,6 +89,14 @@ toggle panel under the field:
 Wrap words in *asterisks* inside a Hint to italicise them, e.g.
   Hint: structured as *If we do this, then this will happen.*
 
+An indented "Guidance:" line is a longer note about the field, shown on
+demand behind a closed "Help with this section" link at the bottom of
+the field, under the box (RPA-107). Every field has the link, the title
+and header fields included; a field with no Guidance line yet opens on
+"No further help for this field yet." (the notes are RPA-119). Several
+Guidance lines make several paragraphs; *italics* work as in a Hint, and
+[text](url) makes a link to a page that says more.
+
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
@@ -106,27 +120,39 @@ Last updated (date, key=lastUpdated):
 
 # Context {open}
 
-Background (textarea, eval, rows=2, key=background):
+Background (textarea, eval, rows=2, words=60, key=background):
   Hint: Relevant context and essential terms needed to understand the project.
-Goal (textarea, eval, rows=2, key=goal): 
+  Guidance: Say what the product or service is, who uses it, and what has changed or is about to. Two or three sentences a colleague outside the team could follow.
+  Guidance: Leave out what you plan to do about it; that is the goal.
+Goal (textarea, eval, rows=2, words=30, key=goal): 
   Hint: The outcome you are trying to achieve, and the expected changes in the product.
-Problem Statement (textarea, eval, rows=2, key=problemStatement): 
+Problem Statement (textarea, eval, rows=2, words=60, key=problemStatement): 
   Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
+  Guidance: Name the problem as the people who have it would recognise it, and the evidence that it exists: support tickets, analytics, an earlier study.
+  Guidance: A problem statement does not contain a solution.
 # Research
 
-Objective (textarea, eval, rows=2, key=objective): 
+Objective (textarea, eval, rows=2, words=30, key=objective): 
   Hint: The purpose of the study: what must be learned to guide product decisions.
-Hypothesis (textarea, optional, eval, rows=1, key=hypothesis): 
+Hypothesis (textarea, optional, eval, rows=1, words=30, key=hypothesis): 
   Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.*
+  Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one.
 Research Questions (list, eval, key=researchQuestions): 
   Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
+  Guidance: Ask what you need to learn, not what you plan to do. A good question can be answered by watching or asking people, has one subject, and would change a decision whichever way it comes out.
+  Guidance: Three is usually enough for one study; see the [service manual on user research](https://www.gov.uk/service-manual/user-research).
 Outcomes (list, eval, key=outcomes): 
   Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
 
 # Methodology
 
-Theory (textarea, optional, rows=2, key=theory): 
-  Hint: A framework to help ground the study design and analysis.
+<!-- Dormant since RPA-117, 14 September 2026. Theory and Action Points are
+     hidden at this stage of the plan — Theory added friction, and actions are
+     tracked in Jira. Saved values in older drafts are carried forward
+     untouched by carryUnrendered, and the framework suggestion code stays
+     for when Theory returns. Uncomment the two lines to bring it back. -->
+<!-- Theory (textarea, optional, rows=2, key=theory): -->
+<!-- Hint: A framework to help ground the study design and analysis. -->
 Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
@@ -150,6 +176,7 @@ User Groups (list, prose, width=20, key=userGroups):
   Hint: The segments that must be represented among the people you recruit. For example: New customers.
 Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of participants needed for this study.
+  Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 
 # Execution
 
@@ -164,8 +191,10 @@ Sample Size (radios, key=sampleSize): Small (1–5),Medium (6–12),Large (13–
      completion date follows Research readout until somebody edits it. -->
 Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
   Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
-Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible
-  Hint: Tasks needed to move this research forward, and who owns each one.
+<!-- Dormant since RPA-117, see Theory above. RPA-69, Jira subtasks from
+     Action Points, loses its source while this is hidden. -->
+<!-- Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible -->
+<!-- Hint: Tasks needed to move this research forward, and who owns each one. -->
 <!-- The Status column was cut (RPA-55). A plan gets signed and printed; it
      cannot also be a live tracker, so any status it claims is wrong the day
      after sign-off. Nothing has happened yet at the point the question is
@@ -226,7 +255,7 @@ Additional information (custom-fields, key=additionalResources):
      sits above the approvals, because feedback offered after sign-off has
      missed its moment. It keeps the key `comments`: a key is an identifier,
      not a description, so no saved draft moves. -->
-Feedback (textarea, optional, key=comments):
+Feedback (textarea, optional, words=60, key=comments):
   Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.

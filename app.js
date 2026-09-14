@@ -161,6 +161,9 @@
       key: declaredKey || toCamelKey(label),
       type,
       optional: typeParts.includes('optional'),
+      // "words=N": a good answer is up to about N words, shown under the box
+      // as "You have N words remaining" (RPA-114). Advisory: never a limit.
+      words: (() => { const part = typeParts.find((t) => /^words=\d+$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       // "width=N" sizes a text input to the answer it expects, in the
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
@@ -264,6 +267,15 @@
       const hintMatch = raw.match(/^\s+Hint:\s*(.*)$/i);
       if (hintMatch && currentField) {
         currentField.hint = hintMatch[1].trim();
+        return;
+      }
+
+      // An indented "Guidance:" line is a longer note about the field, shown
+      // on demand behind a "Help with this section" link at the bottom of the
+      // field (RPA-107). Several lines make several paragraphs.
+      const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
+      if (guideMatch && currentField) {
+        currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
         return;
       }
 
@@ -3961,6 +3973,65 @@
     });
   }
 
+  // Guidance text allows *italics* like a hint, and [text](url) for a link
+  // to a page that says more, which is the other half of what RPA-107 asks.
+  function appendGuidanceText(target, text) {
+    text.split(/(\[[^\]\n]+\]\([^)\s]+\))/).forEach((part) => {
+      if (!part) return;
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      if (link) {
+        const a = el('a', 'field-help-link', { href: link[2], target: '_blank', rel: 'noopener' });
+        a.textContent = link[1];
+        target.appendChild(a);
+      } else {
+        appendHintText(target, part);
+      }
+    });
+  }
+
+  // The GOV.UK details component, closed, at the bottom of the field: a
+  // longer note for the people who want more than the hint, opened as they
+  // answer (RPA-107; Gus, 14 September 2026: one on every field, under the
+  // box, "Help with this section" as its link). Not part of the control's
+  // description, so a screen reader is not read the note on arrival. The
+  // words are their own ticket (RPA-119); until a field's note is written
+  // its link opens on one honest line rather than nothing.
+  const NO_HELP_YET = 'No further help for this field yet.';
+  function renderFieldHelp(field) {
+    const details = el('details', 'field-help');
+    const summary = el('summary', 'field-help-summary');
+    summary.textContent = 'Help with this section';
+    const body = el('div', 'field-help-body');
+    const lines = field.guidance && field.guidance.length ? field.guidance : [NO_HELP_YET];
+    lines.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    details.append(summary, body);
+    return details;
+  }
+
+  // After the document is built, so no field builder has to know. Every
+  // field has the link, the title and the header fields included; only Last
+  // updated, a computed date nobody fills in, has none. The block goes under
+  // the field's control, after everything that belongs to the answer (rows,
+  // the add button, a word count) and before the evaluation controls. Found
+  // by the label's id: a section or header field has a wrapper to append to,
+  // the title has none, so its block follows its box directly.
+  function attachFieldHelp(schema) {
+    const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
+    fields.filter((f) => f && f.key !== 'lastUpdated').forEach((f) => {
+      const id = fieldControlId(f.key);
+      const label = doc.querySelector('#' + id + '-label');
+      if (!label) return;
+      const wrap = label.closest('.field, .mf');
+      if (wrap) {
+        const evaluation = Array.from(wrap.children).find((c) => c.classList.contains('eval-controls') || c.classList.contains('eval-panel'));
+        wrap.insertBefore(renderFieldHelp(f), evaluation || null);
+        return;
+      }
+      const control = doc.querySelector('#' + id);
+      if (control) control.insertAdjacentElement('afterend', renderFieldHelp(f));
+    });
+  }
+
   function renderFieldHint(field, id) {
     const text = field && field.hint;
     if (!text) return null;
@@ -3984,6 +4055,38 @@
 
   function describeControl(control, hint) {
     if (control && hint) control.setAttribute('aria-describedby', hint.id);
+  }
+
+  // The design system's word count, under the box, in its own words: "You
+  // have 30 words remaining", counting down as the person types (RPA-114,
+  // Gus's review). Advisory all the way: past the top it turns to
+  // description, "You've written about 35 words", never "5 words too many",
+  // and it stays hint-grey. As in the component, the visible message is
+  // aria-hidden and the field is described by it, while a visually hidden
+  // polite live region repeats it on a one-second debounce, so a screen
+  // reader hears the count on arrival and hears it change without being
+  // flooded per keystroke.
+  function renderWordGuide(textarea, limit, controlId) {
+    const wrap = el('div', 'word-count-wrap');
+    const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
+    const spoken = el('p', 'word-count-status visually-hidden', { 'aria-live': 'polite' });
+    wrap.append(visible, spoken);
+    const describedBy = (textarea.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    textarea.setAttribute('aria-describedby', describedBy.concat(visible.id).join(' '));
+    const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
+    const message = () => {
+      const n = words();
+      if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
+      return "You've written about " + (Math.round(n / 5) * 5) + ' words';
+    };
+    const render = () => { visible.textContent = message(); };
+    const speak = () => { spoken.textContent = visible.textContent; };
+    let timer = null;
+    textarea.addEventListener('input', () => { render(); window.clearTimeout(timer); timer = window.setTimeout(speak, 1000); });
+    textarea._refreshCharCount = () => { render(); speak(); };   // Clear Form resets at once (Max, #74)
+    render();
+    speak();
+    return wrap;
   }
 
   // ---------- Methods combobox (search suggestions, still free text) ----------
@@ -4545,6 +4648,7 @@
     describeControl(input, guidance);
     attachSignOffStamp(input, field.key);
     wrap.appendChild(input);
+    if (isTextarea && field.words) wrap.appendChild(renderWordGuide(input, field.words, controlId));
     const hint = signOffHint(field.key);
     if (hint) wrap.appendChild(hint);
 
@@ -5095,6 +5199,7 @@
     loose.forEach((f) => doc.appendChild(renderCustomFieldsField(f)));
     // Last, and after the summary rows can see every section above it.
     if (reviewSection) doc.appendChild(renderReviewStep(reviewSection));
+    attachFieldHelp(schema);
   }
 
   // ---------- the options menu (RPA-106) ----------
@@ -6245,6 +6350,7 @@
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
+      if (typeof el._refreshCharCount === 'function') el._refreshCharCount();
     });
     // Radios are neither text inputs nor textareas, so the loops above miss
     // them: a Sample Size chosen before the reset stayed selected and was

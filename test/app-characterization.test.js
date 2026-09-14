@@ -89,7 +89,7 @@ test('renders the complete form from the real index, template, rubric, and metho
     // Execution counts 3, not 4: Additional information is declared there but
     // belongs to the document, so renderSchema lifts it out of the accordion
     // and renders it after the sections (RPA-55).
-    ['3 fields', '4 fields', '5 fields', '3 fields']
+    ['3 fields', '4 fields', '4 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
@@ -98,8 +98,9 @@ test('renders the complete form from the real index, template, rubric, and metho
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       'Background', 'Goal', 'Problem Statement',
       'Objective', 'Hypothesis', 'Research Questions', 'Outcomes',
-      'Theory', 'Methods', 'Characteristics', 'User Groups', 'Sample Size',
-      'Planned Schedule', 'Action Points',
+      // Theory and Action Points are dormant (RPA-117).
+      'Methods', 'Characteristics', 'User Groups', 'Sample Size',
+      'Planned Schedule',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
@@ -116,15 +117,12 @@ test('renders the complete form from the real index, template, rubric, and metho
   // hold live state, and nothing has happened at the point the question is
   // asked. The type itself is still part of the template language, and keeps
   // its coverage in rpa-55-action-points.test.js.
-  assert.deepEqual(
-    Array.from(document.querySelectorAll('#actionPoints-table thead th'))
-      .map((th) => [th.dataset.colKey, th.dataset.colType]),
-    [['action', 'prose'], ['responsible', 'prose'], [undefined, undefined]]
-  );
+  // Action Points is dormant (RPA-117); its column keys keep their coverage in
+  // rpa-55-action-points.test.js, which brings the field back in a fixture.
 
   assert.deepEqual(
     Array.from(document.querySelectorAll('.dtbl')).map((table) => table.id),
-    ['stageTimeline-table', 'actionPoints-table', 'previousKnowledge-table']
+    ['stageTimeline-table', 'previousKnowledge-table']
   );
   assert.equal(
     document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
@@ -137,7 +135,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // hint about how much answer its question expects. Autosize grows it from
   // there; a field that declares nothing keeps the shared default.
   assert.deepEqual(
-    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'theory', 'comments'].map((key) => {
+    ['background', 'goal', 'problemStatement', 'objective', 'hypothesis', 'comments'].map((key) => {
       const ta = document.querySelector(`[data-field="${key}"]`);
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
@@ -147,7 +145,6 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['problemStatement', 2, true],
       ['objective', 2, true],
       ['hypothesis', 1, true],
-      ['theory', 2, true],
       // Declares nothing, so it keeps the shared default. 2 is the browser's
       // own default for a textarea with no rows attribute, not a declared one,
       // which is why the class matters more than the number here. Comments is
