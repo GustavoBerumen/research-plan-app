@@ -4,12 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Research Plan</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <a class="skip-link" href="#main">Skip to the form</a>
+
+<!-- RPA-105. The mark, drawn once and used from the header, the footer and
+     the printed footer line: the tip of a pencil, pointing down and to the
+     left, in lines only, the way the design system's header keeps its own
+     mark simple. A silhouette, the shoulder where the cone begins, two
+     lines along the body, and the small arc of the lead. One colour, the
+     text's own. The same drawing is favicon.svg, which cannot use a symbol
+     from the page. Gus's brief and picture, 15 September 2026. -->
+<svg hidden aria-hidden="true" focusable="false"><symbol id="rpa-mark" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18.6 3.6L5.1 17L3 29L15 26.9L28.5 13.5" stroke-width="2.4"/><path d="M5.1 17L15 26.9" stroke-width="2"/><path d="M8.4 20.3L21.9 6.9M11.7 23.6L25.2 10.2" stroke-width="2"/><path d="M3.7 25.3Q4.7 27.3 6.7 28.3" stroke-width="2"/></g></symbol></svg>
 
 <!-- RPA-92. One bar, not two: the service name and the actions share it, so
      the page does not open with a wordmark strip stacked on a toolbar strip.
@@ -18,7 +28,7 @@
      those are reserved for government services and this is not one. -->
 <header class="site-header" role="banner">
   <div class="site-bar">
-    <a class="service-name" href="./">Research Plan</a>
+    <a class="service-name" href="./"><svg class="logo" aria-hidden="true" focusable="false"><use href="#rpa-mark"></use></svg><span class="service-name-text">Research Plan</span></a>
     <!-- RPA-106. The actions live in one menu, the way the model application
          keeps them: a Menu button, then the plan's name and the same four
          actions as before with the same ids, in the same order. No sign out
@@ -82,8 +92,8 @@
         <p>Tell the person who sent you this link. Say what you were doing, what you expected, and quote the version below so the report can be matched to the build.</p>
       </section>
     </div>
-    <p class="footer-meta">Research Plan <span id="app-version" class="app-version"></span></p>
-    <p class="footer-print-only">Produced with Research Plan <span class="app-version-print"></span> on <span class="print-date"></span>.</p>
+    <p class="footer-meta"><svg class="logo logo-footer" aria-hidden="true" focusable="false"><use href="#rpa-mark"></use></svg>Research Plan <span id="app-version" class="app-version"></span></p>
+    <p class="footer-print-only"><svg class="logo logo-print" aria-hidden="true" focusable="false"><use href="#rpa-mark"></use></svg>Produced with Research Plan <span class="app-version-print"></span> on <span class="print-date"></span>.</p>
   </div>
 </footer>
 
