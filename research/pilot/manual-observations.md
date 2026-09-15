@@ -1,15 +1,31 @@
 # Manual observation template
 
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
+
 Copy this blank template into Gustavo's operator-only notes location. It implements the manual pilot slice of
 [RPA-79](https://turingtestable.atlassian.net/browse/RPA-79), not automatic telemetry.
 Do not commit completed sheets, private links, plan text, attachments, names or
 email addresses to this repository or Jira.
+
+## Mode and interpretation
+
+Record the accepted mode first. The accepted Thursday mode demonstrates author
+and reviewer turns on one browser; local Sign/Approved states are not remote
+delivery, authenticated identity or team receipt. A facilitator acting as the
+second person is a demonstration/assistance, not an independent reviewer success.
+JSON exchange rows below apply only to an explicitly selected contingency.
+Tool feedback remains subject to its separate approved gate/notice.
 
 ## Session record
 
 | Field | Fill for the actual session |
 | --- | --- |
 | Pseudonymous session ID | S__ |
+| Accepted mode and demonstrated role | Browser-local demo / completed-plan collection / future shared review; author / reviewer |
 | Date, start time and timezone | |
 | App origin; full deployed SHA and displayed build | |
 | Rubric revision and notice version | |
@@ -40,9 +56,10 @@ Keep separate rows for:
 
 - Same-browser writing recovery.
 - Download requested and actual file verified.
-- Private upload, reviewer receipt and backup before replacement.
-- Reviewer restore, edit and revised-file download.
-- Private return, author receipt and returned-file restore.
+- Local author signature, reviewer turn, request-changes/re-sign and approval; no delivery inferred.
+- Private upload, reviewer receipt and backup before replacement, only for a selected contingency.
+- Reviewer restore, edit and revised-file download, only for that contingency.
+- Private return, author receipt and returned-file restore, only for that contingency.
 - PDF save and reopen, if attempted.
 - AI evaluation/suggestion use and any failure or retry.
 - Completed-plan validation, declarations, Send receipt/retry, if enabled.

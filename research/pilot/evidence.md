@@ -1,6 +1,69 @@
 # Evidence and remaining work
 
-## Current release preparation — 15 September 2026
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
+
+## Approved repair candidate
+
+[PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104) implements
+the accepted fixes at `429c7297837bb312974b5de2d98e7573cd613f93`, based on f327326.
+The complete 72-file package.json suite passed **672/672**, concurrency 2,
+Node v24.19.0, 280.5 seconds, with no failures/skips/cancellations. The eight
+link/mode/timing cases now preserve the complete saved draft and normal recovery;
+failed/malformed config, no draft, queued/direct saves and the feedback gate pass.
+The queued-save case uses test-only instrumentation of the real app functions.
+
+Synthetic loopback in-app browser checks confirmed disabled dead-link Menu
+actions, retained Interviews after returning to the own plan, honest local review
+progress and the visible feedback-unavailable notice. Zero feedback/submission/AI
+requests occurred. This is local evidence; browser-created file saving and hosted
+acceptance remain separate. Check PR/CI and final main ancestry before deployment.
+
+The original audit below deliberately retains the failures of unchanged f327326
+and earlier evidence. Do not attribute those failures to the repaired candidate
+or the repaired candidate passes to the old deployed build.
+
+## Current continuation — pinned f327326
+
+The [candidate verification](candidate-verification-2026-09-15.md) records this
+pass in detail. Full suite: **654/654**, 71 package.json files, concurrency 2,
+Node v24.19.0, 262.7 seconds. No full-suite rerun after documentation edits.
+The clean source export and unchanged lockfile are preserved with local logs.
+
+Focused dead-link checks found methods lost on autosave and omitted from download
+in all eight ON/OFF, unknown/revoked, early/late cases. ON restore from a dead page
+also fails with a null cloneNode error. The browser reproduced the missing method.
+Normal partial backup/restore/cancel/invalid-file/reload passed. Actual generated
+JSON files were saved, read back and hashed; the in-app browser restored one and
+displayed its writing. Browser download itself remains unverified after a timeout.
+
+Visible checks cover both review modes, sequential local approval and OFF email
+wording. They used a synthetic loopback preview, default in-app viewport and mocked
+capabilities; no native Chrome, hosted, paid-provider or cloud-record evidence is
+claimed. The preview made zero AI/feedback/submission requests. Its initial missing
+helper assets and UTF-8 fixture header were corrected in the temporary harness;
+candidate application code was unchanged. The retained exploratory field-only
+checks are superseded for method preservation by the failing focused reproducer.
+
+The prior nine-document update was already committed/pushed as d681155. These new
+changes are uncommitted on the same branch; no PR has been opened. RPA-6 is still
+In Progress, Max, under RPA-124. Draft PRs #100–103 remain Gustavo's work.
+
+Latest provider/service settings below are historical observations, not a fresh
+dashboard check. Earlier 644/644 plus 44 production checks cover d1802db; 16/16
+hosted checks cover 6818628 / dep-dak32sbl550s73brjv1g. The preserved 59-file pack,
+source exports, logs and retention obligations remain intact. No new deployment,
+paid call, real collection, provider change, external message or BitLocker action.
+
+Use the [release proposal](release-proposal-2026-09-15.md) for the current no-go
+on unchanged f327326 and the accepted browser-local demonstration after fixes.
+All current-sounding statements in the historical sections below belong to their
+recorded observation, not this new candidate.
+
+## Historical earlier preparation — 15 September 2026 (before this continuation)
 
 The [release proposal](release-proposal-2026-09-15.md) is the current starting point.
 The tested candidate is `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e`, including merged

@@ -1,109 +1,88 @@
-# Using the research-plan pilot
+# Using the research-plan demonstration
 
-For invited, moderated sessions on a desktop or laptop. Gustavo will provide the
-app address, session details, password and your private upload/return link.
-The facilitator must confirm these details and the notice against the actual
-deployment before giving out this guide.
+**Instructions for the accepted browser-local mode, 17 September 2026.** The facilitator
+must confirm the accepted release, corrected wording, feedback handling and notice
+before distributing this guide. The mode is approved; deployment and session readiness are still pending.
 
-**15 September release draft:** complete the [operating notice and decisions](operating-decisions-2026-09-15.md)
-before use.
+## What this session demonstrates
 
-## Your writing and the session
+You can write a plan and try the sequence in which its author and reviewer sign
+or request changes. For this demonstration, both roles use the same browser on
+one device. The facilitator will explain whose turn you are representing.
+The app does not send email, send the plan to another person, or open a shared
+plan on another device. A local “Approved” status describes this demonstration.
 
-Your draft saves in the same browser, profile and site. Clearing browser data can
-remove it. Download a backup before changing site/browser or replacing a plan.
-AI evaluation and framework/method suggestions send relevant writing and context
-through the app to Anthropic. AI feedback can be wrong; decide what is useful.
+Your email identifies the draft in this browser; it is not an account. Local
+backups can contain that email and the local review record. Use the agreed
+fictional scenario and addresses for the demonstration. Do not try to send the
+per-person links to someone on another device.
 
-A JSON download stays on your device until you deliberately share it. Your email
-identifies the local draft/backup; it is not an account and this app does not send
-email. A local backup can include that email and local review history, so share it
-only deliberately. For review,
-upload it only to the session folder Gustavo supplies. Gustavo and Max can read
-collected plans and notes; other participants must not have access to your files.
-Gustavo confirms receipt, reviews/edits the plan and returns a revised JSON file
-through your private session folder.
+## Your writing and privacy
 
-Gustavo keeps collected plans, revisions and session notes for four weeks after
-the last session, or deletes them earlier on request. Contact him through the
-method supplied with your session details. You control copies in your own browser
-and downloads; deleting the team's copies does not delete those. Manual notes
-record task outcomes, assistance, evaluation use, displayed scores and technical
-problems, without copying plan text, attachments, names or email addresses.
+Writing saves in this browser, profile and site. Clearing browser data can remove
+it. Download a JSON backup before replacing a plan or changing browser/site.
+Downloads remain on your device until you deliberately share them. JSON is for
+backup/recovery; exchanging JSON files is not the intended reviewer experience.
 
-Use the fictional scenario supplied for technical checks. For the study itself,
-follow Gustavo's agreed scenario and notice. You may decline an AI or file-exchange
-task, pause or stop. Gustavo confirms your acknowledgement before those tasks and
-note collection. These instructions add no recording or automated tracking.
+AI evaluation and suggestions send relevant writing/context through the service
+to Anthropic. Use them deliberately under the session notice; you can continue
+writing without AI. A technical error is different from a low score. Repeated
+clicks are not a remedy for a paused or busy service.
 
-## Sign in and write
+Gustavo confirms your acknowledgement before AI use or taking notes. You may
+decline an action, pause or stop. Agreed team-held plans, revisions and notes keep
+their existing four-week-after-final-session deletion rule, or earlier deletion
+on request to Gustavo via the session contact. Your own browser/device copies
+stay under your control. The final notice must name the actual notes location
+and readers; completed notes never belong in Git or Jira.
 
-1. Open the normal HTTPS address Gustavo supplies. Enter username **pilot** and
-   the shared password in the browser's sign-in prompt. Do not put credentials
-   into the URL. If access fails, contact the organiser.
+## Sign in, write and try review
+
+1. Open the normal HTTPS address provided by the organiser. Enter username
+   **pilot** and the shared password in the browser's sign-in prompt. Keep the
+   password out of URLs and public issue reports.
 2. Choose **Start now**, complete the email page, then use the task list and
-   **Save and continue** to work through the plan. Check the displayed address
-   before continuing. Question, Outcome and Method entries are paired by position.
-3. Use the available evaluation or suggestion controls when useful. Some older
-   guidance refers to controls that are not shown in the current active journey;
-   the facilitator should use the actual screen. A technical error is different
-   from a low score. If AI is paused or
-   busy, keep writing and contact the organiser; avoid repeated clicks.
-4. Editing may mark feedback **Results out of date**. Re-evaluate deliberately
-   when needed. Reloading should recover writing, but evaluation results do not
-   return from a JSON backup.
-5. Existing reference filenames are references, not uploaded attachments. A JSON
-   backup does not contain attachment bytes or AI results.
+   **Save and continue**. Questions, outcomes and methods are paired by position.
+3. Try the review step once the plan is ready. Identify the author role, read its
+   declaration and sign. With the facilitator, move through the second person's
+   review, signing or requesting changes. This advances the local demonstration;
+   it does not deliver a plan or message.
+4. Keep the same browser open for both roles. To return later, use the normal app
+   address. If a link fails, return to that normal address; do not clear your
+   browser data or attempt to repair a plan on the dead-link screen.
+5. If an Execution table extends off screen, scroll inside it to reach the date
+   columns. Tell the facilitator if a field is inaccessible.
 
-If an Execution table extends beyond the visible area, scroll inside the table
-horizontally to reach its remaining date columns. Tell the facilitator if you
-cannot reach or read a field.
+## Keep a backup and restore it
 
-## Keep a copy and exchange revisions
+1. Open **Menu → Download backup**. Find the actual nonempty `.json` file and
+   check that it is the intended plan. A download-started message alone is not
+   proof of a saved file.
+2. Before restoring anything, download a safety copy of writing you need to keep.
+3. At the normal app address, choose **Menu → Restore backup**, select your file
+   and confirm replacement. Restore replaces the plan, including hidden fields;
+   it does not merge plans. Cancel if you have not kept a safety copy.
+4. Wait for **Backup restored and saved in this browser**, then check your writing
+   and blank/unfinished answers. If restoration fails, preserve the file and
+   current writing and ask the facilitator for help.
 
-1. Choose **Download backup** and find the actual, nonempty `.json` file on your
-   device. Check that it belongs to the intended plan. A download-started message
-   alone does not confirm the file was saved.
-2. Upload that file to your private session link. Wait for Gustavo to confirm
-   receipt. Downloading by itself does not send the plan.
-3. When a revised file is returned, download it from the same private location.
-   **First download a backup of any current writing you need to keep.**
-4. Choose **Restore backup**, select the received JSON and confirm replacement.
-   Restore replaces all current plan data, including hidden fields; it does not
-   merge plans. Cancel if you have not saved a safety copy.
-5. Wait for **Backup restored and saved in this browser**, check the returned
-   edits, then continue. If a file is invalid or restoration fails, keep the
-   existing writing and ask for help; do not clear the form to work around it.
+Backups retain plan values, dates, repeated rows, custom/hidden data, reference
+filenames and local review history. They do not contain attachment bytes or AI
+results. An existing email at this browser stays when another backup is restored;
+do not treat restore as switching account or reviewer identity. A PDF is a readable
+copy and cannot be restored. **Clear Form** removes the local plan; keep a backup.
 
-Backups include plan values, dates, repeated rows, tables, custom/hidden data and
-attachment references. They exclude original attachment bytes and AI results.
-**Print / Save as PDF**, where available, makes a readable copy.
-A PDF cannot be restored into the app. **Clear Form** removes the current browser
-plan, so save a backup first. It does not delete files already shared with Gustavo.
+## Feedback and other release modes
 
-## Final Send, only when enabled for this session
+The accepted mode disables server tool-feedback collection and its form. Before
+a session, the facilitator must verify that the deployed release actually has
+that gate disabled. Any manual notes need the agreed notice.
 
-Read the displayed collection notice, check your answers and complete both
-declarations and dated initials. Required-field errors need correction; a high AI
-score is not required. **Send plan** stores the active completed plan privately and
-shows a received reference/time after verification. It does not email anyone or
-mean Gustavo has reviewed or approved it. Your writing remains in the form.
+Completed-plan **Send plan** is outside this accepted demonstration. If Max selects
+live collection instead, replace this mode's instructions with the approved
+collection notice and receipt/retry procedure before the session. A stored receipt
+does not mean email delivery or reviewer approval, and submissions ON replaces
+the sequential review panel. Shared review requires its own future implementation.
 
-If receipt is unconfirmed, keep the draft and follow the displayed retry action;
-it retries the saved original submission. Do not clear the form or invent a new
-reference. Later edits are not automatically sent. An updated submission is a
-separate deliberate action with renewed declarations. A stored-plan export omits
-browser-only email and review history; keep your local backup too.
-
-## Optional feedback on the tool
-
-**Send feedback** is separate from sending a plan. In this candidate it sends your
-score/answers and plan title, with section/build/time, to a local file on the team's
-server. It does not use the private completed-plan receipt or R2 backup system.
-The facilitator must confirm its final notice and handling before participant use.
-Keep personal/client information out of feedback. This draft does not authorise
-that collection or promise durable recovery of the server feedback file.
-
-For help, tell the person who supplied the app link what action failed, its error
-message and the displayed version. Keep your password, API keys and private plan
-text out of public issue reports.
+For help, report the action, error and displayed version to the organiser. Keep
+private plan text, credentials and participant information out of public reports.

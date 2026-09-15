@@ -1,4 +1,17 @@
-# Private JSON exchange — operator steps
+# Private JSON exchange — historical and contingency operator steps
+
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
+
+**Scope after the 15 September meeting:** manual JSON exchange was rejected as
+the normal reviewer product. Use these steps only for an explicitly selected
+operator contingency or handling of existing records. They are not participant
+instructions or a dependency of the accepted browser-local demonstration. JSON
+backup/recovery and the existing retention/deletion obligations remain in force.
+See the [current release proposal](release-proposal-2026-09-15.md).
 
 Gustavo owns the private Drive parent folder and confirms receipt. Max supports
 technical verification and can read the collected plans and notes. This implements
@@ -8,7 +21,7 @@ It does not prove that a folder or its permissions have been configured.
 For a separately enabled RPA-64 release, the author can Send the completed plan
 to private R2. An authorised operator can export the active v8 plan into the
 approved private session folder using [SUBMISSIONS.md](../../SUBMISSIONS.md).
-The review/edit/return steps below still apply. Exported plans omit browser-only
+The steps below are available only if that operator contingency is explicitly selected; R2 collection itself does not provide shared review. Exported plans omit browser-only
 email/review history; local v9 backups may include those and should be shared
 deliberately. Keep receipt references associated with the correct snapshot.
 Tool feedback uses a different local server file and needs its own approved

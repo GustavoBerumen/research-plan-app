@@ -1,176 +1,154 @@
-# Protected release proposal — 15 September 2026
+# Thursday release proposal — 15 September 2026
 
-Prepared under RPA-6, with RPA-1 deployment and RPA-80 operating decisions.
-This is reviewable preparation. Deployment, publication, real participant collection
-and collaborator messages require Max's explicit approval. Work resumed after the
-PC restart; the earlier pause is historical.
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
 
-## Verified release identities
+**Accepted mode: prepare a clearly labelled browser-local review demonstration,
+with completed-plan submissions OFF and a separately reviewed feedback gate.**
+Max accepted this mode and the scoped fixes. Deployment requires separate approval. The unchanged candidate has a reproduced recovery defect and misleading
+delivery wording; it is **not ready for participant release**.
 
-| Item | Verified value / evidence |
+## Approved repair candidate
+
+[PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104) implements
+the accepted fixes at `429c7297837bb312974b5de2d98e7573cd613f93`, based on f327326.
+The complete 72-file package.json suite passed **672/672**, concurrency 2,
+Node v24.19.0, 280.5 seconds, with no failures/skips/cancellations. The eight
+link/mode/timing cases now preserve the complete saved draft and normal recovery;
+failed/malformed config, no draft, queued/direct saves and the feedback gate pass.
+The queued-save case uses test-only instrumentation of the real app functions.
+
+Synthetic loopback in-app browser checks confirmed disabled dead-link Menu
+actions, retained Interviews after returning to the own plan, honest local review
+progress and the visible feedback-unavailable notice. Zero feedback/submission/AI
+requests occurred. This is local evidence; browser-created file saving and hosted
+acceptance remain separate. Check PR/CI and final main ancestry before deployment.
+
+The original audit below deliberately retains the failures of unchanged f327326
+and earlier evidence. Do not attribute those failures to the repaired candidate
+or the repaired candidate passes to the old deployed build.
+
+## Original audit source and evidence
+
+| Item | This pass |
 | --- | --- |
-| Tested candidate | `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e`; source for this preparation's local checks |
-| Latest remote main | `f3273269d58893e9e4f6004267175c54b4d6d4ff`; [PR #98](https://github.com/GustavoBerumen/research-plan-app/pull/98), RPA-137 review links, merged at 17:04:46 UTC on 15 September |
-| RPA-64 | [PR #99](https://github.com/GustavoBerumen/research-plan-app/pull/99) merged; feature head `d3c7be5d1093d7652302186a0467d79d307f7342` |
-| CI | [Run 34986672730](https://github.com/GustavoBerumen/research-plan-app/actions/runs/34986672730), success, feature head; recorded 644/644 |
-| Current hosted source | `6818628280b87dd5eeb2989b60cc3f7487c66d4f`, Render dashboard's last successful commit |
-| Current live deploy | `dep-dak32sbl550s73brjv1g`, environment-update deployment; same earlier code |
-| Service | `srv-dai7m2gae00c73fjgqhg`, research-plan-app, Max's Research Plan App workspace |
-| Hosting settings | Oregon (US West), Node, 0.5c-512mb; `npm ci --omit=dev`; `node server.js`; `/healthz`; auto-deploy Off |
-| Origins | https://research.gustavoberumen.com/ canonical; https://research-plan-app.onrender.com/ also enabled |
-| Custom domain | Render shows Verified and Certificate Issued |
-| AI account | Dedicated research-plan-app workspace; US$3/month; US$3.54 displayed organisation credits; auto-reload Off, read live on 15 September |
-| Current ownership | RPA-1 and RPA-6 In Progress, Max, under RPA-124; RPA-7 Ready, Gustavo. RPA-64/RPA-80 under RPA-88; RPA-125 under RPA-43 |
+| Pinned application candidate | `f3273269d58893e9e4f6004267175c54b4d6d4ff`, freshly fetched main; includes RPA-137 PR #98 and RPA-64 PR #99 |
+| Documentation worktree | `de15/research-plan-app`, `codex/rpa-6-release-readiness`; clean starting HEAD `d681155b77436cf7fe4f2fe15dc8bb8ecb394a16` was already committed and pushed |
+| Documentation application baseline | `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e`; this branch was not advanced or used as the new application test source |
+| New full suite | 654/654 passed, no failures/skips/cancellations; Node v24.19.0; all 71 test files from candidate package.json, concurrency 2; 262.7 seconds, 19:11:35–19:15:57 UTC |
+| Focused evidence | Normal/late/failed configuration, both review modes and ordinary partial-backup restoration checked. Separate dead-link regression: method preservation and download failed in all eight unknown/revoked × ON/OFF × early/late cases |
+| Visible local evidence | Codex in-app browser: sequential signatures and approval; ON declarations/Send; OFF email promise; unknown-link return with missing method; actual saved synthetic file restored and writing visible |
+| Download limit | Browser reported download started, but no download event or verified browser-created file. The saved-file round trip used app-generated Blob bytes written and hash-checked by the diagnostic harness |
+| Last hosted evidence, not rechecked here | Source `6818628280b87dd5eeb2989b60cc3f7487c66d4f`, deploy `dep-dak32sbl550s73brjv1g`; earlier 16/16 HTTPS checks at 16:44:23 UTC apply only there |
 
-The account cap is distinct from the much higher organisation-wide limit. Rounded
-workspace spend is not a count of calls or proof that no calls occurred. No AI
-setting was changed. A read-only Render-shell HTTPS check at 16:44:23 UTC passed
-16/16 checks across both origins: health GET/HEAD, missing/wrong login, valid
-page/config and private-source rejection. Runtime: Node v24.19.0, `6818628`,
-pilot true, AI true, `claude-haiku-4-5-20251001`; submissions setting absent on the
-old build. Safe config on both origins confirms pilot true and all five old
-write/proxy capabilities false. These are hosted checks of the old build, with
-no paid requests or record writes. They do not accept the new candidate.
+See [candidate verification](candidate-verification-2026-09-15.md) and the
+[evidence record](evidence.md). No hosted, paid-provider or cloud-storage test was
+run here. Earlier 644/644 and 44 local production checks remain evidence for
+`d1802db`; they do not cover this SHA or any draft PR.
 
-Main advanced after the candidate checks. RPA-137 adds per-person review links
-that can be copied, withdrawn and reissued, but they resolve against the plan in
-the same browser; remote plan access and email delivery remain deferred. Its
-eight changed files do not overlap this nine-document update. The 644-test and
-44-check results below apply to `d1802db`, not to the newer main. Publishing these
-documents does not select or accept `f3273269` for deployment. If that newer build
-is selected, verify its tests and review-link behaviour and update this release
-record before deployment approval.
+## Reconcile the meeting and implementation
 
-The exact tested candidate was also exported to a clean local folder with no `.env`.
-Render's production dependency mode installed 33 packages from the lockfile;
-`node server.js` passed 44 real local HTTP/startup checks with zero calls reaching
-the loopback provider trap. This includes the feedback-file exception and
-disabled submissions. Windows local production rehearsal is not Render/Linux
-deployment evidence. Application/dependency sources remained unchanged.
+The 15 September transcript (P250–P277) rejects manual JSON exchange as the normal
+reviewer experience and makes human sequential review an MVP objective, allowing
+a simple mockup initially. Thursday targets an updated, tested main (P520 onward),
+with an outstanding draft allowed to wait. Gustavo's full pasted summary confirms
+the two review modes and the remaining storage/feedback/email questions. These
+sources inform this proposal; they do not authorise deployment or product choices.
 
-The fresh complete suite passed **644/644**, zero failures/skips/cancellations,
-in 300.3 seconds with `--test-concurrency=2`. The first default-concurrency run
-passed 643/644: one existing backup test exceeded its app-render setup timeout
-while other checks/installations ran. Both logs are retained; no production code,
-test assertions or timeouts were changed to obtain the pass.
-
-## Proposed sequence
-
-1. **Resolve feedback handling, then approve deployment of the exact candidate.**
-   Existing password holders would receive the new feedback capability too;
-   calling a deployment synthetic-only does not restrict them. Before deploying
-   this unchanged candidate, approve its feedback notice and handling for invited
-   access, or select and review a change that gates feedback collection. Any code
-   change creates a new candidate SHA and must be tested and published first.
-   Use the existing service and manual specific-commit deployment. Keep the shared
-   password, canonical origin, AI key/model/cap, one instance and auto-deploy Off.
-   Keep completed-plan submissions disabled; do not configure R2 or initialise a
-   participant cohort as part of this deployment. Do not sync the Blueprint's
-   initial AI-Off default over the existing setting. The runtime/configuration
-   read above is complete; recheck for changes and an active session at rollout.
-2. Run the bounded hosted checks below with invented content. This establishes
-   whether the interface update works on the actual host. It is not permission to
-   invite more participants, collect completed plans or run a session.
-3. Settle the [operating decisions](operating-decisions-2026-09-15.md), including
-   the feedback exception. For a Send-enabled
-   trial, configure an approved private destination/cohort and run the separate
-   hosted R2 acceptance below before collection. The existing test bucket stays
-   synthetic-only; its location and short-lived keys are not production approval.
-4. Record the exact accepted deployment and one final short Max walkthrough.
-   Gustavo acknowledges the notice and session readiness. Target: before
-   Thursday 17 September; the session time remains to be confirmed.
-
-## Newly identified release issue: tool feedback
-
-At this candidate, `capabilities.feedback` is always true. A successful
-`POST /api/feedback` appends to `feedback-data.jsonl`, including optional free text,
-usefulness, plan title, section, client build and server time. It is protected by
-the pilot gate, but is outside R2, its receipts and backup/deletion CLI. The UI
-thanks the user for saved feedback. This is intentional RPA-98 behaviour, confirmed
-by its tests; this preparation does not silently remove it.
-
-Render's Disk page was checked: it offers Add Disk and has no attached disk.
-The app's local feedback file is therefore on the ephemeral service filesystem.
-The source provides no feedback export/retention scheduler. Before participant
-use, approve and verify feedback notice, custody, export and deletion, or have a
-small separately reviewed change gate this collection. Merely telling participants
-not to click the button is not a technical collection control. Do not describe a
-Send-off release as zero collection, or treat feedback as a durable completed plan.
-Track this under existing RPA-98/RPA-80/RPA-6; no new storage ticket is needed.
-
-## Rollback plan
-
-- Record the current deploy and confirm its retained build artifact before rollout.
-  The first fallback is `dep-dak32sbl550s73brjv1g` / `6818628`, which already has the
-  protected pilot gate. Never choose a pre-RPA-1 unprotected build.
-- Roll back for startup/health failure, either hostname losing protection,
-  unexpected capabilities or collection, broken recovery, or unusable navigation.
-  Recheck both hostnames, safe config and actual source identity after rollback.
-- Render rollback reuses the target build and several target settings, including
-  environment variables, but does not overwrite saved current service settings.
-  A later normal deploy uses the current saved configuration. Environment groups,
-  domains and external R2/Drive data have separate behaviour. Check all relevant
-  flags and secret identities before the next normal deploy. See
-  [Render rollback documentation](https://render.com/docs/rollbacks).
-- Preserve a JSON backup before the update and remain on the canonical origin.
-  Before a planned rollback, download a fresh v9 backup from the still-loaded
-  newer page before refreshing into old code; preserve it even if old code cannot
-  import it. If that is impossible, do not overwrite the browser's newer draft.
-  Old source predates version-9 drafts; do not assume it can read a newer browser
-  draft or safely round-trip browser-only email/review history. Retain the v9 file,
-  stop editing if the fallback rejects it, and recover using the newer compatible
-  build or a verified earlier compatible backup. Never clear browser data to force it.
-- If collection is ever enabled, stop acceptance, drain in-flight sends for at
-  least 75 seconds and pause the cohort before maintenance. Preserve receipts,
-  frozen pending requests, primary records and latest independent deletion journal.
-  Code rollback does not roll back R2. Do not redeclare a receipt, overwrite an old
-  record, or resend edited content under an old ID. Use SUBMISSIONS.md for recovery.
-- An urgent AI stop can revoke the dedicated key; changing an environment variable
-  affects the new process and an in-flight call may still cost money. This document
-  does not authorise a production stop or credential change now.
-
-## Bounded hosted verification after approval
-
-Use synthetic data and a single operator. Record full SHA, deploy ID, UTC time,
-origin, result and evidence class for each item. Stop on an unexpected write or
-paid request; do not stress or exhaust the service.
-
-| Check | Bound and success evidence |
+| Choice | Actual behaviour and release requirements |
 | --- | --- |
-| Build, TLS and access | Both origins: GET/HEAD health, absent/wrong credentials on page/config, valid page/config and private-file rejection. Record Render SHA plus runtime build; no paid payloads |
-| Capability and route controls | pilot true; submissions false for initial update; calibration/uploads/library-write/Jira/Google false; feedback explicitly true. Check malformed disabled requests reject before processing; known/unknown framework read |
-| Browser and recovery | Agent runs desktop and 1280px keyboard/navigation, fresh email entry, partial draft/reload, actual saved v9 JSON and safety-copy restore/cancel/invalid-file checks. Exercise returning earlier draft and receipt states with synthetic fixtures. Inspect saved bytes; no new mandatory PDF round |
-| Feedback boundary | Only after synthetic-write approval: one invented feedback submission, inspect the exact local file record and private-file denial, document export/redeploy-loss limitation. No real title or feedback text |
-| AI | After verifying current credits/cap, at most one small evaluation and one request through each suggestion route; at most US$0.05 total test allowance subject to explicit approval. Stop after each request and inspect usage. No user requests repeated if controls are absent; explain inaccessible UI paths. Automated local evidence covers limit/failure/pause behaviour; do not exhaust real credits |
-| Same-build restart | Approved restart once; verify same-origin draft/recovery, auth and config. Record what survives in browser, what is externally stored, and feedback-file handling separately |
-| Send-enabled acceptance | Separately approved synthetic cohort: one complete application Send with receipt and operator read/hash; same-ID retry, changed-payload conflict, no overwrite; restart/redeploy read; independent encrypted backup plus latest journal readback/recovery; deletion and nonresurrection; close-out/purge procedure. Use existing evidence for unchanged provider semantics, focusing new work on actual hosted build/configuration |
+| Browser-local demonstration — accepted | Submissions OFF shows sequential sign-off. One browser stands in for both people; links resolve only against its saved plan. No remote reviewer retrieval, email delivery or durable shared approval. Preserve partial drafts and v9 backups. Fix dead-link recovery and honest wording, resolve feedback, then perform hosted acceptance |
+| Live completed-plan collection | Submissions ON replaces the sequential panel and per-person links with two declarations, dated initials and Send/receipt. R2 stores completed immutable snapshots. It does not enable shared review or collect browser email/review history. Requires the separate notice/cohort/custody/recovery/deletion acceptance in SUBMISSIONS.md |
+| Live shared review | Requires an agreed mutable, versioned durable record, concurrency/conflict handling, role/access ownership, recovery/deletion and an honest delivery mechanism. RPA-136/RPA-138 remain separate. PR #100's local-file store does not establish durability on the last-observed Render setup |
 
-An arbitrary spend ceiling cannot be guaranteed by checking an asynchronously
-updated Console after each call. Keep the provider cap intact and approve this
-bounded probe allowance before paid tests; skip paid tests if it cannot be honoured.
+The earlier RPA-64 compatibility decision in [SUBMISSIONS.md](../../SUBMISSIONS.md)
+still explains how ON works. It is not a decision to turn ON for Thursday.
+JSON download/restore remains backup and recovery in every option. Historical
+[private exchange](private-file-exchange.md) is operator contingency only; it is
+not the intended reviewer product journey. Preserve existing records and their
+agreed deletion obligations regardless of the new mode.
 
-## Max's final walkthrough (one, about five minutes)
+## Original blockers addressed by the accepted repairs
 
-After technical checks pass, open the canonical protected build on the intended
-desktop/laptop, resume the prepared invented draft, edit one answer and refresh,
-download its backup, then inspect the final review/Send wording if enabled. Confirm
-the journey is understandable and the writing remains. The agent covers detailed
-technical regression and file checks. Additional manual work requires a concrete
-uncovered browser interaction or regression, not a blanket repeat of earlier tests.
+1. **Dead-link recovery.** A click on the dead-link message autosaves an empty
+   methods array; downloading there also omits the saved methods. With submissions
+   ON, restoring there fails with a null `cloneNode` error. Guard persistence and
+   form-dependent actions while the plan DOM is absent; offer a safe return to the
+   canonical own-plan page. Test queued saves, both configuration timings and full
+   data preservation. Do not weaken unknown/revoked-link refusal.
+2. **Delivery wording.** Correct the author-email hint/playback and the other-party
+   email hint in the base rendering, so pending/failed/OFF configuration is honest.
+   The original “Sign and send” / “Sent to” wording is replaced by local-review
+   language in the repair candidate. No email service is added by a wording change.
+3. **Tool feedback.** `capabilities.feedback` is true and POST `/api/feedback`
+   writes score, answers, plan title, section, build and time to a local JSONL file.
+   It is outside R2 backup/deletion. Recommend an explicit server capability gate
+   and matching UI, reviewed separately, before deploying to existing password
+   holders. An alternative is approved notice and verified handling/export/deletion
+   that explicitly accepts the durability limit. Instructions not to click are
+   insufficient. Preserve any already-held records before operational changes.
 
-## Participant instructions and current go/no-go
+Detailed reproductions and change specifications are prepared as local task
+artifacts. No production patch was applied in this documentation branch. Any
+accepted code change creates a new candidate SHA requiring affected regression
+checks and the repository's normal release validation.
 
-Max confirmed on 15 September that Gustavo does not consider discussion-guide
-reconciliation important. It is removed from release requirements; no further
-lookup, replacement script or guide approval is needed.
+## Draft PR boundary
 
-The updated participant instructions use current control names, explain local
-email and drafts, distinguish Send receipts from review/email, keep AI optional,
-and cover separate tool feedback, notice and private review/return. RPA-79 notes
-distinguish assistance, technical failure, AI quality, feedback and plan submission.
-Gustavo chooses the session tasks and timing.
+All four were rechecked open/draft against main, owned by Gustavo; none was
+adopted, altered, fully reviewed or tested as part of this candidate.
 
-**Current decision: prepared for deployment review; participant go/no-go remains
-open.** A successful historical provider rehearsal, local tests or merged PR alone
-does not accept this hosted build. No deployment or participant collection occurred
-in this preparation.
+| PR | Pinned head | Thursday relevance |
+| --- | --- | --- |
+| [#100 RPA-138](https://github.com/GustavoBerumen/research-plan-app/pull/100) | `221b71f40b549fc76033e699f13dc4ad1b59c6bc` | Future HTTP sign-off; local store is not shared-review durability acceptance |
+| [#101 RPA-121](https://github.com/GustavoBerumen/research-plan-app/pull/101) | `99c8993c6b00c45b9908cfc6e8c7acff3a056915` | Attribution; separate review, no blanket dependency implied |
+| [#102 RPA-125](https://github.com/GustavoBerumen/research-plan-app/pull/102) | `095b64acd0f4209881fb9793563cceedec2a1141` | Proposed focus guard; original user-reported flicker remains unreproduced |
+| [#103 RPA-46](https://github.com/GustavoBerumen/research-plan-app/pull/103) | `c4ba9946cf6454a43ef7b380fc62c639aee5a025` | Initial linked-plan model; not required to demonstrate this review flow |
+
+Do not chase tomorrow's content commits indefinitely. If later work is selected,
+record the new exact SHA and inspect its delta before release approval.
+
+## Bounded path to Thursday 17 September
+
+1. Mode, feedback gate and recovery/wording implementation were accepted by Max.
+   Review the completed changes and publish the prepared documentation when authorised.
+2. Implement/review approved fixes in their own scoped work, then select and test
+   the resulting exact main SHA. Preserve this pass's evidence and draft ownership.
+3. Obtain explicit deployment approval. Recheck live service/source/settings and
+   active sessions; manually deploy the specific commit on the existing service.
+   Keep protection, one instance, canonical origin and auto-deploy Off. Preserve
+   the last-observed US$3/month AI cap and auto-reload Off; recheck before paid work.
+4. Complete the [mode-specific acceptance checklist](release-checklist.md) on the
+   actual host using synthetic data. Paid calls, service restarts and collection
+   exercises require their own bounded approval; none happened here.
+5. Max performs one short intended-device walkthrough: honest review wording,
+   edit/reload and actual JSON download/restore, then Gustavo confirms session
+   readiness and notice. No new PDF round or discussion-guide lookup is required.
+
+## Rollback and preservation
+
+The last recorded protected fallback is `dep-dak32sbl550s73brjv1g` / `6818628`.
+Verify its retained build and protection before use. Roll back for lost access
+protection, unexpected collection, failed startup, broken recovery or unusable
+navigation. A pre-RPA-1 unprotected build is never a fallback.
+
+Before refresh into older code, save and retain the newer v9 backup: old code may
+not read browser email/review history or the newer draft version. If it rejects
+the draft, stop editing and recover with compatible code; never clear browser
+data to force it. Keep the canonical origin and preserve partial drafts.
+
+Render reuses target build/settings for rollback but retains current saved
+service settings for the next normal deploy. Disks and external R2/Drive records
+are not rolled back with code. Verify flags and data separately. See
+[Render rollbacks](https://render.com/docs/rollbacks), checked 15 September 2026.
+If collection exists, follow SUBMISSIONS.md: disable acceptance, drain at least
+75 seconds, pause, preserve receipts/frozen retries and the newest independent
+deletion journal. Export/retain existing feedback according to its agreed handling
+before a planned restart or deployment; do not silently discard it.
+
+**Go/no-go: no-go for unchanged f327326 participant deployment.** Independent
+preparation is complete and mode/gate/fix decisions are accepted. Implementation
+verification, publication, deployment and hosted acceptance remain distinct. RPA-6 remains In Progress, assigned to Max under RPA-124.

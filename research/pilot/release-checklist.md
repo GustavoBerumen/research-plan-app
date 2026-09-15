@@ -1,87 +1,93 @@
 # Release verification record
 
-Copy and complete for the actual release. Max owns technical verification,
-deployment and rollback; Gustavo owns sessions and AI-stop authority. Use the
-[deployment runbook](../../DEPLOYMENT.md) for exact service settings, request
-controls, stop/resume and rollback. The checklist does not authorise payment or
-establish that an unrun check passed.
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
 
-## Current starting point — 15 September 2026
+This is a checklist for the exact approved release, not permission to deploy or
+evidence that its unchecked rows passed. Max owns technical release/rollback;
+Gustavo owns sessions and notice. Follow the [release proposal](release-proposal-2026-09-15.md).
 
-Tested candidate: `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e` (RPA-64 PR #99 merged).
-Main subsequently moved to `f3273269d58893e9e4f6004267175c54b4d6d4ff` (RPA-137
-PR #98). Selecting that build requires its own test and review-link verification;
-the recorded candidate results do not automatically cover it.
-Render still serves `6818628280b87dd5eeb2989b60cc3f7487c66d4f`, live deploy
-`dep-dak32sbl550s73brjv1g`. The current proposal, rollback target, source-specific
-evidence and bounded checks are in the [release proposal](release-proposal-2026-09-15.md).
-Use it instead of repeating completed account/payment/merge setup. Keep the
-US$3/month AI workspace cap and auto-reload Off. Completed-plan Send is disabled
-until separately approved. Tool feedback remains enabled and has a separate
-local-file collection/retention issue to resolve before participant use.
+## Preparation already completed
 
-The exact new hosted build, final notice, operating decisions and final acceptance
-remain open. Earlier manual and real-provider results retain their original scope.
-Do not request another broad manual test round; use the single final walkthrough
-and automate technical checks. New PDF checks are not required in this round.
+Approved fixes at `429c7297837bb312974b5de2d98e7573cd613f93` passed 672/672
+local automated tests; [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104).
+The browser observed retained methods and honest local-review/feedback UI.
+Verify CI, final main SHA and the actual hosted release separately.
 
-## Historical starting point — 11 September 2026
+### Original audit
 
-Protected code candidate: `e78e8659d20ff68270794a13d7169d782f2a1bd5` (PR #64).
-The app is not yet verified online. Max has entered the Render configuration and
-reports adding the key/password privately; their values were not inspected.
-Card selection/payment remains pending. Dedicated provider workspace, budget and
-credits remain to verify. Keep `RPA_AI_ENABLED=false` for the first deployment.
-The server still requires `ANTHROPIC_API_KEY` at startup even while AI is paused.
+Pinned main `f3273269d58893e9e4f6004267175c54b4d6d4ff` passed 654/654 tests on
+Node v24.19.0, using its exact 71-file manifest with concurrency 2. Focused checks
+found dead-link autosave/download method loss in eight cases and a submission-mode
+restore error. Browser observation reproduced the missing methods and inspected
+both review modes. Ordinary saved partial JSON restoration passed. These results
+do not accept unchanged f327326 for participants; see [verification](candidate-verification-2026-09-15.md).
 
-## Record privately, publish only non-secret results
+Earlier 644/644 and 44 local production checks refer to d1802db. Earlier hosted
+16/16 refers to `6818628` / `dep-dak32sbl550s73brjv1g`. Live hosting/provider
+configuration was not rechecked here. Do not use these old passes for a new SHA.
 
-| Required value | Actual value |
+## Record before rollout
+
+| Value | Actual approved value |
 | --- | --- |
-| Tested/deployed full SHA, deploy ID and date/time/timezone | |
-| Render service, account owner and region | Max's workspace; prepared region Oregon; actual service: ___ |
-| Canonical participant HTTPS URL; all other exposed origins | |
-| One instance; auto-deploy Off; health path | Verify actual settings; `/healthz` |
-| Runtime/build/start and pilot configuration | Compare with runbook and `render.yaml` |
-| Dedicated API workspace and key identity (never the key value) | |
-| Actual provider billing currency, monthly cap, credits and auto-reload Off | Preserve US$3/month; refreshed balance and verified by/date: ___ |
-| Card/billing decision | Agreed by Max + Gus; no card details in the record |
-| Private folder, tested identities, access and exchange evidence | Private record reference only |
-| Guide, notice, session dates, deletion date/contact and operator | Private record reference only |
+| Full source SHA and selected mode | ___ |
+| Fix PRs/reviews and exact-source test evidence | ___ |
+| Deployment approval, owner and timestamp | ___ |
+| Render deploy ID, service and time | ___ |
+| Canonical origin and every other exposed hostname | ___ |
+| Runtime/build, pilot true, one instance, auto-deploy Off | ___ |
+| Submissions capability and feedback capability, independently | ___ |
+| AI workspace/model/key identity, cap/credits/reload (no secrets) | ___ |
+| Notice, session date/contact, permitted data and notes owner | ___ |
+| Existing-record preservation and due-date record | ___ |
 
-Record each gate as **Pass / Fail / Not run / Not applicable with reason**, with
-tester, timestamp, SHA/origin, evidence and limits. Local/mock evidence cannot
-silently fill a deployed row. Use synthetic data for technical verification.
+## Bounded acceptance
+
+Use one operator and synthetic data. Record **Pass / Fail / Not run / Not applicable
+with reason**, timestamp, full SHA, origin and evidence type. Stop on unexpected
+collection, a protection failure or lost writing. Do not exhaust credits or repeat
+the full suite for documentation-only changes.
 
 | Gate | Required evidence |
 | --- | --- |
-| 1. Identity and HTTPS | Record Render's exact deployed SHA/ID; HTTPS works on canonical and every other exposed hostname. Record footer marker separately; it may read `dev`. |
-| 2. Access with AI paused | Missing/wrong credentials reject page and API access with no paid calls. Valid `pilot` login loads the form/assets. Public GET/HEAD `/healthz` reveals only health. Verify password rotation invalidates old credentials on all hostnames. |
-| 3. Pilot capabilities | Signed-in `/api/config` reports pilot mode and disabled calibration/uploads/library-write/Jira/Google capabilities. Check submissions against the approved release mode and feedback separately. Private paths and encoded/traversal variants reject. Disabled endpoints reject before parsing, including malformed input. Read-only framework lookup works for a known name; unknown names return 404. |
-| 4. Budget and bounded AI | Verify dedicated provider budget/credits before enabling AI. Make one small real evaluation and exercise both suggestion paths; inspect provider usage. Check failure recovery, pause/stop and busy/rate feedback with a bounded method. Use automated evidence for high-volume limits rather than deliberately exhausting credit. No claim that request limits are a monetary cap. |
-| 5. Browser and real files | Agent checks the actual HTTPS origin at desktop/1280px: keyboard/navigation, writing/reload, actual JSON save, backup-first replacement, cancel/invalid-file preservation, separate-profile restore and edit/re-download. Include dates, sparse pairs, tables, defaults and custom/hidden values. Label browser engine/OS and saved-file evidence precisely. Max has one short final walkthrough; retain earlier reported PDF evidence. |
-| 6. Private exchange | Complete the synthetic upload/receipt/review/return/restore sequence; verify cross-participant denial and restricted notes. Record actual file/receipt evidence, not just download status. See the exchange checklist. |
-| 7. Restart, recovery and deletion | Approved restart/redeploy; confirm settings/protection, same-origin browser draft recovery, saved-backup recovery and retained private Drive files. If Send enabled, verify exact hosted R2 receipt/retry/readback and independent recovery/deletion. Apply SUBMISSIONS.md maintenance/drain/journal rules. Feedback's local file needs separate export/retention verification. |
-| 8. Session readiness | Confirm the participant notice and give each participant only their own verified link. Record remaining limitations and final go/no-go. |
-| 9. Operating custody | Approve actual R2 jurisdiction/destination, full versioned notice, readers, cost response, independent backup/passphrase custodians, deletion contact and purge/deputy. Do not use the synthetic test bucket or test keys as implicit trial approval. |
+| Candidate | Approved fixes present in the selected main SHA; normal release tests and focused regression evidence. Draft PRs are not automatic dependencies |
+| HTTPS and access | Both origins: health GET/HEAD, absent/wrong credentials for page/config, valid page/config, private-source rejection. Record exact deployed source, not only footer |
+| Capability controls | Pilot true; calibration/uploads/library-write/Jira/Google false. Submissions and feedback match separate approvals. Malformed requests to disabled endpoints rejected before processing |
+| Dead links and local recovery | Unknown and revoked links reject plan display; clicking message, queued autosave and download/restore/clear controls cannot lose data. Return to normal address restores all fields, lists, methods, tables, hidden data and review history. Check ON/OFF and early/late configuration through affected automated tests plus one visible hosted path |
+| Visible mode and wording | OFF presents the local sequential demonstration and honest email/delivery wording; ON presents the declarations/Send and no per-person link block. Pending/failed config also makes no email promise |
+| Actual files and browser | Agent checks synthetic partial edit/reload, cancellation/invalid restore and saved-file readback. The remaining user check is one short intended-device/keyboard walk with an actual browser-created JSON download and restore; no new PDF round |
+| Feedback | Gate option: disabled capability plus direct POST refusal and no append, with matching UI. Enabled option: approved participant notice, reader/destination/retention/export/deletion and explicit ephemeral-file limitation, verified before existing password holders see the update |
+| Optional AI probes | First verify current cap/credits. Only with separate approval: at most one small evaluation and one request per suggestion path within the approved allowance. Use offline tests for rate/failure stress; preserve writing. Historical provider evidence is not a new hosted pass |
+| Restart/rollback | Only after approval, one same-build restart/redeploy and protection/config/recovery check. Preserve any existing server feedback before planned restart. Verify retained protected fallback; retain v9 backups before old code |
+| Session readiness | Confirm selected mode, honest final guide, acknowledgement and notes handling, actual session time, and explicit go/no-go |
 
-Retain reference filenames as metadata; attachment bytes and AI results are not
-in backups. Back up before switching origins. Shared-password access is not an
-individual account or cross-device draft service. Existing narrow Execution date
-handling is instructions-only unless a tester encounters a real problem; this is
-not permission to waive a failure that prevents the planned laptop task.
+## Conditional gates — only if that mode is selected
 
-Gus's local session 1 on `b9138d0` is an explicit RPA-7 exception and does not pass
-any deployed row here. Keep RPA-1 and RPA-6 open until their acceptance is complete.
-Do not roll back to an unprotected pre-RPA-1 build; if no safe previous deployment
-exists, suspend the service and revoke the pilot key as described in the runbook.
+- **Live completed-plan collection:** approve actual private R2 jurisdiction,
+  cohort/versioned notice, access, costs/response, independent backup/passphrase
+  custody, deletion contact/deputy and purge date. Rehearse the actual hosted
+  Send/receipt/read/hash, duplicate retry/conflict, restart persistence, encrypted
+  backup plus latest journal, recovery, deletion and nonresurrection under
+  [SUBMISSIONS.md](../../SUBMISSIONS.md). No test-bucket credentials for participants.
+- **Live shared review:** decide and verify durable mutable records, version
+  conflicts, role access, revocation, signed-revision retention, backup/deletion
+  and delivery. Completed-snapshot R2 storage does not satisfy this automatically.
+- **Explicit private exchange contingency:** verify identities, isolated folders,
+  real upload/receipt/return/restore and deletion using the
+  [operator checklist](private-file-exchange.md). This is not a gate for a
+  browser-local demonstration that does not exchange plans.
 
-## Decision
+## Final record
 
 - Technical verification: ___ (Max, date/time).
-- Go / no-go for the named deployed candidate: ___; rationale and known limits: ___.
-- Session readiness acknowledged: ___ (Gus, notice version).
-- Remaining action, owner and required evidence: ___.
+- Named source/deploy and mode: ___; go/no-go and remaining limitations: ___.
+- Session readiness: ___ (Gustavo, notice version and session time).
+- Remaining action, owner and evidence: ___.
 
-Keep actual plans, participant folder links and credentials in their private
-locations. Publish only a non-secret pass/fail summary and exact code/deploy identity.
+Keep RPA-1/RPA-6 open until actual acceptance is complete. Preserve historical
+evidence and the earlier local-session exception as historical only. This checklist
+does not authorise publication, service changes, paid requests or real collection.
