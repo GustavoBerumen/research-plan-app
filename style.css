@@ -470,6 +470,8 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .sign-off-note[hidden]{display:none}
 .sign-off-setup{display:grid;gap:22px;margin-bottom:20px}
 .sign-off-setup[hidden]{display:none}
+/* One question at a time. A .field sets its own display, and a class beats the plain [hidden] the browser supplies, so hiding one has to say so here. */
+.sign-off-setup .field[hidden],.sign-off .field[hidden]{display:none}
 .sign-off-notice:empty,.sign-off-actions:empty{display:none}
 .sign-off-notice{margin-bottom:18px;display:grid;gap:10px}
 .sign-off-request{border-left:5px solid var(--orange);padding:10px 16px;background:var(--panel)}

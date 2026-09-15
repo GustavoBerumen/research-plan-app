@@ -5703,6 +5703,14 @@
     otherField.append(otherLabel, otherHint, otherInput);
     setup.append(roleField, otherField);
 
+    // Before a plan exists there are three things to ask, one at a time and
+    // in the order a person does them (Gus, 15 September 2026): which of
+    // the two they are, their own declaration and name, and only then the
+    // address to send it to. Nothing is committed until the last of them:
+    // the record is created and signed in the same act, so a sign-off left
+    // half-done is no sign-off rather than a half-made record.
+    let setupStep = 'role';
+    let setupRole = null;
     let requesting = false;
     const noteId = 'sign-off-change-note';
     const noteField = el('div', 'field');
@@ -5749,21 +5757,45 @@
       return field.statement || field.label;
     }
 
-    function create() {
+    function chooseRole() {
       const chosen = Object.keys(roleInputs).find((role) => roleInputs[role].checked);
+      if (!chosen) { say(['Select which of these you are.']); return; }
+      setupRole = chosen;
+      setupStep = 'sign';
+      clearSaid();
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function toSend() {
+      if (!judge(setupRole)) return;
+      setupStep = 'send';
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function back(step) {
+      setupStep = step;
+      clearSaid();
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function create() {
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
-      const messages = [];
-      if (!chosen) messages.push('Select which of these you are.');
-      if (!other) messages.push('Enter the other person’s email address.');
-      if (messages.length) { say(messages); return; }
-      const authorRole = chosen;
+      if (!other) { say(['Enter the other person’s email address.']); return; }
+      const authorRole = setupRole;
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
       parties[W.otherRole(authorRole)] = { email: other, displayName: signOffPersonName(W.otherRole(authorRole)) };
-      const result = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
-      if (!result.ok) { sayRefusal(result); return; }
-      signOffRecord = result.plan;
+      const created = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
+      if (!created.ok) { sayRefusal(created); return; }
+      // Signing and sending are the one act the person just performed, so
+      // they are the one act here: the record arrives already signed.
+      const signed = W.apply(created.plan, {
+        transition: 'sign', role: authorRole, at: new Date().toISOString(), version: created.plan.version,
+        contentHash: planContentHash(), declaration: declarationOf(authorRole),
+      });
+      if (!signed.ok) { sayRefusal(signed); return; }
+      signOffRecord = signed.plan;
       clearSaid();
       saveDraft();
       draw();
@@ -5805,12 +5837,23 @@
       actions.replaceChildren();
       printed.replaceChildren();
       setup.hidden = Boolean(record);
+      roleField.hidden = Boolean(record) || setupStep !== 'role';
+      otherField.hidden = Boolean(record) || setupStep !== 'send';
       note.hidden = !record;
       Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
 
       if (!record) {
-        stateLine.textContent = 'Say who you are and who else must approve this plan. Whoever writes the plan signs it first.';
-        actions.appendChild(button('Continue', create));
+        if (setupStep === 'role') {
+          stateLine.textContent = 'Say who you are. Whoever writes the plan signs it first, then sends it to the other person.';
+          actions.appendChild(button('Continue', chooseRole));
+        } else if (setupStep === 'sign') {
+          stateLine.textContent = 'Confirm the declaration and sign the plan. You will be asked where to send it next.';
+          pairs[setupRole].hidden = false;
+          actions.append(button('Continue', toSend), button('Back', () => back('role'), true));
+        } else {
+          stateLine.textContent = 'Last thing: who else must approve this plan?';
+          actions.append(button('Sign and send', create), button('Back', () => back('sign'), true));
+        }
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
         refreshTaskList();
         return;

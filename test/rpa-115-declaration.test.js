@@ -71,22 +71,23 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   assert.equal(reviewStatus(d), 'Not started', 'nothing has been sent to anybody yet (RPA-139)');
 
   d.querySelector('input[name="sign-off-role"]').click();
-  setValue(window, d.getElementById('sign-off-other-email'), 'max@example.com');
   press('Continue');
-  await settle();
-  assert.equal(reviewStatus(d), 'Not signed');
 
-  press('Sign and send');
+  // The sign-off is asked for before the address it is sent to (RPA-139),
+  // and it is the declaration that makes it.
+  press('Continue');
   const summary = d.querySelector('.sign-off .error-summary');
   assert.equal(summary.hidden, false, 'a signature without its declaration is refused');
   assert.match(text(summary), /Confirm the declaration: lead researcher/i);
   assert.ok(box(d, 'declarationResearcher').closest('.field').classList.contains('field-invalid'), 'and the box is marked');
-  assert.equal(reviewStatus(d), 'Not signed', 'nothing was signed');
+  assert.equal(reviewStatus(d), 'Not started', 'nothing was signed');
 
   tick(window, box(d, 'declarationResearcher'));
+  press('Continue');
+  assert.equal(summary.hidden, true, 'the declaration answered, the sign-off stands');
+  setValue(window, d.getElementById('sign-off-other-email'), 'max@example.com');
   press('Sign and send');
   await settle();
-  assert.equal(summary.hidden, true, 'the declaration answered, the signature stands');
   assert.equal(reviewStatus(d), 'Awaiting sign-off from the project requester');
   assert.deepEqual(app.jsdomErrors, []);
 });
