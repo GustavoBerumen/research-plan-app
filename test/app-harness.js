@@ -34,6 +34,8 @@ function withFieldFlag(template, key, flag) {
 // Brings a dormant (commented-out) field back, with its Hint and Guidance
 // lines, however many follow it.
 function withFieldUncommented(template, key) {
+  // The following Hint/Guidance lines must stay adjacent on Windows too.
+  template = template.replace(/\r\n?/g, '\n');
   const pattern = new RegExp(
     '^<!--\\s*([^\\n]*\\bkey=' + key + '[^\\n]*?)\\s*-->$'
       + '((?:\\n<!--\\s*(?:Hint|Guidance):[^\\n]*?\\s*-->$)*)',
@@ -143,6 +145,7 @@ async function bootApp(options = {}) {
       typeof draft === 'string' ? draft : JSON.stringify(draft)
     );
   }
+  for (const [key, value] of Object.entries(options.storage || {})) window.localStorage.setItem(key, value);
 
   window.fetch = async (input, init = {}) => {
     const rawUrl = typeof input === 'string' ? input : input.url;
@@ -159,6 +162,10 @@ async function bootApp(options = {}) {
     if (url.origin === window.location.origin && url.pathname === '/api/config') {
       if (options.configResponse) return options.configResponse();
       return response({ pilotMode: false, capabilities: { feedback: true, calibration: true, uploads: true, addFramework: true, jira: !!options.jiraEnabled, googleDrive: false }, jiraEnabled: !!options.jiraEnabled });
+    }
+
+    if (url.origin === window.location.origin && url.pathname === '/api/submissions' && options.submit) {
+      return options.submit(JSON.parse(init.body), init);
     }
 
     if (url.origin === window.location.origin && url.pathname === '/api/jira/search') {
