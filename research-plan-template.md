@@ -10,6 +10,9 @@ Types:
   text      — single-line input
   textarea  — multi-line input
   date      — native date picker (calendar); placeholder text is ignored
+  email     — single-line input for an email address, with the browser's
+              email keyboard and autocomplete; judged by shape (something,
+              an @, something with a dot) when Continue is pressed (RPA-99)
   select    — fixed dropdown; placeholder text becomes a comma-separated
               option list, e.g. "Small (1–5),Medium (6–12)". Same dropdown
               styling as a table's "status"/"select" columns, just for a
@@ -100,7 +103,14 @@ Guidance lines make several paragraphs; *italics* work as in a Hint, and
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
 next "#" heading) become the header's meta fields (owner, dates, etc).
+A field line above that title is asked before the plan, on a page of its
+own that stands in front of every step until it is answered: the email
+address a link back to the plan will be sent to (RPA-99). Its question=
+is the page's heading; its label names it in the Menu and in messages.
 -->
+
+Email address (email, width=30, question=What is your email address?, key=emailAddress):
+  Hint: We’ll use it to send you a link to your plan, so you can return to it later.
 
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.

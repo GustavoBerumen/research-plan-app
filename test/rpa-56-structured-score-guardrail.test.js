@@ -79,7 +79,9 @@ for (const key of Object.keys(rubrics)) {
     assert.deepEqual(saved.metrics, response.metrics);
     assert.deepEqual(saved.recommendations, []);
     assert.equal(classifyEvaluation(key, JSON.parse(JSON.stringify(saved)).metrics).label, 'Developing');
-    await waitFor(() => app.window.localStorage.getItem(DRAFT_KEY));
+    // The address given before the plan is already saved (RPA-99): wait for the entries themselves.
+    const needle = listInputs(app.document, key)[0].value;
+    await waitFor(() => (app.window.localStorage.getItem(DRAFT_KEY) || '').includes(needle));
     const draft = app.window.localStorage.getItem(DRAFT_KEY);
     const restored = await bootApp({draft, evaluate: () => response});
     t.after(() => restored.close());

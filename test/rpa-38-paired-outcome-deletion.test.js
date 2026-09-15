@@ -208,7 +208,8 @@ test('the confirmed structure saves, restores, and evaluates without re-pairing 
     { number: 2, text: 'Question three' },
   ]);
 
-  const savedRaw = await waitFor(() => first.window.localStorage.getItem(DRAFT_KEY), {
+  // The address given before the plan is already saved (RPA-99): wait for the deletion itself.
+  const savedRaw = await waitFor(() => { const r = first.window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Question three') && !r.includes('Question two') && r; }, {
     timeout: 5000,
     message: 'The confirmed deletion was not saved',
   });

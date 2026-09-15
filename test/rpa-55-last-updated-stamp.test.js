@@ -56,7 +56,8 @@ test('a hand-set date survives editing the rest of the plan', async (t) => {
 
   // The exact thing that used to destroy it: an unrelated content edit.
   setValue(window, document.querySelector('[data-field="background"]'), 'New context');
-  await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
+  // The address given before the plan is already saved (RPA-99): wait for the edit itself.
+  await waitFor(() => (window.localStorage.getItem(DRAFT_KEY) || '').includes('New context'), {
     timeout: 5000,
     message: 'the draft was never saved',
   });
