@@ -103,15 +103,16 @@ test('pressing it on an incomplete section shows the summary, takes focus there,
   assert.equal(summary.getAttribute('role'), 'alert');
   assert.equal(text(summary.querySelector('.error-summary-title')), 'There is a problem');
   assert.equal(d.activeElement, summary, 'focus moves to the summary');
-  // One question per page since RPA-108: the first page judges the title alone.
-  assert.deepEqual(linksOf(step), ['Enter the research title']);
+  // One question per page since RPA-108, and the first page asks for the
+  // email address since RPA-99: it judges that alone.
+  assert.deepEqual(linksOf(step), ['Enter your email address']);
   assert.deepEqual(errorsOf(step), linksOf(step), 'the same message at the field');
-  const title = d.querySelector('[data-field="researchTitle"]');
-  const group = title.closest('.title-field');
+  const email = d.querySelector('[data-field="emailAddress"]');
+  const group = email.closest('.mf');
   assert.ok(group.classList.contains('field-invalid'));
   const err = group.querySelector('.field-error');
   assert.ok(err.previousElementSibling.classList.contains('field-hint-text'), 'below the hint, above the control');
-  assert.ok((title.getAttribute('aria-describedby') || '').split(/\s+/).includes(err.id), 'described by its error');
+  assert.ok((email.getAttribute('aria-describedby') || '').split(/\s+/).includes(err.id), 'described by its error');
   assert.match(text(err), /^Error: /, 'a screen reader hears that it is an error');
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -123,10 +124,10 @@ test('a summary link puts focus in the field; filling it takes its error away; t
   const step = await onPlanDetails(app);
   saveAndContinue(step);
   step.querySelector('.error-summary-link').click();
-  assert.equal(d.activeElement, d.querySelector('[data-field="researchTitle"]'));
-  setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
+  assert.equal(d.activeElement, d.querySelector('[data-field="emailAddress"]'));
+  setValue(window, d.querySelector('[data-field="emailAddress"]'), 'gus@example.com');
   assert.deepEqual(linksOf(step), [], 'the page had one question, and it is answered');
-  assert.equal(d.querySelector('[data-field="researchTitle"]').closest('.title-field').classList.contains('field-invalid'), false);
+  assert.equal(d.querySelector('[data-field="emailAddress"]').closest('.mf').classList.contains('field-invalid'), false);
   completeStep(app, step);
   assert.equal(summaryOf(step).hidden, true, 'nothing left to say');
   assert.deepEqual(errorsOf(step), []);

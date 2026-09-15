@@ -255,13 +255,14 @@ function completeStep(app, stepEl) {
     // reason to skip. A date group is answered through its native date
     // input, never by typing into a day segment.
     const pick = (sel) => Array.from(g.querySelectorAll(sel)).find((c) => !c.disabled);
-    const ctl = pick('input[type=date][data-field]') || pick('textarea') || pick('input[type=text][data-field]') || pick('input[type=text]') || pick('input:not([type]):not([type=hidden])') || pick('select');
+    const ctl = pick('input[type=date][data-field]') || pick('input[type=email][data-field]') || pick('textarea') || pick('input[type=text][data-field]') || pick('input[type=text]') || pick('input:not([type]):not([type=hidden])') || pick('select');
     if (!ctl) return;
     if (ctl.tagName === 'SELECT') {
       if (ctl.options.length > 1) { ctl.value = ctl.options[1].value; ctl.dispatchEvent(new window.Event('change', { bubbles: true })); ctl.dispatchEvent(new window.Event('input', { bubbles: true })); }
       return;
     }
-    setValue(window, ctl, ctl.type === 'date' ? '2026-10-01' : 'Filled.');
+    // An email address is judged by shape (RPA-99), so the answer has one.
+    setValue(window, ctl, ctl.type === 'date' ? '2026-10-01' : ctl.type === 'email' ? 'name@example.com' : 'Filled.');
   });
 }
 

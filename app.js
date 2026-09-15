@@ -304,7 +304,13 @@
       if (!field) return;
       if (currentGroup) field.group = currentGroup;
 
-      if (mode === 'header-meta') {
+      if (mode === 'header-pretitle') {
+        // A field above the title is asked before it: the email address that
+        // says whose plan this is (RPA-99). It stays a header field for the
+        // draft, the check page and the review; only its place differs.
+        field.first = true;
+        header.meta.push(field);
+      } else if (mode === 'header-meta') {
         header.meta.push(field);
       } else if (mode === 'section') {
         currentSection.fields.push(field);
@@ -4976,6 +4982,14 @@
         const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
         input = dateControl.input;
         control = dateControl.element;
+      } else if (f.type === 'email') {
+        // The GOV.UK email address pattern (RPA-99): type=email brings up a
+        // phone's email keyboard, autocomplete offers the address the
+        // browser already knows, and spellcheck is off because an address
+        // is not a word. No placeholder: the hint says why it is asked.
+        input = el('input', 'minput', { type: 'email', 'data-field': f.key, autocomplete: 'email', spellcheck: 'false' });
+        if (f.width) input.classList.add('input-w-' + f.width);
+        control = input;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         if (f.width) input.classList.add('input-w-' + f.width);
@@ -5078,6 +5092,15 @@
         return;
       }
       const mf = buildMetaField(f);
+      if (f.first) {
+        // Asked before the title (RPA-99): first in the document, so the
+        // first page of Plan details. It shares the top row with the
+        // dateline, whose plan this is beside when it was last touched, and
+        // that is the row the printed document opens with.
+        mf.classList.add('mf-first');
+        topRow.insertBefore(mf, topRow.firstChild);
+        return;
+      }
       if (f.key === 'jiraProject') {
         // Directly under the title and the same width as it. It identifies
         // the plan rather than asking one of the paired questions in the grid
@@ -5613,6 +5636,9 @@
   function groupMessage(g) {
     const label = groupLabel(g);
     if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
+    const email = requiredEmailInput(g);
+    // The two messages of the GOV.UK email address pattern (RPA-99).
+    if (email) return email.value.trim() ? 'Enter an email address in the correct format, like name@example.com' : 'Enter your email address';
     if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
     if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + label.toLowerCase();
@@ -5626,9 +5652,17 @@
     // required date must have all three valid segments, not merely one digit.
     return g.querySelector('table') ? null : g.querySelector('.date-control input[type="date"]');
   }
+  function requiredEmailInput(g) { return g.querySelector('input[type="email"]'); }
+  // A shape check and no more, the GOV.UK one: something, an @, something
+  // with a dot in it. Nothing is ever sent to the address (RPA-99), so a
+  // stricter rule would only turn away real addresses.
+  function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
   function requiredGroupComplete(g) {
     const date = requiredDateInput(g);
-    return date ? Boolean(readDateSegments(date)) : fieldHasContent(g);
+    if (date) return Boolean(readDateSegments(date));
+    const email = requiredEmailInput(g);
+    if (email) return emailLooksRight(email.value);
+    return fieldHasContent(g);
   }
   function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
   function clearGroupError(g) {
@@ -6075,9 +6109,13 @@
     if (group) showPageOf(stepEl, group); else showPage(stepEl, 0, { silent: true });
     rememberPosition();
     returnAfterSave = { from: stepEl, row: rowSlug };
+    // A section-level Change lands on the first question's control: the
+    // one on the page just shown, which since RPA-99 is the email address
+    // for Plan details rather than the title.
+    const firstPage = stepPages(stepEl)[0];
     const target = group
       ? (groupControl(group) || group.querySelector('button'))
-      : stepEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select, .title-field textarea');
+      : (firstPage && groupControl(firstPage[0])) || stepEl.querySelector('.acc-body input, .acc-body textarea, .acc-body select, .title-field textarea');
     if (target) target.focus({ preventScroll: true });
     const into = group || null;
     if (into && typeof into.scrollIntoView === 'function') into.scrollIntoView({ block: 'center' });
@@ -6214,8 +6252,14 @@
       b.addEventListener('click', () => setOpen(false));
     });
     const name = document.getElementById('options-plan-name');
+    const person = document.getElementById('options-plan-person');
     const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
-    refreshOptionsMenu = () => { name.textContent = title().trim() || 'Untitled plan'; };
+    const email = () => (doc.querySelector('[data-field="emailAddress"]') || {}).value || '';
+    refreshOptionsMenu = () => {
+      name.textContent = title().trim() || 'Untitled plan';
+      // Whose plan this is, under its name, once they have said (RPA-99).
+      if (person) { person.textContent = email().trim(); person.hidden = !person.textContent; }
+    };
     // Restore replaces doc. Delegate to a stable parent, and read the current
     // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
@@ -7059,15 +7103,19 @@
     try {
       const backup = collectBackup();
       validateBackup(backup);
-      const name = (backup.fields.researchTitle || 'Untitled plan')
+      const safe = (s) => String(s || '')
         .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
-        .replace(/[. ]+$/, '') || 'Untitled plan';
+        .replace(/[. ]+$/, '');
+      const name = safe(backup.fields.researchTitle) || 'Untitled plan';
+      // Whose plan it is, in the file's name, so a backup found later in a
+      // shared folder or an inbox is recognisably theirs (RPA-99).
+      const who = safe(backup.fields.emailAddress);
       const blob = new Blob([JSON.stringify(backup, null, 2) + '\n'], { type: 'application/json' });
       if (blob.size > 15 * 1024 * 1024) throw new Error('Backups must be smaller than 15 MB.');
       url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = name + ' - backup ' + todayIso() + '.json';
+      link.download = name + (who ? ' - ' + who : '') + ' - backup ' + todayIso() + '.json';
       document.body.appendChild(link);
       try { link.click(); } finally { link.remove(); }
       backupStatus('Backup download started. Keep the JSON file to restore this plan later.');
@@ -7375,7 +7423,7 @@
     lastUpdatedManual = false;
     timelineVisible = false;
     if (updateTimelineVisibility) updateTimelineVisibility();
-    doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
+    doc.querySelectorAll('input[type="text"], input[type="email"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';

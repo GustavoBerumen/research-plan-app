@@ -51,22 +51,29 @@ test('Plan details asks one question per page, the two dates together, and Back 
   t.after(() => app.close());
   const { document: d, window } = app;
   const plan = await onStep(app, 'plan-details');
-  assert.deepEqual(onScreen(plan), ['Research title']);
-  assert.equal(caption(plan), 'Question 1 of 5');
+  // The email address opens the section since RPA-99, ahead of the title.
+  assert.deepEqual(onScreen(plan), ['Email address']);
+  assert.equal(caption(plan), 'Question 1 of 6');
   press(plan);
-  assert.deepEqual(linksOf(plan), ['Enter the research title'], 'the page judges its own question only');
+  assert.deepEqual(linksOf(plan), ['Enter your email address'], 'the page judges its own question only');
+  setValue(window, d.querySelector('[data-field="emailAddress"]'), 'gus@example.com');
+  press(plan);
+  assert.deepEqual(onScreen(plan), ['Research title']);
+  assert.equal(caption(plan), 'Question 2 of 6');
+  press(plan);
+  assert.deepEqual(linksOf(plan), ['Enter the research title'], 'the title page judges the title alone');
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
   press(plan);
   assert.deepEqual(onScreen(plan), ['Jira Project']);
-  assert.equal(caption(plan), 'Question 2 of 5');
-  assert.equal(window.location.hash, '#plan-details/2');
+  assert.equal(caption(plan), 'Question 3 of 6');
+  assert.equal(window.location.hash, '#plan-details/3');
   assert.equal(d.activeElement, plan.querySelector('#field-jiraProject-label'), 'focus lands on the question');
   for (const key of ['jiraProject', 'leadResearcher', 'projectRequester']) { setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled'); press(plan); }
   assert.deepEqual(onScreen(plan), ['Project decision', 'Research readout'], 'the two dates travel together');
-  assert.equal(caption(plan), 'Question 5 of 5');
+  assert.equal(caption(plan), 'Question 6 of 6');
   plan.querySelector('.step-back').click();
   assert.deepEqual(onScreen(plan), ['Project requester']);
-  assert.equal(window.location.hash, '#plan-details/4');
+  assert.equal(window.location.hash, '#plan-details/5');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -76,8 +83,8 @@ test('the last page judges the whole section, and a summary link opens the page 
   const { document: d, window } = app;
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);
-  press(plan); press(plan); press(plan); press(plan);
-  assert.equal(caption(plan), 'Question 5 of 5');
+  press(plan); press(plan); press(plan); press(plan); press(plan);
+  assert.equal(caption(plan), 'Question 6 of 6');
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
   press(plan);
   assert.deepEqual(visible(d), ['plan-details'], 'stays');

@@ -96,7 +96,8 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      'Last updated', 'Research title', 'Jira Project',
+      // The email address opens the document beside the dateline (RPA-99).
+      'Email address', 'Last updated', 'Research title', 'Jira Project',
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       // One Additional information hatch closes each section (RPA-101).
       'Background', 'Goal', 'Problem Statement', 'Additional information',
