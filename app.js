@@ -5551,7 +5551,9 @@
   function renderSchema(schema) {
     doc.innerHTML = '';
     tables.length = 0;
+    startPage = null;
     emailGate = null;
+    doc.appendChild(renderStartPage());
     if (schema.header.before.length) doc.appendChild(renderEmailGate(schema.header.before));
     doc.appendChild(renderHeader(schema.header));
 
@@ -5755,6 +5757,102 @@
   // and remembers where the person was going, and Continue takes them
   // there. Not a step: it has no number, no place in the task list, no
   // check page, and it does not print.
+  // ---------- the start page (RPA-81) ----------
+  // What this form is, how it works, what to have to hand and where the
+  // writing goes, in the GOV.UK start-page shape, with an example of a
+  // finished plan to open. Shown once, on a first visit with nothing saved
+  // and no link into a step, before the email address; a returning person
+  // goes straight in. "How this form works" in the footer brings it back
+  // over the current step at any time, and its button takes the person on
+  // to where they were going. Not a step: no number, no place in the task
+  // list, nothing of it in the draft, and it does not print. The copy is
+  // a draft for Gus to replace (RPA-81 is his design); it promises nothing
+  // the pilot cannot do: no sending, no account, no other device.
+  let startPage = null;
+  const EXAMPLE_PLAN = [
+    ['Research title', 'Usability testing of checkout flow'],
+    ['Jira Project', 'SHOP-412'],
+    ['Lead researcher', 'Priya Nair'],
+    ['Project requester', 'Tom Okafor'],
+    ['Project decision', '14 November 2026'],
+    ['Research readout', '31 October 2026'],
+    ['Background', 'Checkout was rebuilt in June. Since then, support tickets about delivery slots have doubled and 18% of baskets are abandoned on the delivery page.'],
+    ['Goal', 'Cut abandonment on the delivery page by finding what stops people choosing a slot.'],
+    ['Problem Statement', 'People reach the delivery page and leave without booking a slot. Analytics show where they leave; they do not show why.'],
+    ['Objective', 'Learn what people expect of the delivery page, where choosing a slot breaks down, and for whom.'],
+    ['Research question 1', 'Where does choosing a delivery slot break down, and for whom?'],
+    ['Outcome 1', 'A ranked list of the points where people give up, with the evidence for each.'],
+    ['Methods for question 1', 'Moderated usability testing\nSession replay review'],
+    ['Sample size for question 1', '6 to 10'],
+    ['Planned schedule', 'Recruitment: 5 to 9 October\nData collection: 12 to 16 October\nAnalysis: 19 to 23 October\nReporting: 26 to 30 October'],
+  ];
+  function renderStartPage() {
+    const page = el('section', 'start-step', { 'aria-labelledby': 'start-heading' });
+    const heading = el('h2', 'step-heading', { id: 'start-heading', tabindex: '-1' });
+    heading.textContent = 'Write a research plan';
+    const lead = el('p', 'start-lead');
+    lead.textContent = 'Use this form to plan a piece of product research: what you need to learn, from whom, how, and by when. It is for the researcher leading the work and for the person who asked for it.';
+    const para = (text) => { const p = el('p'); p.textContent = text; return p; };
+    const h = (text) => { const x = el('h3', 'start-h'); x.textContent = text; return x; };
+    const list = (tag, items) => { const l = el(tag); items.forEach((t) => { const li = el('li'); li.textContent = t; l.appendChild(li); }); return l; };
+    const how = list('ol', [
+      'Answer one question at a time, section by section: Plan details, Context, Research, Methodology, Execution and Review. A section opens when the one before it is complete, and you can go back to any completed section.',
+      'Check your answers at the end of each section. You can change any answer from the review at the end.',
+      'Ask for an evaluation of a section when you want a second opinion. It points at gaps and asks questions; it does not write the plan for you.',
+      'Finish with a plan you can print or save as a PDF, and a backup file you can restore later.',
+    ]);
+    const need = list('ul', ['the Jira ticket the research supports', 'the date of the decision it will inform', 'who asked for the research']);
+    const button = el('button', 'btn btn-dark start-btn', { type: 'button', id: 'start-btn' });
+    button.append(document.createTextNode('Start now'));
+    // The design system's start button arrow.
+    button.insertAdjacentHTML('beforeend', '<svg aria-hidden="true" focusable="false" viewBox="0 0 33 40"><path d="M0 0h13l20 20-20 20H0l20-20z"></path></svg>');
+    const example = el('details', 'start-example');
+    const summary = el('summary', 'start-example-summary');
+    summary.textContent = 'See an example of a finished plan';
+    const body = el('div', 'start-example-body');
+    const note = el('p', 'start-example-note');
+    const tag = el('strong', 'phase-tag');
+    tag.textContent = 'Example';
+    const noteText = el('span');
+    noteText.textContent = 'To show what a finished plan looks like. It is not your plan, and nothing here goes into it.';
+    note.append(tag, noteText);
+    const dl = el('dl', 'summary-list');
+    EXAMPLE_PLAN.forEach(([key, value]) => {
+      const row = el('div', 'summary-row');
+      const dt = el('dt', 'summary-key');
+      dt.textContent = key;
+      const dd = el('dd', 'summary-value');
+      dd.textContent = value;
+      row.append(dt, dd);
+      dl.appendChild(row);
+    });
+    body.append(note, dl);
+    example.append(summary, body);
+    page.append(heading, lead, h('How it works'), how, h('Before you start'), para('It helps to have to hand:'), need,
+      h('Where your writing goes'),
+      para('Your draft saves in this browser as you type, so you can close the page and carry on later on the same device. Asking for an evaluation sends that section\u2019s writing to the AI service; nothing else leaves your device unless you download or share it.'),
+      button, example);
+    button.addEventListener('click', () => {
+      page.hidden = true;
+      // On to where the person was going: the email address on a first
+      // visit, or the step this page was opened over.
+      showStep(Math.max(0, currentStep), { force: true });
+    });
+    page.hidden = true;
+    startPage = { el: page, heading, button };
+    return page;
+  }
+  function openStart(opts = {}) {
+    if (!startPage) return;
+    steps.forEach((s) => { s.hidden = true; });
+    if (emailGate) emailGate.el.hidden = true;
+    startPage.button.replaceChildren(document.createTextNode(readDraft() ? 'Continue to your plan' : 'Start now'), startPage.button.querySelector('svg'));
+    startPage.el.hidden = false;
+    if (opts.silent) return;
+    startPage.heading.focus({ preventScroll: true });
+    if (typeof startPage.el.scrollIntoView === 'function') startPage.el.scrollIntoView({ block: 'start' });
+  }
+
   let emailGate = null;
   // Two things the GOV.UK Pay team did that cut invalid addresses by a
   // third (Gus, 15 September 2026). The address is played back under the
@@ -6110,6 +6208,7 @@
     refreshTaskList();
     window.addEventListener('hashchange', () => {
       const slug = location.hash.slice(1);
+      if (slug === 'start') { openStart(); return; }   // "How this form works", from the footer (RPA-81)
       const i = stepIndexForSlug(slug);
       if (i < 0) return;
       if (i !== currentStep) showStep(i, { fromHash: true, check: slugWantsCheck(slug), page: slugPage(slug) });
@@ -6141,6 +6240,7 @@
     if (!opts.force && stepLocked(i)) return false;
     if (returnAfterSave && steps[i] !== returnAfterSave.from) returnAfterSave = null;
     steps.forEach((s, k) => { s.hidden = k !== i; });
+    if (startPage) startPage.el.hidden = true;
     if (emailGate) emailGate.el.hidden = true;
     const stepEl = steps[i];
     currentStep = i;
@@ -7293,7 +7393,12 @@
   }
 
   function initDraftPersistence() {
-    if (!restoreDraft()) restoreStepPosition(null);
+    const arrivedAt = location.hash;   // before the restore rewrites it to the saved step
+    const restored = restoreDraft();
+    if (!restored) restoreStepPosition(null);
+    // The start page: a first visit with nothing saved and no link into a
+    // step, or asked for by its address (RPA-81).
+    if (arrivedAt === '#start' || (!restored && !arrivedAt)) openStart({ silent: true });
     bindDraftPersistence();
   }
 

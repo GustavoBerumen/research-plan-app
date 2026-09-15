@@ -231,6 +231,12 @@ async function bootApp(options = {}) {
   const loadError = document.querySelector('.doc-error');
   if (loadError) throw new Error(loadError.textContent);
 
+  // A first visit opens on the start page (RPA-81). A person presses Start
+  // now, and so does every test, unless it asks to stay there (start: true).
+  if (options.start !== true) {
+    const start = document.querySelector('.start-step');
+    if (start && !start.hidden) start.querySelector('.start-btn').click();
+  }
   // The email address stands in front of the plan (RPA-99). A person gives
   // one and continues, and so does every test, unless it asks to stay on
   // that page (email: false) or names the address to give.
