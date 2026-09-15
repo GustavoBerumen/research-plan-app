@@ -1438,21 +1438,23 @@ async function handleSaveFeedback(req, res) {
     return;
   }
   const answer = (key) => (typeof payload[key] === 'string' ? payload[key].trim() : '');
-  const inTheWay = answer('inTheWay');
-  const changeFirst = answer('changeFirst');
+  // The keys name the questions: what didn't work as expected, and what
+  // would improve the tool (reworded by Gus, 15 September 2026).
+  const notAsExpected = answer('notAsExpected');
+  const improve = answer('improve');
   const usefulness = Number.isInteger(payload.usefulness) && payload.usefulness >= 1 && payload.usefulness <= 5 ? payload.usefulness : null;
-  if ([inTheWay, changeFirst].some((a) => a.length > FEEDBACK_ANSWER_MAX)) {
+  if ([notAsExpected, improve].some((a) => a.length > FEEDBACK_ANSWER_MAX)) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Each answer must be ' + FEEDBACK_ANSWER_MAX + ' characters or fewer' }));
     return;
   }
-  if (!inTheWay && !changeFirst && usefulness === null) {
+  if (!notAsExpected && !improve && usefulness === null) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Answer at least one question' }));
     return;
   }
   const record = {
-    inTheWay, changeFirst, usefulness,
+    notAsExpected, improve, usefulness,
     plan: answer('plan').slice(0, 200),
     section: answer('section').slice(0, 40),
     build: answer('build').slice(0, 40),

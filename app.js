@@ -4272,7 +4272,9 @@
   // aria-hidden and the field is described by it, while a visually hidden
   // polite live region repeats it on a one-second debounce, so a screen
   // reader hears the count on arrival and hears it change without being
-  // flooded per keystroke.
+  // flooded per keystroke. Without a limit it counts up instead, "You have
+  // written 12 words": the feedback questions have no good length, only a
+  // running total (Gus, 15 September 2026).
   function renderWordGuide(textarea, limit, controlId) {
     const wrap = el('div', 'word-count-wrap');
     const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
@@ -4283,6 +4285,7 @@
     const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
     const message = () => {
       const n = words();
+      if (!limit) return 'You have written ' + n + (n === 1 ? ' word' : ' words');
       if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
       return "You've written about " + (Math.round(n / 5) * 5) + ' words';
     };
@@ -5170,8 +5173,8 @@
     form.appendChild(score);
 
     const questions = [
-      { id: 'tool-feedback-in-the-way', key: 'inTheWay', label: 'What got in the way?', hint: 'Anything that slowed you down, confused you or stopped you.' },
-      { id: 'tool-feedback-change', key: 'changeFirst', label: 'What would you change first?', hint: 'One thing, if you could.' },
+      { id: 'tool-feedback-not-as-expected', key: 'notAsExpected', label: 'What didn\u2019t work as expected?', hint: 'Anything that slowed you down, felt confusing, or broke.' },
+      { id: 'tool-feedback-improve', key: 'improve', label: 'What could we do to improve this tool?', hint: 'If you could change or add something, what would it be?' },
     ];
     const controls = {};
     questions.forEach((q) => {
@@ -5180,9 +5183,12 @@
       label.textContent = q.label;
       const hint = el('div', 'field-hint-text', { id: q.id + '-hint' });
       hint.textContent = q.hint;
-      const ta = el('textarea', 'finput field-ta tool-feedback-answer', { id: q.id, rows: '2', maxlength: '2000', 'aria-describedby': hint.id });
+      // One line to begin with, growing as the answer does, and a running
+      // word count under it as the plan's own questions have (Gus, 15
+      // September 2026).
+      const ta = el('textarea', 'finput field-ta tool-feedback-answer', { id: q.id, rows: '1', maxlength: '2000', 'aria-describedby': hint.id });
       bindTextarea(ta);
-      field.append(label, hint, ta);
+      field.append(label, hint, ta, renderWordGuide(ta, 0, q.id));
       form.appendChild(field);
       controls[q.key] = ta;
     });
@@ -5215,14 +5221,14 @@
       const chosen = group.querySelector('.radio-input:checked');
       return {
         usefulness: chosen ? parseInt(chosen.value, 10) : null,
-        inTheWay: controls.inTheWay.value.trim(),
-        changeFirst: controls.changeFirst.value.trim(),
+        notAsExpected: controls.notAsExpected.value.trim(),
+        improve: controls.improve.value.trim(),
       };
     };
-    const empty = (a) => a.usefulness === null && !a.inTheWay && !a.changeFirst;
+    const empty = (a) => a.usefulness === null && !a.notAsExpected && !a.improve;
     const say = (text, error) => { status.textContent = text; if (error) status.dataset.error = 'true'; else delete status.dataset.error; };
     const clear = () => {
-      Object.values(controls).forEach((ta) => { ta.value = ''; resizeTa(ta); });
+      Object.values(controls).forEach((ta) => { ta.value = ''; resizeTa(ta); if (typeof ta._refreshCharCount === 'function') ta._refreshCharCount(); });
       group.querySelectorAll('.radio-input').forEach((r) => { r.checked = false; });
     };
     const planName = () => ((doc.querySelector('[data-field="researchTitle"]') || {}).value || '').trim();

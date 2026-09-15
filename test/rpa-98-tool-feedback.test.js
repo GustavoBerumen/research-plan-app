@@ -26,8 +26,8 @@ const reveal = (d) => { const b = d.getElementById('tool-feedback-open'); if (b.
 const fill = (app, answers) => {
   const { document: d, window } = app;
   reveal(d);
-  if (answers.inTheWay !== undefined) setValue(window, d.getElementById('tool-feedback-in-the-way'), answers.inTheWay);
-  if (answers.changeFirst !== undefined) setValue(window, d.getElementById('tool-feedback-change'), answers.changeFirst);
+  if (answers.notAsExpected !== undefined) setValue(window, d.getElementById('tool-feedback-not-as-expected'), answers.notAsExpected);
+  if (answers.improve !== undefined) setValue(window, d.getElementById('tool-feedback-improve'), answers.improve);
   if (answers.usefulness) { const r = d.getElementById('tool-feedback-usefulness-' + answers.usefulness); r.checked = true; r.dispatchEvent(new window.Event('change', { bubbles: true })); }
 };
 function captureFetch(app, respond) {
@@ -69,20 +69,37 @@ test('the review step ends with a Give feedback button; the form is hidden until
   assert.equal(open.getAttribute('aria-expanded'), 'true');
   assert.equal(d.activeElement, d.getElementById('tool-feedback-usefulness-1'), 'focus lands on the first answer');
   assert.equal(text(f.querySelector('.tool-feedback-h')), 'Feedback on this tool');
-  assert.deepEqual(Array.from(f.querySelectorAll('.tf-label')).map(text), ['How useful was this tool overall?', 'What got in the way?', 'What would you change first?'], 'the score first, then two questions; "what were you trying to do" is gone');
+  assert.deepEqual(Array.from(f.querySelectorAll('.tf-label')).map(text), ['How useful was this tool overall?', 'What didn\u2019t work as expected?', 'What could we do to improve this tool?'], 'the score first, then two questions; "what were you trying to do" is gone');
   assert.equal(d.getElementById('tool-feedback-trying'), null);
-  for (const id of ['tool-feedback-in-the-way', 'tool-feedback-change']) {
+  const hints = { 'tool-feedback-not-as-expected': 'Anything that slowed you down, felt confusing, or broke.', 'tool-feedback-improve': 'If you could change or add something, what would it be?' };
+  for (const id of ['tool-feedback-not-as-expected', 'tool-feedback-improve']) {
     const ta = d.getElementById(id);
     assert.equal(ta.tagName, 'TEXTAREA', id);
     assert.ok(d.querySelector('label[for="' + id + '"]'), id + ' has a label');
-    assert.ok(d.getElementById(ta.getAttribute('aria-describedby')).classList.contains('field-hint-text'), id + ' is described by its hint');
+    const described = ta.getAttribute('aria-describedby').split(/\s+/);
+    assert.ok(d.getElementById(described[0]).classList.contains('field-hint-text'), id + ' is described by its hint');
+    assert.equal(text(d.getElementById(described[0])), hints[id], id + ' hint');
     assert.equal(ta.hasAttribute('data-field'), false, id + ' is not a plan field');
+    // One line to begin with, growing with the answer, and a running word
+    // count under it as the plan's own questions have (Gus, 15 September 2026).
+    assert.equal(ta.getAttribute('rows'), '1', id + ' starts one line high');
+    assert.ok(ta.classList.contains('field-ta'), id + ' grows with its text like every other box');
+    const count = ta.nextElementSibling;
+    assert.ok(count && count.classList.contains('word-count-wrap'), id + ' has a word count under it');
+    assert.equal(text(count.querySelector('.word-count')), 'You have written 0 words');
+    assert.ok(described.includes(count.querySelector('.word-count').id), id + ' is described by its count');
+    setValue(window, ta, 'One');
+    assert.equal(text(count.querySelector('.word-count')), 'You have written 1 word', 'the singular');
+    setValue(window, ta, 'It lost my  answer twice.');
+    assert.equal(text(count.querySelector('.word-count')), 'You have written 5 words', 'counting up, no limit and no remaining');
+    setValue(window, ta, '');
+    assert.equal(text(count.querySelector('.word-count')), 'You have written 0 words');
   }
   const score = f.querySelector('fieldset');
   assert.equal(score.querySelector('legend') && text(score.querySelector('legend')), 'How useful was this tool overall?', 'the score is a fieldset whose legend asks');
   assert.deepEqual(Array.from(score.querySelectorAll('.radio-label')).map(text), ['1 Not useful', '2 Slightly useful', '3 Somewhat useful', '4 Useful', '5 Very useful'], 'every option has words, so a screen reader hears a scale');
   assert.equal(score.querySelector('.select-cell'), null, 'not a plan choice either');
-  fill(app, { inTheWay: 'Plan a study.', usefulness: 4 });
+  fill(app, { notAsExpected: 'Plan a study.', usefulness: 4 });
   setValue(window, d.querySelector('[data-field="background"]'), 'An edit that saves the plan.');
   const saved = await waitFor(() => { const s = JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null'); return s && s.fields.background ? s : null; });
   assert.equal(JSON.stringify(saved).includes('Plan a study.'), false, 'the answers never enter the draft');
@@ -98,15 +115,16 @@ test('Send posts the answers with the plan\'s name and build, thanks the person,
   const { document: d, window } = app;
   const calls = captureFetch(app, () => ok());
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
-  fill(app, { inTheWay: 'The sample size question.', changeFirst: 'Fewer pages.', usefulness: 4 });
+  fill(app, { notAsExpected: 'The sample size question.', improve: 'Fewer pages.', usefulness: 4 });
   d.getElementById('tool-feedback-send').click();
   await waitFor(() => /Thank you/.test(status(d)), { message: 'no thanks' });
   const sent = calls.filter((c) => c.url.endsWith('/api/feedback'));
   assert.equal(sent.length, 1, 'one request');
   assert.equal(sent[0].method, 'POST');
-  assert.deepEqual(sent[0].body, { usefulness: 4, inTheWay: 'The sample size question.', changeFirst: 'Fewer pages.', plan: 'Usability testing of checkout flow', build: sent[0].body.build, section: sent[0].body.section });
+  assert.deepEqual(sent[0].body, { usefulness: 4, notAsExpected: 'The sample size question.', improve: 'Fewer pages.', plan: 'Usability testing of checkout flow', build: sent[0].body.build, section: sent[0].body.section });
   assert.equal(typeof sent[0].body.build, 'string');
-  assert.equal(d.getElementById('tool-feedback-in-the-way').value, '', 'cleared after sending');
+  assert.equal(d.getElementById('tool-feedback-not-as-expected').value, '', 'cleared after sending');
+  assert.equal(text(d.getElementById('tool-feedback-not-as-expected').nextElementSibling.querySelector('.word-count')), 'You have written 0 words', 'and its count with it');
   assert.equal(d.querySelector('.tool-feedback .radio-input:checked'), null);
   assert.equal(d.getElementById('tool-feedback-form').hidden, true, 'and folded away, the thanks staying by the button');
   assert.equal(d.activeElement, d.getElementById('tool-feedback-open'));
@@ -132,17 +150,17 @@ test('when sending fails, nothing is lost: the answers stay, and are offered as 
   const { document: d } = app;
   captureFetch(app, () => { throw new Error('Synthetic network failure'); });
   const downloads = captureDownloads(app);
-  fill(app, { inTheWay: 'It stopped.', usefulness: 2 });
+  fill(app, { notAsExpected: 'It stopped.', usefulness: 2 });
   d.getElementById('tool-feedback-send').click();
   await waitFor(() => /Could not send/.test(status(d)), { message: 'no failure message' });
-  assert.equal(d.getElementById('tool-feedback-in-the-way').value, 'It stopped.', 'the answers stay');
+  assert.equal(d.getElementById('tool-feedback-not-as-expected').value, 'It stopped.', 'the answers stay');
   const download = d.getElementById('tool-feedback-download');
   assert.equal(download.hidden, false, 'a file is offered');
   download.click();
   assert.equal(downloads.length, 1);
   assert.match(downloads[0].name, /^Feedback on Research Plan - \d{4}-\d{2}-\d{2}\.json$/);
   const written = JSON.parse(await downloads[0].blob.text());
-  assert.equal(written.inTheWay, 'It stopped.');
+  assert.equal(written.notAsExpected, 'It stopped.');
   assert.equal(written.usefulness, 2);
   assert.match(status(d), /Send the file to the person who shared this link/);
 });
@@ -153,7 +171,7 @@ test('when the server says feedback is unavailable, the form offers the file str
   t.after(() => app.close());
   const d = app.document;
   const calls = captureFetch(app, () => ok());
-  fill(app, { changeFirst: 'The order of the sections.' });
+  fill(app, { improve: 'The order of the sections.' });
   d.getElementById('tool-feedback-send').click();
   await waitFor(() => /unavailable/.test(status(d)), { message: 'no unavailable message' });
   assert.equal(calls.filter((c) => c.url.endsWith('/api/feedback')).length, 0, 'no request');
@@ -167,7 +185,7 @@ test('a pilot configuration that advertises feedback is accepted whole: the buil
   const d = app.document;
   const calls = captureFetch(app, () => ok());
   assert.equal(text(d.getElementById('app-version')), 'v1.0.0 · abc1234', 'the pilot config was not thrown away for advertising feedback');
-  fill(app, { changeFirst: 'A pilot session.' });
+  fill(app, { improve: 'A pilot session.' });
   d.getElementById('tool-feedback-send').click();
   await waitFor(() => /Thank you/.test(status(d)), { message: 'no thanks in pilot mode' });
   assert.equal(calls.filter((c) => c.url.endsWith('/api/feedback')).length, 1);

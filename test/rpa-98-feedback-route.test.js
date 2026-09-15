@@ -10,7 +10,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadServer } = require('./rpa-89-server-harness.cjs');
 
-const body = (extra = {}) => JSON.stringify(Object.assign({ inTheWay: '  It stopped.  ', changeFirst: 'Fewer pages.', usefulness: 4, plan: 'Checkout study', section: 'review', build: 'abc1234' }, extra));
+const body = (extra = {}) => JSON.stringify(Object.assign({ notAsExpected: '  It stopped.  ', improve: 'Fewer pages.', usefulness: 4, plan: 'Checkout study', section: 'review', build: 'abc1234' }, extra));
 
 test('pilot and non-pilot modes both accept feedback and append one line per submission', async () => {
   for (const pilot of ['true', 'false']) {
@@ -24,15 +24,15 @@ test('pilot and non-pilot modes both accept feedback and append one line per sub
     assert.match(String(file), /feedback-data\.jsonl$/);
     assert.ok(line.endsWith('\n'), 'one line per submission');
     const record = JSON.parse(line);
-    assert.deepEqual(record, { inTheWay: 'It stopped.', changeFirst: 'Fewer pages.', usefulness: 4, plan: 'Checkout study', section: 'review', build: 'abc1234', savedAt: record.savedAt });
+    assert.deepEqual(record, { notAsExpected: 'It stopped.', improve: 'Fewer pages.', usefulness: 4, plan: 'Checkout study', section: 'review', build: 'abc1234', savedAt: record.savedAt });
     assert.match(record.savedAt, /^\d{4}-\d{2}-\d{2}T/);
   }
 });
 
 test('an empty submission, an answer over the cap, a score off the scale and a bad body are refused without writing', async () => {
   const app = loadServer({ pilot: 'true' });
-  assert.equal((await app.request('/api/feedback', 'POST', JSON.stringify({ inTheWay: '', usefulness: null }))).status, 400, 'nothing to send');
-  assert.equal((await app.request('/api/feedback', 'POST', body({ inTheWay: 'x'.repeat(2001) }))).status, 400, 'over the cap');
+  assert.equal((await app.request('/api/feedback', 'POST', JSON.stringify({ notAsExpected: '', usefulness: null }))).status, 400, 'nothing to send');
+  assert.equal((await app.request('/api/feedback', 'POST', body({ notAsExpected: 'x'.repeat(2001) }))).status, 400, 'over the cap');
   const offScale = await app.request('/api/feedback', 'POST', JSON.stringify({ usefulness: 6 }));
   assert.equal(offScale.status, 400, 'a score off the scale counts as no score, and nothing else was answered');
   assert.equal((await app.request('/api/feedback', 'POST', '{bad')).status, 400, 'bad JSON');
