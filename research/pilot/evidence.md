@@ -1,4 +1,57 @@
-# Evidence and remaining work — 11 September 2026
+# Evidence and remaining work
+
+## Current release preparation — 15 September 2026
+
+The [release proposal](release-proposal-2026-09-15.md) is the current starting point.
+The tested candidate is `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e`, including merged
+RPA-64 and its successful PR-head CI. Main subsequently advanced to
+`f3273269d58893e9e4f6004267175c54b4d6d4ff` through RPA-137 PR #98 at 17:04:46 UTC.
+Live GitHub verification confirms that merge adds browser-local review links and
+does not overlap these documentation changes. The new main was not run through
+this preparation's local tests; the results below retain their original source.
+Recorded RPA-64 evidence: 644/644 local and CI, 22/22 focused compatibility,
+synthetic browser walkthrough, earlier Max-reported manual passes, and an earlier
+real R2/private Drive recovery/deletion rehearsal. Each retains its own source
+version; none is hosted acceptance of the merged build.
+
+Render's dashboard still shows `6818628` / `dep-dak32sbl550s73brjv1g` live, Oregon,
+the expected build/start/health settings, auto-deploy Off and a verified custom
+domain with certificate issued. Anthropic shows US$3 workspace cap, US$3.54 credits
+and auto-reload Off. At 16:44:23 UTC, 16/16 read-only HTTPS checks through Render
+Web Shell passed across both hostnames. Runtime is Node v24.19.0, pilot/AI true,
+Haiku 4.5, submissions unset, source `6818628`; authenticated config agrees and
+keeps the five old write/proxy capabilities off. No paid call or write was made.
+No provider settings or deployed source changed.
+
+A clean export of `d1802db` installed 33 production packages from the unchanged
+lockfile and passed 44 local production-start/HTTP checks, zero provider-trap calls.
+It confirmed feedback writes locally even while plan submissions are disabled.
+This is Windows local runtime evidence with synthetic credentials/data, not hosted
+acceptance or real R2 evidence.
+
+The old uncommitted RPA-6 pack (59 files) was copied and SHA-256 verified with zero
+mismatches before this refresh. Both earlier RPA-6 worktrees and RPA-64's worktree
+remain preserved. The current preparation branch is `codex/rpa-6-release-readiness`.
+Current-run logs, source export and preservation manifests are retained in the
+task's local release-readiness evidence folder, not presented as participant data.
+
+The candidate's `/api/feedback` local-file collection is a newly recorded
+operational release issue. Its enabled capability is not covered by the older
+all-writes-disabled assertion. See the operating decisions before participant use.
+
+Fresh full suite: **644/644 passed**, no failures/skips/cancellations, 300.3 seconds
+with test concurrency two. The first default-concurrency run was 643/644 after one
+backup test's app-render setup timed out under load. Both logs remain available.
+No app code, assertions or test timeouts changed. Source-specific earlier tests
+remain separate evidence.
+
+Max removed discussion-guide reconciliation from release requirements after
+checking with Gustavo. Older entries below record historical context only.
+
+## Historical record — 11 September 2026
+
+The following table describes the earlier source and observations only. Its
+pending account/deployment statements are superseded by the current record above.
 
 This pack documents the protected candidate
 `e78e8659d20ff68270794a13d7169d782f2a1bd5`, merged through
@@ -23,7 +76,5 @@ and [RPA-1 comment 10094](https://turingtestable.atlassian.net/browse/RPA-1?focu
 Older local pack evidence retains its original dates, source revisions and limits;
 it has not been relabelled as current hosted evidence or uploaded with this pack.
 
-Next: finish the card decision; deploy protected code with AI paused; verify access
-and configuration; verify the provider budget before live AI; rehearse private
-exchange, recovery and deletion; reconcile Gus's guide and record the release
-decision using the [release checklist](release-checklist.md).
+For current next steps use the [release proposal](release-proposal-2026-09-15.md)
+and [release checklist](release-checklist.md), not the historical pending setup.

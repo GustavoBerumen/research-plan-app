@@ -1,9 +1,26 @@
 # RPA-1: invited Render pilot
 
 This runbook covers one Render web service operated by Max, using Gustavo's
-GitHub repository and the agreed JSON/PDF workflow. Gustavo covers the agreed
+GitHub repository, browser drafts/JSON backups and optional private completed-plan
+submission. Gustavo covers the agreed
 costs and retains authority to stop AI spending. These are preparation steps;
 the existence of this file or passing local tests does not establish a live deploy.
+
+## Release update — 15 September 2026
+
+The protected service already exists. Do not repeat account setup or create a
+second service. The [current release proposal](research/pilot/release-proposal-2026-09-15.md)
+records the verified deployed build, candidate, rollback and remaining gates.
+RPA-64 is merged in main at `d1802db5c9aea44eebf68eb6d34a3070f2ed9f4e`.
+Completed-plan Send remains off unless separately configured and approved using
+[SUBMISSIONS.md](SUBMISSIONS.md). Keep the existing AI settings during an update;
+the initial-install defaults below are not instructions to reset a working service.
+
+The candidate also enables `/api/feedback` in pilot mode. It collects a score,
+two answers, plan title, section, build and timestamp in `feedback-data.jsonl`.
+This is a local server file, outside R2 submission backups. Before participant
+use, settle its notice, export/recovery and deletion procedure or gate collection
+in a separately reviewed change. Submissions off does not mean all collection off.
 
 ## Connect and configure
 
@@ -33,18 +50,21 @@ the existence of this file or passing local tests does not establish a live depl
    this flag after syncing configuration.
 7. Deploy only a reviewed, tested commit containing RPA-1. Record its full SHA,
    service URL, deploy ID and timestamp. Verify `/api/config` after sign-in shows
-   `pilotMode: true` and all write/proxy capabilities false. Record Render's SHA
+   `pilotMode: true`, submissions off unless separately approved, and calibration,
+   uploads, addFramework, jira and googleDrive false. The current candidate's
+   feedback capability is true and needs the operating decision above. Record Render's SHA
    even if the footer's build marker is `dev`.
 
 ## AI spending and request controls
 
-Gustavo's approved allowance is **£10 per month**, separate from hosting. Use a
-dedicated non-default Anthropic workspace and a key from that workspace. In the
-provider Console, set a monthly workspace spend limit conservatively within
-that allowance in its billing currency; record the actual configured currency
-and amount, accounting for conversion/tax. Verify prepaid credits and disable
-automatic reload. A dedicated key alone is not a spending limit. No app-side
-counter claims to implement the monetary cap.
+The current dedicated `research-plan-app` Anthropic workspace limit is
+**US$3 per month**, replacing the earlier £10 allowance for this pilot. The Console
+was rechecked on 15 September: US$3 cap, US$3.54 displayed credits, auto-reload Off.
+These are timestamped observations; check them again before paid release probes.
+Preserve Haiku 4.5 and the existing key. Gustavo retains stop authority; Max owns
+the technical stop. Record the agreed monitoring/response arrangement under RPA-80.
+A dedicated key alone is not a spending limit. No app-side counter implements a
+monetary cap. Do not change billing controls as part of a code deployment.
 
 The single server enforces these pilot safety ceilings:
 
@@ -97,8 +117,10 @@ then restore it there. Use one canonical participant address.
 
 ## Plan handling and verification
 
-No app database or persistent disk is required for the selected pilot. Plan
-writing autosaves in the participant's browser. Calibration, uploads, framework
+Draft-only use needs no plan database or persistent disk. Optional completed-plan
+Send uses private R2 and its separate operator procedure. Tool feedback currently
+uses an ephemeral local server file; it is not a durable submission or independent
+backup. Plan writing autosaves in the participant's browser. Calibration, uploads, framework
 file writes and Jira proxying remain disabled at the API and UI. Existing file
 references remain references; no attachment bytes are in a JSON backup.
 
@@ -116,14 +138,16 @@ Before inviting testers, use synthetic data on the actual deployed origin:
 - Valid login: full form and allowed read-only framework lookup work;
   `/api/config` confirms pilot capabilities. Private files are inaccessible.
 - Direct calls to upload, calibration, add-framework and Jira routes reject
-  even with malformed bodies. No app server data writes are expected.
+  even with malformed bodies. Check feedback separately; do not assert zero server
+  writes for a successful feedback request.
 - Confirm the provider budget settings before enabling AI. Perform one small
   real evaluation and both suggestion paths; inspect provider usage. Exercise
   the off switch and an API failure; writing must remain intact.
 - In Windows Chrome desktop and 1280px laptop view, check keyboard operation,
   same-browser refresh/recovery, actual JSON download and restore, replacement
   warning/cancel/invalid-file recovery, edit/re-download, actual private handover
-  and receipt, returned-backup restore, and a saved readable PDF.
+  and receipt, and returned-backup restore. Preserve earlier reported PDF evidence;
+  PDF is not a new mandatory manual check in this release round.
 - Restart/redeploy the same version and check browser recovery. Test the saved
   backup in a separate browser profile. Do not treat a download toast as proof
   that a file was saved, or a local/mock run as deployed acceptance.
@@ -135,7 +159,7 @@ Before inviting testers, use synthetic data on the actual deployed origin:
 Keep automatic deploys off for the pilot. Before each update, record the current
 good deploy/SHA, verify tests for the intended commit, and deploy that specific
 commit through Render's manual deploy flow. Confirm health, login, capabilities,
-and one representative AI request after release. In a failure, roll back to the
+and approved bounded AI checks after release. In a failure, roll back to the
 last verified **protected pilot** deploy; never choose a pre-RPA-1 build that
 lacks authentication. Recheck environment settings separately from code rollback.
 For the first deployment, if no protected good version exists, suspend the service

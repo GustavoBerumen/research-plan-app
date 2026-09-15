@@ -5,6 +5,15 @@ technical verification and can read the collected plans and notes. This implemen
 the handling decision in [RPA-80 comment 10087](https://turingtestable.atlassian.net/browse/RPA-80?focusedCommentId=10087).
 It does not prove that a folder or its permissions have been configured.
 
+For a separately enabled RPA-64 release, the author can Send the completed plan
+to private R2. An authorised operator can export the active v8 plan into the
+approved private session folder using [SUBMISSIONS.md](../../SUBMISSIONS.md).
+The review/edit/return steps below still apply. Exported plans omit browser-only
+email/review history; local v9 backups may include those and should be shared
+deliberately. Keep receipt references associated with the correct snapshot.
+Tool feedback uses a different local server file and needs its own approved
+handling; it is not part of either R2 plan export or this JSON exchange.
+
 ## Prepare with synthetic files
 
 1. Record the actual parent folder privately. Keep access restricted to Gus and
@@ -53,7 +62,9 @@ do not claim receipt or retry by overwriting the only good copy.
   remain intact. A successful restore replaces the current plan, including hidden
   and unsaved data. Verify a safety copy before every replacement.
 - Verify the private originals/revisions remain retrievable after an app restart
-  or redeploy. App hosting does not store these plans or back up the Drive folder.
+  or redeploy. Drive files and optional R2 submissions are separate destinations;
+  the app does not independently back up the Drive folder. Tool-feedback files
+  on the Render filesystem have a separate durability limitation.
 - Gus deletes retained plans, revisions and notes four weeks after the final
   session, or sooner on request. Record the due date once the final session date
   is known and adjust it if that date changes. Account for team-held downloads,
