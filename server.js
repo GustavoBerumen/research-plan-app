@@ -66,6 +66,7 @@ const PUBLIC_ASSETS = new Map([
   ['/', 'index.html'],
   ['/index.html', 'index.html'],
   ['/style.css', 'style.css'],
+  ['/favicon.svg', 'favicon.svg'],
   ['/app.js', 'app.js'],
   ['/score-classification.js', 'score-classification.js'],
   ['/textarea-autosize.js', 'textarea-autosize.js'],
@@ -95,6 +96,7 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
   '.md': 'text/markdown; charset=utf-8',
 };
 

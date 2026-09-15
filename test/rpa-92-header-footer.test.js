@@ -78,9 +78,13 @@ test('nothing rendered carries GOV.UK branding', async (t) => {
   assert.doesNotMatch(text, /GOV\.UK/i);
   assert.doesNotMatch(text, /crown copyright|open government licence/i);
   // Scoped to the chrome: the form draws its own accordion chevrons and
-  // evaluation icons, and those are not branding.
-  assert.equal(app.document.querySelectorAll('header svg, header img, footer svg, footer img').length, 0,
-    'no logo, crest or wordmark image in the header or footer');
+  // evaluation icons, and those are not branding. The form's own mark, the
+  // pencil of RPA-105, is: it is the one drawing allowed here, and it is
+  // nobody else's.
+  assert.equal(app.document.querySelectorAll('header img, footer img').length, 0, 'no crest or wordmark image in the header or footer');
+  const drawings = Array.from(app.document.querySelectorAll('header svg, footer svg'));
+  assert.ok(drawings.length > 0, 'the form\'s own mark is there (RPA-105)');
+  assert.ok(drawings.every((svg) => svg.classList.contains('logo') && svg.querySelector('use[href="#rpa-mark"]')), 'and nothing but that mark');
 });
 
 test('the phase banner is present during the pilot, and is one element to delete', async (t) => {
