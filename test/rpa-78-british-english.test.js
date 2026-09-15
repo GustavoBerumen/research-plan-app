@@ -130,7 +130,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.version = 8;
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
-  expected.fields.emailAddress = '';   // the email address the form now opens with, unanswered (RPA-99)
+  expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)
   expected.methods = expected.methods.map((g) => ({ ...g, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
   delete expected.lists.characteristics; delete expected.lists.userGroups; delete expected.selects.sampleSize;
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');

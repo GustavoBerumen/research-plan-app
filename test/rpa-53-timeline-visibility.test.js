@@ -44,7 +44,12 @@ async function populatedDraft(t) {
     setValue(app.window, dates[0], i ? '2026-09-15' : '2026-09-01');
     setValue(app.window, dates[1], i ? '2026-09-28' : '2026-09-14');
   });
-  const draft = await savedChoice(app, false);
+  // The address given before the plan is already saved (RPA-99): wait for the two dated rows.
+  const draft = await waitFor(() => {
+    const saved = JSON.parse(app.window.localStorage.getItem(DRAFT_KEY));
+    const stages = saved?.tables?.['stageTimeline-table'];
+    return saved?.ui?.timelineVisible === false && stages?.length === 2 && JSON.stringify(stages).includes('2026-09-28') && saved;
+  });
   draft.fields.lastUpdated = '2020-01-01';
   draft.lastUpdatedManual = false;
   return draft;

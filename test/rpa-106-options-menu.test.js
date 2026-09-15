@@ -29,7 +29,7 @@ test('one Menu button in the bar; the panel is closed until pressed, and holds t
   assert.equal(menu.hidden, false);
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   assert.deepEqual(Array.from(menu.querySelectorAll('.tb-btns button')).map((b) => b.id), ['download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn']);
-  assert.deepEqual(Array.from(menu.querySelectorAll('button')).map((b) => b.id), ['download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn'], 'nothing else: no Save progress, autosave does it; no sign out without a sign in');
+  assert.deepEqual(Array.from(menu.querySelectorAll('button')).map((b) => b.id), ['options-plan-change', 'download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn'], 'nothing else but Change on the email address (RPA-99): no Save progress, autosave does it; no sign out, there is no account to sign out of');
   assert.equal(d.getElementById('save-status'), null, 'and no save confirmation line in the page');
   toggle.click();
   assert.equal(menu.hidden, true);

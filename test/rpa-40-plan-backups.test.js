@@ -57,7 +57,8 @@ test('download includes immediate unsaved edits, metadata and dormant data witho
   assert.equal(download.data.fields.lastUpdated, '2026-08-29');
   assert.equal(download.data.lastUpdatedManual, true);
   assert.equal(download.blob.type, 'application/json');
-  assert.match(download.name, /^Latest edit café 🧭 Before autosave - backup \d{4}-\d{2}-\d{2}\.json$/);
+  // The address given before the plan names the file too (RPA-99).
+  assert.match(download.name, /^Latest edit café 🧭 Before autosave - name@example\.com - backup \d{4}-\d{2}-\d{2}\.json$/);
   assert.equal(app.window.localStorage.getItem(DRAFT_KEY), before);
   assert.equal(app.evaluationRequests.length, 0);
   assert.equal(download.data.evaluations, undefined);
@@ -68,7 +69,7 @@ test('download has an untitled fallback and works with denied storage, retaining
   setValue(app.window, title(app), '');
   Object.defineProperty(app.window, 'localStorage', { configurable: true, get() { throw new Error('Storage denied'); } });
   const result = await interceptDownload(app)();
-  assert.match(result.name, /^Untitled plan - backup /);
+  assert.match(result.name, /^Untitled plan - name@example\.com - backup /);
   assert.equal(result.data.fields.researchTitle, '');
   assert.equal(result.data.fields.project, realisticBackup().fields.project);
 });

@@ -148,17 +148,17 @@ test('Plan details is on the review step too, answers and all, and Change there 
   assert.equal(text(rowOf(review, 'plan-details').querySelector('.review-name')), 'Plan details');
   const details = answersOf(review, 'plan-details');
   reveal(details);
-  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Email address', 'Research title', 'Jira Project', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout']);
+  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Research title', 'Jira Project', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout']);
   changeIn(details, 'Lead researcher').click();
   assert.deepEqual(visible(d), ['plan-details']);
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus Berumen');
   stepOf(d, 'plan-details').querySelector('.step-continue').click();
   assert.deepEqual(visible(d), ['review']);
-  assert.equal(rowsOf(answersOf(review, 'plan-details'))[3][1], 'Gus Berumen');
+  assert.equal(rowsOf(answersOf(review, 'plan-details'))[2][1], 'Gus Berumen');
   rowOf(review, 'plan-details').querySelector('.review-change').click();
   assert.deepEqual(visible(d), ['plan-details']);
-  assert.equal(d.activeElement, d.querySelector('[data-field="emailAddress"]'), 'the section-level Change lands on the first control, the email address since RPA-99');
+  assert.equal(d.activeElement, d.querySelector('[data-field="researchTitle"]'), 'the section-level Change lands on the first control');
 });
 
 test('the revealed answers do not print', () => {

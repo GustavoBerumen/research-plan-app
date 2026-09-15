@@ -87,9 +87,12 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .options-menu{position:absolute;right:24px;top:100%;z-index:101;min-width:300px;max-width:calc(100% - 48px);background:#fff;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:16px;display:grid;gap:12px}
 .options-menu[hidden]{display:none}
 .options-plan-name{margin:0;font-weight:700;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
-/* Whose plan it is, under its name (RPA-99). Hidden until an address is given. */
-.options-plan-person{margin:-8px 0 0;font-size:var(--text-sm);color:var(--text-2);overflow-wrap:anywhere}
+/* The address the link back goes to, under the plan's name, with Change to go back to the page that asked for it (RPA-99). Hidden until an address is given. */
+.options-plan-person{margin:-8px 0 0;font-size:var(--text-sm);color:var(--text-2);overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:0 10px;align-items:baseline}
 .options-plan-person[hidden]{display:none}
+.options-plan-change{font-family:inherit;font-size:var(--text-sm);color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.options-plan-change:hover{color:var(--link-hover)}
+.options-plan-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 .options-menu .tb-btns{flex-direction:column;align-items:stretch;justify-content:flex-start}
 .options-menu .tb-btns .btn{width:100%;text-align:left}
 @media screen and (max-width:600px){.options-menu{left:12px;right:12px;max-width:none}}
@@ -154,13 +157,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 /* Inputs sized to the answer they expect (RPA-109), the GOV.UK width classes. A date is already fixed; a textarea is open-ended and stays full width. */
 .input-w-2{max-width:2.5em}.input-w-3{max-width:3.5em}.input-w-4{max-width:4.5em}.input-w-5{max-width:5.5em}.input-w-10{max-width:11.5em}.input-w-20{max-width:20.5em}.input-w-30{max-width:29.5em}
 /* Last Updated is a computed corner value, kept compact. */
-.doc-header-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:16px;margin-bottom:8px}
-/* The email address shares the row (RPA-99): whose plan this is on the left,
-   when it was last touched on the right. The address box takes the GOV.UK
-   20-character width; the hint and any error wrap in the room that is left,
-   and on a narrow screen the dateline drops to its own line. */
-.mf-first{flex:1 1 16em;margin-right:auto}
-.mf-first .minput{max-width:20.5em}
+.doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
 /* The ticket reference sits under the title on its own row, matching its
    width. Narrower looked tidier in isolation but wrapped the hint onto two
    lines and read as a different kind of thing from the title above it. */
@@ -237,6 +234,12 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .step-page-caption:empty{display:none}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
+/* The email address before the plan (RPA-99): a page of its own with one question, its label the heading, standing in front of every step until a well-formed address is given. */
+.email-step{padding-top:22px}
+.email-step .step-heading{margin:8px 0 10px}
+.email-step .step-heading .flabel{font-size:inherit;font-weight:inherit;line-height:inherit;display:inline}
+.email-step .field{gap:8px}
+.email-step .step-nav{padding-top:16px}
 .task-list-intro{margin:6px 0 4px;color:var(--text-2)}
 .task-list-progress{margin:0 0 18px;font-weight:700}
 .task-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--border)}
@@ -805,4 +808,4 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
 
-@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.check-answers,.review-answers,.tool-feedback,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}
+@media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.email-step,.check-answers,.review-answers,.tool-feedback,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}

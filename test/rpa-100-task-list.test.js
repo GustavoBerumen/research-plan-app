@@ -47,11 +47,20 @@ test('editing an earlier answer preserves access to another completed section', 
 
 test('fresh blocked fragments return to the task list without creating a draft', async (t) => {
   for (const slug of ['context', 'review']) {
-    const app = await bootApp({ url: 'https://research-plan.test/#' + slug });
+    // Nothing is stored for merely arriving: the page asking for the email
+    // address stands in front (RPA-99), and only what the person gives there is saved.
+    const app = await bootApp({ url: 'https://research-plan.test/#' + slug, email: false });
     t.after(() => app.close());
+    assert.deepEqual(visible(app.document), []);
+    assert.equal(app.window.localStorage.getItem('research-plan-app:draft'), null);
+    const gate = app.document.querySelector('.email-step');
+    setValue(app.window, gate.querySelector('[data-field="emailAddress"]'), 'name@example.com');
+    gate.querySelector('.step-continue').click();
     assert.deepEqual(visible(app.document), ['sections']);
     assert.equal(app.window.location.hash, '#sections');
-    assert.equal(app.window.localStorage.getItem('research-plan-app:draft'), null);
+    const draft = JSON.parse(app.window.localStorage.getItem('research-plan-app:draft'));
+    assert.equal(draft.fields.emailAddress, 'name@example.com', 'the address is kept');
+    assert.equal(draft.ui.section, 'sections');
   }
 });
 

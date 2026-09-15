@@ -96,8 +96,9 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
-      // The email address opens the document beside the dateline (RPA-99).
-      'Email address', 'Last updated', 'Research title', 'Jira Project',
+      // The page before the plan asks its one question as its heading (RPA-99).
+      'What is your email address?',
+      'Last updated', 'Research title', 'Jira Project',
       'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
       // One Additional information hatch closes each section (RPA-101).
       'Background', 'Goal', 'Problem Statement', 'Additional information',
@@ -260,7 +261,8 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
   groups[1].querySelector('.add-btn').click();
   setValue(window, groups[1].querySelectorAll('.list-input')[1], 'Survey');
 
-  const savedRaw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
+  // The address given before the plan is already saved (RPA-99): wait for the last edit.
+  const savedRaw = await waitFor(() => { const r = window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Survey') && r; }, {
     timeout: 5000,
     message: 'The v7 draft was not saved',
   });

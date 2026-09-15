@@ -35,8 +35,8 @@ test('the dates page still asks both dates together, decision above readout in t
   await waitFor(() => visible(d)[0] === 'plan-details');
   const plan = steps(d)[1];
   completeStep(app, plan);
-  for (let k = 0; k < 5; k++) plan.querySelector('.step-continue').click();   // six pages since the email address (RPA-99)
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 6 of 6');
+  for (let k = 0; k < 4; k++) plan.querySelector('.step-continue').click();
+  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 5 of 5');
   const shown = onScreen(plan);
   assert.deepEqual(shown.map((u) => text(u.querySelector('.mlabel'))), ['Project decision', 'Research readout'], 'still paired');
   assert.ok(shown[0].compareDocumentPosition(shown[1]) & 4, 'decision comes first in the document, so first down the page');

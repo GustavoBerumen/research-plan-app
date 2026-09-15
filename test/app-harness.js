@@ -125,9 +125,22 @@ async function bootApp(options = {}) {
   }
 
   if (options.draft) {
+    // A draft from before RPA-99 has no email address; one is put in, the
+    // way the person would have given it, unless the test says email: false
+    // to meet the page that asks, or names the address itself.
+    let draft = options.draft;
+    const asText = typeof draft === 'string';
+    if (options.email !== false) {
+      let parsed = draft;
+      if (asText) { try { parsed = JSON.parse(draft); } catch (e) { parsed = null; } }
+      if (parsed && typeof parsed === 'object' && parsed.fields && typeof parsed.fields === 'object' && !parsed.fields.emailAddress) {
+        parsed = { ...parsed, fields: { ...parsed.fields, emailAddress: options.email || 'name@example.com' } };
+        draft = asText ? JSON.stringify(parsed) : parsed;
+      }
+    }
     window.localStorage.setItem(
       DRAFT_KEY,
-      typeof options.draft === 'string' ? options.draft : JSON.stringify(options.draft)
+      typeof draft === 'string' ? draft : JSON.stringify(draft)
     );
   }
 
@@ -217,6 +230,17 @@ async function bootApp(options = {}) {
   );
   const loadError = document.querySelector('.doc-error');
   if (loadError) throw new Error(loadError.textContent);
+
+  // The email address stands in front of the plan (RPA-99). A person gives
+  // one and continues, and so does every test, unless it asks to stay on
+  // that page (email: false) or names the address to give.
+  if (options.email !== false) {
+    const gate = document.querySelector('.email-step');
+    if (gate && !gate.hidden) {
+      setValue(window, gate.querySelector('[data-field="emailAddress"]'), options.email || 'name@example.com');
+      gate.querySelector('.step-continue').click();
+    }
+  }
 
   return {
     alerts,

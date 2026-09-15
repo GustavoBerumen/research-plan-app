@@ -239,7 +239,7 @@
     // one hint did, with nothing reported.
     text = text.replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
     const lines = text.split('\n');
-    const header = { title: null, meta: [] };
+    const header = { title: null, meta: [], before: [] };
     const sections = [];
     let mode = 'header-pretitle';
     let currentSection = null;
@@ -305,11 +305,9 @@
       if (currentGroup) field.group = currentGroup;
 
       if (mode === 'header-pretitle') {
-        // A field above the title is asked before it: the email address that
-        // says whose plan this is (RPA-99). It stays a header field for the
-        // draft, the check page and the review; only its place differs.
-        field.first = true;
-        header.meta.push(field);
+        // A field above the title is asked before the plan, on a page of its
+        // own: the email address a link back will be sent to (RPA-99).
+        header.before.push(field);
       } else if (mode === 'header-meta') {
         header.meta.push(field);
       } else if (mode === 'section') {
@@ -4982,14 +4980,6 @@
         const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
         input = dateControl.input;
         control = dateControl.element;
-      } else if (f.type === 'email') {
-        // The GOV.UK email address pattern (RPA-99): type=email brings up a
-        // phone's email keyboard, autocomplete offers the address the
-        // browser already knows, and spellcheck is off because an address
-        // is not a word. No placeholder: the hint says why it is asked.
-        input = el('input', 'minput', { type: 'email', 'data-field': f.key, autocomplete: 'email', spellcheck: 'false' });
-        if (f.width) input.classList.add('input-w-' + f.width);
-        control = input;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         if (f.width) input.classList.add('input-w-' + f.width);
@@ -5092,15 +5082,6 @@
         return;
       }
       const mf = buildMetaField(f);
-      if (f.first) {
-        // Asked before the title (RPA-99): first in the document, so the
-        // first page of Plan details. It shares the top row with the
-        // dateline, whose plan this is beside when it was last touched, and
-        // that is the row the printed document opens with.
-        mf.classList.add('mf-first');
-        topRow.insertBefore(mf, topRow.firstChild);
-        return;
-      }
       if (f.key === 'jiraProject') {
         // Directly under the title and the same width as it. It identifies
         // the plan rather than asking one of the paired questions in the grid
@@ -5543,6 +5524,8 @@
   function renderSchema(schema) {
     doc.innerHTML = '';
     tables.length = 0;
+    emailGate = null;
+    if (schema.header.before.length) doc.appendChild(renderEmailGate(schema.header.before));
     doc.appendChild(renderHeader(schema.header));
 
     // The review step is found by the sign-off keys, not by its section's
@@ -5588,6 +5571,7 @@
   // and the error summary all ask this, so they cannot disagree: required
   // means not optional and not the Additional information hatch.
   function requiredGroupsOf(stepEl) {
+    if (stepEl.classList.contains('email-step')) return Array.from(stepEl.querySelectorAll('.field')).filter((f) => !f.querySelector('.fopt'));
     if (stepEl.classList.contains('doc-header')) {
       // The title counts too: the template does not mark it optional.
       return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
@@ -5730,6 +5714,85 @@
     summary.hidden = false;
     if (focus) summary.focus();
     return true;
+  }
+  // ---------- the email address before the plan (RPA-99) ----------
+  // Identify, don't authenticate. In front of the plan stands one question,
+  // an email address, on a page of its own in the GOV.UK shape: the
+  // question as the heading, a hint that says why, one box, Continue. Why
+  // is the link back: a link to the plan will be sent to that address so
+  // the person can return to it. The sending is the next piece of work and
+  // is not built yet; today the address is kept in the draft, names the
+  // backup file and shows in the Menu, with Change to come back here.
+  // Nothing is shown past this page without a well-formed address: every
+  // way into a step passes through showStep, which shows this page instead
+  // and remembers where the person was going, and Continue takes them
+  // there. Not a step: it has no number, no place in the task list, no
+  // check page, and it does not print.
+  let emailGate = null;
+  function renderEmailGate(fields) {
+    const gate = el('section', 'email-step', { 'aria-labelledby': 'email-step-heading' });
+    const summary = renderErrorSummary();
+    gate.appendChild(summary);
+    let heading = null;
+    fields.forEach((f, k) => {
+      const group = el('div', 'field field-email');
+      const controlId = fieldControlId(f.key);
+      const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
+      label.textContent = f.question || f.label;
+      markOptional(label, f);
+      if (k === 0) {
+        // The label is the page's heading, as the design system has it for
+        // a page that asks one question.
+        heading = el('h2', 'step-heading', { id: 'email-step-heading', tabindex: '-1' });
+        heading.appendChild(label);
+        group.appendChild(heading);
+      } else {
+        group.appendChild(label);
+      }
+      const hint = renderFieldHint(f, controlId + '-hint');
+      if (hint) group.appendChild(hint);
+      // The GOV.UK email address pattern: type=email brings up a phone's
+      // email keyboard, autocomplete offers the address the browser already
+      // knows, and spellcheck is off because an address is not a word. No
+      // placeholder: the hint says why it is asked.
+      const input = el('input', 'finput', f.type === 'email'
+        ? { type: 'email', id: controlId, 'data-field': f.key, autocomplete: 'email', spellcheck: 'false' }
+        : { type: 'text', id: controlId, 'data-field': f.key });
+      if (f.width) input.classList.add('input-w-' + f.width);
+      describeControl(input, hint);
+      group.appendChild(input);
+      gate.appendChild(group);
+    });
+    const nav = el('div', 'step-nav');
+    const next = el('button', 'btn btn-dark step-continue', { type: 'button' });
+    next.textContent = 'Continue';
+    nav.appendChild(next);
+    gate.appendChild(nav);
+    let errorsShowing = false;
+    next.addEventListener('click', () => {
+      saveDraft();
+      errorsShowing = showStepErrors(gate, summary, { focus: true });
+      if (errorsShowing) return;
+      gate.hidden = true;
+      // Where the person was going: the step a link, a hash or the saved
+      // draft asked for, vetted by its lock when it was asked for.
+      showStep(Math.max(0, currentStep), { force: true });
+    });
+    const follow = () => { if (errorsShowing) errorsShowing = showStepErrors(gate, summary, { focus: false }); };
+    gate.addEventListener('input', follow);
+    gate.addEventListener('change', follow);
+    gate.hidden = true;
+    emailGate = { el: gate, heading, input: gate.querySelector('input[type="email"]') };
+    return gate;
+  }
+  function emailGiven() { return !emailGate || !requiredGroupsOf(emailGate.el).some((g) => !requiredGroupComplete(g)); }
+  function openEmailGate(opts = {}) {
+    if (!emailGate) return;
+    steps.forEach((s) => { s.hidden = true; });
+    emailGate.el.hidden = false;
+    if (opts.silent) return;
+    emailGate.heading.focus({ preventScroll: true });
+    if (typeof emailGate.el.scrollIntoView === 'function') emailGate.el.scrollIntoView({ block: 'start' });
   }
   let taskListEl = null;
   function renderTaskList() {
@@ -5911,6 +5974,7 @@
     if (!opts.force && stepLocked(i)) return false;
     if (returnAfterSave && steps[i] !== returnAfterSave.from) returnAfterSave = null;
     steps.forEach((s, k) => { s.hidden = k !== i; });
+    if (emailGate) emailGate.el.hidden = true;
     const stepEl = steps[i];
     currentStep = i;
     // Asked for a mode, take it; otherwise the step is as it was left, so
@@ -5926,6 +5990,9 @@
       try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     }
     refreshTaskList();
+    // Not without an email address (RPA-99): the page asking for it shows
+    // instead, the URL and the draft keep this step, and Continue lands here.
+    if (!emailGiven()) { openEmailGate({ silent: opts.silent }); return true; }
     if (opts.silent) return true;
     const focusTarget = isChecking(stepEl) ? checkPanelOf(stepEl).querySelector('.check-heading') : stepEl.querySelector('.step-heading, .acc-head, .review-h');
     if (focusTarget) {
@@ -6253,13 +6320,17 @@
     });
     const name = document.getElementById('options-plan-name');
     const person = document.getElementById('options-plan-person');
+    const personEmail = document.getElementById('options-plan-person-email');
+    const change = document.getElementById('options-plan-change');
     const title = () => (doc.querySelector('[data-field="researchTitle"]') || {}).value || '';
     const email = () => (doc.querySelector('[data-field="emailAddress"]') || {}).value || '';
     refreshOptionsMenu = () => {
       name.textContent = title().trim() || 'Untitled plan';
-      // Whose plan this is, under its name, once they have said (RPA-99).
-      if (person) { person.textContent = email().trim(); person.hidden = !person.textContent; }
+      // The address the link back goes to, under the plan's name, with
+      // Change to go back to the page that asked for it (RPA-99).
+      if (person && personEmail) { personEmail.textContent = email().trim(); person.hidden = !personEmail.textContent; }
     };
+    if (change) change.addEventListener('click', () => openEmailGate());
     // Restore replaces doc. Delegate to a stable parent, and read the current
     // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
@@ -6500,6 +6571,9 @@
   function draftContentSignature(draft) {
     const fields = Object.assign({}, draft.fields);
     delete fields.lastUpdated;
+    // Who the plan is for is not what the plan says: giving or correcting
+    // the email address does not date the plan (RPA-99).
+    delete fields.emailAddress;
     const content = Object.assign({}, draft, { fields });
     delete content.ui; // Viewing the timeline does not edit the authored plan.
     return JSON.stringify(content);
@@ -7220,7 +7294,9 @@
     if (lastUpdatedManual) return true;
     const header = doc.querySelector('.doc-header').cloneNode(true);
     header.querySelector('.dateline')?.remove();
-    if (fieldHasContent(header) || Array.from(doc.querySelectorAll('.field')).some(fieldHasContent)) return true;
+    // The page before the plan is not the plan: the email address is not
+    // writing a backup would replace (RPA-99).
+    if (fieldHasContent(header) || Array.from(doc.querySelectorAll('.field:not(.field-email)')).some(fieldHasContent)) return true;
     const live = collectDraft();
     const complete = carryUnrendered(collectDraft());
     const hasValue = (value) => {
@@ -7301,6 +7377,11 @@
   function replacePlanFromBackup(draft) {
     const store = draftStore();
     if (!store) throw new Error('Browser storage is unavailable. The current plan has been kept; allow storage and try again.');
+    // The plan is replaced, the person is not (RPA-99): the address given at
+    // this keyboard stays, and a backup's own fills in only where there is
+    // none yet, so restoring a colleague's plan does not send them the link.
+    const who = ((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
+    if (who) draft = Object.assign({}, draft, { fields: Object.assign({}, draft.fields, { emailAddress: who }) });
     // Keep the original nodes and closures, including feedback, focus and any
     // unsaved text. A failed rebuild never has to reconstruct the original.
     const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
@@ -7423,7 +7504,7 @@
     lastUpdatedManual = false;
     timelineVisible = false;
     if (updateTimelineVisibility) updateTimelineVisibility();
-    doc.querySelectorAll('input[type="text"], input[type="email"]').forEach((el) => { el.value = ''; });
+    doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';

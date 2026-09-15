@@ -76,7 +76,8 @@ test('the choice is saved and restored in the shape a dropdown used', async (t) 
   const { document, window } = app;
 
   choose(window, group(document).radios[2]);
-  const raw = await waitFor(() => window.localStorage.getItem(DRAFT_KEY), {
+  // The address given before the plan is already saved (RPA-99): wait for the choice itself.
+  const raw = await waitFor(() => { const r = window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Large (13') && r; }, {
     timeout: 5000,
     message: 'the draft was never saved',
   });
