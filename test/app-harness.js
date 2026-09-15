@@ -225,7 +225,9 @@ async function bootApp(options = {}) {
     // .title-inp, not [data-field="title"]: field keys are derived from
     // labels, so keying this on one means a copy edit in the template stops
     // every booting test with a timeout instead of a useful failure.
-    () => document.querySelector('.title-inp') || document.querySelector('.doc-error'),
+    // A link nobody recognises leaves nothing of the plan in the page, so
+    // that counts as finished rendering too (RPA-137).
+    () => document.querySelector('.title-inp') || document.querySelector('.doc-error') || document.querySelector('.dead-link:not([hidden])'),
     { message: 'The real application did not finish rendering' }
   );
   const loadError = document.querySelector('.doc-error');

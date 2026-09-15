@@ -5577,12 +5577,46 @@
     withdrawn: 'tag',
   };
   let signOffRecord = null;
+  // A link identifies a role on one plan and nothing else (RPA-137). It is
+  // read from "?as=" once, at boot: the role it names is who the person is
+  // for as long as the page is open, in place of the plan simply turning to
+  // whoever is next. A link that is not recognised, or has been withdrawn,
+  // opens nothing of the plan.
+  let linkToken = '';
+  let linkRole = null;
+  let linkState = 'none';   // none | ok | revoked | unknown
+  let deadLinkPage = null;
+  function newLinkToken() {
+    const random = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : String(Math.random()).slice(2) + String(Date.now());
+    return random.replace(/-/g, '');
+  }
+  function linkUrlFor(token) {
+    return window.location.origin + window.location.pathname + '?as=' + encodeURIComponent(token) + '#review';
+  }
+  // Resolved against the plan this browser holds. Until a plan lives on a
+  // server (RPA-136) a link only opens on the device that wrote it, which
+  // is what the page says rather than something it pretends away.
+  function resolveLink() {
+    linkToken = String(new URLSearchParams(window.location.search).get('as') || '').trim();
+    linkRole = null;
+    linkState = 'none';
+    if (!linkToken) return;
+    const found = signOffRecord ? workflow().roleForToken(signOffRecord, linkToken) : null;
+    if (!found) { linkState = 'unknown'; return; }
+    if (found.revoked) { linkState = 'revoked'; return; }
+    linkState = 'ok';
+    linkRole = found.role;
+  }
   // Whose move it is. While each person has a link of their own (RPA-137)
   // this is read from the link instead; until then one device stands in
   // for two people, and the plan is always shown to whoever is next.
   function turnRole(record) {
     return record.status === 'awaitingCounterparty' ? workflow().counterpartyRole(record) : record.authorRole;
   }
+  // A link says who you are. Without one, the plan turns to whoever is next,
+  // which is how one device stands in for two people until the links can be
+  // sent (RPA-84).
+  function actingRole(record) { return linkRole || turnRole(record); }
   let redrawSignOff = () => {};
   const workflow = () => window.RPA_PLAN_WORKFLOW;
 
@@ -5657,7 +5691,18 @@
 
     // The temporary half: one device standing in for two people.
     const note = el('p', 'sign-off-note');
-    note.textContent = 'Both people sign on this one device for now. A plan sent for real reaches the other person through a link of their own.';
+
+    // The link the other person needs. It cannot be emailed yet (RPA-84)
+    // and it only opens on this device until a plan lives on a server
+    // (RPA-136), so the block says both of those rather than implying it
+    // has been sent.
+    const linkBlock = el('div', 'sign-off-link');
+    const linkHead = el('h4', 'sign-off-link-head');
+    const linkHint = el('p', 'sign-off-link-hint');
+    const linkUrl = el('code', 'sign-off-link-url', { tabindex: '0' });
+    const linkActions = el('div', 'sign-off-link-actions');
+    const linkStatus = el('p', 'sign-off-link-status', { role: 'status', 'aria-live': 'polite' });
+    linkBlock.append(linkHead, linkHint, linkUrl, linkActions, linkStatus);
 
     const summary = renderErrorSummary();
     const notice = el('div', 'sign-off-notice');
@@ -5672,7 +5717,7 @@
     });
     const actions = el('div', 'sign-off-actions');
     const printed = el('div', 'sign-off-printed');
-    wrap.append(head, stateLine, note, summary, notice, setup, fields, actions, printed);
+    wrap.append(head, stateLine, note, summary, notice, linkBlock, setup, fields, actions, printed);
 
     // Who is who, asked once: the role the person filling this in holds,
     // and where the other person is to be reached. The author's own address
@@ -5786,7 +5831,8 @@
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
       parties[W.otherRole(authorRole)] = { email: other, displayName: signOffPersonName(W.otherRole(authorRole)) };
-      const created = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
+      const tokens = { leadResearcher: newLinkToken(), projectRequester: newLinkToken() };
+      const created = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties, tokens });
       if (!created.ok) { sayRefusal(created); return; }
       // Signing and sending are the one act the person just performed, so
       // they are the one act here: the record arrives already signed.
@@ -5820,6 +5866,16 @@
       if (after) heading.focus({ preventScroll: true });
     }
 
+    function sayLinkStatus(message) { linkStatus.textContent = message; }
+    // Copying is offered where the browser allows it; the address is on the
+    // page and selectable either way, which is the part that always works.
+    function copyLink(url) {
+      const clipboard = window.navigator && window.navigator.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== 'function') { sayLinkStatus('Select the link above and copy it.'); return; }
+      Promise.resolve(clipboard.writeText(url))
+        .then(() => sayLinkStatus('Link copied. Send it to ' + signOffPersonName(W.counterpartyRole(signOffRecord)) + '.'))
+        .catch(() => sayLinkStatus('Select the link above and copy it.'));
+    }
     function button(label, onClick, ghost) {
       const b = el('button', 'btn ' + (ghost ? 'btn-ghost' : 'btn-dark'), { type: 'button' });
       b.textContent = label;
@@ -5840,6 +5896,12 @@
       roleField.hidden = Boolean(record) || setupStep !== 'role';
       otherField.hidden = Boolean(record) || setupStep !== 'send';
       note.hidden = !record;
+      linkBlock.hidden = true;
+      if (record) {
+        note.textContent = linkRole
+          ? 'You are signing as ' + signOffPersonName(linkRole) + ', the ' + signOffRoleName(linkRole).toLowerCase() + ', because that is whose link opened this plan. Not you? Tell the person who sent it.'
+          : 'Both people sign on this one device for now. A plan sent for real reaches the other person through a link of their own.';
+      }
       Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
 
       if (!record) {
@@ -5868,7 +5930,7 @@
       // Whoever has the next move: the author until it is sent, the other
       // person while it waits for them, the author again when changes are
       // asked for. There is nothing to choose, so nothing asks.
-      const me = turnRole(record);
+      const me = actingRole(record);
       const author = record.authorRole;
       const other = W.counterpartyRole(record);
       const allowed = W.permissionsFor(record, me);
@@ -5904,6 +5966,40 @@
         notice.appendChild(line('sign-off-signature', 'Signed by ' + who + ' on ' + signOffDate(signature.at) + ', revision ' + signature.revision + '.'));
       });
 
+      // The author's copy of the other person's link: what to send, and
+      // the two ways to take it back or replace it.
+      const held = record.parties[other];
+      const live = Boolean(held.token) && !held.revokedAt;
+      // Whose browser this is. A link says so outright; without one, this is
+      // the browser the plan was written in, which is the author's. The
+      // panel turns to whoever must act next, but sending the link stays
+      // the author's to do and has to be reachable while they wait.
+      const viewerIsAuthor = linkRole ? linkRole === author : true;
+      linkBlock.hidden = !(viewerIsAuthor && W.permissionsFor(record, author).canManageLinks);
+      if (!linkBlock.hidden) {
+        linkHead.textContent = live ? 'Send this link to ' + otherName : 'The link to ' + otherName + ' has been withdrawn';
+        linkHint.textContent = live
+          ? 'It opens the plan for them to read and sign, as themselves. It cannot be emailed yet, and it only opens in this browser until the plan is kept on a server.'
+          : 'Nobody can open the plan with it. Issue a new one when you are ready to send it again.';
+        linkUrl.textContent = live ? linkUrlFor(held.token) : '';
+        linkUrl.hidden = !live;
+        linkActions.replaceChildren();
+        if (live) {
+          linkActions.append(
+            button('Copy link', () => copyLink(linkUrlFor(held.token)), true),
+            // Managing links is the author's act whoever the panel is
+            // currently turned to, so it is made in the author's name.
+            button('Withdraw link', () => {
+              if (act({ transition: 'revokeLink', role: author, forRole: other })) sayLinkStatus('The link has been withdrawn. Nobody can open the plan with it.');
+            }, true)
+          );
+        } else {
+          linkActions.appendChild(button('Issue a new link', () => {
+            if (act({ transition: 'issueLink', role: author, forRole: other, token: newLinkToken() })) sayLinkStatus('A new link. The one before it no longer works.');
+          }, true));
+        }
+      }
+
       if (requesting && allowed.canRequestChanges) {
         notice.appendChild(noteField);
         actions.append(
@@ -5919,6 +6015,10 @@
         if (allowed.canRequestChanges) actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
       } else if (allowed.canRequestChanges) {
         actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
+      } else if (linkRole && (record.status === 'awaitingCounterparty' || record.status === 'changesRequested')) {
+        // A link pins who you are, so you can be looking at a plan that is
+        // waiting on the other person. Say so rather than show a dead end.
+        notice.appendChild(line('sign-off-waiting', 'Nothing for you to do. This plan is with ' + (record.status === 'awaitingCounterparty' ? otherName : authorName) + '.'));
       }
       if (allowed.canReopen) actions.appendChild(button('Reopen', () => { act({ transition: 'reopen', role: me }); heading.focus({ preventScroll: true }); }, true));
 
@@ -5954,6 +6054,8 @@
     redrawSignOff = () => {};
     startPage = null;
     emailGate = null;
+    deadLinkPage = null;
+    doc.appendChild(renderDeadLink());
     doc.appendChild(renderStartPage());
     if (schema.header.before.length) doc.appendChild(renderEmailGate(schema.header.before));
     doc.appendChild(renderHeader(schema.header));
@@ -6259,6 +6361,40 @@
     startPage.heading.focus({ preventScroll: true });
     if (typeof startPage.el.scrollIntoView === 'function') startPage.el.scrollIntoView({ block: 'start' });
   }
+
+  // A link that is not recognised opens this and nothing else: no plan, no
+  // sign-off, not even the name of the study (RPA-137).
+  function renderDeadLink() {
+    const page = el('section', 'dead-link', { 'aria-labelledby': 'dead-link-heading' });
+    const heading = el('h2', 'step-heading', { id: 'dead-link-heading', tabindex: '-1' });
+    heading.textContent = 'This link no longer works';
+    const body = el('p', 'dead-link-body');
+    const own = el('p');
+    const back = el('a', 'dead-link-back', { href: window.location.pathname });
+    back.textContent = 'Open your own plan';
+    own.appendChild(back);
+    page.append(heading, body, own);
+    page.hidden = true;
+    deadLinkPage = { el: page, heading, body };
+    return page;
+  }
+  function openDeadLink() {
+    if (!deadLinkPage) return;
+    steps.forEach((s) => { s.hidden = true; });
+    if (startPage) startPage.el.hidden = true;
+    if (emailGate) emailGate.el.hidden = true;
+    const author = signOffRecord ? signOffRecord.parties[signOffRecord.authorRole] : null;
+    deadLinkPage.body.textContent = linkState === 'revoked'
+      ? 'The person who sent it has withdrawn it. Ask them for a new one' + (author && author.email ? ': ' + author.email : '') + '.'
+      : 'It may have been withdrawn, or it may be for a plan this browser does not hold. Ask the person who sent it.';
+    deadLinkPage.el.hidden = false;
+    // Hidden is not gone. A link nobody recognises leaves nothing of the
+    // plan in the page at all, which is what there will be to show once a
+    // plan is kept on a server rather than in this browser (RPA-136).
+    doc.replaceChildren(deadLinkPage.el);
+    deadLinkPage.heading.focus({ preventScroll: true });
+  }
+  function linkIsDead() { return linkState === 'revoked' || linkState === 'unknown'; }
 
   let emailGate = null;
   // Two things the GOV.UK Pay team did that cut invalid addresses by a
@@ -6652,8 +6788,10 @@
     // restored draft may still land on it: it was reachable when saved.
     if (!opts.force && stepLocked(i)) return false;
     if (returnAfterSave && steps[i] !== returnAfterSave.from) returnAfterSave = null;
+    if (linkIsDead()) { openDeadLink(); return true; }
     steps.forEach((s, k) => { s.hidden = k !== i; });
     if (startPage) startPage.el.hidden = true;
+    if (deadLinkPage) deadLinkPage.el.hidden = true;
     if (emailGate) emailGate.el.hidden = true;
     const stepEl = steps[i];
     currentStep = i;
@@ -7824,6 +7962,8 @@
   function initDraftPersistence() {
     const arrivedAt = location.hash;   // before the restore rewrites it to the saved step
     const restored = restoreDraft();
+    resolveLink();   // the plan is in hand, so a link can be judged against it
+    if (linkIsDead()) { openDeadLink(); bindDraftPersistence(); return; }
     if (!restored) restoreStepPosition(null);
     // The start page: a first visit with nothing saved and no link into a
     // step, or asked for by its address (RPA-81).
