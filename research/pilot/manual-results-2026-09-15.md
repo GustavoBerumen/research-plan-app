@@ -34,6 +34,10 @@ or that a deployed service/private file exchange was verified.
   new local signatures. No AI evaluation or score is required.
 - Newly entered initials are capitalised when the date is added, and that
   change is saved. Existing dated signatures keep their original text/date.
+- GitHub CI also exposed a keyboard-focus race in Show answers. A delayed
+  disclosure event could rebuild already rendered controls and remove focus
+  from Change. The duplicate rebuild is prevented; a deterministic regression
+  reproduces the old failure.
 
 Incomplete drafts remain editable, downloadable and restorable. Existing
 signature history remains historical evidence, including records created by

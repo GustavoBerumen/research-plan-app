@@ -5545,7 +5545,9 @@
         const rows = el('dl', 'summary-list');
         const drawRows = () => renderSummaryRows(stepEl, rows, (g) => changeFromReview(stepEl, g, slug));
         const wording = () => { revealText.textContent = (answers.open ? 'Hide' : 'Show') + ' answers'; };
-        answers.addEventListener('toggle', () => { wording(); if (answers.open) drawRows(); });
+        // Restoring an open disclosure draws eagerly below. Its later native
+        // toggle must not replace those controls and discard restored focus.
+        answers.addEventListener('toggle', () => { wording(); if (answers.open && !rows.childElementCount) drawRows(); });
         answers.append(reveal, rows);
         if (revealed.has(slug)) { answers.open = true; drawRows(); }
         wording();
