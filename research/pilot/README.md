@@ -1,57 +1,52 @@
-# Invited pilot instructions and checks
+# Pilot preparation and instructions
 
-Prepared 11 September 2026 for [RPA-6](https://turingtestable.atlassian.net/browse/RPA-6).
-This is the shareable operating pack for the agreed JSON/PDF pilot. It draws on
-the earlier local review pack, which remains preserved with its historical evidence.
-Publication of these documents does not establish a deployed or accepted release.
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
 
-## Use the pack
+Updated 15 September 2026 under [RPA-6](https://turingtestable.atlassian.net/browse/RPA-6).
+Start with the [release proposal](release-proposal-2026-09-15.md) and
+[decision sheet](operating-decisions-2026-09-15.md).
+
+The accepted mode for Thursday is a clearly labelled browser-local sequential
+review demonstration, submissions OFF, with corrected wording and reviewed
+feedback handling. Max accepted the feedback gate and scoped fixes. Unchanged candidate `f327326` is no-go
+for participant release because of reproduced dead-link recovery loss and
+misleading delivery wording. Publishing documentation does not accept a build.
 
 | Reader | Document | Purpose |
 | --- | --- | --- |
-| Participant | [Participant guide](participant-guide.md) | Sign in, keep writing, use AI deliberately, download and restore |
-| Gustavo and Max | [Private file exchange](private-file-exchange.md) | Verify access, transfer, confirm receipt, return a revision and delete retained copies |
-| Session observer | [Manual observation sheet](manual-observations.md) | Copy the blank template into the private notes location |
-| Max | [Release checklist](release-checklist.md) | Record the actual deployment, tests and go/no-go |
-| Reviewer | [Evidence and remaining work](evidence.md) | Distinguish code, local/manual results and outstanding hosted checks |
+| Max and Gustavo | [Release proposal](release-proposal-2026-09-15.md) | Exact candidate, choices, blockers, sequence and rollback |
+| Decision makers | [Operating decisions](operating-decisions-2026-09-15.md) | One grouped decision list; conditional collection requirements |
+| Participant, after acceptance | [Participant guide](participant-guide.md) | Honest local-demo instructions and backup/recovery |
+| Verifier | [Candidate verification](candidate-verification-2026-09-15.md) | Tests, source references, reproduced failures and limits |
+| Release operator | [Release checklist](release-checklist.md) | Bounded checks on the exact approved hosted build |
+| Observer | [Manual observations](manual-observations.md) | Distinguish local demonstration, AI, collection and assistance |
+| Historical/contingency operator | [Private file exchange](private-file-exchange.md) | Previously agreed private handling, only when explicitly needed |
+| Reviewer | [Evidence](evidence.md) | New evidence separated from older local, provider and hosted results |
 
-Use Gustavo's existing 35-minute discussion guide to run sessions. The participant
-instructions and observation columns support that guide; this pack introduces no
-replacement timetable or research script. Reconciliation awaits access to the
-actual guide. Fill the private operational details below before distributing the
-participant guide; never publish participant links, completed notes or credentials
-in this repository or Jira.
+## Scope and ownership
 
-## Agreed scope and owners
+- Max owns technical verification, deployment and rollback; Gustavo owns sessions,
+  covers agreed costs and retains AI-stop authority. RPA-1/RPA-6 remain open.
+- Human sequential review is an MVP objective. Current links use this browser's
+  saved plan. Neither submissions OFF nor ON supplies live shared review/email.
+- JSON remains the backup/recovery representation, preserving partial drafts.
+  Manual JSON exchange is historical/contingency handling, not the reviewer product.
+- Completed-plan R2 collection is independently activated using
+  [SUBMISSIONS.md](../../SUBMISSIONS.md). Immutable submissions and mutable review
+  records have different requirements. No new participant bucket is authorised.
+- Existing team-held records keep their agreed retention and deletion obligations:
+  four weeks after the last session or earlier on request to Gustavo. Confirm actual
+  dates, access and notices privately; no records are silently discarded.
+- Feedback is separate local-file collection and remains enabled in this source.
+  Its gate/handling must be reviewed before deployment to existing password holders.
+- Last-observed provider/hosting settings are dated evidence: protected pilot,
+  one Oregon instance, auto-deploy Off, US$3/month AI cap and auto-reload Off.
+  Recheck before rollout; do not change them through this documentation task.
 
-- Max owns deployment, verification, release and rollback in his Render workspace.
-  Gustavo covers the agreed costs and retains authority to stop AI spending.
-  Card selection remains a Max/Gustavo decision.
-- Gustavo owns sessions, the discussion guide and the private Google Drive folder.
-  Gus and Max read collected plans and notes; each participant accesses only their
-  own upload/return location. Use session IDs rather than names in filenames.
-- The selected journey is browser draft → JSON download → deliberate private
-  upload/receipt → reviewer restore/edit → revised download/return → author restore.
-  Print / Save as PDF provides a readable copy. Restore replaces, rather than merges.
-- Plans, revisions and session notes are deleted four weeks after the last session,
-  or earlier on request to Gus. Actual permissions and exchange are still to verify.
-- Finish/Send, direct PDF/Word downloads, email collection/delivery, CSV, accounts
-  and automatic telemetry remain later work. Pilot calibration, uploads, library
-  writes and app Google/Jira integrations stay disabled.
-
-## Remaining private operational details
-
-| Value | Owner | Where to record it |
-| --- | --- | --- |
-| Canonical HTTPS address and actual release/deploy identity | Max | Release record; normal app URL may be shared with invitees |
-| Shared password and API key | Max | Private credential storage and Render secrets only |
-| Card and provider budget/credits confirmed | Max + Gus | Account settings; record non-secret verification only |
-| Actual parent folder and isolated per-session links | Gus | Private operator record; give each participant only their own link |
-| Session dates, final deletion date and contact method for Gus | Gus | Private operator record and participant notice |
-| Existing discussion guide reference and reconciled notice | Gus + Max | Private session record |
-
-Use the [deployment runbook](../../DEPLOYMENT.md) for service settings and AI stop
-procedures. Follow [RPA-80's workflow decision](https://turingtestable.atlassian.net/browse/RPA-80?focusedCommentId=10068)
-and [Gus's handling decision](https://turingtestable.atlassian.net/browse/RPA-80?focusedCommentId=10087).
-RPA-1 and RPA-6 remain open until their actual acceptance gates pass; RPA-7 owns
-session results and RPA-83 the later public release.
+Keep credentials, actual participant files, links and completed observation sheets
+private. Use [DEPLOYMENT.md](../../DEPLOYMENT.md) for the service runbook. No new
+discussion-guide lookup, PDF round, draft-PR takeover or public release is required.
