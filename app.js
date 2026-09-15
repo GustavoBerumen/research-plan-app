@@ -7,6 +7,9 @@
   let doc = document.getElementById('doc');
   let formEvents = new AbortController();
   let formSchema = null;
+  // The plan's linked relationships live in the model, not in counts taken
+  // off the page (RPA-46).
+  const PLAN = window.RPA_PLAN_MODEL;
   const {
     bindTextarea,
     bindTextareas,
@@ -2899,7 +2902,7 @@
   }
 
   function shortQuestionLabel(question, index) {
-    const rq = 'RQ' + (index + 1);
+    const rq = PLAN.questionNumber(index);
     const cleaned = (question || '').replace(/[?!.\s]+$/, '').trim();
     if (!cleaned) return rq;
 
@@ -2931,8 +2934,8 @@
     const questions = rqList
       ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim())
       : [];
-    const hasAnyQuestion = questions.some(Boolean);
-    const targetCount = hasAnyQuestion ? questions.length : 1;
+    const hasAnyQuestion = PLAN.hasAnyQuestion(questions);
+    const targetCount = PLAN.groupCount(questions);
     const placeholder = container.dataset.placeholder || '';
 
     let groups = methodsGroupEls();
@@ -2969,7 +2972,7 @@
         group.setAttribute('aria-label', 'Methods for ' + shortQuestionLabel(text, i) + ': ' + text);
       } else {
         label.removeAttribute('title');
-        group.setAttribute('aria-label', hasAnyQuestion ? 'Methods for RQ' + (i + 1) : 'Methods');
+        group.setAttribute('aria-label', hasAnyQuestion ? 'Methods for ' + PLAN.questionNumber(i) : 'Methods');
       }
     });
     container.classList.toggle('methods-grouped', hasAnyQuestion);
@@ -3697,10 +3700,7 @@
   // Keeps each visible row's original number even when an earlier row is
   // blank, so Outcomes always pair with the same-position Research Question.
   function collectNumberedListValues(list) {
-    return Array.from(list.querySelectorAll('.list-row')).map((row, index) => ({
-      number: index + 1,
-      text: row.querySelector('.list-input').value.trim(),
-    })).filter((entry) => entry.text);
+    return PLAN.answered(Array.from(list.querySelectorAll('.list-row')).map((row) => row.querySelector('.list-input').value));
   }
 
   // Outcomes is a "linked" list (see renderLinkedOutcomesField below): it has
@@ -4176,7 +4176,8 @@
     const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
     const outcomesList = outcomesListEl();
     if (!rqList || !outcomesList) return;
-    const targetCount = rqList.querySelectorAll('.list-row').length;
+    // Outcomes track questions row for row; the model says how many.
+    const targetCount = PLAN.outcomeCount(Array.from(rqList.querySelectorAll('.list-input')).map((input) => input.value));
     while (outcomesListEl().querySelectorAll('.list-row').length < targetCount) {
       addOutcomeRow();
     }
