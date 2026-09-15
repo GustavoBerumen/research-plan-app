@@ -5729,11 +5729,140 @@
   // there. Not a step: it has no number, no place in the task list, no
   // check page, and it does not print.
   let emailGate = null;
+  // Two things the GOV.UK Pay team did that cut invalid addresses by a
+  // third (Gus, 15 September 2026). The address is played back under the
+  // box as it is typed, so a slip is easier to see than in the box. And on
+  // Continue, a last part that is a letter or two from a common one is
+  // offered as a choice, "There might be a mistake in the last part of your
+  // email address", the likely address first and the typed one second.
+  // Neither is an error: the typed address stands if the person says so.
+  // The lists are common providers and endings; a company's domain is only
+  // judged at its ending, which is where .con and .cmo live. A short
+  // provider name is matched strictly (one slip), a longer one loosely
+  // (two), so bbc.com is not taken for mac.com. No "co": it would cost the
+  // commonest slip of all, .co for .com, more than it would ever catch.
+  const EMAIL_DOMAINS = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.co.uk', 'outlook.com', 'live.com', 'live.co.uk', 'msn.com',
+    'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com', 'protonmail.com', 'proton.me', 'mail.com',
+    'gmx.com', 'gmx.co.uk', 'btinternet.com', 'sky.com', 'virginmedia.com', 'talktalk.net', 'fastmail.com', 'zoho.com'];
+  const EMAIL_ENDINGS = ['com', 'co.uk', 'org.uk', 'gov.uk', 'ac.uk', 'nhs.uk', 'uk', 'org', 'net', 'edu', 'gov', 'io', 'me', 'ie', 'eu',
+    'de', 'fr', 'es', 'it', 'nl', 'be', 'ch', 'at', 'se', 'dk', 'no', 'fi', 'pt', 'pl', 'cz', 'us', 'ca', 'mx', 'com.mx', 'br', 'com.br',
+    'ar', 'au', 'com.au', 'nz', 'co.nz', 'in', 'co.in', 'jp', 'co.jp', 'cn', 'sg', 'hk', 'za', 'co.za', 'ai', 'app', 'dev', 'info', 'biz'];
+  // Edits between two strings: an insertion, a deletion, a substitution or
+  // two adjacent letters swapped each count one.
+  function editDistance(a, b) {
+    const d = [];
+    for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+    return d[a.length][b.length];
+  }
+  // The nearest entry within its allowance, the first of equals: the lists
+  // put the likeliest first, so "com" wins over "ca" for "co".
+  function nearest(value, list, allowance) {
+    let best = null;
+    let bestDistance = Infinity;
+    list.forEach((entry) => {
+      const distance = editDistance(value, entry);
+      if (distance <= allowance(entry) && distance < bestDistance) { best = entry; bestDistance = distance; }
+    });
+    return best;
+  }
+  function suggestEmail(value) {
+    const at = value.lastIndexOf('@');
+    if (at < 1) return null;
+    const local = value.slice(0, at);
+    const domain = value.slice(at + 1).toLowerCase();
+    if (EMAIL_DOMAINS.includes(domain)) return null;
+    const provider = nearest(domain, EMAIL_DOMAINS, (entry) => (entry.indexOf('.') >= 5 ? 2 : 1));
+    if (provider) return local + '@' + provider;
+    const dot = domain.indexOf('.');
+    if (dot < 1) return null;
+    const ending = domain.slice(dot + 1);
+    if (EMAIL_ENDINGS.includes(ending)) return null;
+    const nearEnding = nearest(ending, EMAIL_ENDINGS, () => 1);
+    if (nearEnding) return local + '@' + domain.slice(0, dot + 1) + nearEnding;
+    // A subdomain in front, mail.ocado.con: the last part alone.
+    const lastDot = domain.lastIndexOf('.');
+    const last = domain.slice(lastDot + 1);
+    if (lastDot > dot && !EMAIL_ENDINGS.includes(last)) {
+      const nearLast = nearest(last, EMAIL_ENDINGS, () => 1);
+      if (nearLast) return local + '@' + domain.slice(0, lastDot + 1) + nearLast;
+    }
+    return null;
+  }
+  function renderEmailPlayback(input) {
+    const box = el('div', 'email-playback');
+    const lead = el('p', 'email-playback-lead');
+    lead.textContent = 'A link to your plan will be sent to:';
+    const value = el('p', 'email-playback-value');
+    box.append(lead, value);
+    const refresh = () => { const v = input.value.trim(); value.textContent = v; box.hidden = !v; };
+    input.addEventListener('input', refresh);
+    refresh();
+    return { el: box, refresh };
+  }
+  function showEmailSuggestion(typed, suggested) {
+    const { suggest, input, playback } = emailGate;
+    suggest.replaceChildren();
+    const fieldset = el('fieldset', 'email-suggest-fieldset');
+    const legend = el('legend', 'email-suggest-legend', { tabindex: '-1' });
+    legend.textContent = 'There might be a mistake in the last part of your email address. Select your email address.';
+    const group = el('div', 'radio-group');
+    const at = suggested.lastIndexOf('@');
+    [suggested, typed].forEach((value, i) => {
+      const item = el('div', 'radio-item');
+      const id = 'email-suggest-' + i;
+      const radio = el('input', 'radio-input', { type: 'radio', id: id, name: 'email-suggest', value: value });
+      const label = el('label', 'radio-label', { for: id });
+      if (i === 0) {
+        // The part that changed, in bold, so the difference can be seen.
+        radio.checked = true;
+        label.appendChild(document.createTextNode(value.slice(0, at + 1)));
+        const changed = el('b');
+        changed.textContent = value.slice(at + 1);
+        label.appendChild(changed);
+      } else {
+        label.textContent = value;
+      }
+      // The choice goes into the box at once, so what is played back is
+      // what Continue will take.
+      radio.addEventListener('change', () => { if (!radio.checked) return; input.value = value; playback.refresh(); });
+      item.append(radio, label);
+      group.appendChild(item);
+    });
+    fieldset.append(legend, group);
+    suggest.appendChild(fieldset);
+    suggest.hidden = false;
+    legend.focus({ preventScroll: true });
+  }
+  // On Continue with a well-formed address: the choice made on an offer is
+  // taken; otherwise a likely slip is offered, and Continue waits. The page
+  // restored with an address plays it back through the same input event
+  // the restore fires on every box.
+  function settleEmailSuggestion() {
+    const { input, suggest, playback } = emailGate;
+    if (!input) return true;
+    const value = input.value.trim();
+    const chosen = !suggest.hidden && suggest.querySelector('.radio-input:checked');
+    if (chosen) { input.value = chosen.value; playback.refresh(); suggest.hidden = true; return true; }
+    const suggested = suggestEmail(value);
+    if (!suggested) return true;
+    showEmailSuggestion(value, suggested);
+    return false;
+  }
   function renderEmailGate(fields) {
     const gate = el('section', 'email-step', { 'aria-labelledby': 'email-step-heading' });
     const summary = renderErrorSummary();
     gate.appendChild(summary);
     let heading = null;
+    let playback = null;
+    let suggest = null;
     fields.forEach((f, k) => {
       const group = el('div', 'field field-email');
       const controlId = fieldControlId(f.key);
@@ -5761,6 +5890,15 @@
       if (f.width) input.classList.add('input-w-' + f.width);
       describeControl(input, hint);
       group.appendChild(input);
+      if (f.type === 'email') {
+        playback = renderEmailPlayback(input);
+        group.appendChild(playback.el);
+        suggest = el('div', 'email-suggest');
+        suggest.hidden = true;
+        group.appendChild(suggest);
+        // Typing again withdraws an offer and any choice made on it.
+        input.addEventListener('input', () => { suggest.hidden = true; });
+      }
       gate.appendChild(group);
     });
     const nav = el('div', 'step-nav');
@@ -5773,6 +5911,8 @@
       saveDraft();
       errorsShowing = showStepErrors(gate, summary, { focus: true });
       if (errorsShowing) return;
+      if (!settleEmailSuggestion()) return;
+      saveDraft();   // the address as settled, before the plan opens on it
       gate.hidden = true;
       // Where the person was going: the step a link, a hash or the saved
       // draft asked for, vetted by its lock when it was asked for.
@@ -5782,7 +5922,7 @@
     gate.addEventListener('input', follow);
     gate.addEventListener('change', follow);
     gate.hidden = true;
-    emailGate = { el: gate, heading, input: gate.querySelector('input[type="email"]') };
+    emailGate = { el: gate, heading, input: gate.querySelector('input[type="email"]'), playback, suggest };
     return gate;
   }
   function emailGiven() { return !emailGate || !requiredGroupsOf(emailGate.el).some((g) => !requiredGroupComplete(g)); }

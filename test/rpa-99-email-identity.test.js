@@ -231,6 +231,142 @@ test('a backup restore replaces the plan, not the person: the address stays, and
   assert.deepEqual(app.jsdomErrors, []);
 });
 
+// ---------- what the GOV.UK Pay team did: play it back, catch the slip ----------
+const playbackOf = (d) => d.querySelector('.email-playback');
+const suggestOf = (d) => d.querySelector('.email-suggest');
+const offered = (d) => Array.from(suggestOf(d).querySelectorAll('.radio-input')).map((r) => r.value);
+
+test('the address is played back under the box as it is typed, and again when the page is reopened with one saved', async (t) => {
+  const app = await bootApp({ email: false });
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const playback = playbackOf(d);
+  assert.equal(playback.hidden, true, 'nothing to play back yet');
+  assert.ok(playback.closest('.field-email') && playback.previousElementSibling === emailOf(d), 'inset under the box');
+  setValue(window, emailOf(d), 'joeb');
+  assert.equal(playback.hidden, false);
+  assert.equal(text(playback.querySelector('.email-playback-lead')), 'A link to your plan will be sent to:');
+  assert.equal(text(playback.querySelector('.email-playback-value')), 'joeb');
+  setValue(window, emailOf(d), ' joebloggs@hotmail.com ');
+  assert.equal(text(playback.querySelector('.email-playback-value')), 'joebloggs@hotmail.com', 'as typed, the spaces aside');
+  setValue(window, emailOf(d), '');
+  assert.equal(playback.hidden, true, 'and gone when the box is emptied');
+  assert.equal(playback.getAttribute('aria-live'), null, 'not read out on every keystroke: the box already is');
+
+  const back = await bootApp({ email: 'gus@example.com' });
+  t.after(() => back.close());
+  back.document.getElementById('menu-btn').click();
+  back.document.getElementById('options-plan-change').click();
+  assert.equal(playbackOf(back.document).hidden, false, 'a saved address is played back when the page comes back');
+  assert.equal(text(playbackOf(back.document).querySelector('.email-playback-value')), 'gus@example.com');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('a likely slip in the last part is offered as a choice on Continue, the likely address first and already selected, and taking it opens the plan', async (t) => {
+  const app = await bootApp({ email: false });
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const gate = gateOf(d);
+  setValue(window, emailOf(d), 'joebloggs@hotnail.com');
+  press(gate);
+  assert.equal(gate.hidden, false, 'Continue waits');
+  assert.deepEqual(visible(d), []);
+  assert.equal(gate.querySelector('.error-summary').hidden, true, 'not an error: no summary, no red box');
+  assert.equal(emailOf(d).closest('.field').classList.contains('field-invalid'), false);
+  const suggest = suggestOf(d);
+  assert.equal(suggest.hidden, false);
+  assert.ok(suggest.previousElementSibling === playbackOf(d), 'under the playback, inside the question');
+  assert.equal(text(suggest.querySelector('legend')), 'There might be a mistake in the last part of your email address. Select your email address.');
+  assert.equal(d.activeElement, suggest.querySelector('legend'), 'focus goes to the offer');
+  assert.deepEqual(offered(d), ['joebloggs@hotmail.com', 'joebloggs@hotnail.com'], 'the likely address first, the typed one second');
+  const radios = suggest.querySelectorAll('.radio-input');
+  assert.equal(radios[0].checked, true, 'the likely one already selected');
+  assert.equal(suggest.querySelector('label[for="' + radios[0].id + '"]').innerHTML, 'joebloggs@<b>hotmail.com</b>', 'the part that changed in bold');
+  assert.equal(text(suggest.querySelector('label[for="' + radios[1].id + '"]')), 'joebloggs@hotnail.com');
+  assert.equal(emailOf(d).value, 'joebloggs@hotnail.com', 'the box is as typed until a choice is made');
+  press(gate);
+  assert.equal(gate.hidden, true, 'Continue takes the selected address');
+  assert.deepEqual(visible(d), ['sections']);
+  assert.equal(emailOf(d).value, 'joebloggs@hotmail.com');
+  const saved = await waitFor(() => { const dr = draftOf(window); return dr && dr.fields.emailAddress === 'joebloggs@hotmail.com' && dr; });
+  assert.equal(saved.fields.emailAddress, 'joebloggs@hotmail.com', 'and that is what is kept');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('the typed address stands if the person says so; choosing puts the address in the box and the playback; typing again withdraws the offer', async (t) => {
+  const app = await bootApp({ email: false });
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const gate = gateOf(d);
+  setValue(window, emailOf(d), 'gus@ocado.con');
+  press(gate);
+  assert.deepEqual(offered(d), ['gus@ocado.com', 'gus@ocado.con'], 'a company domain is judged at its ending');
+  const [likely, typed] = suggestOf(d).querySelectorAll('.radio-input');
+  typed.click();
+  assert.equal(emailOf(d).value, 'gus@ocado.con');
+  likely.click();
+  assert.equal(emailOf(d).value, 'gus@ocado.com', 'the choice goes into the box at once');
+  assert.equal(text(playbackOf(d).querySelector('.email-playback-value')), 'gus@ocado.com', 'and is played back');
+  typed.click();
+  assert.equal(emailOf(d).value, 'gus@ocado.con', 'back to the typed one');
+  assert.equal(suggestOf(d).hidden, false, 'the offer stays while choosing');
+  press(gate);
+  assert.equal(gate.hidden, true, 'the typed address stands');
+  assert.equal(emailOf(d).value, 'gus@ocado.con');
+  const saved = await waitFor(() => { const dr = draftOf(window); return dr && dr.fields.emailAddress === 'gus@ocado.con' && dr; });
+  assert.equal(saved.fields.emailAddress, 'gus@ocado.con');
+
+  d.getElementById('menu-btn').click();
+  d.getElementById('options-plan-change').click();
+  assert.equal(suggestOf(d).hidden, true, 'the page comes back without the old offer');
+  setValue(window, emailOf(d), 'gus@ocado.cmo');
+  press(gate);
+  assert.deepEqual(offered(d), ['gus@ocado.com', 'gus@ocado.cmo']);
+  setValue(window, emailOf(d), 'gus@ocado.cm');
+  assert.equal(suggestOf(d).hidden, true, 'typing again withdraws the offer');
+  press(gate);
+  assert.deepEqual(offered(d), ['gus@ocado.com', 'gus@ocado.cm'], 'and Continue judges the new address afresh');
+  setValue(window, emailOf(d), 'gus@ocado.com');
+  press(gate);
+  assert.equal(gate.hidden, true, 'a known ending needs no offer');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('what is offered and what is left alone: common providers, endings, a subdomain, and short names judged strictly', async (t) => {
+  const app = await bootApp({ email: false });
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const gate = gateOf(d);
+  const offer = (typed) => {
+    if (gate.hidden) { d.getElementById('menu-btn').click(); d.getElementById('options-plan-change').click(); }
+    setValue(window, emailOf(d), typed);
+    press(gate);
+    return suggestOf(d).hidden ? null : offered(d)[0];
+  };
+  const cases = [
+    ['a@gmial.com', 'a@gmail.com'],
+    ['a@gamil.com', 'a@gmail.com'],
+    ['a@hotmail.con', 'a@hotmail.com'],
+    ['a@Hotnail.com', 'a@hotmail.com'],
+    ['a@yaho.co.uk', 'a@yahoo.co.uk'],
+    ['a@outlok.com', 'a@outlook.com'],
+    ['a@ocado.co', 'a@ocado.com'],
+    ['a@ocado.couk', 'a@ocado.co.uk'],
+    ['a@ocado.co.ukk', 'a@ocado.co.uk'],
+    ['a@mail.ocado.con', 'a@mail.ocado.com'],
+    ['a@ocado.com', null],
+    ['a@yahoo.co.uk', null],
+    ['a@Gmail.com', null],
+    ['a@mail.com', null],
+    ['a@bbc.com', null],
+    ['a@ocado.org.uk', null],
+    ['a@ocado.ai', null],
+    ['a@mail.ocado.com', null],
+  ];
+  for (const [typed, expected] of cases) assert.equal(offer(typed), expected, typed);
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
 test('not a question of the plan: absent from the check page and the print, kept through Clear Form', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
