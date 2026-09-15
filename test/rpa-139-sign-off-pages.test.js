@@ -47,7 +47,7 @@ function sign(app, role, initials) {
   const box = d.querySelector('[data-field="' + KEYS[role].declaration + '"]');
   if (!box.checked) { box.checked = true; box.dispatchEvent(new window.Event('change', { bubbles: true })); }
   setValue(window, d.querySelector('[data-field="' + KEYS[role].name + '"]'), initials);
-  press(d, role === 'leadResearcher' ? 'Sign and send' : 'Sign');
+  press(d, role === 'leadResearcher' ? 'Sign for local review' : 'Sign');
 }
 async function onReview(app) {
   const { document: d, window } = app;
@@ -76,7 +76,7 @@ function startAndSign(app, options = {}) {
   setValue(window, d.querySelector('[data-field="' + KEYS[role].name + '"]'), options.initials || 'PN');
   press(d, 'Continue');
   setValue(window, d.getElementById('sign-off-other-email'), options.other || 'tom@example.com');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
 }
 
 test('before anything is sent, the panel asks who you are and who else must approve, and nothing else', async (t) => {
@@ -135,8 +135,8 @@ test('the three steps come in the order a person does them: who you are, your si
   // The question names the other person, because the first question already
   // said which of the two you are: Plan details names them Tom Okafor.
   assert.deepEqual(shownLabels(), ['What is Tom Okafor’s email address?'], 'and only now, where it goes');
-  assert.equal(stateOf(d), 'You have signed. Send the plan to Tom Okafor to approve.');
-  assert.deepEqual(buttons(d), ['Sign and send', 'Back']);
+  assert.equal(stateOf(d), 'Prepare the plan for Tom Okafor to review on this device.');
+  assert.deepEqual(buttons(d), ['Sign for local review', 'Back']);
 
   press(d, 'Back');
   assert.deepEqual(shownLabels(), ['Declaration: Lead researcher'], 'Back returns to the sign-off');
@@ -151,25 +151,25 @@ test('the three steps come in the order a person does them: who you are, your si
   setValue(window, d.querySelector('[data-field="signOffProjectOwner"]'), 'TO');
   press(d, 'Continue');
   assert.deepEqual(shownLabels(), ['What is Priya Nair’s email address?'], 'and so does the address it asks for');
-  assert.equal(stateOf(d), 'You have signed. Send the plan to Priya Nair to approve.');
+  assert.equal(stateOf(d), 'Prepare the plan for Priya Nair to review on this device.');
 
   press(d, 'Back');
   press(d, 'Back');
   d.querySelector('.sign-off-setup input[value="leadResearcher"]').click();
   press(d, 'Continue');
   press(d, 'Continue');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
   assert.deepEqual(Array.from(summaryOf(d).querySelectorAll('li')).map(text), ['Enter the other person’s email address.']);
   assert.equal(tagOf(d), 'Not started', 'and still nothing is committed');
 
   // One person cannot sign for both, and the refusal is the module's own.
   setValue(window, d.getElementById('sign-off-other-email'), 'name@example.com');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
   assert.deepEqual(Array.from(summaryOf(d).querySelectorAll('li')).map(text),
     ['Enter a different email address for the other person. One person cannot sign for both.']);
 
   setValue(window, d.getElementById('sign-off-other-email'), 'tom@example.com');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
   await settle();
   // Signing and sending were the one act, so the plan arrives signed and sent.
   assert.equal(summaryOf(d).hidden, true);
@@ -207,7 +207,7 @@ test('with nobody named, the question asks by role instead, and it is asked afre
   press(d, 'Back');
   press(d, 'Continue');
   assert.equal(label(), 'What is the project requester’s email address?', 'the role, when there is no name to use');
-  assert.equal(stateOf(d), 'You have signed. Send the plan to the project requester to approve.');
+  assert.equal(stateOf(d), 'Prepare the plan for the project requester to review on this device.');
 
   setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Max Spiegel');
   press(d, 'Back');
@@ -225,7 +225,7 @@ test('the author signs and sends, and the panel turns to the other person: their
   await settle();
   assert.equal(tagOf(d), 'Awaiting sign-off from the project requester');
   assert.equal(reviewRow(d), 'Awaiting sign-off from the project requester');
-  assert.match(stateOf(d), /^Sent to Tom Okafor on \d+ \w+ \d{4}\. Revision 1\.$/);
+  assert.match(stateOf(d), /^Ready for Tom Okafor to review on this device\. Signed \d+ \w+ \d{4}\. Revision 1\.$/);
   assert.deepEqual(noticeLines(d).filter((l) => /^Signed by/.test(l)).length ? [true] : [false], [true], 'the signature is on the record');
   assert.match(noticeLines(d)[0], /^Signed by Priya Nair on .+, revision 1\.$/);
   // The plan is with the other person now, so that is whose side shows:
@@ -268,7 +268,7 @@ test('asking for changes sends it back with the reason, and the author signs a n
   assert.equal(noticeLines(d)[1], 'The sample size does not match the questions.');
   // And the plan turns back to its author, who is the one who must act.
   assert.equal(pairFor(d, 'projectRequester').hidden, true);
-  assert.deepEqual(buttons(d), ['Sign and send']);
+  assert.deepEqual(buttons(d), ['Sign for local review']);
   assert.equal(pairFor(d, 'leadResearcher').hidden, false, 'the author answers the request');
   setValue(window, d.querySelector('[data-field="goal"]'), 'A goal that answers the request.');
   await settle();
@@ -333,10 +333,10 @@ test('changing the plan after it is sent says so, and the module’s own words c
   setValue(window, d.querySelector('[data-field="background"]'), 'Something the other person has not read.');
   await settle();
   assert.equal(tagOf(d), 'Not signed');
-  assert.equal(stateOf(d), 'The plan has changed since it was last signed. Priya Nair signs it again to send it.');
+  assert.equal(stateOf(d), 'The plan has changed since it was last signed. Priya Nair signs it again for local review.');
   assert.equal(reviewRow(d), 'Not signed');
   assert.equal(pairFor(d, 'projectRequester').hidden, true, 'the other person cannot sign what they have not been sent');
-  assert.deepEqual(buttons(d), ['Sign and send'], 'it is the author\'s move again');
+  assert.deepEqual(buttons(d), ['Sign for local review'], 'it is the author\'s move again');
 
   setValue(window, d.querySelector('[data-field="background"]'), written);
   await settle();

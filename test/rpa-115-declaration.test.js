@@ -86,7 +86,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   press('Continue');
   assert.equal(summary.hidden, true, 'the declaration answered, the sign-off stands');
   setValue(window, d.getElementById('sign-off-other-email'), 'max@example.com');
-  press('Sign and send');
+  press('Sign for local review');
   await settle();
   assert.equal(reviewStatus(d), 'Awaiting sign-off from the project requester');
   assert.deepEqual(app.jsdomErrors, []);

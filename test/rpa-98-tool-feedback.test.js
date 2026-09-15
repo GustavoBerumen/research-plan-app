@@ -144,7 +144,7 @@ test('nothing to send is refused kindly, without a request', async (t) => {
   assert.equal(calls.filter((c) => c.url.endsWith('/api/feedback')).length, 0);
 });
 
-test('when sending fails, nothing is lost: the answers stay, and are offered as a file to send by hand', async (t) => {
+test('when sending fails, nothing is lost: the answers stay, and are offered as a file for local records', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d } = app;
@@ -162,10 +162,10 @@ test('when sending fails, nothing is lost: the answers stay, and are offered as 
   const written = JSON.parse(await downloads[0].blob.text());
   assert.equal(written.notAsExpected, 'It stopped.');
   assert.equal(written.usefulness, 2);
-  assert.match(status(d), /Send the file to the person who shared this link/);
+  assert.match(status(d), /Keep this feedback file for your own records/);
 });
 
-test('when the server says feedback is unavailable, the form offers the file straight away and never asks the server', async (t) => {
+test('when the server says feedback is unavailable, the form and file action stay unavailable and never ask the server', async (t) => {
   const closed = { pilotMode: true, capabilities: { feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false } };
   const app = await bootApp({ configResponse: async () => ({ ok: true, json: async () => closed }) });
   t.after(() => app.close());
@@ -175,7 +175,10 @@ test('when the server says feedback is unavailable, the form offers the file str
   d.getElementById('tool-feedback-send').click();
   await waitFor(() => /unavailable/.test(status(d)), { message: 'no unavailable message' });
   assert.equal(calls.filter((c) => c.url.endsWith('/api/feedback')).length, 0, 'no request');
-  assert.equal(d.getElementById('tool-feedback-download').hidden, false);
+  assert.equal(d.getElementById('tool-feedback-download').hidden, true);
+  assert.equal(d.getElementById('tool-feedback-send').hidden, true);
+  assert.equal(d.getElementById('tool-feedback-open').hidden, true);
+  assert.equal(d.getElementById('tool-feedback-form').hidden, true);
 });
 
 test('a pilot configuration that advertises feedback is accepted whole: the build marker renders and Send posts', async (t) => {

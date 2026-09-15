@@ -60,7 +60,7 @@ function startAndSign(app, role = 'leadResearcher') {
   setValue(window, d.querySelector('[data-field="' + KEYS[role].name + '"]'), 'PN');
   press(d, 'Continue');
   setValue(window, d.getElementById('sign-off-other-email'), 'tom@example.com');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
 }
 // A plan sent to Tom, and the draft it was saved in.
 async function sent(t) {
