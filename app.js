@@ -5577,7 +5577,12 @@
     withdrawn: 'tag',
   };
   let signOffRecord = null;
-  let signOffActingAs = 'leadResearcher';
+  // Whose move it is. While each person has a link of their own (RPA-137)
+  // this is read from the link instead; until then one device stands in
+  // for two people, and the plan is always shown to whoever is next.
+  function turnRole(record) {
+    return record.status === 'awaitingCounterparty' ? workflow().counterpartyRole(record) : record.authorRole;
+  }
   let redrawSignOff = () => {};
   const workflow = () => window.RPA_PLAN_WORKFLOW;
 
@@ -5620,11 +5625,13 @@
   // The role's name as the template words it: "Sign off: Lead researcher".
   let signOffRoleNames = { leadResearcher: 'Lead researcher', projectRequester: 'Project requester' };
   function signOffRoleName(role) { return signOffRoleNames[role]; }
-  function signOffPersonName(role) {
+  // In a sentence, an unnamed person is "the lead researcher"; the name
+  // itself is empty until Plan details says who they are.
+  function signOffPersonNamed(role) {
     const input = doc.querySelector('[data-field="' + role + '"]');
-    const given = input ? String(input.value || '').trim() : '';
-    return given || 'the ' + signOffRoleName(role).toLowerCase();
+    return input ? String(input.value || '').trim() : '';
   }
+  function signOffPersonName(role) { return signOffPersonNamed(role) || 'the ' + signOffRoleName(role).toLowerCase(); }
   function signOffDate(iso) {
     const day = String(iso || '').slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? formatDateline(day) : '';
@@ -5649,23 +5656,8 @@
     const stateLine = el('p', 'sign-off-state');
 
     // The temporary half: one device standing in for two people.
-    const acting = el('div', 'sign-off-acting');
-    const actingLegend = el('p', 'sign-off-acting-legend', { id: 'sign-off-acting-legend' });
-    actingLegend.textContent = 'Acting as';
-    // Buttons, not radios: this is a view being switched, not a question
-    // the plan is asking, and a radio here would answer to every query that
-    // looks for the form's own choices.
-    const actingGroup = el('div', 'sign-off-acting-group', { role: 'group', 'aria-labelledby': 'sign-off-acting-legend' });
-    const actingInputs = {};
-    Object.keys(SIGN_OFF_FIELDS).forEach((role) => {
-      const b = el('button', 'acting-btn', { type: 'button', 'aria-pressed': 'false', 'data-acting': role });
-      b.addEventListener('click', () => { signOffActingAs = role; requesting = false; clearSaid(); draw(); });
-      actingInputs[role] = b;
-      actingGroup.appendChild(b);
-    });
-    const actingNote = el('p', 'sign-off-acting-note');
-    actingNote.textContent = 'Both people are on this one device for now. A plan sent for real reaches the other person through a link of their own.';
-    acting.append(actingLegend, actingGroup, actingNote);
+    const note = el('p', 'sign-off-note');
+    note.textContent = 'Both people sign on this one device for now. A plan sent for real reaches the other person through a link of their own.';
 
     const summary = renderErrorSummary();
     const notice = el('div', 'sign-off-notice');
@@ -5680,7 +5672,7 @@
     });
     const actions = el('div', 'sign-off-actions');
     const printed = el('div', 'sign-off-printed');
-    wrap.append(head, stateLine, acting, summary, notice, setup, fields, actions, printed);
+    wrap.append(head, stateLine, note, summary, notice, setup, fields, actions, printed);
 
     // Who is who, asked once: the role the person filling this in holds,
     // and where the other person is to be reached. The author's own address
@@ -5711,6 +5703,14 @@
     otherField.append(otherLabel, otherHint, otherInput);
     setup.append(roleField, otherField);
 
+    // Before a plan exists there are three things to ask, one at a time and
+    // in the order a person does them (Gus, 15 September 2026): which of
+    // the two they are, their own declaration and name, and only then the
+    // address to send it to. Nothing is committed until the last of them:
+    // the record is created and signed in the same act, so a sign-off left
+    // half-done is no sign-off rather than a half-made record.
+    let setupStep = 'role';
+    let setupRole = null;
     let requesting = false;
     const noteId = 'sign-off-change-note';
     const noteField = el('div', 'field');
@@ -5757,22 +5757,45 @@
       return field.statement || field.label;
     }
 
-    function create() {
+    function chooseRole() {
       const chosen = Object.keys(roleInputs).find((role) => roleInputs[role].checked);
+      if (!chosen) { say(['Select which of these you are.']); return; }
+      setupRole = chosen;
+      setupStep = 'sign';
+      clearSaid();
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function toSend() {
+      if (!judge(setupRole)) return;
+      setupStep = 'send';
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function back(step) {
+      setupStep = step;
+      clearSaid();
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+    function create() {
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
-      const messages = [];
-      if (!chosen) messages.push('Select which of these you are.');
-      if (!other) messages.push('Enter the other person’s email address.');
-      if (messages.length) { say(messages); return; }
-      const authorRole = chosen;
+      if (!other) { say(['Enter the other person’s email address.']); return; }
+      const authorRole = setupRole;
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
       parties[W.otherRole(authorRole)] = { email: other, displayName: signOffPersonName(W.otherRole(authorRole)) };
-      const result = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
-      if (!result.ok) { sayRefusal(result); return; }
-      signOffRecord = result.plan;
-      signOffActingAs = authorRole;
+      const created = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
+      if (!created.ok) { sayRefusal(created); return; }
+      // Signing and sending are the one act the person just performed, so
+      // they are the one act here: the record arrives already signed.
+      const signed = W.apply(created.plan, {
+        transition: 'sign', role: authorRole, at: new Date().toISOString(), version: created.plan.version,
+        contentHash: planContentHash(), declaration: declarationOf(authorRole),
+      });
+      if (!signed.ok) { sayRefusal(signed); return; }
+      signOffRecord = signed.plan;
       clearSaid();
       saveDraft();
       draw();
@@ -5814,22 +5837,38 @@
       actions.replaceChildren();
       printed.replaceChildren();
       setup.hidden = Boolean(record);
-      acting.hidden = !record;
+      roleField.hidden = Boolean(record) || setupStep !== 'role';
+      otherField.hidden = Boolean(record) || setupStep !== 'send';
+      note.hidden = !record;
       Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
-      Object.keys(actingInputs).forEach((role) => {
-        actingInputs[role].setAttribute('aria-pressed', role === signOffActingAs ? 'true' : 'false');
-        actingInputs[role].textContent = signOffPersonName(role) + ', ' + signOffRoleName(role).toLowerCase();
-      });
 
       if (!record) {
-        stateLine.textContent = 'Say who you are and who else must approve this plan. Whoever writes the plan signs it first.';
-        actions.appendChild(button('Continue', create));
+        if (setupStep === 'role') {
+          stateLine.textContent = 'Say who you are. Whoever writes the plan signs it first, then sends it to the other person.';
+          actions.appendChild(button('Continue', chooseRole));
+        } else if (setupStep === 'sign') {
+          stateLine.textContent = 'Confirm the declaration and sign the plan. You will be asked where to send it next.';
+          pairs[setupRole].hidden = false;
+          actions.append(button('Continue', toSend), button('Back', () => back('role'), true));
+        } else {
+          // The person has already said which of the two they are, so the
+          // question names the other by name where Plan details gives one,
+          // and by role where it does not (Gus, 15 September 2026).
+          const other = W.otherRole(setupRole);
+          const them = signOffPersonNamed(other) || 'the ' + signOffRoleName(other).toLowerCase();
+          stateLine.textContent = 'You have signed. Send the plan to ' + them + ' to approve.';
+          otherLabel.textContent = 'What is ' + them + '\u2019s email address?';
+          actions.append(button('Sign and send', create), button('Back', () => back('sign'), true));
+        }
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
         refreshTaskList();
         return;
       }
 
-      const me = signOffActingAs;
+      // Whoever has the next move: the author until it is sent, the other
+      // person while it waits for them, the author again when changes are
+      // asked for. There is nothing to choose, so nothing asks.
+      const me = turnRole(record);
       const author = record.authorRole;
       const other = W.counterpartyRole(record);
       const allowed = W.permissionsFor(record, me);
@@ -5880,21 +5919,23 @@
         if (allowed.canRequestChanges) actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
       } else if (allowed.canRequestChanges) {
         actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
-      } else if (record.status === 'awaitingCounterparty' || record.status === 'changesRequested') {
-        notice.appendChild(line('sign-off-waiting', 'Nothing for you to do. This plan is with ' + (record.status === 'awaitingCounterparty' ? otherName : authorName) + '.'));
       }
       if (allowed.canReopen) actions.appendChild(button('Reopen', () => { act({ transition: 'reopen', role: me }); heading.focus({ preventScroll: true }); }, true));
 
       // What the paper says, whatever the screen is showing.
       const signatures = Object.keys(SIGN_OFF_FIELDS).filter((role) => record.signatures[role]);
+      const printSignature = (role) => {
+        const signature = record.signatures[role];
+        printed.appendChild(line('sign-off-printed-line',
+          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(signature.at) + ', revision ' + signature.revision + '.'));
+        printed.appendChild(line('sign-off-printed-declaration', signature.declaration));
+      };
       if (W.isApproved(record)) {
         printed.appendChild(line('sign-off-printed-line', 'Approved. Revision ' + revision + '.'));
-        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
-          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+        signatures.forEach(printSignature);
       } else if (signatures.length) {
         printed.appendChild(line('sign-off-printed-line', 'Not yet approved. Revision ' + revision + '.'));
-        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
-          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+        signatures.forEach(printSignature);
       } else {
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
       }
@@ -5910,7 +5951,6 @@
     doc.innerHTML = '';
     tables.length = 0;
     signOffRecord = null;
-    signOffActingAs = 'leadResearcher';
     redrawSignOff = () => {};
     startPage = null;
     emailGate = null;
@@ -7459,7 +7499,6 @@
   function applyDraft(draft) {
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     signOffRecord = draft.signOff || null;
-    if (signOffRecord) signOffActingAs = signOffRecord.authorRole;
     // Not handled in migrateDraft: that returns early for any draft already at
     // the current version, and every plan saved before RPA-76 is one. A draft
     // with no creation date falls back to savedAt — the last save rather than
@@ -8179,7 +8218,6 @@
     timelineVisible = false;
     // Clearing the form clears the plan, and a sign-off is about a plan.
     signOffRecord = null;
-    signOffActingAs = 'leadResearcher';
     redrawSignOff();
     if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
