@@ -58,6 +58,8 @@ test('renders the complete form from the real index, template, rubric, and metho
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
+    'submission-contract.js',
+    'submission-ui.js',
     'app.js',
   ]);
   assert.deepEqual(app.executedScripts, [
@@ -65,6 +67,8 @@ test('renders the complete form from the real index, template, rubric, and metho
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
+    'submission-contract.js',
+    'submission-ui.js',
     'app.js',
   ]);
   assert.equal(document.querySelector('.doc-loading'), null);

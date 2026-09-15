@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { setTimeout: delay } = require('node:timers/promises');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createPilotGuard, PilotAIError, PILOT_BODY_BYTES } = require('./pilot-guard');
+const { createSubmissions } = require('./submissions-server');
 
 const PORT = process.env.PORT || 8934;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
@@ -49,9 +50,10 @@ const APP_BUILD = (() => {
       .toString().trim() || 'dev';
   } catch (e) { return 'dev'; }
 })();
+const submissions = createSubmissions({ env: process.env, pilot: PILOT_MODE, build: APP_BUILD });
 const CAPABILITIES = Object.freeze({
-  // Feedback on the tool is the one record a pilot exists to collect, so it
-  // is written in every mode (RPA-98). Everything else stays closed in pilot.
+  // Completed plans have a separate, explicitly configured private destination.
+  submissions: submissions.enabled,
   feedback: true,
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
@@ -69,6 +71,8 @@ const PUBLIC_ASSETS = new Map([
   ['/favicon.svg', 'favicon.svg'],
   ['/app.js', 'app.js'],
   ['/plan-workflow.js', 'plan-workflow.js'],
+  ['/submission-contract.js', 'submission-contract.js'],
+  ['/submission-ui.js', 'submission-ui.js'],
   ['/score-classification.js', 'score-classification.js'],
   ['/textarea-autosize.js', 'textarea-autosize.js'],
   ['/test-profiles.js', 'test-profiles.js'],
@@ -1566,6 +1570,7 @@ function handleConfig(req, res) {
   res.end(JSON.stringify({
     pilotMode: PILOT_MODE,
     capabilities: CAPABILITIES,
+    ...(submissions.enabled ? { submissions: submissions.publicConfig } : {}),
     ...(CAPABILITIES.googleDrive ? {
       googleClientId: process.env.GOOGLE_CLIENT_ID,
       googleApiKey: process.env.GOOGLE_API_KEY,
@@ -1621,6 +1626,7 @@ const API_ROUTES = new Map([
   ['/api/evaluate', ['POST', handleEvaluate]],
   ['/api/calibration', ['POST', handleSaveCalibration, 'calibration']],
   ['/api/feedback', ['POST', handleSaveFeedback, 'feedback']],
+  ['/api/submissions', ['POST', submissions.handle, 'submissions']],
   ['/api/suggest-framework', ['POST', handleSuggestFramework]],
   ['/api/add-framework', ['POST', handleAddFramework, 'addFramework']],
   ['/api/suggest-methods', ['POST', handleSuggestMethods]],
