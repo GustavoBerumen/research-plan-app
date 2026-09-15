@@ -118,7 +118,7 @@ test('controls that only exist once revealed are swept too', async (t) => {
 
   document.querySelector('.custom-fields-list[data-list-key="additionalResources"]')
     .closest('.field').querySelector('.add-btn').click();
-  document.querySelector('.review-step .comments-block .add-btn').click();
+  document.getElementById('tool-feedback-open').click();   // reveals feedback on the tool (RPA-98)
 
   const stray = placeholders(document).filter((p) =>
     !DATE_SEGMENTS.includes(p.placeholder) && !OTHER_ESCAPE.test(p.placeholder));
@@ -148,8 +148,8 @@ test('the escape hatch says what it is, and is scoped to the plan', async (t) =>
   assert.equal(wrap.querySelector('.flabel').textContent, 'Additional information');
   const hint = wrap.querySelector('.field-hint-text');
   assert.ok(hint && hint.textContent.trim(), 'it explains what it is for');
-  assert.match(hint.textContent, /Feedback/,
-    'and points at Feedback for comments on the plan, which is the other thing');
+  assert.doesNotMatch(hint.textContent, /Feedback/,
+    'and no longer points at a Feedback box, which is dormant since RPA-98');
   assert.equal(wrap.querySelector('.add-btn').textContent, '+ Add additional information');
 
   // RPA-101: one hatch per section, rendered inside it after the section's

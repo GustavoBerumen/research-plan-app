@@ -4272,7 +4272,9 @@
   // aria-hidden and the field is described by it, while a visually hidden
   // polite live region repeats it on a one-second debounce, so a screen
   // reader hears the count on arrival and hears it change without being
-  // flooded per keystroke.
+  // flooded per keystroke. Without a limit it counts up instead, "You have
+  // written 12 words": the feedback questions have no good length, only a
+  // running total (Gus, 15 September 2026).
   function renderWordGuide(textarea, limit, controlId) {
     const wrap = el('div', 'word-count-wrap');
     const visible = el('p', 'word-count', { id: controlId + '-words', 'aria-hidden': 'true' });
@@ -4283,6 +4285,7 @@
     const words = () => textarea.value.trim().split(/\s+/).filter(Boolean).length;
     const message = () => {
       const n = words();
+      if (!limit) return 'You have written ' + n + (n === 1 ? ' word' : ' words');
       if (n <= limit) { const left = limit - n; return 'You have ' + left + (left === 1 ? ' word' : ' words') + ' remaining'; }
       return "You've written about " + (Math.round(n / 5) * 5) + ' words';
     };
@@ -5127,40 +5130,26 @@
   // always in the DOM from first render, never lazily created — see the
   // print override below for why that matters.
   // ---------- feedback on the tool (RPA-98) ----------
-  // Three questions and a score, asked where people finish: what they were
-  // trying to do, what got in the way, what they would change first, and
-  // how useful the tool was. The answers go to the people building the
-  // tool, not into the plan: nothing here carries data-field, so the draft,
-  // the backup and the print never see them. Sent to the server as one
-  // record; when that fails, offered as a file so nothing is lost.
+  // A score and two questions, asked where people finish and only if they
+  // choose to: a Give feedback button reveals the form (Gus, 15 September
+  // 2026). How useful was the tool, what got in the way, what they would
+  // change first. The answers go to the people building the tool, not into
+  // the plan: nothing here carries data-field, so the draft, the backup and
+  // the print never see them. Sent to the server as one record; when that
+  // fails, offered as a file so nothing is lost.
   function renderToolFeedback() {
     const wrap = el('section', 'tool-feedback', { 'aria-labelledby': 'tool-feedback-h' });
+    const open = el('button', 'btn btn-ghost', { type: 'button', id: 'tool-feedback-open', 'aria-expanded': 'false', 'aria-controls': 'tool-feedback-form' });
+    open.textContent = 'Give feedback';
+    const form = el('div', 'tool-feedback-form', { id: 'tool-feedback-form' });
+    form.hidden = true;
     const h = el('h3', 'tool-feedback-h', { id: 'tool-feedback-h' });
     h.textContent = 'Feedback on this tool';
     const sub = el('p', 'tool-feedback-sub');
-    sub.textContent = 'Three questions and a score, for the people building this tool. Your answers are not part of your plan.';
-    wrap.append(h, sub);
+    sub.textContent = 'A score and two questions, for the people building this tool. Your answers are not part of your plan.';
+    form.append(h, sub);
 
-    const questions = [
-      { id: 'tool-feedback-trying', key: 'tryingTo', label: 'What were you trying to do?', hint: 'For example: plan a usability study of the checkout.' },
-      { id: 'tool-feedback-in-the-way', key: 'inTheWay', label: 'What got in the way?', hint: 'Anything that slowed you down, confused you or stopped you.' },
-      { id: 'tool-feedback-change', key: 'changeFirst', label: 'What would you change first?', hint: 'One thing, if you could.' },
-    ];
-    const controls = {};
-    questions.forEach((q) => {
-      const field = el('div', 'field tool-feedback-field');
-      const label = el('label', 'tf-label', { for: q.id });
-      label.textContent = q.label;
-      const hint = el('div', 'field-hint-text', { id: q.id + '-hint' });
-      hint.textContent = q.hint;
-      const ta = el('textarea', 'finput field-ta tool-feedback-answer', { id: q.id, rows: '2', maxlength: '2000', 'aria-describedby': hint.id });
-      bindTextarea(ta);
-      field.append(label, hint, ta);
-      wrap.appendChild(field);
-      controls[q.key] = ta;
-    });
-
-    // The score, in the design system's radios: a fieldset whose legend asks.
+    // The score first, in the design system's radios: a fieldset whose legend asks.
     const score = el('fieldset', 'field field-radios tool-feedback-field');
     const legend = el('legend', 'tf-label');
     legend.textContent = 'How useful was this tool overall?';
@@ -5181,7 +5170,28 @@
       group.appendChild(item);
     }
     score.append(legend, scoreHint, group);
-    wrap.appendChild(score);
+    form.appendChild(score);
+
+    const questions = [
+      { id: 'tool-feedback-not-as-expected', key: 'notAsExpected', label: 'What didn\u2019t work as expected?', hint: 'Anything that slowed you down, felt confusing, or broke.' },
+      { id: 'tool-feedback-improve', key: 'improve', label: 'What could we do to improve this tool?', hint: 'If you could change or add something, what would it be?' },
+    ];
+    const controls = {};
+    questions.forEach((q) => {
+      const field = el('div', 'field tool-feedback-field');
+      const label = el('label', 'tf-label', { for: q.id });
+      label.textContent = q.label;
+      const hint = el('div', 'field-hint-text', { id: q.id + '-hint' });
+      hint.textContent = q.hint;
+      // One line to begin with, growing as the answer does, and a running
+      // word count under it as the plan's own questions have (Gus, 15
+      // September 2026).
+      const ta = el('textarea', 'finput field-ta tool-feedback-answer', { id: q.id, rows: '1', maxlength: '2000', 'aria-describedby': hint.id });
+      bindTextarea(ta);
+      field.append(label, hint, ta, renderWordGuide(ta, 0, q.id));
+      form.appendChild(field);
+      controls[q.key] = ta;
+    });
 
     const actions = el('div', 'tool-feedback-actions');
     const send = el('button', 'btn btn-dark', { type: 'button', id: 'tool-feedback-send' });
@@ -5190,22 +5200,35 @@
     download.textContent = 'Download your feedback';
     download.hidden = true;
     actions.append(send, download);
+    form.appendChild(actions);
     const status = el('p', 'tool-feedback-status', { id: 'tool-feedback-status', role: 'status', 'aria-live': 'polite' });
-    wrap.append(actions, status);
+    wrap.append(open, form, status);
+
+    const setOpen = (on) => {
+      form.hidden = !on;
+      open.setAttribute('aria-expanded', on ? 'true' : 'false');
+    };
+    open.addEventListener('click', () => {
+      const opening = form.hidden;
+      setOpen(opening);
+      if (opening) {
+        const first = group.querySelector('.radio-input');
+        if (first) first.focus({ preventScroll: true });
+      }
+    });
 
     const read = () => {
       const chosen = group.querySelector('.radio-input:checked');
       return {
-        tryingTo: controls.tryingTo.value.trim(),
-        inTheWay: controls.inTheWay.value.trim(),
-        changeFirst: controls.changeFirst.value.trim(),
         usefulness: chosen ? parseInt(chosen.value, 10) : null,
+        notAsExpected: controls.notAsExpected.value.trim(),
+        improve: controls.improve.value.trim(),
       };
     };
-    const empty = (a) => !a.tryingTo && !a.inTheWay && !a.changeFirst && a.usefulness === null;
+    const empty = (a) => a.usefulness === null && !a.notAsExpected && !a.improve;
     const say = (text, error) => { status.textContent = text; if (error) status.dataset.error = 'true'; else delete status.dataset.error; };
     const clear = () => {
-      Object.values(controls).forEach((ta) => { ta.value = ''; resizeTa(ta); });
+      Object.values(controls).forEach((ta) => { ta.value = ''; resizeTa(ta); if (typeof ta._refreshCharCount === 'function') ta._refreshCharCount(); });
       group.querySelectorAll('.radio-input').forEach((r) => { r.checked = false; });
     };
     const planName = () => ((doc.querySelector('[data-field="researchTitle"]') || {}).value || '').trim();
@@ -5252,6 +5275,9 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         clear();
         download.hidden = true;
+        // Sent: the form folds away again and the thanks stays by the button.
+        setOpen(false);
+        open.focus({ preventScroll: true });
         say('Thank you. Your feedback is saved for the people building this tool.');
       } catch (err) {
         download.hidden = false;
@@ -5497,7 +5523,8 @@
 
     if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
     // Where people finish: feedback on the tool itself, after the plan is
-    // signed (RPA-98). Not part of the plan, so not in the draft or print.
+    // signed, behind a Give feedback button (RPA-98). Not part of the plan,
+    // so not in the draft or print.
     step.appendChild(renderToolFeedback());
 
     // The summary is only true at the moment it is drawn, so redraw it

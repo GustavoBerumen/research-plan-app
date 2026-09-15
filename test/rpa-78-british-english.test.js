@@ -67,7 +67,7 @@ for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
     const contract = keyContract(app.document);
     const retained = structuredClone(baseline.keys);
     for (const attr of ['data-field', 'data-list-key', 'data-field-key']) {
-      retained[attr] = retained[attr].filter((k) => !/theory|actionPoints/.test(k));
+      retained[attr] = retained[attr].filter((k) => !/theory|actionPoints|comments/.test(k));
       assert.deepEqual(retained[attr].filter((k) => !contract[attr].includes(k)), [], attr + ' keys retained');
     }
     retained.tables = retained.tables.filter((t) => t.id !== 'actionPoints-table');
@@ -95,7 +95,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   const app = await bootApp({ draft: baseline.draft }); t.after(() => app.close());
   const { document, window } = app;
   for (const [key, value] of Object.entries(baseline.draft.fields)) {
-    if (key === 'theory' || key === 'hypothesis') continue;   // dormant since RPA-117; carried in the draft, checked below
+    if (key === 'theory' || key === 'hypothesis' || key === 'comments') continue;   // dormant (RPA-117, RPA-98); carried in the draft, checked below
     assert.equal(document.querySelector('[data-field="' + key + '"]').value, value, key);
   }
   for (const [key, values] of Object.entries(baseline.draft.lists)) {
