@@ -170,70 +170,36 @@ test('an evaluated section says so, and says when that has gone out of date', as
   assert.equal(stale.state, 'complete', 'stale still counts as complete');
 });
 
-test('Feedback is offered here, and closes the step', async (t) => {
-  // RPA-55's last open row. Feedback was the only field with no defined
-  // reader, and a section of its own at the end of the document was nobody's
-  // stop. The review step is where a plan is read rather than written, which
-  // is the one moment a comment on it has an audience.
-  //
-  // Below the sign-offs. It sat above them briefly, on the argument that
-  // feedback after approval has missed its moment; Gus put it last, where a
-  // reader reaches it having read the whole plan.
-  const app = await bootApp();
+test('the plan\'s Feedback box is dormant, and Give feedback now opens feedback on the tool', async (t) => {
+  // RPA-55 put Feedback on the plan here, below the sign-offs. On 15 September
+  // 2026 Gus retired that box: the same Give feedback button, in the same
+  // place, now reveals feedback on the tool (RPA-98). The key comments is
+  // still carried in older drafts, so nothing anyone wrote is lost.
+  const app = await bootApp({ draft: { version: 8, fields: { comments: 'The recruitment timeline looks optimistic.' }, lists: {}, tables: {}, custom: {} } });
   t.after(() => app.close());
-  const { document } = app;
-
-  const el = step(document);
-  const block = el.querySelector('.comments-block');
-  assert.ok(block, 'the review step offers Feedback');
-  assert.equal(document.querySelectorAll('.comments-block').length, 1,
-    'and only here — it is not still rendered outside the step as well');
-
-  // No section of its own any more.
-  const titles = Array.from(document.querySelectorAll('.acc-title')).map((e) => e.textContent);
-  assert.equal(titles.includes('Feedback'), false);
-
-  const signOffs = el.querySelector('.review-signoffs');
-  assert.ok(signOffs);
-  assert.equal(
-    signOffs.compareDocumentPosition(block) & 4 /* DOCUMENT_POSITION_FOLLOWING */, 4,
-    'Feedback comes after the approvals'
-  );
-  // The last thing of the plan. Feedback on the tool itself follows it (RPA-98), about the app, not the plan.
-  assert.ok(block.nextElementSibling && block.nextElementSibling.classList.contains('tool-feedback'), 'and is the last thing of the plan in the step');
-  assert.equal(block.nextElementSibling.nextElementSibling, null, 'only the feedback on the tool follows it');
-
-  // It also stays out of the way until wanted, as it did before the move, and
-  // is not counted as an unanswered field by the summary above it.
-  assert.equal(block.querySelector('.field').hidden, true);
-  assert.equal(signOffs.querySelector('[data-field="comments"]'), null,
-    'and is not rendered as a third sign-off');
-});
-
-test('Feedback still reveals, saves and clears from its new home', async (t) => {
-  const app = await bootApp();
   const { document, window } = app;
 
-  const block = step(document).querySelector('.comments-block');
-  const addBtn = block.querySelector('.add-btn');
-  assert.equal(addBtn.textContent, 'Give feedback');
-  addBtn.click();
-  const ta = block.querySelector('[data-field="comments"]');
-  assert.equal(block.querySelector('.field').hidden, false, 'the reveal still works');
+  const el = step(document);
+  assert.equal(el.querySelector('.comments-block'), null, 'no Feedback box on the plan');
+  assert.equal(document.querySelector('[data-field="comments"]'), null, 'and no field for it anywhere');
+  const titles = Array.from(document.querySelectorAll('.acc-title')).map((e) => e.textContent);
+  assert.equal(titles.includes('Feedback'), false, 'no section of its own either');
 
-  setValue(window, ta, 'The recruitment timeline looks optimistic.');
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  const saved = JSON.parse(window.localStorage.getItem(DRAFT_KEY));
-  assert.equal(saved.fields.comments, 'The recruitment timeline looks optimistic.',
-    'still stored under the key it has always had, so no draft moves');
-  app.close();
+  const signOffs = el.querySelector('.review-signoffs');
+  const tool = el.querySelector('.tool-feedback');
+  assert.ok(tool, 'feedback on the tool stands where the box stood');
+  assert.equal(signOffs.compareDocumentPosition(tool) & 4, 4, 'after the approvals');
+  assert.equal(tool.nextElementSibling, null, 'and is the last thing in the step');
+  const open = tool.querySelector('#tool-feedback-open');
+  assert.equal(open.textContent, 'Give feedback', 'the same button');
+  assert.equal(document.getElementById('tool-feedback-form').hidden, true, 'stays out of the way until wanted');
+  open.click();
+  assert.equal(document.getElementById('tool-feedback-form').hidden, false);
+  assert.equal(signOffs.querySelector('.tool-feedback'), null, 'not rendered among the sign-offs');
 
-  const reopened = await bootApp({ draft: saved });
-  t.after(() => reopened.close());
-  const restored = reopened.document.querySelector('.review-step [data-field="comments"]');
-  assert.equal(restored.value, 'The recruitment timeline looks optimistic.');
-  assert.equal(restored.closest('.field').hidden, false,
-    'a draft with feedback in it opens with the feedback showing');
+  setValue(window, document.querySelector('[data-field="background"]'), 'An edit that saves.');
+  const saved = await waitFor(() => { const d = JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null'); return d && d.fields.background ? d : null; });
+  assert.equal(saved.fields.comments, 'The recruitment timeline looks optimistic.', 'an older draft keeps its comment through an autosave');
 });
 
 test('nothing in the step blocks signing', async (t) => {

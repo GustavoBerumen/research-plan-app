@@ -113,8 +113,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // step — below the approvals, so a reader arrives at it having read the
       // whole plan (RPA-55).
       // Two declarations close the plan, one per role, each above its approval (RPA-115).
+      // Feedback on the plan is dormant since RPA-98's rework; feedback on the tool has no field label.
       'Declaration: Lead researcher', 'Sign off: Lead researcher', 'Declaration: Project requester', 'Sign off: Project requester',
-      'Feedback',
     ]
   );
   // Column keys and types are in the DOM so they can be checked and styled.
@@ -144,7 +144,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // hint about how much answer its question expects. Autosize grows it from
   // there; a field that declares nothing keeps the shared default.
   assert.deepEqual(
-    ['background', 'goal', 'problemStatement', 'objective', 'comments'].map((key) => {
+    ['background', 'goal', 'problemStatement', 'objective'].map((key) => {
       const ta = document.querySelector(`[data-field="${key}"]`);
       return [key, ta.rows, ta.classList.contains('finput-rows')];
     }),
@@ -153,12 +153,6 @@ test('renders the complete form from the real index, template, rubric, and metho
       ['goal', 2, true],
       ['problemStatement', 2, true],
       ['objective', 2, true],
-      // Declares nothing, so it keeps the shared default. 2 is the browser's
-      // own default for a textarea with no rows attribute, not a declared one,
-      // which is why the class matters more than the number here. Comments is
-      // the control rather than Project: Project is a grid cell, built by
-      // buildGridCell, which sets rows itself.
-      ['comments', 2, false],
     ]
   );
   // The Participants group is gone: its three fields are asked per research

@@ -28,7 +28,7 @@ test('every free-text field says what remains, from the start, right under its b
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  const tiers = { background: 60, problemStatement: 60, comments: 60, goal: 30, objective: 30 };
+  const tiers = { background: 60, problemStatement: 60, goal: 30, objective: 30 };
   for (const [key, n] of Object.entries(tiers)) {
     const ta = d.querySelector('[data-field="' + key + '"]');
     assert.equal(countOf(d, key).textContent, 'You have ' + n + ' words remaining', key);
@@ -37,7 +37,9 @@ test('every free-text field says what remains, from the start, right under its b
     assert.ok((ta.getAttribute('aria-describedby') || '').split(/\s+/).includes(countOf(d, key).id), key + ': the field is described by it');
     assert.equal(spokenOf(d, key).getAttribute('aria-live'), 'polite', key);
   }
-  assert.equal(d.querySelectorAll('.word-count').length, 5, 'and nowhere else');
+  assert.equal(d.querySelectorAll('.field[data-field], .field:not(.tool-feedback-field) .word-count').length, 4, 'and nowhere else in the plan');
+  assert.equal(d.querySelectorAll('.tool-feedback-field .word-count').length, 2, 'the two feedback questions count up instead, with no limit (RPA-98)');
+  assert.equal(d.querySelector('[data-field="comments"]'), null, 'the plan Feedback box is dormant (RPA-98)');
   assert.equal(d.querySelector('[data-field="theory"]'), null, 'Theory is dormant (RPA-117)');
   assert.equal(d.querySelector('[data-field="hypothesis"]'), null, 'and so is Hypothesis');
   assert.deepEqual(app.jsdomErrors, []);

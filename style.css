@@ -435,6 +435,8 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .review-signoffs{display:grid;grid-template-columns:1fr 1fr;gap:28px}
 /* Feedback on the tool, where people finish (RPA-98): three questions and a score, after the plan is signed. */
 .tool-feedback{margin-top:40px;padding-top:28px;border-top:1px solid var(--border)}
+.tool-feedback-form{margin-top:20px}
+.tool-feedback-form[hidden]{display:none}
 .tool-feedback-h{margin:0 0 4px;font-size:1.25rem;font-weight:700;color:var(--ink)}
 .tool-feedback-sub{margin:0 0 22px;font-size:var(--text);color:var(--text-2)}
 .tool-feedback-field{margin:0 0 20px}

@@ -249,7 +249,7 @@ Previous Knowledge (table, optional, key=previousKnowledge): Name:prose:name | F
      at a time that reason is gone. The Execution one keeps the key
      additionalResources so older drafts restore into it. -->
 Additional information (custom-fields, max=1, key=additionalResources):
-  Hint: Anything this plan needs that the sections above have no place for. Each one you add becomes its own titled part of the document. To comment on the plan rather than add to it, use Feedback at the end.
+  Hint: Anything this plan needs that the sections above have no place for. Each one you add becomes its own titled part of the document.
 
 <!-- The review step, and the last thing in the document. Alignment became this
      once its identifiers moved to the header: what was left was the two
@@ -275,8 +275,12 @@ Additional information (custom-fields, max=1, key=additionalResources):
      sits above the approvals, because feedback offered after sign-off has
      missed its moment. It keeps the key `comments`: a key is an identifier,
      not a description, so no saved draft moves. -->
-Feedback (textarea, optional, words=60, key=comments):
-  Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing.
+<!-- Dormant since 15 September 2026, RPA-98. The plan's Feedback box and
+     its "Give feedback" button gave way to feedback on the tool, revealed by
+     the same button after the sign-offs. The key comments is still carried
+     in older drafts. Uncomment the two lines to bring it back. -->
+<!-- Feedback (textarea, optional, words=60, key=comments): -->
+<!-- Hint: Comments on the plan itself — a question, a concern, or anything you want the approvers to read before signing. -->
 <!-- Two declarations close the plan, RPA-115, 14 September 2026, one per
      role in Gus's words: the lead researcher conducts the research, the
      project requester is responsible for the project. Each is a required
