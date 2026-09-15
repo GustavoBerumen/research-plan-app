@@ -479,11 +479,13 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .sign-off-request-note{margin:0;color:var(--ink);white-space:pre-line}
 .sign-off-signature{margin:0;color:var(--ink);font-weight:700}
 .sign-off-waiting{margin:0;color:var(--text-2)}
-.sign-off-fields{margin-bottom:20px}
+.sign-off-fields{display:block;margin-bottom:20px}
 .sign-off-pair[hidden]{display:none}
 .sign-off-pair{display:grid;gap:22px}
 .sign-off-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .sign-off-printed{display:none}
+.sign-off-printed-line{margin:0 0 2px;font-weight:700;color:var(--ink)}
+.sign-off-printed-declaration{margin:0 0 12px;color:var(--text-2)}
 /* Feedback on the tool, where people finish (RPA-98): three questions and a score, after the plan is signed. */
 .tool-feedback{margin-top:40px;padding-top:28px;border-top:1px solid var(--border)}
 .tool-feedback-form{margin-top:20px}

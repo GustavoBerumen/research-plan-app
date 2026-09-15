@@ -5851,7 +5851,13 @@
           pairs[setupRole].hidden = false;
           actions.append(button('Continue', toSend), button('Back', () => back('role'), true));
         } else {
-          stateLine.textContent = 'Last thing: who else must approve this plan?';
+          // The person has already said which of the two they are, so the
+          // question names the other by name where Plan details gives one,
+          // and by role where it does not (Gus, 15 September 2026).
+          const other = W.otherRole(setupRole);
+          const them = signOffPersonNamed(other) || 'the ' + signOffRoleName(other).toLowerCase();
+          stateLine.textContent = 'You have signed. Send the plan to ' + them + ' to approve.';
+          otherLabel.textContent = 'What is ' + them + '\u2019s email address?';
           actions.append(button('Sign and send', create), button('Back', () => back('sign'), true));
         }
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
@@ -5918,14 +5924,18 @@
 
       // What the paper says, whatever the screen is showing.
       const signatures = Object.keys(SIGN_OFF_FIELDS).filter((role) => record.signatures[role]);
+      const printSignature = (role) => {
+        const signature = record.signatures[role];
+        printed.appendChild(line('sign-off-printed-line',
+          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(signature.at) + ', revision ' + signature.revision + '.'));
+        printed.appendChild(line('sign-off-printed-declaration', signature.declaration));
+      };
       if (W.isApproved(record)) {
         printed.appendChild(line('sign-off-printed-line', 'Approved. Revision ' + revision + '.'));
-        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
-          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+        signatures.forEach(printSignature);
       } else if (signatures.length) {
         printed.appendChild(line('sign-off-printed-line', 'Not yet approved. Revision ' + revision + '.'));
-        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
-          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+        signatures.forEach(printSignature);
       } else {
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
       }

@@ -132,12 +132,31 @@ test('the three steps come in the order a person does them: who you are, your si
   box.dispatchEvent(new window.Event('change', { bubbles: true }));
   setValue(window, d.querySelector('[data-field="signOffResearcher"]'), 'PN');
   press(d, 'Continue');
-  assert.deepEqual(shownLabels(), ['What is the other person’s email address?'], 'and only now, where it goes');
-  assert.equal(stateOf(d), 'Last thing: who else must approve this plan?');
+  // The question names the other person, because the first question already
+  // said which of the two you are: Plan details names them Tom Okafor.
+  assert.deepEqual(shownLabels(), ['What is Tom Okafor’s email address?'], 'and only now, where it goes');
+  assert.equal(stateOf(d), 'You have signed. Send the plan to Tom Okafor to approve.');
   assert.deepEqual(buttons(d), ['Sign and send', 'Back']);
 
   press(d, 'Back');
   assert.deepEqual(shownLabels(), ['Declaration: Lead researcher'], 'Back returns to the sign-off');
+  // Say you are the other one instead, and the question turns round.
+  press(d, 'Back');
+  d.querySelector('.sign-off-setup input[value="projectRequester"]').click();
+  press(d, 'Continue');
+  assert.deepEqual(shownLabels(), ['Declaration: Project requester'], 'the declaration follows the role');
+  const theirBox = d.querySelector('[data-field="declarationRequester"]');
+  theirBox.checked = true;
+  theirBox.dispatchEvent(new window.Event('change', { bubbles: true }));
+  setValue(window, d.querySelector('[data-field="signOffProjectOwner"]'), 'TO');
+  press(d, 'Continue');
+  assert.deepEqual(shownLabels(), ['What is Priya Nair’s email address?'], 'and so does the address it asks for');
+  assert.equal(stateOf(d), 'You have signed. Send the plan to Priya Nair to approve.');
+
+  press(d, 'Back');
+  press(d, 'Back');
+  d.querySelector('.sign-off-setup input[value="leadResearcher"]').click();
+  press(d, 'Continue');
   press(d, 'Continue');
   press(d, 'Sign and send');
   assert.deepEqual(Array.from(summaryOf(d).querySelectorAll('li')).map(text), ['Enter the other person’s email address.']);
@@ -163,6 +182,37 @@ test('the three steps come in the order a person does them: who you are, your si
   assert.equal(saved.signatures.leadResearcher.revision, 1);
   assert.equal(saved.parties.projectRequester.email, 'tom@example.com');
   assert.equal(saved.parties.leadResearcher.email, 'name@example.com', 'the author is whoever gave their address at the start (RPA-99)');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('with nobody named, the question asks by role instead, and it is asked afresh each time', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  await onReview(app);
+  d.querySelector('.sign-off-setup input[value="leadResearcher"]').click();
+  press(d, 'Continue');
+  const box = d.querySelector('[data-field="declarationResearcher"]');
+  box.checked = true;
+  box.dispatchEvent(new window.Event('change', { bubbles: true }));
+  setValue(window, d.querySelector('[data-field="signOffResearcher"]'), 'PN');
+  press(d, 'Continue');
+  const label = () => text(d.getElementById('sign-off-other-email').closest('.field').querySelector('.flabel'));
+  assert.equal(label(), 'What is Tom Okafor’s email address?');
+
+  // Plan details requires both names, so this is the state a restored plan
+  // can be in rather than one a person types their way into. The question
+  // still has to say who it means.
+  setValue(window, d.querySelector('[data-field="projectRequester"]'), '');
+  press(d, 'Back');
+  press(d, 'Continue');
+  assert.equal(label(), 'What is the project requester’s email address?', 'the role, when there is no name to use');
+  assert.equal(stateOf(d), 'You have signed. Send the plan to the project requester to approve.');
+
+  setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Max Spiegel');
+  press(d, 'Back');
+  press(d, 'Continue');
+  assert.equal(label(), 'What is Max Spiegel’s email address?', 'and the name again as soon as there is one');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -247,6 +297,12 @@ test('both signatures approve the plan, it prints what was signed, and reopening
   assert.match(signatures[0], /^Signed by Priya Nair on .+, revision 1\.$/);
   assert.match(signatures[1], /^Signed by Tom Okafor on .+, revision 1\.$/);
   assert.equal(printedLines(d)[0], 'Approved. Revision 1.', 'the paper says so too');
+  // And what was agreed to, not only who agreed: the declarations only show
+  // on screen for whoever's turn it is, so the record's copy prints.
+  assert.deepEqual(Array.from(d.querySelectorAll('.sign-off-printed-declaration')).map(text), [
+    'I confirm this plan is complete and current, and I will conduct the research as it describes.',
+    'I confirm this plan meets the needs of the project I am responsible for, and I approve it.',
+  ]);
   assert.equal(printedLines(d).length, 3);
   assert.match(text(d.querySelector('.task-list-progress')), /completed 6 of 6 sections/, 'and the plan is done');
 
@@ -343,6 +399,9 @@ test('signing does not re-date the plan: Last updated is for edits', async (t) =
 
 test('the status is the design system’s tag, and print shows the signatures without the machinery', () => {
   assert.match(CSS, /\.tag\{[^}]*text-transform:uppercase/);
+  // One question at a time means one column: the two roles no longer sit
+  // side by side, and the words should not wrap at half the width they have.
+  assert.match(CSS, /\.sign-off-fields\{display:block/);
   for (const cls of ['tag-blue', 'tag-orange', 'tag-green']) assert.match(CSS, new RegExp('\\.' + cls + '\\{background:'), cls);
   const print = CSS.slice(CSS.lastIndexOf('@media print'));
   const all = CSS.slice(CSS.indexOf('@media print{.sign-off-printed'));
