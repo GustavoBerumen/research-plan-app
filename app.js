@@ -5519,11 +5519,17 @@
     // same reason the section itself is.
     const commentsField = section.fields.find((f) => f.key === 'comments');
 
-    const signOffs = el('div', 'review-signoffs');
-    section.fields
-      .filter((f) => f !== commentsField)
-      .forEach((f) => signOffs.appendChild(renderField(f)));
-    step.appendChild(signOffs);
+    // The review section may hold fields of its own beyond the sign-off
+    // apparatus and the comment box; they belong to the plan and are drawn
+    // where they always were, above the sign-off.
+    const signOffKeys = new Set(Object.values(SIGN_OFF_FIELDS).flatMap((keys) => [keys.declaration, keys.name]));
+    const extras = section.fields.filter((f) => f !== commentsField && !signOffKeys.has(f.key));
+    if (extras.length) {
+      const other = el('div', 'review-extra');
+      extras.forEach((f) => other.appendChild(renderField(f)));
+      step.appendChild(other);
+    }
+    step.appendChild(renderSignOff(section, commentsField));
 
     if (commentsField) step.appendChild(renderCommentsReveal(commentsField));
     // Where people finish: feedback on the tool itself, after the plan is
@@ -5536,7 +5542,7 @@
     let pending = null;
     const refresh = () => {
       if (pending) window.clearTimeout(pending);
-      pending = window.setTimeout(draw, 120);
+      pending = window.setTimeout(() => { reportPlanEdit(); draw(); redrawSignOff(); refreshTaskList(); }, 120);
     };
     doc.addEventListener('input', refresh);
     doc.addEventListener('change', refresh);
@@ -5548,9 +5554,364 @@
     return step;
   }
 
+  // ---------- sign-off on the review step (RPA-139) ----------
+  // The state machine of RPA-135, on the page people finish on. Whoever
+  // wrote the plan signs first and sends it; the other signs or asks for
+  // changes; the plan is approved when both signatures name the revision
+  // that stands. The status is the design system's tag, here and in the
+  // task list, and the plan prints what was signed and when.
+  //
+  // Both parties are faked on this one device, because the links that would
+  // bring the second person are RPA-137 and the server that would hold the
+  // plan is RPA-136. "Acting as" switches sides; everything else is the
+  // real module, refusals and all. The switch goes when the links arrive.
+  const SIGN_OFF_FIELDS = {
+    leadResearcher: { declaration: 'declarationResearcher', name: 'signOffResearcher' },
+    projectRequester: { declaration: 'declarationRequester', name: 'signOffProjectOwner' },
+  };
+  const SIGN_OFF_TAGS = {
+    draft: 'tag',
+    awaitingCounterparty: 'tag tag-blue',
+    changesRequested: 'tag tag-orange',
+    approved: 'tag tag-green',
+    withdrawn: 'tag',
+  };
+  let signOffRecord = null;
+  let signOffActingAs = 'leadResearcher';
+  let redrawSignOff = () => {};
+  const workflow = () => window.RPA_PLAN_WORKFLOW;
+
+  function planContentHash() {
+    const text = JSON.stringify(planContent(collectDraft()));
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 0x01000193) >>> 0; }
+    return 'h-' + hash.toString(16).padStart(8, '0');
+  }
+
+  // An edit is reported as a hash, never as content: enough for the other
+  // person's side to say the plan changed since it was sent, without the
+  // working draft leaving the browser it is written in.
+  function reportPlanEdit() {
+    if (!signOffRecord || draftRestoring) return;
+    if (!signOffRecord.revisions.length) return;   // nothing signed yet to diverge from
+    const W = workflow();
+    if (!W.permissionsFor(signOffRecord, signOffRecord.authorRole).canEdit) return;
+    const result = W.apply(signOffRecord, {
+      transition: 'edit', role: signOffRecord.authorRole,
+      at: new Date().toISOString(), version: signOffRecord.version, contentHash: planContentHash(),
+    });
+    if (result.ok && !result.unchanged) { signOffRecord = result.plan; saveDraft(); }
+  }
+
+  function signOffTag(record) {
+    if (!record) return { text: 'Not started', cls: 'tag' };
+    const W = workflow();
+    const other = W.counterpartyRole(record);
+    const name = signOffRoleName(other);
+    const labels = {
+      draft: 'Not signed',
+      awaitingCounterparty: 'Awaiting sign-off from the ' + name.toLowerCase(),
+      changesRequested: 'Changes requested',
+      approved: 'Approved',
+      withdrawn: 'Withdrawn',
+    };
+    return { text: labels[record.status], cls: SIGN_OFF_TAGS[record.status] };
+  }
+  // The role's name as the template words it: "Sign off: Lead researcher".
+  let signOffRoleNames = { leadResearcher: 'Lead researcher', projectRequester: 'Project requester' };
+  function signOffRoleName(role) { return signOffRoleNames[role]; }
+  function signOffPersonName(role) {
+    const input = doc.querySelector('[data-field="' + role + '"]');
+    const given = input ? String(input.value || '').trim() : '';
+    return given || 'the ' + signOffRoleName(role).toLowerCase();
+  }
+  function signOffDate(iso) {
+    const day = String(iso || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) ? formatDateline(day) : '';
+  }
+
+  function renderSignOff(section, commentsField) {
+    const W = workflow();
+    const byKey = {};
+    section.fields.forEach((f) => { byKey[f.key] = f; });
+    Object.keys(SIGN_OFF_FIELDS).forEach((role) => {
+      const label = (byKey[SIGN_OFF_FIELDS[role].name] || {}).label || '';
+      const named = label.replace(/^[^:]*:\s*/, '').trim();
+      if (named) signOffRoleNames[role] = named;
+    });
+
+    const wrap = el('section', 'sign-off', { 'aria-labelledby': 'sign-off-heading' });
+    const head = el('div', 'sign-off-head');
+    const heading = el('h3', 'sign-off-h', { id: 'sign-off-heading', tabindex: '-1' });
+    heading.textContent = 'Sign-off';
+    const tag = el('strong', 'tag');
+    head.append(heading, tag);
+    const stateLine = el('p', 'sign-off-state');
+
+    // The temporary half: one device standing in for two people.
+    const acting = el('div', 'sign-off-acting');
+    const actingLegend = el('p', 'sign-off-acting-legend', { id: 'sign-off-acting-legend' });
+    actingLegend.textContent = 'Acting as';
+    // Buttons, not radios: this is a view being switched, not a question
+    // the plan is asking, and a radio here would answer to every query that
+    // looks for the form's own choices.
+    const actingGroup = el('div', 'sign-off-acting-group', { role: 'group', 'aria-labelledby': 'sign-off-acting-legend' });
+    const actingInputs = {};
+    Object.keys(SIGN_OFF_FIELDS).forEach((role) => {
+      const b = el('button', 'acting-btn', { type: 'button', 'aria-pressed': 'false', 'data-acting': role });
+      b.addEventListener('click', () => { signOffActingAs = role; requesting = false; clearSaid(); draw(); });
+      actingInputs[role] = b;
+      actingGroup.appendChild(b);
+    });
+    const actingNote = el('p', 'sign-off-acting-note');
+    actingNote.textContent = 'Both people are on this one device for now. A plan sent for real reaches the other person through a link of their own.';
+    acting.append(actingLegend, actingGroup, actingNote);
+
+    const summary = renderErrorSummary();
+    const notice = el('div', 'sign-off-notice');
+    const setup = el('div', 'sign-off-setup');
+    const fields = el('div', 'review-signoffs sign-off-fields');
+    const pairs = {};
+    Object.keys(SIGN_OFF_FIELDS).forEach((role) => {
+      const pair = el('div', 'sign-off-pair');
+      pair.append(renderField(byKey[SIGN_OFF_FIELDS[role].declaration]), renderField(byKey[SIGN_OFF_FIELDS[role].name]));
+      pairs[role] = pair;
+      fields.appendChild(pair);
+    });
+    const actions = el('div', 'sign-off-actions');
+    const printed = el('div', 'sign-off-printed');
+    wrap.append(head, stateLine, acting, summary, notice, setup, fields, actions, printed);
+
+    // Who is who, asked once: the role the person filling this in holds,
+    // and where the other person is to be reached. The author's own address
+    // is the one they gave at the start (RPA-99).
+    const setupRoleId = 'sign-off-role';
+    const roleField = el('fieldset', 'field field-radios');
+    const roleLegend = el('legend', 'flabel', { id: setupRoleId + '-label' });
+    roleLegend.textContent = 'Which of these are you?';
+    const roleGroup = el('div', 'radio-group');
+    const roleInputs = {};
+    Object.keys(SIGN_OFF_FIELDS).forEach((role, i) => {
+      const item = el('div', 'radio-item');
+      const id = setupRoleId + '-' + i;
+      const radio = el('input', 'radio-input', { type: 'radio', id, name: setupRoleId, value: role });
+      const label = el('label', 'radio-label', { for: id });
+      label.textContent = signOffRoleName(role);
+      roleInputs[role] = radio;
+      item.append(radio, label);
+      roleGroup.appendChild(item);
+    });
+    roleField.append(roleLegend, roleGroup);
+    const otherField = el('div', 'field');
+    const otherLabel = el('label', 'flabel', { for: 'sign-off-other-email', id: 'sign-off-other-email-label' });
+    otherLabel.textContent = 'What is the other person’s email address?';
+    const otherHint = el('div', 'field-hint-text', { id: 'sign-off-other-email-hint' });
+    otherHint.textContent = 'They will be sent a link to read the plan and sign it.';
+    const otherInput = el('input', 'finput input-w-30', { type: 'email', id: 'sign-off-other-email', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'sign-off-other-email-hint' });
+    otherField.append(otherLabel, otherHint, otherInput);
+    setup.append(roleField, otherField);
+
+    let requesting = false;
+    const noteId = 'sign-off-change-note';
+    const noteField = el('div', 'field');
+    const noteLabel = el('label', 'flabel', { for: noteId });
+    noteLabel.textContent = 'What needs to change?';
+    const noteInput = el('textarea', 'finput field-ta', { id: noteId, rows: '2', maxlength: '2000' });
+    bindTextarea(noteInput);
+    noteField.append(noteLabel, noteInput);
+
+    const said = [];
+    function clearSaid() {
+      said.forEach(clearGroupError);
+      said.length = 0;
+      summary.hidden = true;
+      summary.querySelector('.error-summary-list').replaceChildren();
+    }
+    function say(messages, groups) {
+      clearSaid();
+      if (!messages.length) return false;
+      const list = summary.querySelector('.error-summary-list');
+      messages.forEach((message, i) => {
+        const item = el('li');
+        item.textContent = message;
+        list.appendChild(item);
+        if (groups && groups[i]) { markGroupError(groups[i], message); said.push(groups[i]); }
+      });
+      summary.hidden = false;
+      summary.focus();
+      return true;
+    }
+    // A refusal from the state machine is shown in its own words: they are
+    // written for a person already (RPA-135).
+    function sayRefusal(result) { say([result.message]); }
+
+    function groupsOf(role) { return Array.from(pairs[role].querySelectorAll('.field')); }
+    function judge(role) {
+      const missing = groupsOf(role).filter((g) => !requiredGroupComplete(g));
+      if (!missing.length) { clearSaid(); return true; }
+      say(missing.map(groupMessage), missing);
+      return false;
+    }
+    function declarationOf(role) {
+      const field = byKey[SIGN_OFF_FIELDS[role].declaration];
+      return field.statement || field.label;
+    }
+
+    function create() {
+      const chosen = Object.keys(roleInputs).find((role) => roleInputs[role].checked);
+      const other = String(otherInput.value || '').trim();
+      const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
+      const messages = [];
+      if (!chosen) messages.push('Select which of these you are.');
+      if (!other) messages.push('Enter the other person’s email address.');
+      if (messages.length) { say(messages); return; }
+      const authorRole = chosen;
+      const parties = {};
+      parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
+      parties[W.otherRole(authorRole)] = { email: other, displayName: signOffPersonName(W.otherRole(authorRole)) };
+      const result = W.createPlan({ id: 'plan-' + Date.now(), at: new Date().toISOString(), authorRole, parties });
+      if (!result.ok) { sayRefusal(result); return; }
+      signOffRecord = result.plan;
+      signOffActingAs = authorRole;
+      clearSaid();
+      saveDraft();
+      draw();
+      heading.focus({ preventScroll: true });
+    }
+
+    function act(action) {
+      const result = W.apply(signOffRecord, Object.assign({ at: new Date().toISOString(), version: signOffRecord.version }, action));
+      if (!result.ok) { sayRefusal(result); draw(); return null; }
+      signOffRecord = result.plan;
+      clearSaid();
+      saveDraft();
+      draw();
+      return result.plan;
+    }
+    function sign(role) {
+      if (!judge(role)) return;
+      const action = { transition: 'sign', role, declaration: declarationOf(role) };
+      if (role === signOffRecord.authorRole) action.contentHash = planContentHash();
+      else action.revision = W.currentRevisionNumber(signOffRecord);
+      const after = act(action);
+      if (after) heading.focus({ preventScroll: true });
+    }
+
+    function button(label, onClick, ghost) {
+      const b = el('button', 'btn ' + (ghost ? 'btn-ghost' : 'btn-dark'), { type: 'button' });
+      b.textContent = label;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+    function line(className, content) { const p = el('p', className); p.textContent = content; return p; }
+
+    function draw() {
+      const record = signOffRecord;
+      const state = signOffTag(record);
+      tag.textContent = state.text;
+      tag.className = state.cls;
+      notice.replaceChildren();
+      actions.replaceChildren();
+      printed.replaceChildren();
+      setup.hidden = Boolean(record);
+      acting.hidden = !record;
+      Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
+      Object.keys(actingInputs).forEach((role) => {
+        actingInputs[role].setAttribute('aria-pressed', role === signOffActingAs ? 'true' : 'false');
+        actingInputs[role].textContent = signOffPersonName(role) + ', ' + signOffRoleName(role).toLowerCase();
+      });
+
+      if (!record) {
+        stateLine.textContent = 'Say who you are and who else must approve this plan. Whoever writes the plan signs it first.';
+        actions.appendChild(button('Continue', create));
+        printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
+        refreshTaskList();
+        return;
+      }
+
+      const me = signOffActingAs;
+      const author = record.authorRole;
+      const other = W.counterpartyRole(record);
+      const allowed = W.permissionsFor(record, me);
+      const revision = W.currentRevisionNumber(record);
+      const authorName = signOffPersonName(author);
+      const otherName = signOffPersonName(other);
+
+      if (record.status === 'awaitingCounterparty') {
+        stateLine.textContent = 'Sent to ' + otherName + ' on ' + signOffDate(record.signatures[author].at) + '. Revision ' + revision + '.';
+      } else if (record.status === 'changesRequested') {
+        stateLine.textContent = 'Back with ' + authorName + ' to change.';
+      } else if (record.status === 'approved') {
+        stateLine.textContent = 'Both people have signed revision ' + revision + '.';
+      } else {
+        stateLine.textContent = !record.revisions.length
+          ? 'Not yet sent. ' + authorName + ' signs first.'
+          : 'The plan has changed since it was last signed. ' + authorName + ' signs it again to send it.';
+      }
+
+      if (record.changeRequest) {
+        const request = el('div', 'sign-off-request');
+        request.append(
+          line('sign-off-request-head', signOffPersonName(record.changeRequest.by) + ' asked for changes on ' + signOffDate(record.changeRequest.at) + ', revision ' + record.changeRequest.revision + '.'),
+          line('sign-off-request-note', record.changeRequest.note)
+        );
+        notice.appendChild(request);
+      }
+
+      Object.keys(SIGN_OFF_FIELDS).forEach((role) => {
+        const signature = record.signatures[role];
+        if (!signature) return;
+        const who = signOffPersonName(role);
+        notice.appendChild(line('sign-off-signature', 'Signed by ' + who + ' on ' + signOffDate(signature.at) + ', revision ' + signature.revision + '.'));
+      });
+
+      if (requesting && allowed.canRequestChanges) {
+        notice.appendChild(noteField);
+        actions.append(
+          button('Send request', () => {
+            const after = act({ transition: 'requestChanges', role: me, revision, note: noteInput.value });
+            if (after) { requesting = false; noteInput.value = ''; resizeTa(noteInput); draw(); heading.focus({ preventScroll: true }); }
+          }),
+          button('Cancel', () => { requesting = false; clearSaid(); draw(); }, true)
+        );
+      } else if (allowed.canSign) {
+        pairs[me].hidden = false;
+        actions.appendChild(button(me === author ? 'Sign and send' : 'Sign', () => sign(me)));
+        if (allowed.canRequestChanges) actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
+      } else if (allowed.canRequestChanges) {
+        actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
+      } else if (record.status === 'awaitingCounterparty' || record.status === 'changesRequested') {
+        notice.appendChild(line('sign-off-waiting', 'Nothing for you to do. This plan is with ' + (record.status === 'awaitingCounterparty' ? otherName : authorName) + '.'));
+      }
+      if (allowed.canReopen) actions.appendChild(button('Reopen', () => { act({ transition: 'reopen', role: me }); heading.focus({ preventScroll: true }); }, true));
+
+      // What the paper says, whatever the screen is showing.
+      const signatures = Object.keys(SIGN_OFF_FIELDS).filter((role) => record.signatures[role]);
+      if (W.isApproved(record)) {
+        printed.appendChild(line('sign-off-printed-line', 'Approved. Revision ' + revision + '.'));
+        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
+          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+      } else if (signatures.length) {
+        printed.appendChild(line('sign-off-printed-line', 'Not yet approved. Revision ' + revision + '.'));
+        signatures.forEach((role) => printed.appendChild(line('sign-off-printed-line',
+          'Signed by ' + signOffPersonName(role) + ' on ' + signOffDate(record.signatures[role].at) + ', revision ' + record.signatures[role].revision + '.')));
+      } else {
+        printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
+      }
+      refreshTaskList();
+    }
+
+    redrawSignOff = draw;
+    draw();
+    return wrap;
+  }
+
   function renderSchema(schema) {
     doc.innerHTML = '';
     tables.length = 0;
+    signOffRecord = null;
+    signOffActingAs = 'leadResearcher';
+    redrawSignOff = () => {};
     startPage = null;
     emailGate = null;
     doc.appendChild(renderStartPage());
@@ -5615,7 +5976,13 @@
     return { total: groups.length, answered, complete: groups.length > 0 && answered === groups.length };
   }
   function headerSummary(headerEl) { return groupsSummary(requiredGroupsOf(headerEl)); }
-  function reviewSummaryOf(reviewEl) { return groupsSummary(requiredGroupsOf(reviewEl)); }
+  // The review step is done when the plan is approved, not when four boxes
+  // are filled in: a signature is the point of the step (RPA-139).
+  function reviewSummaryOf(reviewEl) {
+    if (!signOffRecord) return { total: 1, answered: 0, complete: false };
+    const approved = workflow().isApproved(signOffRecord);
+    return { total: 1, answered: approved ? 1 : 0, complete: approved };
+  }
   function stepSummary(i) {
     const stepEl = steps[i];
     if (!stepEl || stepEl.classList.contains('task-list-step')) return { total: 0, answered: 0, complete: true };
@@ -6091,6 +6458,12 @@
       else if (s.complete) { state = 'Completed'; status.classList.add('task-status-done'); }
       else if (s.answered > 0) { state = 'Incomplete'; status.classList.add('task-tag'); }
       else { state = 'Not yet started'; status.classList.add('task-tag'); }
+      // The sign-off says where the plan is in its own words (RPA-139).
+      if (steps[i].classList.contains('review-step') && !locked) {
+        const signOff = signOffTag(signOffRecord);
+        state = signOff.text;
+        status.className = 'task-status ' + signOff.cls;
+      }
       status.textContent = state;
       status.id = 'task-status-' + steps[i].dataset.stepSlug;
       name.setAttribute('aria-describedby', status.id);
@@ -6616,7 +6989,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 8;
+  const DRAFT_VERSION = 9;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -6830,21 +7203,33 @@
     });
 
     return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual,
+      // The sign-off record (RPA-139). It lives in the draft because there
+      // is no server to hold it yet (RPA-136); the shape is the module's.
+      signOff: signOffRecord,
       ui: { timelineVisible, section: currentStepSlug() || undefined } };
   }
 
-  // Everything about the plan except the stamp itself, so that re-dating the
-  // plan can never look like a change and re-trigger itself.
-  function draftContentSignature(draft) {
+  // What the plan says, as against who is signing it, for whom and when.
+  // One definition, because two things ask it and they must not disagree:
+  // the stamp that dates an edit, and the hash the two signatures are
+  // given on. Left out are the stamp itself, so re-dating cannot look like
+  // a change and re-trigger itself; the email address, which says who the
+  // plan is for and not what it says (RPA-99); the declarations and the
+  // two names, which are how a plan is signed rather than what it says, so
+  // that one person ticking their box does not knock the plan back to a
+  // draft under the other; the sign-off record, for the same reason; and
+  // the timeline preference, because looking at a chart is not editing.
+  function planContent(draft) {
     const fields = Object.assign({}, draft.fields);
     delete fields.lastUpdated;
-    // Who the plan is for is not what the plan says: giving or correcting
-    // the email address does not date the plan (RPA-99).
     delete fields.emailAddress;
+    Object.values(SIGN_OFF_FIELDS).forEach((keys) => { delete fields[keys.declaration]; delete fields[keys.name]; });
     const content = Object.assign({}, draft, { fields });
-    delete content.ui; // Viewing the timeline does not edit the authored plan.
-    return JSON.stringify(content);
+    delete content.ui;
+    delete content.signOff;
+    return content;
   }
+  function draftContentSignature(draft) { return JSON.stringify(planContent(draft)); }
 
   // collectDraft can only report what the form currently renders, so making a
   // field dormant used to delete anything already saved under it on the very
@@ -6957,6 +7342,9 @@
     const version = Number(draft.version) || 1;
     if (version >= DRAFT_VERSION) return draft;
     const migrated = Object.assign({}, draft, { version: DRAFT_VERSION });
+    // v9 carries the sign-off record (RPA-139). A plan written before it
+    // has not been sent to anybody, so it starts with none.
+    if (version < 9) migrated.signOff = migrated.signOff || null;
     // v7 adds a draft UI preference; pre-existing drafts start hidden.
     if (version < 7) {
       migrated.ui = Object.assign({}, migrated.ui, { timelineVisible: false });
@@ -7070,6 +7458,8 @@
 
   function applyDraft(draft) {
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
+    signOffRecord = draft.signOff || null;
+    if (signOffRecord) signOffActingAs = signOffRecord.authorRole;
     // Not handled in migrateDraft: that returns early for any draft already at
     // the current version, and every plan saved before RPA-76 is one. A draft
     // with no creation date falls back to savedAt — the last save rather than
@@ -7498,7 +7888,19 @@
       string(value.v, path + '.v');
       if ('o' in value) string(value.o, path + '.o');
     };
-    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'tables', 'custom', 'lastUpdatedManual', 'ui']);
+    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
+    // The sign-off record travels with a backup, so a plan signed on one
+    // machine still reads as signed when it is restored (RPA-139). Checked
+    // for shape rather than rebuilt: the module is the authority on it.
+    if (draft.signOff !== undefined && draft.signOff !== null) {
+      const signOff = draft.signOff;
+      record(signOff, 'signOff', ['id', 'version', 'status', 'createdAt', 'authorRole', 'parties', 'revisions', 'workingHash', 'signatures', 'changeRequest', 'history']);
+      const W = workflow();
+      if (!Number.isInteger(signOff.version) || signOff.version < 1) fail('signOff.version');
+      if (W.STATUSES.indexOf(signOff.status) === -1) fail('signOff.status');
+      if (W.ROLES.indexOf(signOff.authorRole) === -1) fail('signOff.authorRole');
+      if (!Array.isArray(signOff.revisions) || !Array.isArray(signOff.history)) fail('signOff.history');
+    }
     const version = draft.version === undefined ? 1 : draft.version;
     if (!Number.isInteger(version) || version < 1 || version > DRAFT_VERSION) {
       throw new Error('Unsupported backup version. This app supports versions 1 to ' + DRAFT_VERSION + '.');
@@ -7775,6 +8177,10 @@
     lastSavedSignature = null;
     lastUpdatedManual = false;
     timelineVisible = false;
+    // Clearing the form clears the plan, and a sign-off is about a plan.
+    signOffRecord = null;
+    signOffActingAs = 'leadResearcher';
+    redrawSignOff();
     if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });

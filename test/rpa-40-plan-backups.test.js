@@ -174,14 +174,14 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     assert.equal(stored(app).fields.problemStatement, 'Legacy problem');
     assert.equal(stored(app).fields.leadResearcher, 'Ana');
     assert.equal(stored(app).fields.title, undefined);
-    assert.equal(stored(app).version, 8);
+    assert.equal(stored(app).version, 9);
     assert.equal(stored(app).ui.timelineVisible, false);
     if (version === 1) assert.deepEqual(stored(app).methods[0].methods, ['Interviews']);
   });
 }
 
 const invalidCases = {
-  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 9, fields: {} },
+  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 10, fields: {} },
   'string version': { version: '7', fields: {} }, 'zero version': { version: 0, fields: {} },
   'field nested object': { version: 7, fields: { project: {} } },
   'list wrong nested type': { version: 7, fields: {}, lists: { researchQuestions: ['Valid', null] } },

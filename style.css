@@ -457,6 +457,38 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .review-change:hover{color:var(--link-hover)}
 .review-change:focus-visible{outline:3px solid var(--focus);outline-offset:0;background:var(--focus);color:var(--ink);text-decoration:none}
 .review-signoffs{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+/* The sign-off workflow on the review step (RPA-139). The status is the design system's tag; one thing is asked at a time, so only the person whose turn it is sees a declaration and a box to sign in. */
+.tag{display:inline-block;font-size:var(--text-sm);font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 9px;background:#eeefef;color:#383f43;border-radius:2px}
+.tag-blue{background:#d2e2f1;color:#1d4f70}
+.tag-orange{background:#fcd6a8;color:#6e3c07}
+.tag-green{background:#cce2d8;color:#005a30}
+.sign-off{margin-top:34px;border-top:2px solid var(--ink);padding-top:22px}
+.sign-off-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.sign-off-h{margin:0;font-size:1.25rem;font-weight:700;color:var(--ink)}
+.sign-off-state{margin:6px 0 16px;color:var(--text-2)}
+.sign-off-acting{background:var(--panel);padding:12px 16px;margin:0 0 18px;border-left:5px solid var(--border)}
+.sign-off-acting[hidden]{display:none}
+.sign-off-acting-legend{margin:0 0 6px;font-size:var(--text-sm);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-2)}
+.sign-off-acting-group{display:flex;flex-wrap:wrap;gap:8px}
+.acting-btn{font-family:inherit;font-size:var(--text-sm);padding:6px 12px;border:2px solid var(--border);background:#fff;color:var(--ink);cursor:pointer}
+.acting-btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
+.acting-btn:focus-visible{outline:3px solid var(--focus);outline-offset:0}
+.sign-off-acting-note{margin:8px 0 0;font-size:var(--text-sm);color:var(--text-2)}
+.sign-off-setup{display:grid;gap:22px;margin-bottom:20px}
+.sign-off-setup[hidden]{display:none}
+.sign-off-notice:empty,.sign-off-actions:empty{display:none}
+.sign-off-notice{margin-bottom:18px;display:grid;gap:10px}
+.sign-off-request{border-left:5px solid var(--orange);padding:10px 16px;background:var(--panel)}
+.sign-off-request-head{margin:0 0 4px;font-weight:700;color:var(--ink)}
+.sign-off-request-note{margin:0;color:var(--ink);white-space:pre-line}
+.sign-off-signature{margin:0;color:var(--ink);font-weight:700}
+.sign-off-waiting{margin:0;color:var(--text-2)}
+.sign-off-fields{margin-bottom:20px}
+.sign-off-pair[hidden]{display:none}
+.sign-off-pair{display:grid;gap:22px}
+.sign-off-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.sign-off-printed{display:none}
+@media screen and (max-width:600px){.sign-off-acting-group{flex-direction:column}}
 /* Feedback on the tool, where people finish (RPA-98): three questions and a score, after the plan is signed. */
 .tool-feedback{margin-top:40px;padding-top:28px;border-top:1px solid var(--border)}
 .tool-feedback-form{margin-top:20px}
@@ -845,4 +877,5 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
   .dtbl tr,.atbl tr,.list-rows,.list-row,.radio-group,.custom-field-block{page-break-inside:avoid;break-inside:avoid}
 }
 
+@media print{.sign-off-printed{display:block!important}.sign-off-acting,.sign-off-actions,.sign-off-setup,.sign-off-state{display:none!important}}
 @media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.start-step,.email-step,.check-answers,.review-answers,.tool-feedback,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}

@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const http = require('node:http');
 const { EventEmitter } = require('node:events');
 const ROOT = path.resolve(__dirname, '..');
-const ASSETS = ['index.html', 'style.css', 'favicon.svg', 'app.js', 'score-classification.js',
+const ASSETS = ['index.html', 'style.css', 'favicon.svg', 'app.js', 'plan-workflow.js', 'score-classification.js',
   'textarea-autosize.js', 'test-profiles.js', 'research-plan-template.md',
   'research-plan-rubric.md', 'research-methods.md'];
 const PRIVATE = ['.env', '.git/HEAD', 'calibration-data.jsonl', 'uploads/private.pdf',
