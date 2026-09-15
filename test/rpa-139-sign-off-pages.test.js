@@ -406,6 +406,6 @@ test('the status is the design system’s tag, and print shows the signatures wi
   const print = CSS.slice(CSS.lastIndexOf('@media print'));
   const all = CSS.slice(CSS.indexOf('@media print{.sign-off-printed'));
   assert.match(all, /\.sign-off-printed\{display:block!important\}/, 'what was signed prints');
-  assert.match(all, /\.sign-off-note,\.sign-off-actions,\.sign-off-setup,\.sign-off-state\{display:none!important\}/, 'the buttons and the working notes do not');
+  assert.match(all, /\.sign-off-note,\.sign-off-link,\.sign-off-actions,\.sign-off-setup,\.sign-off-state\{display:none!important\}/, 'the buttons and the working notes do not');
   assert.doesNotMatch(print, /\.review-signoffs/, 'the declarations and names still print with the plan');
 });

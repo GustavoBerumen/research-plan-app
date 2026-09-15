@@ -30,7 +30,7 @@
 
   const ROLES = ['leadResearcher', 'projectRequester'];
   const STATUSES = ['draft', 'awaitingCounterparty', 'changesRequested', 'approved', 'withdrawn'];
-  const TRANSITIONS = ['sign', 'requestChanges', 'edit', 'reopen', 'withdraw'];
+  const TRANSITIONS = ['sign', 'requestChanges', 'edit', 'reopen', 'withdraw', 'issueLink', 'revokeLink'];
 
   // Every refusal is written for a person, in the form's own voice, ready
   // for the error summary (RPA-102). A code travels with it for the routes.
@@ -51,6 +51,8 @@
     'not-approved': 'This plan is not approved, so there is nothing to reopen.',
     'withdrawn': 'This plan has been withdrawn.',
     'not-awaiting': 'This plan is not waiting for your sign-off.',
+    'missing-token': 'The link could not be made. Try again.',
+    'no-link': 'There is no link to that person to withdraw.',
   };
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -118,8 +120,22 @@
     }, extra);
   }
 
+  function party(given, email, token, at) {
+    const issued = text(token);
+    return { email, displayName: text((given || {}).displayName), token: issued || null, issuedAt: issued ? at : null, revokedAt: null };
+  }
+  // The role a link belongs to, and whether it still works. A link that has
+  // been withdrawn is recognisably withdrawn rather than simply unknown, so
+  // the person holding it can be told which of the two it is.
+  function roleForToken(plan, token) {
+    const wanted = text(token);
+    if (!wanted) return null;
+    const role = ROLES.find((r) => plan.parties[r] && plan.parties[r].token === wanted);
+    return role ? { role, revoked: Boolean(plan.parties[role].revokedAt) } : null;
+  }
   function createPlan(options) {
     const parties = options.parties || {};
+    const tokens = options.tokens || {};
     if (!isRole(options.authorRole)) return fail('unknown-role');
     const emails = {};
     for (const role of ROLES) {
@@ -135,9 +151,12 @@
       status: 'draft',
       createdAt: options.at,
       authorRole: options.authorRole,
+      // A link per party: the one thing that will let the other person open
+      // this plan (RPA-137). It identifies a role on one plan and nothing
+      // else, and the caller supplies the token so this stays pure.
       parties: {
-        leadResearcher: { email: emails.leadResearcher, displayName: text((parties.leadResearcher || {}).displayName) },
-        projectRequester: { email: emails.projectRequester, displayName: text((parties.projectRequester || {}).displayName) },
+        leadResearcher: party(parties.leadResearcher, emails.leadResearcher, tokens.leadResearcher, options.at),
+        projectRequester: party(parties.projectRequester, emails.projectRequester, tokens.projectRequester, options.at),
       },
       revisions: [],
       workingHash: null,
@@ -214,6 +233,24 @@
         next.status = next.workingHash === null && signedCurrent(next, next.authorRole) ? 'awaitingCounterparty' : 'draft';
       }
       record = entry(plan, action, { from, to: next.status, revision: currentRevisionNumber(plan), hash });
+    } else if (action.transition === 'issueLink' || action.transition === 'revokeLink') {
+      // The author decides who can open the plan, and every issue and
+      // withdrawal is on the record, so who could open it and when is part
+      // of the audit rather than something to reconstruct.
+      if (!author) return fail('not-author');
+      if (!isRole(action.forRole)) return fail('unknown-role');
+      const held = next.parties[action.forRole];
+      if (action.transition === 'issueLink') {
+        const token = text(action.token);
+        if (!token) return fail('missing-token');
+        held.token = token;
+        held.issuedAt = action.at;
+        held.revokedAt = null;
+      } else {
+        if (!held.token || held.revokedAt) return fail('no-link');
+        held.revokedAt = action.at;
+      }
+      record = entry(plan, action, { from, to: next.status, forRole: action.forRole });
     } else if (action.transition === 'reopen') {
       if (plan.status !== 'approved') return fail('not-approved');
       // The signatures go, the ledger keeps them. Approval never quietly
@@ -225,6 +262,8 @@
       if (!author) return fail('not-author');
       if (plan.status === 'approved') return fail('already-approved');
       next.status = 'withdrawn';
+      // A withdrawn plan is nobody's to open: the links go with it.
+      ROLES.forEach((role) => { const held = next.parties[role]; if (held.token && !held.revokedAt) held.revokedAt = action.at; });
       record = entry(plan, action, { from, to: next.status, revision: currentRevisionNumber(plan) });
     }
 
@@ -235,7 +274,7 @@
 
   return {
     ROLES, STATUSES, TRANSITIONS, MESSAGES,
-    createPlan, apply, permissionsFor, isApproved,
+    createPlan, apply, permissionsFor, isApproved, roleForToken,
     otherRole, counterpartyRole, currentRevision, currentRevisionNumber, signedCurrent,
   };
 });
