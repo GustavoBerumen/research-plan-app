@@ -470,10 +470,10 @@
 
   // ---------- Google Drive picker ----------
   let configPromise = null;
-  // Feedback on the tool is the one capability a pilot advertises (RPA-98);
-  // every other write stays closed there, and the check below holds it to that.
-  const unavailableCapabilities = Object.freeze({ feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
+  // Submissions are independently configured; absent flags from older servers stay off.
+  const unavailableCapabilities = Object.freeze({ submissions: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
   let capabilities = unavailableCapabilities;
+  let submissionConfig = null;
 
   function renderBuildMarker(cfg) {
     const version = cfg && typeof cfg.version === 'string' ? cfg.version : '';
@@ -492,14 +492,22 @@
       }).then(cfg => {
         if (!cfg || typeof cfg.pilotMode !== 'boolean' || !cfg.capabilities ||
             // feedback may be absent from an older server's map: absent means unavailable, not invalid.
-            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (key === 'feedback' && cfg.capabilities[key] === undefined)) ||
-            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => key !== 'feedback' && value !== false)) ||
+            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (['feedback', 'submissions'].includes(key) && cfg.capabilities[key] === undefined)) ||
+            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => !['feedback', 'submissions'].includes(key) && value !== false)) ||
+            (cfg.capabilities.submissions && (!cfg.pilotMode || cfg.submissions?.formSchemaVersion !== window.RPA_SUBMISSION?.SCHEMA ||
+              !['deployment', 'cohort', 'collectionPolicyVersion'].every(key => /^[a-z0-9][a-z0-9-]{0,63}$/.test(cfg.submissions?.[key] || '')) ||
+              typeof cfg.submissions?.notice !== 'string' || cfg.submissions.notice.trim().length < 40)) ||
             (cfg.capabilities.googleDrive && (!cfg.capabilities.uploads ||
               typeof cfg.googleClientId !== 'string' || !cfg.googleClientId ||
               typeof cfg.googleApiKey !== 'string' || !cfg.googleApiKey))) {
           throw new Error('Invalid capabilities');
         }
         capabilities = Object.freeze(Object.fromEntries(Object.keys(unavailableCapabilities).map(key => [key, cfg.capabilities[key] === true])));
+        submissionConfig = capabilities.submissions ? cfg.submissions : null;
+        if (capabilities.submissions && formSchema && doc.querySelector('.review-step')) {
+          mountSubmissionPanel(doc.querySelector('.review-step'));
+          refreshReviewSummary(); refreshTaskList();
+        }
         renderBuildMarker(cfg);
         const status = document.getElementById('capability-status');
         if (status) status.textContent = cfg.pilotMode
@@ -4065,6 +4073,14 @@
       placeholder: 'Type your own value…',
       'aria-label': field.label + ' — other',
     });
+    if (field.key === 'sampleSize') {
+      otherRow.classList.add('sample-size-other');
+      const hint = el('p', 'field-hint-text', { id: controlId + '-other-hint' });
+      hint.textContent = 'Enter a positive whole number, a range such as 5–8, or a minimum such as 30+.';
+      otherInput.placeholder = '';
+      otherInput.setAttribute('aria-describedby', hint.id);
+      otherRow.appendChild(hint);
+    }
     otherRow.appendChild(otherInput);
     otherRow.hidden = true;
 
@@ -4631,13 +4647,23 @@
   // automatically (once) so nobody has to type the date by hand.
   function attachSignOffStamp(input, key) {
     if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return;
-    input.addEventListener('blur', () => {
-      const val = input.value.trim();
-      if (val && !/ — \d{2}\/\d{2}\/\d{4}$/.test(val)) {
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+    input.addEventListener('blur', () => stampSignOff(input));
+  }
+  function stampSignOff(input) {
+    const val = input.value.trim();
+    if (!val || / — \d{2}\/\d{2}\/\d{4}$/.test(val)) return false;
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+    return true;
+  }
+  function prepareSubmissionSignOffs() {
+    // A deliberate new Send dates restored initials; restoration and frozen retries do not.
+    [['signOffResearcher', 'declarationResearcher'], ['signOffProjectOwner', 'declarationRequester']].forEach(([key, declaration]) => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      if (input && doc.querySelector('[data-field="' + declaration + '"]')?.checked && stampSignOff(input)) {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
   }
@@ -5535,6 +5561,7 @@
     // Where people finish: feedback on the tool itself, after the plan is
     // signed, behind a Give feedback button (RPA-98). Not part of the plan,
     // so not in the draft or print.
+    if (capabilities.submissions) mountSubmissionPanel(step);
     step.appendChild(renderToolFeedback());
 
     // The summary is only true at the moment it is drawn, so redraw it
@@ -5634,6 +5661,15 @@
     if (!signOffRecord || draftRestoring) return;
     if (!signOffRecord.revisions.length) return;   // nothing signed yet to diverge from
     const W = workflow();
+    // A draft from the later workflow can be edited in the simpler MVP flow.
+    // Keep its ledger, but never leave a prior approval attached to changed content.
+    if (capabilities.submissions && signOffRecord.status === 'approved' &&
+        W.currentRevision(signOffRecord)?.contentHash !== planContentHash()) {
+      const reopened = W.apply(signOffRecord, { transition: 'reopen', role: signOffRecord.authorRole,
+        version: signOffRecord.version, at: new Date().toISOString() });
+      if (!reopened.ok) return;
+      signOffRecord = reopened.plan;
+    }
     if (!W.permissionsFor(signOffRecord, signOffRecord.authorRole).canEdit) return;
     const result = W.apply(signOffRecord, {
       transition: 'edit', role: signOffRecord.authorRole,
@@ -6103,6 +6139,16 @@
   // and the error summary all ask this, so they cannot disagree: required
   // means not optional and not the Additional information hatch.
   function requiredGroupsOf(stepEl) {
+    const groups = baseRequiredGroupsOf(stepEl);
+    if (capabilities.submissions) {
+      submissionErrors().forEach(error => {
+        const group = submissionTarget(error).group;
+        if (group && stepEl.contains(group) && !groups.includes(group)) groups.push(group);
+      });
+    }
+    return groups;
+  }
+  function baseRequiredGroupsOf(stepEl) {
     if (stepEl.classList.contains('email-step')) return Array.from(stepEl.querySelectorAll('.field')).filter((f) => !f.querySelector('.fopt'));
     if (stepEl.classList.contains('doc-header')) {
       // The title counts too: the template does not mark it optional.
@@ -6121,6 +6167,7 @@
   // The review step is done when the plan is approved, not when four boxes
   // are filled in: a signature is the point of the step (RPA-139).
   function reviewSummaryOf(reviewEl) {
+    if (capabilities.submissions) return groupsSummary(requiredGroupsOf(reviewEl));
     if (!signOffRecord) return { total: 1, answered: 0, complete: false };
     const approved = workflow().isApproved(signOffRecord);
     return { total: 1, answered: approved ? 1 : 0, complete: approved };
@@ -6180,10 +6227,16 @@
   // stricter rule would only turn away real addresses.
   function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
   function requiredGroupComplete(g) {
-    const date = requiredDateInput(g);
-    if (date) return Boolean(readDateSegments(date));
+    // Identity is a separate entry page, not a completed-plan requirement.
     const email = requiredEmailInput(g);
     if (email) return emailLooksRight(email.value);
+    if (capabilities.submissions) {
+      const key = unitKey(g), methodGroup = g.closest('.methods-group');
+      const question = methodGroup ? methodsGroupEls().indexOf(methodGroup) : undefined;
+      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || error.question === question)));
+    }
+    const date = requiredDateInput(g);
+    if (date) return Boolean(readDateSegments(date));
     return fieldHasContent(g);
   }
   function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
@@ -6228,6 +6281,13 @@
   // Draws the step's errors from scratch against what is missing now. With
   // focus: the person just pressed the button, so the summary takes focus.
   function showStepErrors(stepEl, summary, { focus, groups }) {
+    if (capabilities.submissions && !stepEl.classList.contains('email-step')) {
+      const errors = submissionErrors().filter(error => {
+        const group = submissionTarget(error).group;
+        return !error.key || (group && stepEl.contains(group) && (!groups || groups.includes(group)));
+      });
+      return showSubmissionErrors(errors, summary, { focus });
+    }
     const missing = (groups || requiredGroupsOf(stepEl)).filter((g) => !requiredGroupComplete(g));
     requiredGroupsOf(stepEl).forEach(clearGroupError);
     const list = summary.querySelector('.error-summary-list');
@@ -6635,7 +6695,7 @@
       else if (s.answered > 0) { state = 'Incomplete'; status.classList.add('task-tag'); }
       else { state = 'Not yet started'; status.classList.add('task-tag'); }
       // The sign-off says where the plan is in its own words (RPA-139).
-      if (steps[i].classList.contains('review-step') && !locked) {
+      if (!capabilities.submissions && steps[i].classList.contains('review-step') && !locked) {
         const signOff = signOffTag(signOffRecord);
         state = signOff.text;
         status.className = 'task-status ' + signOff.cls;
@@ -6742,6 +6802,9 @@
         const follow = () => { if (errorsShowing) errorsShowing = showStepErrors(stepEl, summary, { focus: false, groups: judged }); };
         stepEl.addEventListener('input', follow);
         stepEl.addEventListener('change', follow);
+        stepEl.addEventListener('click', event => {
+          if (capabilities.submissions && event.target.closest('.list-remove')) follow();
+        });
         nav.appendChild(next);
         stepEl.appendChild(nav);
         stepEl.appendChild(renderCheckPanel(stepEl, i));
@@ -7990,6 +8053,191 @@
     return { version: DRAFT_VERSION, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
   }
 
+  // Submission collects the active form directly. Recovery's dormant-data carry is separate.
+  function mountSubmissionPanel(step) {
+    // Max's MVP choice: preserve the tested declarations and final Send.
+    // Move the existing controls so a late configuration response loses no input.
+    const workflowPanel = step.querySelector('.sign-off');
+    if (workflowPanel) {
+      const declarations = el('div', 'review-signoffs submission-signoffs');
+      Object.values(SIGN_OFF_FIELDS).forEach(keys => {
+        [keys.declaration, keys.name].forEach(key => {
+          const control = workflowPanel.querySelector('[data-field="' + key + '"]');
+          declarations.appendChild(control.closest('.field'));
+        });
+      });
+      workflowPanel.replaceWith(declarations);
+      redrawSignOff = () => {};
+    }
+    const emailHint = doc.querySelector('.email-step .field-hint-text');
+    if (emailHint) emailHint.textContent = 'This address identifies your local draft and backup file. Sending a plan does not send an email.';
+    const playbackLead = doc.querySelector('.email-playback-lead');
+    if (playbackLead) playbackLead.textContent = 'Email address for this browser:';
+    if (step.querySelector('.submission-panel')) return;
+    const owner = doc;
+    owner._submissionErrors = null;
+    ['input', 'change', 'click'].forEach(type => owner.addEventListener(type, () => { owner._submissionErrors = null; }, true));
+    const summary = renderErrorSummary();
+    summary.classList.add('submission-errors');
+    owner._submission = window.createSubmissionUI({ doc: owner, config: submissionConfig, collect: collectSubmissionPlan,
+      prepare: prepareSubmissionSignOffs, showErrors: (errors, focus) => showSubmissionErrors(errors, summary, { focus, final: true }), resetDeclarations: resetSubmissionDeclarations, isRestoring: () => draftRestoring });
+    const feedback = step.querySelector('.tool-feedback');
+    step.insertBefore(summary, feedback); step.insertBefore(owner._submission.root, feedback);
+    const follow = () => {
+      if (summary._submissionJudged && summary.isConnected) showSubmissionErrors(submissionErrors(), summary, { final: true });
+    };
+    owner.addEventListener('input', follow); owner.addEventListener('change', follow);
+    owner.addEventListener('click', event => { if (event.target.closest('.list-remove, .row-remove, .custom-field-remove')) follow(); });
+  }
+  function collectSubmissionPlan() {
+    const contract = window.RPA_SUBMISSION;
+    const fields = [formSchema.header.title, ...formSchema.header.meta, ...formSchema.sections.flatMap(s => s.fields)];
+    if (!contract.matchesSchema(fields, formSchema.header.before)) throw new Error('Unsupported active form schema');
+    const draft = backupPayload(collectDraft());
+    if (!planCreatedAtExact) delete draft.createdAt;
+    doc.querySelectorAll('input[type="date"]').forEach(input => {
+      if (!dateSegments(input)) return;
+      // An unfinished typing buffer must never fall back to an older valid backing date.
+      const value = readDateSegments(input)?.iso || '';
+      const td = input.closest('td');
+      if (td) {
+        const table = td.closest('table');
+        const row = Array.from(table.querySelectorAll('tbody tr')).indexOf(td.parentElement);
+        const column = Array.from(td.parentElement.children).indexOf(td);
+        draft.tables[table.id][row][column].v = value;
+      } else if (input.dataset.field) draft.fields[input.dataset.field] = value;
+    });
+    return contract.project(draft);
+  }
+  function submissionErrors() {
+    if (doc._submissionErrors) return doc._submissionErrors;
+    const owner = doc;
+    // A task-list redraw asks about the same plan many times. Share one validation
+    // during that synchronous read, and invalidate before edits and the next turn.
+    queueMicrotask(() => { owner._submissionErrors = null; });
+    try { return (doc._submissionErrors = window.RPA_SUBMISSION.validate(collectSubmissionPlan())); }
+    catch (_) { return (doc._submissionErrors = [{ key: null, section: 'review', code: 'schema', message: 'The active form has changed. Keep a backup and contact the organiser before sending.' }]); }
+  }
+  function resetSubmissionDeclarations() {
+    doc._submissionErrors = null;
+    ['declarationResearcher', 'declarationRequester'].forEach(key => {
+      const input = doc.querySelector('[data-field="' + key + '"]');
+      if (input) input.checked = false;
+    });
+    saveDraft(); refreshReviewSummary(); refreshTaskList();
+  }
+  function submissionTarget(error, fresh = false) {
+    const cache = doc._submissionTargets || (doc._submissionTargets = new WeakMap());
+    if (!fresh && cache.has(error)) return cache.get(error);
+    const target = resolveSubmissionTarget(error);
+    cache.set(error, target);
+    return target;
+  }
+  function resolveSubmissionTarget(error) {
+    if (!error.key) return {};
+    const owner = error.question === undefined ? doc : methodsGroupEls()[error.question];
+    if (!owner) return {};
+    const node = owner.querySelector('[data-field="' + error.key + '"], [data-list-key="' + error.key + '"], [data-field-key="' + error.key + '"]');
+    const group = node?.closest('.field, .mf, .title-field');
+    if (!group) return {};
+    let area = group;
+    if (node.matches('.custom-fields-list')) {
+      const blocks = Array.from(node.querySelectorAll('.custom-field-block')).filter(b =>
+        b.querySelector('.custom-field-name').value.trim() || b.querySelector('.custom-field-body').value.trim());
+      area = blocks[error.row] || group;
+      return { group, control: area.querySelector(error.column === 'label' ? '.custom-field-name' : '.custom-field-body') };
+    }
+    const table = group.querySelector('table');
+    if (table) {
+      const row = table.querySelectorAll('tbody tr')[error.row || 0];
+      const column = { stage: 0, startDate: 1, completionDate: 2, name: 0 }[error.column] || 0;
+      area = row?.children[column] || group;
+    } else if (node.matches('.list-rows') && error.row !== undefined) {
+      const control = node.querySelectorAll('.list-input')[error.row];
+      return { group, control: control || group.querySelector('.add-btn') };
+    }
+    const date = area.querySelector('input[type="date"]');
+    if (date) {
+      const parts = dateSegments(date);
+      const invalid = parts && (!/^\d{1,2}$/.test(parts.day.value.trim()) || Number(parts.day.value) < 1 || Number(parts.day.value) > 31 ? parts.day :
+        !parseMonthSegment(parts.month.value) ? parts.month : !/^\d{4}$/.test(parts.year.value.trim()) ? parts.year : parts.day);
+      return { group, control: invalid || date };
+    }
+    const visible = c => !c.disabled && !c.hidden && !c.closest('[hidden]') && c.type !== 'hidden' && c.type !== 'file';
+    // The section/page itself may be hidden until Change opens it. Ignore those ancestors here.
+    const localVisible = c => !c.disabled && !c.hidden && c.type !== 'hidden' && c.type !== 'file' &&
+      !Array.from(area.querySelectorAll('[hidden]')).some(p => p === c || p.contains(c));
+    const controls = Array.from(area.querySelectorAll('input, textarea, select'));
+    const control = error.code === 'other' ? controls.find(c => c.type === 'text' && localVisible(c)) : controls.find(localVisible);
+    return { group, control: control || controls.find(visible) || group.querySelector('button') };
+  }
+  function showSubmissionErrors(errors, summary, { focus = false, final = false } = {}) {
+    // Summaries share inline marks. Release only this summary's claim so a
+    // question-level refresh cannot remove the final summary's error or duplicate it.
+    const owner = summary.id || (summary.id = 'submission-error-summary-' + (++fieldErrorSeq));
+    doc.querySelectorAll('[data-submission-error-owner~="' + owner + '"]').forEach(mark => {
+      const owners = mark.dataset.submissionErrorOwner.split(/\s+/).filter(id => id !== owner);
+      if (owners.length) { mark.dataset.submissionErrorOwner = owners.join(' '); return; }
+      doc.querySelectorAll('[aria-describedby]').forEach(c => {
+        const before = c.getAttribute('aria-describedby').split(/\s+/);
+        if (!before.includes(mark.id)) return;
+        const ids = before.filter(id => id !== mark.id);
+        if (ids.length) c.setAttribute('aria-describedby', ids.join(' ')); else c.removeAttribute('aria-describedby');
+        if (!ids.some(id => id.startsWith('submission-error-'))) {
+          if (c._submissionInvalidBefore === null) c.removeAttribute('aria-invalid');
+          else if (c._submissionInvalidBefore !== undefined) c.setAttribute('aria-invalid', c._submissionInvalidBefore);
+          delete c._submissionInvalidBefore;
+        }
+      });
+      mark.remove();
+    });
+    const list = summary.querySelector('.error-summary-list'); list.replaceChildren();
+    errors.slice(0, 100).forEach(error => {
+      const { group, control } = submissionTarget(error);
+      const item = el('li');
+      const link = el(group ? 'a' : 'span', 'error-summary-link', group ? { href: '#' } : {});
+      link.textContent = error.message;
+      if (group) {
+        const container = control?.closest('td, .list-row, .custom-field-block') || group;
+        let mark = Array.from(container.querySelectorAll('[data-submission-error-owner]')).find(mark =>
+          mark._submissionControl === control && mark.textContent === error.message);
+        if (mark) {
+          mark.dataset.submissionErrorOwner = Array.from(new Set(mark.dataset.submissionErrorOwner.split(/\s+/).concat(owner))).join(' ');
+        } else {
+          mark = el('p', 'field-error', { id: 'submission-error-' + (++fieldErrorSeq), 'data-submission-error-owner': owner });
+          mark._submissionControl = control;
+          mark.textContent = error.message;
+          container.appendChild(mark);
+        }
+        if (control) {
+          if (control._submissionInvalidBefore === undefined) control._submissionInvalidBefore = control.getAttribute('aria-invalid');
+          control.setAttribute('aria-invalid', 'true');
+          const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+          control.setAttribute('aria-describedby', Array.from(new Set(ids.concat(mark.id))).join(' '));
+        }
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          const target = submissionTarget(error, true); // Resolve against current rows, never a server selector.
+          if (!target.group) return;
+          const step = target.group.closest('.step');
+          if (final && !step.classList.contains('review-step')) changeFromReview(step, target.group, step.dataset.stepSlug);
+          else showPageOf(step, target.group);
+          for (let p = target.control?.parentElement; p && p !== step; p = p.parentElement) if (p.tagName === 'DETAILS') p.open = true;
+          target.control?.focus({ preventScroll: true });
+          target.control?.scrollIntoView?.({ block: 'center' });
+        });
+      }
+      item.appendChild(link); list.appendChild(item);
+    });
+    if (errors.length > 100) {
+      const more = el('li'); more.textContent = 'Showing the first 100 problems. Correct these, then check the plan again.'; list.appendChild(more);
+    }
+    summary.hidden = !errors.length;
+    if (focus && errors.length) summary.focus({ preventScroll: false });
+    if (final) summary._submissionJudged = true;
+    return errors.length > 0;
+  }
+
   function collectBackup() {
     const draft = collectDraft();
     // Date segments have their own typing buffer. Read complete dates directly
@@ -8238,7 +8486,8 @@
     // Keep the original nodes and closures, including feedback, focus and any
     // unsaved text. A failed rebuild never has to reconstruct the original.
     const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
-      syncCommentsReveal, planCreatedAt, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      syncCommentsReveal, planCreatedAt, planCreatedAtExact, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
       methodsSuggestRefresh, fields: new Map(evaluationFields), batches: new Map(evaluationBatches),
       focus: document.activeElement, signature: lastSavedSignature, recoveredDraft };
     const replacement = doc.cloneNode(false);
@@ -8279,8 +8528,10 @@
       lastSavedSignature = signature;
     } catch (err) {
       replacementEvents.abort();
+      replacement._submission?.dispose();
       if (replacement.isConnected) replacement.replaceWith(original.doc);
-      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt,
+      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact,
+        signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
         lastUpdatedManual, refreshDateline, refreshReviewSummary, methodsSuggestRefresh, recoveredDraft } = original);
       tables.splice(0, tables.length, ...original.tables);
       evaluationFields.clear(); original.fields.forEach((value, key) => evaluationFields.set(key, value));
@@ -8296,6 +8547,8 @@
     if (draftTimer) window.clearTimeout(draftTimer);
     draftTimer = null;
     original.formEvents.abort();
+    original.doc._submission?.dispose();
+    doc._submission?.replaced();
     resetEvaluationWork();
     refreshOptionsMenu();
   }
@@ -8351,6 +8604,7 @@
 
   function clearForm() {
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
+    doc._submission?.replaced();
     resetEvaluationWork();
     clearDraft();
     lastSavedSignature = null;
@@ -8445,6 +8699,7 @@
     // edit, so this must not be the edit that resurrects one.
     withoutDraftSave(applyTableDefaults);
     refreshOptionsMenu();
+    doc._submission?.refresh();
   }
 
   // ---------- evaluation test profiles ----------
@@ -8494,6 +8749,8 @@
     const profiles = window.TEST_PROFILES || {};
     const profile = profiles[profileKey];
     if (!profile) throw new Error('Unknown test profile "' + profileKey + '"');
+
+    doc._submission?.replaced();
 
     resetEvaluationWork();
     Object.entries(profile.fields).forEach(([key, value]) => {
