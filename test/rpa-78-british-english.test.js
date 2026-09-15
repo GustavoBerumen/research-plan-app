@@ -127,7 +127,8 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
   Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   // RPA-116: the plan-level participant answers now live in every question's group, in draft version 8.
-  expected.version = 8;
+  expected.version = 9;
+  expected.signOff = null;   // no sign-off has been started (RPA-139)
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
   expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)

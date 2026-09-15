@@ -30,10 +30,13 @@ test('the review step ends with a declaration for each role, each above its sign
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
+  // Since RPA-139 the pairs sit inside the sign-off flow, each shown only
+  // when it is that person's turn, but the words and the shape are these.
   const signOffs = d.querySelector('.review-signoffs');
-  assert.deepEqual(Array.from(signOffs.querySelectorAll(':scope > .field > .flabel')).map(text),
+  assert.deepEqual(Array.from(signOffs.querySelectorAll('.sign-off-pair > .field > .flabel')).map(text),
     ['Declaration: Lead researcher', 'Sign off: Lead researcher', 'Declaration: Project requester', 'Sign off: Project requester'],
     'each role declares, then signs');
+  assert.equal(signOffs.querySelectorAll('.sign-off-pair').length, 2, 'one pair per role');
   for (const [key, statement] of Object.entries(STATEMENTS)) {
     const el = box(d, key);
     assert.ok(el, key + ': one checkbox');
@@ -50,7 +53,7 @@ test('the review step ends with a declaration for each role, each above its sign
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the Review row reads Incomplete until both boxes are ticked and both sign-offs given, and Completed then', async (t) => {
+test('a declaration is what makes a signature: signing without ticking is refused, and the Review row follows the sign-off', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -60,20 +63,32 @@ test('the Review row reads Incomplete until both boxes are ticked and both sign-
     completeStep(app, steps(d)[i]);
   }
   await settle();
-  assert.equal(reviewStatus(d), 'Not yet started');
-  setValue(window, d.querySelector('[data-field="signOffResearcher"]'), 'GB');
-  setValue(window, d.querySelector('[data-field="signOffProjectOwner"]'), 'MS');
-  await settle();
-  assert.equal(reviewStatus(d), 'Incomplete', 'both sign-offs are not enough');
-  tick(window, box(d, 'declarationResearcher'));
-  await settle();
-  assert.equal(reviewStatus(d), 'Incomplete', 'one declaration is not enough either');
-  tick(window, box(d, 'declarationRequester'));
-  await settle();
-  assert.equal(reviewStatus(d), 'Completed', 'both declarations complete the plan');
+  // The four fields are filled in by completeStep, so the declarations are
+  // ticked; untick the researcher's to be sure the sign-off asks for it.
+  setValue(window, d.querySelector('[data-field="signOffResearcher"]'), 'PN');
   tick(window, box(d, 'declarationResearcher'), false);
+  const press = (label) => Array.from(d.querySelectorAll('.sign-off-actions button')).find((b) => text(b) === label).click();
+  assert.equal(reviewStatus(d), 'Not started', 'nothing has been sent to anybody yet (RPA-139)');
+
+  d.querySelector('input[name="sign-off-role"]').click();
+  setValue(window, d.getElementById('sign-off-other-email'), 'max@example.com');
+  press('Continue');
   await settle();
-  assert.equal(reviewStatus(d), 'Incomplete', 'and unticking either takes it back');
+  assert.equal(reviewStatus(d), 'Not signed');
+
+  press('Sign and send');
+  const summary = d.querySelector('.sign-off .error-summary');
+  assert.equal(summary.hidden, false, 'a signature without its declaration is refused');
+  assert.match(text(summary), /Confirm the declaration: lead researcher/i);
+  assert.ok(box(d, 'declarationResearcher').closest('.field').classList.contains('field-invalid'), 'and the box is marked');
+  assert.equal(reviewStatus(d), 'Not signed', 'nothing was signed');
+
+  tick(window, box(d, 'declarationResearcher'));
+  press('Sign and send');
+  await settle();
+  assert.equal(summary.hidden, true, 'the declaration answered, the signature stands');
+  assert.equal(reviewStatus(d), 'Awaiting sign-off from the project requester');
+  assert.deepEqual(app.jsdomErrors, []);
 });
 
 test('the ticks are saved in the draft as a plain yes, come back on reload, and Clear Form unticks them', async (t) => {

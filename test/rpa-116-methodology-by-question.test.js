@@ -75,7 +75,7 @@ test('the answers are saved per question, in draft version 8, and come back per 
   fillGroup(app, groups[0], { method: 'Interviews', characteristic: 'Abandoned a basket', userGroup: 'New customers', sample: 0 });
   fillGroup(app, groups[1], { method: 'Survey', characteristic: 'Regular buyers', userGroup: 'Returning customers', sample: 2 });
   const saved = await waitFor(() => { const s = savedDraft(window); return s && s.methods && s.methods[1] && s.methods[1].sampleSize && s.methods[1].sampleSize.v ? s : null; }, { message: 'the draft was not saved with the second question' });
-  assert.equal(saved.version, 8);
+  assert.equal(saved.version, 9);
   assert.deepEqual(saved.methods[0], { question: 'Why do people leave?', methods: ['Interviews'], characteristics: ['Abandoned a basket'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' } });
   assert.deepEqual(saved.methods[1], { question: 'What do they expect?', methods: ['Survey'], characteristics: ['Regular buyers'], userGroups: ['Returning customers'], sampleSize: { v: 'Large (13–29)', o: '' } });
   assert.equal('characteristics' in saved.lists, false, 'no plan-level list any more');
@@ -107,7 +107,7 @@ test('a version 7 plan brings its one answer to every question it had, and the p
   });
   setValue(window, d.querySelector('[data-field="background"]'), 'An edit that saves.');
   const saved = await waitFor(() => { const s = savedDraft(window); return s && s.fields.background === 'An edit that saves.' ? s : null; });
-  assert.equal(saved.version, 8);
+  assert.equal(saved.version, 9);
   assert.equal('characteristics' in saved.lists, false, 'not carried as a leftover');
   assert.equal('userGroups' in saved.lists, false);
   assert.equal('sampleSize' in saved.selects, false);

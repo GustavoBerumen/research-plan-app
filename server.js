@@ -68,6 +68,7 @@ const PUBLIC_ASSETS = new Map([
   ['/style.css', 'style.css'],
   ['/favicon.svg', 'favicon.svg'],
   ['/app.js', 'app.js'],
+  ['/plan-workflow.js', 'plan-workflow.js'],
   ['/score-classification.js', 'score-classification.js'],
   ['/textarea-autosize.js', 'textarea-autosize.js'],
   ['/test-profiles.js', 'test-profiles.js'],

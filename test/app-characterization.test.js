@@ -55,12 +55,14 @@ test('renders the complete form from the real index, template, rubric, and metho
 
   assert.deepEqual(app.scriptSources, [
     'test-profiles.js',
+    'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
     'app.js',
   ]);
   assert.deepEqual(app.executedScripts, [
     'test-profiles.js',
+    'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
     'app.js',
@@ -114,6 +116,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // whole plan (RPA-55).
       // Two declarations close the plan, one per role, each above its approval (RPA-115).
       // Feedback on the plan is dormant since RPA-98's rework; feedback on the tool has no field label.
+      // The sign-off asks who you are before it asks you to sign (RPA-139).
+      'Which of these are you?', 'What is the other person\u2019s email address?',
       'Declaration: Lead researcher', 'Sign off: Lead researcher', 'Declaration: Project requester', 'Sign off: Project requester',
     ]
   );
@@ -261,7 +265,7 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
     message: 'The v7 draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 8);
+  assert.equal(saved.version, 9);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
