@@ -18,6 +18,13 @@ if (pilotSetting !== undefined && pilotSetting !== 'true' && pilotSetting !== 'f
   throw new Error('RPA_PILOT_MODE must be true or false');
 }
 const PILOT_MODE = pilotSetting === 'true';
+// Tool feedback is separate from completed-plan submissions. Pilot collection
+// needs an explicit choice; retain the existing non-pilot default.
+const feedbackSetting = process.env.RPA_FEEDBACK_ENABLED;
+if (feedbackSetting !== undefined && feedbackSetting !== 'true' && feedbackSetting !== 'false') {
+  throw new Error('RPA_FEEDBACK_ENABLED must be true or false');
+}
+const FEEDBACK_ENABLED = feedbackSetting === undefined ? !PILOT_MODE : feedbackSetting === 'true';
 const pilotGuard = createPilotGuard({ pilot: PILOT_MODE, env: process.env });
 
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -54,7 +61,7 @@ const submissions = createSubmissions({ env: process.env, pilot: PILOT_MODE, bui
 const CAPABILITIES = Object.freeze({
   // Completed plans have a separate, explicitly configured private destination.
   submissions: submissions.enabled,
-  feedback: true,
+  feedback: FEEDBACK_ENABLED,
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
   addFramework: !PILOT_MODE,

@@ -220,7 +220,9 @@ async function bootApp(options = {}) {
     if (!scriptPath.startsWith(ROOT + path.sep)) {
       throw new Error('Refusing to load script outside the repository: ' + source);
     }
-    window.eval(fs.readFileSync(scriptPath, 'utf8') + '\n//# sourceURL=' + source);
+    const script = fs.readFileSync(scriptPath, 'utf8');
+    // Test-only instrumentation for callbacks that cannot be reached after a page is removed.
+    window.eval((options.transformScript ? options.transformScript(source, script) : script) + '\n//# sourceURL=' + source);
     executedScripts.push(source);
   });
 

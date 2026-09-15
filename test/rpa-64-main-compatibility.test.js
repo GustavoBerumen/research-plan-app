@@ -70,7 +70,7 @@ test('late MVP configuration preserves control identity and switches to the test
   assert.equal(initials.value, 'MY — 15/09/2026');
   assert.equal(app.document.querySelector('.sign-off'), null);
   assert.equal(app.document.querySelectorAll('.submission-signoffs .field').length, 4);
-  assert.match(app.document.querySelector('.email-step .field-hint-text').textContent, /does not send an email/);
+  assert.match(app.document.querySelector('.email-step .field-hint-text').textContent, /does not send email/);
   assert.doesNotMatch(app.document.querySelector('.email-playback-lead').textContent, /will be sent/);
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -131,7 +131,7 @@ test('editing in the MVP reopens an earlier workflow approval and preserves its 
   source.document.querySelector('.sign-off-setup input[value=leadResearcher]').click();
   press('Continue'); press('Continue');
   setValue(source.window, source.document.getElementById('sign-off-other-email'), 'reviewer@example.com');
-  press('Sign and send'); press('Sign');
+  press('Sign for local review'); press('Sign');
   const approved = await backupOf(source);
   assert.equal(approved.signOff.status, 'approved');
   const app = await bootApp({ draft: approved, configResponse }); t.after(() => app.close());
