@@ -288,6 +288,12 @@ function completeStep(app, stepEl) {
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
       : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
   groups.forEach((g) => {
+    const schedule = g.querySelector('#stageTimeline-table');
+    if (schedule) {
+      // Complete each retained row with a real, ordered date pair.
+      schedule.querySelectorAll('tbody input[type=date]').forEach(input => setValue(window, input, '2026-10-01'));
+      return;
+    }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');

@@ -79,6 +79,21 @@ test('pressing Show answers keeps focus on it through the redraw the press itsel
   assert.equal(d.activeElement, changeIn(answersOf(review, 'research'), 'Outcomes'), 'so does a Change a person tabbed to');
 });
 
+test('a delayed disclosure toggle does not replace the Change button that has focus', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const review = await reachReview(app);
+  const details = answersOf(review, 'research');
+  reveal(details);
+  const change = changeIn(details, 'Outcomes');
+  change.focus();
+  // Native toggle delivery can follow the eager draw that restores an open
+  // disclosure, or a synthetic toggle used by an interaction harness.
+  details.dispatchEvent(new app.window.Event('toggle'));
+  assert.equal(app.document.activeElement, change);
+  assert.equal(changeIn(details, 'Outcomes'), change, 'the already current answer rows keep their controls');
+});
+
 test('the return path is one-shot and only for that section: the next Save and continue goes to the check page as usual', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
