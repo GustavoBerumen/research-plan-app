@@ -75,8 +75,16 @@ test('nothing rendered carries GOV.UK branding', async (t) => {
   const app = await bootApp({ configResponse: config() });
   t.after(() => app.close());
   const text = app.document.body.textContent;
-  assert.doesNotMatch(text, /GOV\.UK/i);
-  assert.doesNotMatch(text, /crown copyright|open government licence/i);
+  // The rule is about branding, not about naming a source. Since RPA-121 the
+  // footer credits the Design System and its two licences, which is the
+  // opposite of passing this off as a government service: the credit itself
+  // says it is not one. Everywhere but that credit stays silent.
+  const credit = app.document.querySelector('.footer-credit');
+  assert.ok(credit, 'the credit is there (RPA-121)');
+  const elsewhere = text.replace(credit.textContent, '');
+  assert.doesNotMatch(elsewhere, /GOV\.UK/i, 'named once, where a source is named, and nowhere else');
+  assert.doesNotMatch(elsewhere, /crown copyright|open government licence/i);
+  assert.match(credit.textContent, /This is not a government service\./);
   // Scoped to the chrome: the form draws its own accordion chevrons and
   // evaluation icons, and those are not branding. The form's own mark, the
   // pencil of RPA-105, is: it is the one drawing allowed here, and it is

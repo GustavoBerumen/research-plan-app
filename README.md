@@ -142,6 +142,26 @@ research-plan-rubric.md      Evaluation rubric
 research-methods.md          Methods dropdown list
 ```
 
+## Credits and licence
+
+The form's components, layout and accessibility patterns are adapted from the
+[GOV.UK Design System](https://design-system.service.gov.uk/) and govuk-frontend,
+which is MIT licensed, © 2017 Crown Copyright (Government Digital Service).
+Design System documentation and guidance are © Crown copyright under the
+[Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+
+Adapted rather than copied: the patterns, class names and values are taken from
+the Design System, the CSS here is hand-written. None of GOV.UK's branding is
+used — no logotype, no Royal Arms or crown, and Arial rather than GDS Transport,
+which is licensed for government services alone. **This is not a government
+service.**
+
+The full notices, including the MIT licence text, are in [NOTICE.md](NOTICE.md).
+
+This app itself is not currently published under an open licence: `package.json`
+says `UNLICENSED`, which grants nobody any rights to it. Change that field and
+add a LICENCE file if it should be shared.
+
 ## Status
 
 Actively evolving — this is a working prototype, not a finished product.
