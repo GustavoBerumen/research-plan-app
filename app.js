@@ -4647,7 +4647,9 @@
   // automatically (once) so nobody has to type the date by hand.
   function attachSignOffStamp(input, key) {
     if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return;
-    input.addEventListener('blur', () => stampSignOff(input));
+    input.addEventListener('blur', () => {
+      if (stampSignOff(input)) input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
   }
   function stampSignOff(input) {
     const val = input.value.trim();
@@ -4655,7 +4657,7 @@
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+    input.value = val.toUpperCase() + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
     return true;
   }
   function prepareSubmissionSignOffs() {
@@ -5878,6 +5880,7 @@
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
       if (!other) { say(['Enter the other person’s email address.']); return; }
+      if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
@@ -5910,11 +5913,19 @@
     }
     function sign(role) {
       if (!judge(role)) return;
+      if (!judgePlan()) return;
       const action = { transition: 'sign', role, declaration: declarationOf(role) };
       if (role === signOffRecord.authorRole) action.contentHash = planContentHash();
       else action.revision = W.currentRevisionNumber(signOffRecord);
       const after = act(action);
       if (after) heading.focus({ preventScroll: true });
+    }
+    function judgePlan() {
+      const errors = localCompletionErrors();
+      if (!errors.length) return true;
+      clearSaid();
+      showSubmissionErrors(errors, summary, { focus: true, final: true });
+      return false;
     }
 
     function sayLinkStatus(message) { linkStatus.textContent = message; }
@@ -6219,6 +6230,7 @@
   }
   function groupMessage(g) {
     const label = groupLabel(g);
+    if (customSampleSizeInput(g)) return 'Enter a valid ' + label.toLowerCase() + ': a positive whole number, a range such as 5–8, or a minimum such as 30+';
     if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
     const email = requiredEmailInput(g);
     // The two messages of the GOV.UK email address pattern (RPA-99).
@@ -6229,7 +6241,14 @@
     return 'Enter the ' + label.toLowerCase();
   }
   function groupControl(g) {
+    const sample = customSampleSizeInput(g);
+    if (sample) return sample;
     return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
+  }
+  function customSampleSizeInput(g) {
+    const radios = g.querySelector('.radio-group[data-field-key="sampleSize"]');
+    return radios?.querySelector('input[type="radio"]:checked')?.value === '__other__'
+      ? radios.querySelector('.radio-other-row input[type="text"]') : null;
   }
   function requiredDateInput(g) {
     // Tables retain their existing advisory completeness rule; a standalone
@@ -6250,6 +6269,11 @@
       const question = methodGroup ? methodsGroupEls().indexOf(methodGroup) : undefined;
       return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || error.question === question)));
     }
+    // Drafts stay editable and recoverable; moving on requires an actual count.
+    // Use the same rule as final submission without requiring that capability.
+    const sample = customSampleSizeInput(g);
+    if (sample) return window.RPA_SUBMISSION.validSampleSize(sample.value);
+    if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
     const date = requiredDateInput(g);
     if (date) return Boolean(readDateSegments(date));
     return fieldHasContent(g);
@@ -6296,6 +6320,11 @@
   // Draws the step's errors from scratch against what is missing now. With
   // focus: the person just pressed the button, so the summary takes focus.
   function showStepErrors(stepEl, summary, { focus, groups }) {
+    const checked = groups || requiredGroupsOf(stepEl);
+    if (!capabilities.submissions && checked.length && checked.every(g => unitKey(g) === 'stageTimeline')) {
+      const errors = localCompletionErrors().filter(error => !error.key || error.key === 'stageTimeline');
+      return showSubmissionErrors(errors, summary, { focus });
+    }
     if (capabilities.submissions && !stepEl.classList.contains('email-step')) {
       const errors = submissionErrors().filter(error => {
         const group = submissionTarget(error).group;
@@ -7989,12 +8018,13 @@
   }
 
   function floorMessage(floor) {
-    return 'This is before the plan was started on ' + formatDateline(floor) + '.';
+    return 'This is before this document was created on ' + formatDateline(floor)
+      + '. Earlier research work is allowed; this is only a note.';
   }
 
-  // min= has to compose rather than overwrite: attachDateRangeConstraint
-  // already sets it on each completion date to keep it at or after its own
-  // start date. Whichever is later wins, and both still hold.
+  // Creation is advisory, so it must not constrain the picker. Only the
+  // stage's start is a minimum for its completion date. Otherwise an earlier
+  // readout would leave min > max, despite earlier work being allowed.
   function rowMinimumFor(input) {
     const tr = input.closest('tr');
     const dates = tr ? tr.querySelectorAll('input[type="date"]') : [];
@@ -8008,8 +8038,7 @@
 
     table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
       const rowMin = rowMinimumFor(input);
-      const effective = [floor, rowMin].filter(Boolean).sort().pop() || '';
-      if (effective) input.min = effective;
+      if (rowMin) input.min = rowMin;
       else input.removeAttribute('min');
 
       const note = input.closest('.date-control').querySelector('.date-note');
@@ -8108,6 +8137,10 @@
     const contract = window.RPA_SUBMISSION;
     const fields = [formSchema.header.title, ...formSchema.header.meta, ...formSchema.sections.flatMap(s => s.fields)];
     if (!contract.matchesSchema(fields, formSchema.header.before)) throw new Error('Unsupported active form schema');
+    return collectCurrentPlan();
+  }
+  function collectCurrentPlan() {
+    const contract = window.RPA_SUBMISSION;
     const draft = backupPayload(collectDraft());
     if (!planCreatedAtExact) delete draft.createdAt;
     doc.querySelectorAll('input[type="date"]').forEach(input => {
@@ -8132,6 +8165,13 @@
     queueMicrotask(() => { owner._submissionErrors = null; });
     try { return (doc._submissionErrors = window.RPA_SUBMISSION.validate(collectSubmissionPlan())); }
     catch (_) { return (doc._submissionErrors = [{ key: null, section: 'review', code: 'schema', message: 'The active form has changed. Keep a backup and contact the organiser before sending.' }]); }
+  }
+  // Basic numeric and schedule checks also apply to browser-local review.
+  // Read unfinished date buffers as incomplete, without changing the saved draft.
+  function localCompletionErrors() {
+    const contract = window.RPA_SUBMISSION;
+    return contract.validate(collectCurrentPlan())
+      .filter(error => !error.key || error.key === 'sampleSize' || error.key === 'stageTimeline');
   }
   function resetSubmissionDeclarations() {
     doc._submissionErrors = null;
