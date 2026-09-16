@@ -64,7 +64,7 @@ test('the template declares the address above the title, and the form opens on a
   assert.equal(label.getAttribute('for'), emailOf(d).id, 'the heading is the label of the box');
   assert.equal(gate.getAttribute('aria-labelledby'), heading.id);
   const hint = gate.querySelector('.field-hint-text');
-  assert.equal(text(hint), 'We’ll use it to send you a link to your plan, so you can return to it later.');
+  assert.equal(text(hint), 'This address identifies your local draft and backup. This app does not send email.');
   const input = emailOf(d);
   assert.equal(input.type, 'email');
   assert.equal(input.getAttribute('autocomplete'), 'email', 'the browser may offer the address it knows');
@@ -245,7 +245,7 @@ test('the address is played back under the box as it is typed, and again when th
   assert.ok(playback.closest('.field-email') && playback.previousElementSibling === emailOf(d), 'inset under the box');
   setValue(window, emailOf(d), 'joeb');
   assert.equal(playback.hidden, false);
-  assert.equal(text(playback.querySelector('.email-playback-lead')), 'A link to your plan will be sent to:');
+  assert.equal(text(playback.querySelector('.email-playback-lead')), 'Email address for this browser:');
   assert.equal(text(playback.querySelector('.email-playback-value')), 'joeb');
   setValue(window, emailOf(d), ' joebloggs@hotmail.com ');
   assert.equal(text(playback.querySelector('.email-playback-value')), 'joebloggs@hotmail.com', 'as typed, the spaces aside');

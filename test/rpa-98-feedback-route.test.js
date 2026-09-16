@@ -1,8 +1,7 @@
 'use strict';
 
 // RPA-98, the server side. POST /api/feedback appends one record per
-// submission to feedback-data.jsonl, in every mode: feedback on the tool is
-// the one record a pilot exists to collect. A score and two answers, trimmed and capped,
+// submission to feedback-data.jsonl, when enabled. Pilot collection must be explicitly enabled. A score and two answers, trimmed and capped,
 // the score must be 1 to 5, an empty submission is refused, and nothing from
 // the plan is stored beyond its name, the section and the build.
 
@@ -12,9 +11,9 @@ const { loadServer } = require('./rpa-89-server-harness.cjs');
 
 const body = (extra = {}) => JSON.stringify(Object.assign({ notAsExpected: '  It stopped.  ', improve: 'Fewer pages.', usefulness: 4, plan: 'Checkout study', section: 'review', build: 'abc1234' }, extra));
 
-test('pilot and non-pilot modes both accept feedback and append one line per submission', async () => {
+test('explicitly enabled pilot and non-pilot modes both accept feedback and append one line per submission', async () => {
   for (const pilot of ['true', 'false']) {
-    const app = loadServer({ pilot });
+    const app = loadServer({ pilot, env: { RPA_FEEDBACK_ENABLED: 'true' } });
     const config = JSON.parse((await app.request('/api/config')).body);
     assert.equal(config.capabilities.feedback, true, 'advertised in pilot mode ' + pilot);
     const result = await app.request('/api/feedback', 'POST', body());
@@ -30,7 +29,7 @@ test('pilot and non-pilot modes both accept feedback and append one line per sub
 });
 
 test('an empty submission, an answer over the cap, a score off the scale and a bad body are refused without writing', async () => {
-  const app = loadServer({ pilot: 'true' });
+  const app = loadServer({ pilot: 'true', env: { RPA_FEEDBACK_ENABLED: 'true' } });
   assert.equal((await app.request('/api/feedback', 'POST', JSON.stringify({ notAsExpected: '', usefulness: null }))).status, 400, 'nothing to send');
   assert.equal((await app.request('/api/feedback', 'POST', body({ notAsExpected: 'x'.repeat(2001) }))).status, 400, 'over the cap');
   const offScale = await app.request('/api/feedback', 'POST', JSON.stringify({ usefulness: 6 }));
@@ -43,7 +42,7 @@ test('an empty submission, an answer over the cap, a score off the scale and a b
 });
 
 test('the record keeps only what a reader needs: no plan content, names capped', async () => {
-  const app = loadServer({ pilot: 'true' });
+  const app = loadServer({ pilot: 'true', env: { RPA_FEEDBACK_ENABLED: 'true' } });
   const result = await app.request('/api/feedback', 'POST', body({ background: 'Plan content that must not be stored', tryingTo: 'A question that went', plan: 'p'.repeat(300), extra: 'ignored' }));
   assert.equal(result.status, 200);
   const record = JSON.parse(app.writes[0].args[1]);

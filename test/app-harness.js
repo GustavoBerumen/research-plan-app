@@ -220,7 +220,9 @@ async function bootApp(options = {}) {
     if (!scriptPath.startsWith(ROOT + path.sep)) {
       throw new Error('Refusing to load script outside the repository: ' + source);
     }
-    window.eval(fs.readFileSync(scriptPath, 'utf8') + '\n//# sourceURL=' + source);
+    const script = fs.readFileSync(scriptPath, 'utf8');
+    // Test-only instrumentation for callbacks that cannot be reached after a page is removed.
+    window.eval((options.transformScript ? options.transformScript(source, script) : script) + '\n//# sourceURL=' + source);
     executedScripts.push(source);
   });
 
@@ -286,6 +288,12 @@ function completeStep(app, stepEl) {
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
       : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
   groups.forEach((g) => {
+    const schedule = g.querySelector('#stageTimeline-table');
+    if (schedule) {
+      // Complete each retained row with a real, ordered date pair.
+      schedule.querySelectorAll('tbody input[type=date]').forEach(input => setValue(window, input, '2026-10-01'));
+      return;
+    }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');
