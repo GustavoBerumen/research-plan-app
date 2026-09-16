@@ -1020,9 +1020,25 @@
       input.select();
     }
 
+    // Selecting a segment's text is deferred by a tick, because a browser
+    // places the caret from the click after the focus event and would undo
+    // an immediate select(). Deferring it means the selection can arrive
+    // after focus has moved on, and then it paints a segment that is no
+    // longer the one being used — two segments showing selected in turn,
+    // which is the flicker Max sees in Opera and Chrome on the first click
+    // after returning to the window (RPA-125). Restoring focus on window
+    // activation and the click that follows are two focus events a tick
+    // apart, which is exactly the gap this closes.
+    //
+    // So a selection only ever paints the segment that still has focus when
+    // it arrives; one that is late does nothing. This is a guard
+    // against a race rather than a reproduction of Max's: an intermittent,
+    // window-activation bug on Windows is not something these tests can
+    // stage, and a stale selection is the only mechanism here that can
+    // paint two segments at once.
     [dayInput, monthInput, yearInput].forEach((input) => {
       input.addEventListener('focus', () => {
-        setTimeout(() => input.select(), 0);
+        setTimeout(() => { if (document.activeElement === input) input.select(); }, 0);
       });
     });
 
