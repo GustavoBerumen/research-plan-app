@@ -20,6 +20,22 @@ const BODY_TIMEOUT_MS = 15000;
 const TRANSITIONS = new Set(['sign', 'requestChanges', 'edit', 'reopen', 'withdraw', 'issueLink', 'revokeLink']);
 const STATUS_FOR = { 'version-conflict': 409, 'no-link': 404 };
 
+// A bad link says exactly what went wrong. Gus decided this on 16 September
+// 2026, choosing plain answers over hiding which plans exist: a plan address
+// is 32 random hex characters, so it cannot be guessed, and a person holding
+// a link that stopped working deserves to be told why. A withdrawn link is
+// "gone" in HTTP's own word, because it once worked and now does not.
+const NO_PLAN = { status: 404, error: 'There is no plan at this address.', code: 'no-plan' };
+const UNKNOWN_LINK = { status: 404, error: 'This link is not one this plan recognises.', code: 'unknown-link' };
+const LINK_WITHDRAWN = { status: 410, error: 'This link was withdrawn. Ask the plan\u2019s author for a new one.', code: 'link-withdrawn' };
+function whoIsAsking(record, token) {
+  if (!record) return { problem: NO_PLAN };
+  const found = workflow.roleForToken(record, token);
+  if (!found) return { problem: UNKNOWN_LINK };
+  if (found.revoked) return { problem: LINK_WITHDRAWN };
+  return { found };
+}
+
 function readBody(req, timeoutMs = BODY_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -83,10 +99,8 @@ function createSignOff({ env, pilot, store, now = () => new Date().toISOString()
       if (!id || !token) return reply(res, 400, { error: 'A plan and a link are needed to read one.' });
       let record;
       try { record = await store.read(id); } catch (err) { return reply(res, 400, { error: 'That plan could not be read.' }); }
-      const found = record && workflow.roleForToken(record, token);
-      // A plan nobody can name and a link nobody recognises answer the same
-      // way, so an address cannot be probed for plans that exist.
-      if (!found || found.revoked) return reply(res, 404, { error: 'This link no longer works.' });
+      const { found, problem } = whoIsAsking(record, token);
+      if (problem) return reply(res, problem.status, { error: problem.error, code: problem.code });
       return reply(res, 200, { plan: projection(record, found.role), role: found.role });
     }
 
@@ -109,8 +123,8 @@ function createSignOff({ env, pilot, store, now = () => new Date().toISOString()
     if (!id || !token) return reply(res, 400, { error: 'A plan and a link are needed to change one.' });
     let record;
     try { record = await store.read(id); } catch (err) { return reply(res, 400, { error: 'That plan could not be read.' }); }
-    const found = record && workflow.roleForToken(record, token);
-    if (!found || found.revoked) return reply(res, 404, { error: 'This link no longer works.' });
+    const { found, problem } = whoIsAsking(record, token);
+    if (problem) return reply(res, problem.status, { error: problem.error, code: problem.code });
 
     // The role comes from the link, never from the request. Everything else
     // the body carries is the person's own answer, and the module judges it.

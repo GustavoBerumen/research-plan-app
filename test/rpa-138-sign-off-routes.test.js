@@ -165,23 +165,30 @@ test('reading a plan needs a link, and shows the links the reader is allowed to 
   assert.equal((await read(server, 'as=' + mine)).status, 400);
 });
 
-test('a plan nobody can name and a link nobody recognises answer alike, so nothing can be probed', async () => {
+test('a bad link says exactly what went wrong: no such plan, a link the plan does not know, and a withdrawn link each answer in their own words', async () => {
+  // Gus's decision of 16 September 2026: plain answers over hiding which
+  // plans exist. A plan address is 32 random hex characters and cannot be
+  // guessed, so saying "no plan here" gives nothing away.
   const { server } = fixture();
   const { id, mine } = await created(server);
   const unknownPlan = await read(server, 'id=' + 'f'.repeat(32) + '&as=' + mine);
-  const unknownLink = await read(server, 'id=' + id + '&as=' + 'f'.repeat(48));
   assert.equal(unknownPlan.status, 404);
+  assert.deepEqual(json(unknownPlan), { error: 'There is no plan at this address.', code: 'no-plan' });
+
+  const unknownLink = await read(server, 'id=' + id + '&as=' + 'f'.repeat(48));
   assert.equal(unknownLink.status, 404);
-  assert.deepEqual(json(unknownPlan), json(unknownLink));
-  assert.equal(json(unknownLink).error, 'This link no longer works.');
+  assert.deepEqual(json(unknownLink), { error: 'This link is not one this plan recognises.', code: 'unknown-link' });
 
   const withdrawn = await post(server, { id, token: mine, version: 1, transition: 'revokeLink', forRole: 'projectRequester' });
   assert.equal(withdrawn.status, 200);
   const gone = json(withdrawn).plan.parties.projectRequester;
   assert.ok(gone.revokedAt, 'the link is withdrawn on the record');
   const tried = await read(server, 'id=' + id + '&as=' + gone.token);
-  assert.equal(tried.status, 404, 'and a withdrawn link opens nothing');
-  assert.equal(json(tried).error, 'This link no longer works.');
+  assert.equal(tried.status, 410, 'a withdrawn link is gone, in HTTP\u2019s own word: it once worked and now does not');
+  assert.deepEqual(json(tried), { error: 'This link was withdrawn. Ask the plan\u2019s author for a new one.', code: 'link-withdrawn' });
+  const triedToAct = await post(server, { id, token: gone.token, version: 2, transition: 'sign', revision: 1, declaration: 'I confirm.' });
+  assert.equal(triedToAct.status, 410, 'and it cannot act, with the same answer');
+  assert.equal(json(triedToAct).code, 'link-withdrawn');
 
   const fresh = await post(server, { id, token: mine, version: 2, transition: 'issueLink', forRole: 'projectRequester' });
   const next = json(fresh).plan.parties.projectRequester.token;
