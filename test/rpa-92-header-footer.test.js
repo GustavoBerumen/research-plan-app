@@ -84,7 +84,9 @@ test('nothing rendered carries GOV.UK branding', async (t) => {
   const elsewhere = text.replace(credit.textContent, '');
   assert.doesNotMatch(elsewhere, /GOV\.UK/i, 'named once, where a source is named, and nowhere else');
   assert.doesNotMatch(elsewhere, /crown copyright|open government licence/i);
-  assert.match(credit.textContent, /This is not a government service\./);
+  // Gus's decision of 16 September 2026: the disclaimer lives in the files
+  // people read about the project in, not on the page.
+  assert.doesNotMatch(credit.textContent, /not a government service/i);
   // Scoped to the chrome: the form draws its own accordion chevrons and
   // evaluation icons, and those are not branding. The form's own mark, the
   // pencil of RPA-105, is: it is the one drawing allowed here, and it is

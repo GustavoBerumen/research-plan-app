@@ -53,13 +53,13 @@ test('the notice says plainly that this is not a government service', () => {
   assert.doesNotMatch(NOTICE, /\bcopied from\b|\bbuilt with GOV\.UK\b/i, 'and not a claim of more than that');
 });
 
-test('a reader of the page is told too, with the two licences named and links to follow', async (t) => {
+test('a reader of the page sees the credit, with the two licences named and a link to follow; the disclaimer stays in the files (Gus, 16 September 2026)', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const credit = app.document.querySelector('.site-footer .footer-credit');
   assert.ok(credit, 'the credit is in the footer, where a colophon belongs');
   assert.equal(text(credit),
-    'Form patterns adapted from the GOV.UK Design System, © Crown copyright, used under the MIT Licence and the Open Government Licence v3.0. This is not a government service.');
+    'Form patterns adapted from the GOV.UK Design System, © Crown copyright, used under the MIT Licence and the Open Government Licence v3.0.');
   const links = Array.from(credit.querySelectorAll('a')).map((a) => a.getAttribute('href'));
   assert.deepEqual(links, ['https://design-system.service.gov.uk/', 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/'],
     'each licence and the system itself can be read for yourself');
