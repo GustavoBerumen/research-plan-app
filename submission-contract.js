@@ -146,7 +146,9 @@
       ['startDate', 'completionDate'].forEach((column, i) => {
         const date = r[i + 1]?.v;
         if (!isoDate(date)) add('stageTimeline', 'date', { row, column }, 'Enter a complete, valid ' + (i ? 'completion' : 'start') + ' date in schedule row ' + (row + 1) + '.');
-        else if ((isoDate(plan.createdAt) && date < plan.createdAt) || (isoDate(f.researchReadout) && date > f.researchReadout)) add('stageTimeline', 'bounds', { row, column }, 'Keep schedule row ' + (row + 1) + ' between the plan start and research readout dates.');
+        // A document can be written after research began. Creation is advisory,
+        // while the readout and each stage's own start are real schedule bounds.
+        else if (isoDate(f.researchReadout) && date > f.researchReadout) add('stageTimeline', 'bounds', { row, column }, 'Keep schedule row ' + (row + 1) + ' on or before the research readout date.');
       });
       if (isoDate(r[1]?.v) && isoDate(r[2]?.v) && r[2].v < r[1].v) add('stageTimeline', 'range', { row, column: 'completionDate' }, 'Complete schedule row ' + (row + 1) + ' on or after its start date.');
     });
@@ -162,5 +164,5 @@
     }));
     return errors;
   }
-  return Object.freeze({ SCHEMA, MAX_BYTES, MAX_ENTRIES, FIELDS, CUSTOM, SECTION, SAMPLE_SIZES, STAGES, project, fingerprint, canonical, matchesSchema, structure, validate, isoDate });
+  return Object.freeze({ SCHEMA, MAX_BYTES, MAX_ENTRIES, FIELDS, CUSTOM, SECTION, SAMPLE_SIZES, STAGES, project, fingerprint, canonical, matchesSchema, structure, validate, isoDate, validSampleSize: sampleSize });
 });

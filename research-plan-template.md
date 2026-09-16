@@ -110,7 +110,7 @@ is the page's heading; its label names it in the Menu and in messages.
 -->
 
 Email address (email, width=30, question=What is your email address?, key=emailAddress):
-  Hint: We’ll use it to send you a link to your plan, so you can return to it later.
+  Hint: This address identifies your local draft and backup. This app does not send email.
 
 # Research title (text, key=researchTitle):
   Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
@@ -217,7 +217,7 @@ Additional information (custom-fields, max=1, key=additionalMethodology):
      the list. Planning's start date is when the plan was started; Reporting's
      completion date follows Research readout until somebody edits it. -->
 Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
-  Hint: Suggested stages of a standard study, bounded by the plan start date and research readout.
+  Hint: Suggested stages of a standard study. Each stage needs a start and completion date, on or before the research readout. Remove stages you do not need.
 <!-- Dormant since RPA-117, see Theory above. RPA-69, Jira subtasks from
      Action Points, loses its source while this is hidden. -->
 <!-- Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible -->
