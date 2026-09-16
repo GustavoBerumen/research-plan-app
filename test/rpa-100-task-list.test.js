@@ -24,7 +24,7 @@ const rows = (d) => Array.from(d.querySelectorAll('.task-item')).map((li) => ({
   linked: li.querySelector('.task-name').tagName === 'BUTTON',
 }));
 const statusOf = (d, name) => rows(d).find((r) => r.name === name);
-const settle = (d) => waitFor(() => d.querySelectorAll('.task-item').length === 6).then(() => new Promise((r) => setTimeout(r, 160)));
+const settle = (d) => waitFor(() => d.querySelectorAll('.task-item').length === 7).then(() => new Promise((r) => setTimeout(r, 160)));
 
 test('editing an earlier answer preserves access to another completed section', async (t) => {
   const app = await bootApp(); t.after(() => app.close());
@@ -76,16 +76,16 @@ test('an incoming unlocked link is resolved against the restored answers', async
   assert.deepEqual(visible(restored.document), ['context']);
 });
 
-test('the list is first, names the six sections, and at the start only Plan details can be started', async (t) => {
+test('the list is first, names the seven sections, and at the start only Plan details can be started', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
   assert.deepEqual(visible(d), ['sections']);
   assert.equal(text(d.querySelector('.task-list-step .step-heading')), 'Your research plan');
-  assert.deepEqual(rows(d).map((r) => r.name), ['Plan details', 'Context', 'Research', 'Methodology', 'Execution', 'Review']);
-  assert.deepEqual(rows(d).map((r) => r.status), ['Not yet started', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet']);
-  assert.deepEqual(rows(d).map((r) => r.linked), [true, false, false, false, false, false], 'only what can be started is a link');
-  assert.equal(text(d.querySelector('.task-list-progress')), 'You have completed 0 of 6 sections.');
+  assert.deepEqual(rows(d).map((r) => r.name), ['Plan details', 'Context', 'Research', 'Studies', 'Methodology', 'Execution', 'Review']);
+  assert.deepEqual(rows(d).map((r) => r.status), ['Not yet started', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet']);
+  assert.deepEqual(rows(d).map((r) => r.linked), [true, false, false, false, false, false, false], 'only what can be started is a link');
+  assert.equal(text(d.querySelector('.task-list-progress')), 'You have completed 0 of 7 sections.');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -102,7 +102,7 @@ test('completing a section unlocks the next; starting one reads as Incomplete; t
   assert.equal(statusOf(d, 'Context').status, 'Not yet started');
   assert.equal(statusOf(d, 'Context').linked, true);
   assert.equal(statusOf(d, 'Research').status, 'Cannot start yet', 'one at a time');
-  assert.equal(text(d.querySelector('.task-list-progress')), 'You have completed 1 of 6 sections.');
+  assert.equal(text(d.querySelector('.task-list-progress')), 'You have completed 1 of 7 sections.');
 
   setValue(window, d.querySelector('[data-field="background"]'), 'Started.');
   await settle(d);

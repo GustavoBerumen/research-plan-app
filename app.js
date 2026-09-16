@@ -2617,7 +2617,7 @@
   let methodsGroupSeq = 0;
   function perQuestionSuffix() {
     const s = el('span', 'visually-hidden per-question-of');
-    s.textContent = ' for research question 1';
+    s.textContent = ' for Study 1';
     return s;
   }
   function buildMethodsGroup(placeholder, width) {
@@ -2632,7 +2632,7 @@
     head.hidden = true;
     const qLabel = el('div', 'methods-group-q');
     qLabel.hidden = true;
-    const qText = el('p', 'methods-group-text');
+    const qText = el('ul', 'methods-group-text');
     qText.hidden = true;
     head.append(qLabel, qText);
     group.appendChild(head);
@@ -2756,202 +2756,19 @@
     renumberMethodsGroup(group);
     refreshMethodsSuggestSelection();
   }
-
-  // A full research question can't fit a third-width column, so group
-  // headings are shortened to "RQ<n> · <topic>". The number is the part that
-  // has to be reliable; the topic is a best-effort hint. Nothing is actually
-  // lost — syncMethodsGroups keeps the full question on the heading's title
-  // and on the group's aria-label.
-  //
-  // The topic is chosen by *what it is*, not by where it sits in the
-  // sentence. Picking the first content words gives "Main pain" for "What
-  // are the main pain points?" — a qualifier plus half a compound. So every
-  // word is classified, maximal runs of adjacent nouns are collected, and
-  // the best run wins.
-
-  // Words that only ever open a question.
-  const QUESTION_LEAD_WORDS = new Set([
-    'what', 'which', 'how', 'why', 'when', 'where', 'who', 'whom', 'whose',
-    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am', 'be',
-    'can', 'could', 'should', 'would', 'will', 'shall', 'may', 'might',
-    'have', 'has', 'had', 'there',
-  ]);
-  // Qualifier adjectives, dropped wherever they appear rather than only at
-  // the front: "the main pain points" is about pain points, not about main.
-  // Ordinals and small cardinals sit here too — a number is never a topic.
-  const QUESTION_QUALIFIERS = new Set([
-    'main', 'key', 'most', 'biggest', 'common', 'important', 'primary', 'top',
-    'major', 'overall', 'general', 'specific', 'various', 'particular',
-    'different', 'best', 'worst', 'more', 'much', 'many', 'some', 'any', 'all',
-    'each', 'every', 'other', 'same', 'such', 'very', 'just', 'only', 'also',
-    'one', 'two', 'three', 'four', 'five', 'first', 'second', 'third',
-    'fourth', 'fifth', 'last', 'next', 'new', 'old',
-  ]);
-  // Verbs describe what is being done, never what the question is about, so
-  // a noun phrase is never allowed to span one. This is also what stops
-  // "users think" and "parts selecting" being read as compounds.
-  const QUESTION_VERBS = new Set([
-    'think', 'thinks', 'feel', 'feels', 'say', 'says', 'want', 'wants',
-    'need', 'needs', 'use', 'uses', 'make', 'makes', 'get', 'gets',
-    'like', 'likes', 'know', 'knows', 'navigate', 'navigates', 'abandon',
-    'abandons', 'experience', 'experiences', 'perceive', 'perceives',
-    'describe', 'describes', 'understand', 'understands', 'expect', 'expects',
-    'prefer', 'prefers', 'choose', 'chooses', 'find', 'finds', 'happen',
-    'happens', 'occur', 'occurs', 'cause', 'causes', 'affect', 'affects',
-    'complete', 'completes', 'select', 'selects', 'enter', 'enters',
-    'leave', 'leaves', 'go', 'goes', 'come', 'comes', 'see', 'sees',
-    'look', 'looks', 'take', 'takes', 'give', 'gives', 'been', 'being',
-  ]);
-  // The people doing the thing. Never the topic on their own — "What do
-  // users think about the checkout?" is about the checkout — but perfectly
-  // good *inside* a compound, which is why "user segment" survives. They
-  // stay as phrase material and are only penalised when a phrase is nothing
-  // but actors.
-  const QUESTION_ACTORS = new Set([
-    'user', 'users', 'person', 'people', 'participant', 'participants',
-    'customer', 'customers', 'shopper', 'shoppers', 'visitor', 'visitors',
-    'respondent', 'respondents', 'someone', 'anyone', 'everyone',
-  ]);
-  // Plural actors are the ones that act as a bare *subject* ("do users
-  // rate…"). A bare singular actor can't be a subject without a determiner,
-  // so it's a modifier instead ("user segment", "customer journey") — which
-  // is why the two are treated differently in questionNounPhrases.
-  const PLURAL_ACTORS = new Set([
-    'users', 'people', 'participants', 'customers', 'shoppers', 'visitors',
-    'respondents',
-  ]);
-  // Auxiliaries that front a question and push the main verb after the
-  // subject: "How do users **rate** …". Without this cue there is no way to
-  // tell that "rate" is the verb and not the noun in "conversion rate".
-  const QUESTION_AUXILIARIES = new Set([
-    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am',
-    'can', 'could', 'will', 'would', 'should', 'shall', 'may', 'might',
-    'have', 'has', 'had',
-  ]);
-  const QUESTION_STOPWORDS = new Set([
-    'a', 'an', 'the', 'of', 'to', 'in', 'on', 'for', 'with', 'about', 'from',
-    'by', 'at', 'as', 'and', 'or', 'but', 'if', 'than', 'then', 'that', 'this',
-    'these', 'those', 'into', 'over', 'before', 'during', 'between',
-    'through', 'across', 'within', 'without', 'after',
-    'our', 'their', 'its', 'his', 'her', 'my', 'your', 'we', 'they', 'it',
-    'you', 'us', 'them', 'me', 'i', 'not', 'no', 'while', 'because',
-    'here', 'them',
-  ]);
-  // Words ending -ing are verb forms often enough to exclude by default;
-  // these are the ones that are genuinely nouns in this domain.
-  const ING_NOUNS = new Set([
-    'onboarding', 'marketing', 'branding', 'testing', 'training', 'meeting',
-    'briefing', 'pricing', 'shipping', 'listing', 'rating', 'setting',
-    'settings', 'wording', 'funding', 'staffing', 'banking', 'messaging',
-    'reporting', 'booking', 'billing',
-  ]);
-  const SHORT_LABEL_MAX = 20;
-
-  function classifyQuestionWord(word) {
-    if (word.length <= 2) return 'skip';
-    if (QUESTION_LEAD_WORDS.has(word)) return 'skip';
-    if (QUESTION_QUALIFIERS.has(word)) return 'skip';
-    if (QUESTION_STOPWORDS.has(word)) return 'skip';
-    if (QUESTION_VERBS.has(word)) return 'skip';
-    // Crude morphology for the verbs not worth listing ("experienced",
-    // "selecting"). The -ed rule needs a length floor or it would swallow
-    // "need", "feed" and "speed".
-    if (/ing$/.test(word) && !ING_NOUNS.has(word)) return 'skip';
-    if (/ed$/.test(word) && word.length > 5) return 'skip';
-    if (QUESTION_ACTORS.has(word)) return 'actor';
-    return 'noun';
-  }
-
-  // Maximal runs of adjacent noun-ish words. Adjacency is measured on the
-  // *original* word positions, so dropping "main" from "the main pain
-  // points" cannot glue two unrelated words into a compound that was never
-  // there — which is the whole point of rule 2.
-  function questionNounPhrases(question) {
-    const words = (question || '').toLowerCase().match(/[a-z0-9][a-z0-9'’-]*/g) || [];
-    const phrases = [];
-    let current = null;
-    let sawAuxiliary = false;
-    let prevWasPluralActor = false;
-    words.forEach((word, index) => {
-      if (QUESTION_AUXILIARIES.has(word)) sawAuxiliary = true;
-      let kind = classifyQuestionWord(word);
-      // In an auxiliary-fronted question the word straight after a plural
-      // subject is the main verb, whatever else it could be elsewhere:
-      // "How do users **rate** the pricing page?" is about the pricing page,
-      // not about a "users rate". Without this, any noun/verb ambiguity
-      // ("rate", "drop", "order", "design") glues itself to the subject and
-      // produces exactly the dangling fragment rule 5 forbids.
-      if (kind === 'noun' && sawAuxiliary && prevWasPluralActor) kind = 'skip';
-      prevWasPluralActor = PLURAL_ACTORS.has(word);
-      if (kind === 'skip') {
-        current = null;
-        return;
-      }
-      if (current && current.end === index - 1) {
-        current.words.push(word);
-        current.end = index;
-        if (kind === 'noun') current.hasNoun = true;
-      } else {
-        current = { words: [word], start: index, end: index, hasNoun: kind === 'noun' };
-        phrases.push(current);
-      }
-    });
-    return phrases;
-  }
-
-  function pickQuestionPhrase(phrases) {
-    let best = null;
-    let bestScore = -Infinity;
-    phrases.forEach((phrase) => {
-      // Containing a real noun dominates everything: a phrase of nothing but
-      // actors is the people, not the topic, and only wins if the question
-      // offers nothing else. Then longer wins, so a compound beats a bare
-      // noun ("user segment" over "issues"). Position is the last tie-break
-      // only, which is what makes "the X of Y" resolve to X.
-      const score = (phrase.hasNoun ? 1000 : 0) + phrase.words.length * 10 - phrase.start;
-      if (score > bestScore) {
-        bestScore = score;
-        best = phrase;
-      }
-    });
-    return best;
-  }
-
-  function shortQuestionLabel(question, index) {
-    const rq = PLAN.questionNumber(index);
-    const cleaned = (question || '').replace(/[?!.\s]+$/, '').trim();
-    if (!cleaned) return rq;
-
-    const phrase = pickQuestionPhrase(questionNounPhrases(cleaned));
-    if (!phrase) return rq;
-
-    // English compounds are head-final, so the last two words carry the head
-    // plus its nearest modifier. Every word in a phrase is a noun, so this
-    // can never end on a verb or a dangling adjective.
-    let keyword = phrase.words.slice(-2).join(' ');
-    if (keyword.length > SHORT_LABEL_MAX) {
-      // Too long to keep the compound. Fall back to the single most
-      // distinctive word rather than truncating both into a stub —
-      // "Accessibility" reads; "Accessibility barri…" does not.
-      keyword = phrase.words.reduce((a, b) => (b.length > a.length ? b : a));
-    }
-    if (keyword.length > SHORT_LABEL_MAX) {
-      keyword = keyword.slice(0, SHORT_LABEL_MAX - 1).replace(/\s+$/, '') + '…';
-    }
-    return rq + ' · ' + keyword.charAt(0).toUpperCase() + keyword.slice(1);
-  }
-
-  // Keeps one group per Research Question row, in order, and keeps each
-  // group's label in step with the question text as it's edited.
   function syncMethodsGroups() {
     const container = methodsGroupsEl();
     if (!container) return;
-    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    const questions = rqList
-      ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim())
-      : [];
-    const hasAnyQuestion = PLAN.hasAnyQuestion(questions);
-    const targetCount = PLAN.groupCount(questions);
+    const questions = researchQuestionTexts();
+    // One group per study (RPA-142). The studies page grows and shrinks the
+    // studies, with confirmation where something would be lost, so here the
+    // groups simply follow.
+    const studies = studiesSnapshot();
+    // One group per study, and one before any study is declared: the fields
+    // exist from the start, unlabelled and behind the task list's lock, so
+    // the form always renders every key the template declares. It becomes
+    // Study 1's group the moment a study is.
+    const targetCount = Math.max(PLAN.groupCount(studies), 1);
     const placeholder = container.dataset.placeholder || '';
 
     let groups = methodsGroupEls();
@@ -2959,39 +2776,45 @@
       container.appendChild(buildMethodsGroup(placeholder, container.dataset.width));
       groups = methodsGroupEls();
     }
-    // Incidental sync only trims empty trailing groups. Deliberate Question
-    // deletion confirms linked content and removes the exact indexed group.
     while (groups.length > targetCount) {
-      const last = groups[groups.length - 1];
-      if (groupHasContent(last)) break;
-      last.remove();
+      groups[groups.length - 1].remove();
       groups = methodsGroupEls();
     }
 
     groups.forEach((group, i) => {
       const label = group.querySelector('.methods-group-q');
       if (!label) return;
-      const text = questions[i] || '';
+      const declared = i < studies.length;
+      const study = studies[i] || { questions: [] };
       const head = group.querySelector('.methods-group-head');
-      if (head) head.hidden = !hasAnyQuestion;
-      const full = group.querySelector('.methods-group-text');
-      if (full) { full.textContent = text; full.hidden = !text; }
-      group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ' for research question ' + (i + 1); });
-      label.hidden = !hasAnyQuestion;
-      label.textContent = hasAnyQuestion ? shortQuestionLabel(text, i) : '';
-      label.classList.toggle('methods-group-q-empty', hasAnyQuestion && !text);
-      // The heading is abbreviated, so the full question is carried on the
-      // group instead: title for hover, aria-label so screen-reader users
-      // get the whole question rather than just "RQ2 · Checkout".
-      if (hasAnyQuestion && text) {
-        label.title = text;
-        group.setAttribute('aria-label', 'Methods for ' + shortQuestionLabel(text, i) + ': ' + text);
-      } else {
-        label.removeAttribute('title');
-        group.setAttribute('aria-label', hasAnyQuestion ? 'Methods for ' + PLAN.questionNumber(i) : 'Methods');
+      if (head) head.hidden = !declared;
+      if (!declared) {
+        group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ''; });
+        group.setAttribute('aria-label', 'Methods');
+        return;
       }
+      // The pinned head names the study and lists, in full, the questions it
+      // answers: that is the study's identity, on the page where it matters.
+      const full = group.querySelector('.methods-group-text');
+      if (full) {
+        full.replaceChildren();
+        study.questions.forEach((n) => {
+          const li = el('li');
+          const rq = el('strong', 'methods-group-rq');
+          rq.textContent = PLAN.questionNumber(n - 1);
+          li.append(rq, ' ', questions[n - 1] || '');
+          full.appendChild(li);
+        });
+        full.hidden = !study.questions.length;
+      }
+      group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ' for ' + PLAN.studyLabel(i); });
+      label.hidden = false;
+      label.textContent = PLAN.studyLabel(i) + (study.questions.length ? ' answers' : ' answers no research question yet');
+      label.classList.toggle('methods-group-q-empty', !study.questions.length);
+      const said = study.questions.map((n) => PLAN.questionNumber(n - 1) + ' ' + (questions[n - 1] || '')).join('; ');
+      group.setAttribute('aria-label', 'Methods for ' + PLAN.studyLabel(i) + (said ? ': ' + said : ''));
     });
-    container.classList.toggle('methods-grouped', hasAnyQuestion);
+    container.classList.toggle('methods-grouped', studies.length > 0);
     refreshMethodsSuggestSelection();
   }
 
@@ -3000,9 +2823,7 @@
   // same positional Questions instead of silently re-labelling them.
   function removeMethodsGroupAt(index) {
     const group = methodsGroupAt(index);
-    if (!group) return;
-    if (methodsGroupEls().length <= 1) return;
-    group.remove();
+    if (group) group.remove();
   }
 
   function suggestMethods(objective, researchQuestions) {
@@ -3064,8 +2885,11 @@
     // with its ✕ shows exactly the same state as one added from this panel.
     function syncSelection() {
       body.querySelectorAll('.ms-method[data-method-name]').forEach((row) => {
-        const target = methodsGroupAt(Number(row.dataset.groupIndex));
+        const target = groupForQuestion(Number(row.dataset.questionNumber));
         const on = !!target && groupHasMethod(target, row.dataset.methodName);
+        // A question no study answers yet has nowhere to put a method.
+        row.disabled = !target;
+        row.title = target ? '' : 'No study answers this question yet';
         row.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
     }
@@ -3117,10 +2941,10 @@
             row.disabled = true;
           } else {
             row.dataset.methodName = name;
-            row.dataset.groupIndex = String(entry.rowIndex);
+            row.dataset.questionNumber = String(entry.rowIndex + 1);
             row.setAttribute('aria-label', name + ' — add to "' + entry.text + '"');
             row.addEventListener('click', () => {
-              const target = methodsGroupAt(entry.rowIndex);
+              const target = groupForQuestion(entry.rowIndex + 1);
               if (!target) return;
               if (groupHasMethod(target, name)) removeMethodFromGroup(target, name);
               else applyMethodsToGroup(target, [name]);
@@ -3137,7 +2961,7 @@
           const addAll = el('button', 'eval-btn fw-add-btn ms-add-all', { type: 'button' });
           addAll.textContent = 'Add all for this question';
           addAll.addEventListener('click', () => {
-            const target = methodsGroupAt(entry.rowIndex);
+            const target = groupForQuestion(entry.rowIndex + 1);
             if (target) applyMethodsToGroup(target, [...new Set(names)]);
           });
           actions.appendChild(addAll);
@@ -3863,17 +3687,19 @@
     const outcomeRow = outcomeList && outcomeList.querySelectorAll('.list-row')[index];
     const outcomeInput = outcomeRow && outcomeRow.querySelector('.list-input');
     const hasOutcome = !!(outcomeInput && outcomeInput.value.trim());
-    const methodsGroup = methodsGroupAt(index);
-    const hasMethods = !!(methodsGroup && methodsGroupValues(methodsGroup).length);
-    const hasParticipants = !!(methodsGroup && groupHasParticipants(methodsGroup));
+    // A study that answers only this question is left answering nothing.
+    // It is not deleted, and neither are its methods: the check page will
+    // say it needs a question (RPA-142, decision 2).
+    const orphaned = studiesSnapshot()
+      .map((study, i) => (study.questions.length === 1 && study.questions[0] === number ? i : -1))
+      .filter((i) => i !== -1);
 
-    if (!hasOutcome && !hasMethods && !hasParticipants) return true;
+    if (!hasOutcome && !orphaned.length) return true;
     const linkedContent = [];
-    if (hasOutcome) linkedContent.push('Outcome ' + number);
-    if (hasMethods) linkedContent.push('Methods RQ' + number);
-    if (hasParticipants) linkedContent.push('Participants RQ' + number);
+    if (hasOutcome) linkedContent.push('Outcome ' + number + ' will be deleted');
+    orphaned.forEach((i) => linkedContent.push(PLAN.studyLabel(i) + ' will no longer answer any research question'));
     return window.confirm(
-      'Deleting Research Question ' + number + ' will also delete:\n\n' +
+      'Deleting Research Question ' + number + ' means:\n\n' +
       linkedContent.map((item) => '- ' + item).join('\n')
     );
   }
@@ -3959,7 +3785,7 @@
       if (isGrowable) bindTextarea(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
-      if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
+      if (field.key === 'researchQuestions') inp.addEventListener('input', syncStudyQuestions);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', (event) => {
@@ -3971,13 +3797,16 @@
             return;
           }
           removeOutcomeRowAt(index);
-          removeMethodsGroupAt(index);
+          // The studies drop the question and the ones after it move up
+          // one, so every tick keeps pointing at the question it meant
+          // (RPA-142). No methods are deleted: they belong to the study.
+          dropQuestionFromStudies(index + 1);
         }
         row.remove();
         renumber();
         updateResearchQuestionsWarning();
         if (field.key === 'researchQuestions') {
-          syncMethodsGroups();
+          syncStudyQuestions();
           const remaining = list.querySelectorAll('.list-input');
           const nextInput = remaining[Math.min(index, remaining.length - 1)];
           // The removed button is detached by the time its click bubbles.
@@ -3991,7 +3820,7 @@
       renumber();
       if (field.key === 'researchQuestions') {
         addOutcomeRow();
-        syncMethodsGroups();
+        syncStudyQuestions();
       }
       updateResearchQuestionsWarning();
       if (focus) inp.focus();
@@ -4056,10 +3885,169 @@
     return wrap;
   }
 
-  // Methods: a container of question-labelled groups instead of one flat
-  // list. Only the first group is built here — the rest are created, removed
-  // and labelled by syncMethodsGroups, which runs whenever a Research
-  // Question is added, removed or edited, and once from the wire-up below.
+  // ---------- studies (RPA-142) ----------
+  // Between Research and Methodology the plan says how many studies there
+  // are and which questions each one answers. A study is what Methodology
+  // is then answered for: one methods group per study, its questions pinned.
+  // The rules live in plan-model.js; this is the page that asks them.
+  let studyQuestionsFieldDef = null;
+  let lastStudyCountChoice = { v: '', o: '' };
+  function studyCountCell() {
+    return Array.from(doc.querySelectorAll('.select-cell')).find((c) => c.dataset.fieldKey === 'studyCount' && !c.closest('table')) || null;
+  }
+  function studyGroupsEl() { return doc.querySelector('.study-groups'); }
+  function studyGroupEls() {
+    const container = studyGroupsEl();
+    return container ? Array.from(container.querySelectorAll('.study-group')) : [];
+  }
+  function researchQuestionTexts() {
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    return rqList ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim()) : [];
+  }
+  // The questions a study group has ticked, by number.
+  function studyQuestionsOf(group) {
+    return Array.from(group.querySelectorAll('.study-question-input:checked')).map((c) => Number(c.dataset.question));
+  }
+  // The studies as the page has them, in the draft's shape: what each
+  // answers, and its four answers from its methods group.
+  function studiesSnapshot() {
+    return studyGroupEls().map((group, i) => {
+      const mg = methodsGroupAt(i);
+      const list = mg ? methodsListIn(mg) : null;
+      const entry = {
+        questions: studyQuestionsOf(group),
+        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((inp) => inp.value) : [],
+      };
+      perQuestionFields.forEach((f) => { entry[f.key] = mg ? perQuestionValue(mg, f) : (f.type === 'radios' ? { v: '', o: '' } : []); });
+      return entry;
+    });
+  }
+  // Where a question's methods go: the first study that answers it.
+  function groupForQuestion(number) {
+    const covering = PLAN.studiesFor(studiesSnapshot(), number);
+    return covering.length ? methodsGroupAt(covering[0]) : null;
+  }
+  function buildStudyGroup(index) {
+    const field = studyQuestionsFieldDef || { label: 'Study questions', question: 'Which research questions does this study answer?', key: 'studyQuestions' };
+    const group = el('fieldset', 'field field-radios study-group');
+    group.dataset.studyIndex = String(index);
+    const controlId = fieldControlId(field.key) + '-s' + (index + 1);
+    const legend = el('legend', 'flabel', { id: controlId + '-label' });
+    legend.textContent = (field.question || field.label).replace(/this study/i, PLAN.studyLabel(index));
+    markOptional(legend, field);
+    group.appendChild(legend);
+    // The name the check page and the error summary use (RPA-118's rule).
+    group.dataset.fieldName = PLAN.studyLabel(index);
+    const guidance = renderFieldHint(field, controlId + '-hint');
+    if (guidance) { group.appendChild(guidance); describeControl(group, guidance); }
+    const choices = el('div', 'study-choices', { role: 'group' });
+    group.appendChild(choices);
+    return group;
+  }
+  // The checkbox rows of every study follow the research questions: one per
+  // question, in order, ticks kept by question number, and under each a note
+  // of which other studies answer it, so overlap is visible while choosing.
+  function syncStudyQuestions() {
+    const questions = researchQuestionTexts();
+    const groups = studyGroupEls();
+    groups.forEach((group, s) => {
+      const choices = group.querySelector('.study-choices');
+      if (!choices) return;
+      let rows = Array.from(choices.querySelectorAll('.study-question'));
+      while (rows.length > questions.length) { rows[rows.length - 1].remove(); rows.pop(); }
+      while (rows.length < questions.length) {
+        const n = rows.length + 1;
+        const row = el('div', 'checkbox-item study-question');
+        const id = fieldControlId('studyQuestions') + '-s' + (s + 1) + '-q' + n;
+        const box = el('input', 'checkbox-input study-question-input', { type: 'checkbox', id, 'data-question': String(n), value: String(n) });
+        box.addEventListener('change', () => { syncStudyQuestions(); });
+        const label = el('label', 'checkbox-label study-question-label', { for: id });
+        const rq = el('strong', 'study-question-rq');
+        const text = el('span', 'study-question-text');
+        const also = el('span', 'study-question-also');
+        label.append(rq, ' ', text, also);
+        row.append(box, label);
+        choices.appendChild(row);
+        rows.push(row);
+      }
+    });
+    const studies = studiesSnapshot();
+    groups.forEach((group, s) => {
+      group.querySelectorAll('.study-question').forEach((row, i) => {
+        const n = i + 1;
+        row.querySelector('.study-question-rq').textContent = PLAN.questionNumber(i);
+        row.querySelector('.study-question-text').textContent = questions[i] || '(not written yet)';
+        const others = PLAN.studiesFor(studies, n).filter((k) => k !== s).map((k) => PLAN.studyLabel(k));
+        row.querySelector('.study-question-also').textContent = others.length ? 'Also answered by ' + others.join(' and ') : '';
+      });
+    });
+    syncMethodsGroups();
+  }
+  // Removing question N: every study drops it and later ticks move up one.
+  // The ticks are set from the model's answer; the rows themselves follow
+  // the questions, so the spare last row goes when syncStudyQuestions runs
+  // after the question's own row has gone.
+  function dropQuestionFromStudies(number) {
+    const next = PLAN.withoutQuestion(studiesSnapshot(), number);
+    studyGroupEls().forEach((group, s) => {
+      const wanted = new Set((next[s] || { questions: [] }).questions);
+      group.querySelectorAll('.study-question-input').forEach((box, i) => { box.checked = wanted.has(i + 1); });
+    });
+  }
+  // The studies follow the count the person chose. Growing is free; shrinking
+  // past a study that has ticks or methods asks first, and a refusal puts the
+  // radios back where they were (RPA-38's rule, with the study as the unit).
+  function syncStudies(opts = {}) {
+    const cell = studyCountCell();
+    const container = studyGroupsEl();
+    if (!cell || !container) { syncMethodsGroups(); return; }
+    const choice = choiceSnapshot(cell);
+    const target = PLAN.studyCount(choice);
+    let groups = studyGroupEls();
+    if (groups.length > target) {
+      const studies = studiesSnapshot();
+      const losing = [];
+      for (let i = target; i < groups.length; i++) if (studies[i].questions.length || PLAN.hasContent(studies[i])) losing.push(PLAN.studyLabel(i));
+      if (opts.confirm && losing.length && !window.confirm(
+        'Reducing to ' + (target || 'no') + ' stud' + (target === 1 ? 'y' : 'ies') + ' will delete ' + losing.join(' and ') + ', with the methods and participants written for ' + (losing.length === 1 ? 'it' : 'them') + '. Continue?'
+      )) {
+        applyChoice(cell, lastStudyCountChoice);
+        return;
+      }
+      for (let i = groups.length - 1; i >= target; i--) { groups[i].remove(); removeMethodsGroupAt(i); }
+      groups = studyGroupEls();
+    }
+    while (groups.length < target) { container.appendChild(buildStudyGroup(groups.length)); groups = studyGroupEls(); }
+    lastStudyCountChoice = choice;
+    syncStudyQuestions();
+    // The pages of the step changed under the person: the caption and what
+    // is on screen follow, without moving them off the page they are on.
+    const stepEl = container.closest('.step');
+    if (stepEl && steps.length && !isChecking(stepEl)) showPage(stepEl, pageOf(stepEl), { silent: true });
+  }
+  function renderStudyQuestionsField(field) {
+    studyQuestionsFieldDef = field;
+    // The outer field is only the container: each study presents the
+    // question itself, so each is a page and a row on the check page.
+    const wrap = el('div', 'field-study-questions', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    // The container's own name is for assistive technology and the optional
+    // marker; what a person reads is each study's legend.
+    const label = el('div', 'flabel visually-hidden', { id: labelId });
+    label.textContent = field.label;
+    markOptional(label, field);
+    wrap.setAttribute('aria-labelledby', labelId);
+    wrap.appendChild(label);
+    const container = el('div', 'study-groups');
+    container.dataset.fieldKey = field.key;
+    wrap.appendChild(container);
+    return wrap;
+  }
+
+  // Methods: a container of study-labelled groups instead of one flat list.
+  // Only the first group is built here — the rest are created, removed and
+  // labelled by syncMethodsGroups, which runs whenever the studies or the
+  // research questions change, and once from the wire-up below.
   let methodsFieldDef = null;
   // Radios in the design system's shape (RPA-118): a fieldset whose legend
   // asks the question, the hint beneath it, the options stacked with a
@@ -4089,6 +4077,19 @@
       placeholder: 'Type your own value…',
       'aria-label': field.label + ' — other',
     });
+    if (field.key === 'studyCount') {
+      // "More than three" reveals the number (RPA-142, Gus's choice of radios
+      // over a bare number box, 16 September 2026).
+      const hint = el('p', 'field-hint-text', { id: controlId + '-other-hint' });
+      hint.textContent = 'Enter the number of studies.';
+      otherInput.placeholder = '';
+      otherInput.setAttribute('inputmode', 'numeric');
+      otherInput.classList.add('input-w-2');
+      otherInput.setAttribute('aria-describedby', hint.id);
+      otherInput.setAttribute('aria-label', 'How many studies?');
+      otherRow.appendChild(hint);
+      otherInput.addEventListener('input', () => syncStudies({ confirm: true }));
+    }
     if (field.key === 'sampleSize') {
       otherRow.classList.add('sample-size-other');
       const hint = el('p', 'field-hint-text', { id: controlId + '-other-hint' });
@@ -4106,12 +4107,13 @@
       const id = controlId + '-opt-' + i;
       const radio = el('input', 'radio-input', { type: 'radio', id: id, name: controlId, value: value });
       const optLabel = el('label', 'radio-label', { for: id });
-      optLabel.textContent = value === '__other__' ? 'Other' : value;
+      optLabel.textContent = value === '__other__' ? (field.key === 'studyCount' ? 'More than three' : 'Other') : value;
       radio.addEventListener('change', () => {
         if (!radio.checked) return;
         const isOther = radio.value === '__other__';
         otherRow.hidden = !isOther;
         if (isOther) otherInput.focus(); else otherInput.value = '';
+        if (field.key === 'studyCount') syncStudies({ confirm: true });
       });
       item.append(radio, optLabel);
       group.appendChild(item);
@@ -4185,7 +4187,7 @@
   }
 
   function initMethodsGroupsSync() {
-    syncMethodsGroups();
+    syncStudies();
   }
 
   function initOutcomesSync() {
@@ -4749,6 +4751,7 @@
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
     if (field.type === 'checkbox') return renderCheckboxField(field);
     if (field.type === 'radios') return renderRadiosField(field);
+    if (field.type === 'study-questions') return renderStudyQuestionsField(field);
 
     const wrap = el('div', 'field');
     const controlId = fieldControlId(field.key);
@@ -6202,7 +6205,7 @@
     if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
     // The outer Methods field holds one group per research question; the
     // fields inside the groups are the questions to judge (RPA-116).
-    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom):not(.field-methods)')).filter((f) => !f.querySelector('.fopt'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom):not(.field-methods):not(.field-study-questions)')).filter((f) => !f.querySelector('.fopt'));
   }
   function groupsSummary(groups) {
     const answered = groups.filter(requiredGroupComplete).length;
@@ -6249,15 +6252,19 @@
   }
   function groupMessage(g) {
     const label = groupLabel(g);
-    if (customSampleSizeInput(g)) return 'Enter a valid ' + label.toLowerCase() + ': a positive whole number, a range such as 5–8, or a minimum such as 30+';
-    if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
+    // "Sample Size for Study 2" reads as "sample size for Study 2": the
+    // field's name is lowered mid-sentence, the study's is not (RPA-142).
+    const lowered = label.replace(/^(.*?)( for Study \d+)?$/, (m, name, of) => name.toLowerCase() + (of || ''));
+    if (customSampleSizeInput(g)) return 'Enter a valid ' + lowered + ': a positive whole number, a range such as 5–8, or a minimum such as 30+';
+    if (requiredDateInput(g)) return 'Enter a complete, valid ' + lowered + ' date';
     const email = requiredEmailInput(g);
     // The two messages of the GOV.UK email address pattern (RPA-99).
     if (email) return email.value.trim() ? 'Enter an email address in the correct format, like name@example.com' : 'Enter your email address';
-    if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
+    if (g.classList.contains('study-group')) return 'Select at least one research question for ' + label;
+    if (g.querySelector('input[type=radio]')) return 'Select a ' + lowered;
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
-    if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + label.toLowerCase();
-    return 'Enter the ' + label.toLowerCase();
+    if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + lowered;
+    return 'Enter the ' + lowered;
   }
   function groupControl(g) {
     const sample = customSampleSizeInput(g);
@@ -6285,8 +6292,9 @@
     if (email) return emailLooksRight(email.value);
     if (capabilities.submissions) {
       const key = unitKey(g), methodGroup = g.closest('.methods-group');
-      const question = methodGroup ? methodsGroupEls().indexOf(methodGroup) : undefined;
-      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || error.question === question)));
+      // A study's field is judged for every question the study answers.
+      const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
+      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
     }
     // Drafts stay editable and recoverable; moving on requires an actual count.
     // Use the same rule as final submission without requiring that capability.
@@ -6414,8 +6422,10 @@
     ['Objective', 'Learn what people expect of the delivery page, where choosing a slot breaks down, and for whom.'],
     ['Research question 1', 'Where does choosing a delivery slot break down, and for whom?'],
     ['Outcome 1', 'A ranked list of the points where people give up, with the evidence for each.'],
-    ['Methods for question 1', 'Moderated usability testing\nSession replay review'],
-    ['Sample size for question 1', '6 to 10'],
+    ['Number of studies', 'One'],
+    ['Study 1 answers', 'RQ1'],
+    ['Methods for Study 1', 'Moderated usability testing\nSession replay review'],
+    ['Sample size for Study 1', '6 to 10'],
     ['Planned schedule', 'Recruitment: 5 to 9 October\nData collection: 12 to 16 October\nAnalysis: 19 to 23 October\nReporting: 26 to 30 October'],
   ];
   function renderStartPage() {
@@ -6428,7 +6438,7 @@
     const h = (text) => { const x = el('h3', 'start-h'); x.textContent = text; return x; };
     const list = (tag, items) => { const l = el(tag); items.forEach((t) => { const li = el('li'); li.textContent = t; l.appendChild(li); }); return l; };
     const how = list('ol', [
-      'Answer one question at a time, section by section: Plan details, Context, Research, Methodology, Execution and Review. A section opens when the one before it is complete, and you can go back to any completed section.',
+      'Answer one question at a time, section by section: Plan details, Context, Research, Studies, Methodology, Execution and Review. A section opens when the one before it is complete, and you can go back to any completed section.',
       'Check your answers at the end of each section. You can change any answer from the review at the end.',
       'Ask for an evaluation of a section when you want a second opinion. It points at gaps and asks questions; it does not write the plan for you.',
       'Finish with a plan you can print or save as a PDF, and a backup file you can restore later.',
@@ -7011,7 +7021,7 @@
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.querySelector('[data-field="lastUpdated"]'));
-    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods)'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods):not(.field-study-questions)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
   // label, a date in words, a list by its rows, a table by its rows, methods
@@ -7063,6 +7073,13 @@
       return lines;
     }
     if (g.querySelector('.list-rows')) { g.querySelectorAll('.list-input').forEach((c) => push(c.value)); return lines; }
+    if (g.classList.contains('study-group')) {
+      g.querySelectorAll('.study-question-input:checked').forEach((c) => {
+        const row = c.closest('.study-question');
+        push(row.querySelector('.study-question-rq').textContent + ' ' + row.querySelector('.study-question-text').textContent);
+      });
+      return lines;
+    }
     if (g.querySelector('input[type=radio]')) {
       const radio = g.querySelector('input[type=radio]:checked');
       if (!radio) return lines;
@@ -7171,6 +7188,8 @@
     const walk = (container) => Array.from(container.children).forEach((c) => {
       if (c.classList.contains('field-methods')) {
         c.querySelectorAll('.methods-group').forEach((g) => units.push(...Array.from(g.children).filter((x) => x.classList.contains('field-per-question'))));
+      } else if (c.classList.contains('field-study-questions')) {
+        units.push(...Array.from(c.querySelectorAll('.study-group')));   // one page per study (RPA-142)
       } else if (c.classList.contains('field')) units.push(c);
       else if (c.classList.contains('field-group')) walk(c);
     });
@@ -7297,7 +7316,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 9;
+  const DRAFT_VERSION = 10;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -7468,26 +7487,17 @@
       lists[list.dataset.listKey] = Array.from(list.querySelectorAll('.list-input')).map((i) => i.value);
     });
 
-    // The question is read from the Research Questions rows, not from the
-    // group's heading — that heading is only the abbreviated "RQ<n> ·
-    // keyword", so reading it back would store a label where a question is
-    // meant. Nothing consumes this on restore (syncMethodsGroups recomputes
-    // headings from the live questions), but it keeps the saved shape
-    // honest for anything that reads a draft later.
-    const rqDraftList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    const rqDraftTexts = rqDraftList
-      ? Array.from(rqDraftList.querySelectorAll('.list-input')).map((i) => i.value.trim())
-      : [];
-    const methods = methodsGroupEls().map((group, i) => {
-      const list = methodsListIn(group);
-      const entry = {
-        question: rqDraftTexts[i] || '',
-        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i2) => i2.value) : [],
-      };
-      // The participant answers for this question, under their own keys (RPA-116).
-      perQuestionFields.forEach((f) => { entry[f.key] = perQuestionValue(group, f); });
-      return entry;
-    });
+    // The studies, each with the questions it answers and its four answers
+    // (RPA-142). The questions are numbers: position is identity. Writing
+    // in the group that exists before any study is declared is kept as a
+    // study answering nothing, rather than lost: it is flagged, not deleted.
+    let studies = studiesSnapshot();
+    if (!studies.length && methodsGroupAt(0) && groupHasContent(methodsGroupAt(0))) {
+      const mg = methodsGroupAt(0);
+      const entry = { questions: [], methods: Array.from(methodsListIn(mg).querySelectorAll('.list-input')).map((inp) => inp.value) };
+      perQuestionFields.forEach((f) => { entry[f.key] = perQuestionValue(mg, f); });
+      studies = [entry];
+    }
 
     const tableData = {};
     tables.forEach(({ id }) => {
@@ -7510,7 +7520,7 @@
       custom[list.dataset.listKey] = blocks;
     });
 
-    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual,
+    return { fields, selects, lists, studies, tables: tableData, custom, lastUpdatedManual,
       // The sign-off record (RPA-139). It lives in the draft because there
       // is no server to hold it yet (RPA-136); the shape is the module's.
       signOff: signOffRecord,
@@ -7653,6 +7663,8 @@
     // v9 carries the sign-off record (RPA-139). A plan written before it
     // has not been sent to anybody, so it starts with none.
     if (version < 9) migrated.signOff = migrated.signOff || null;
+    // v10 (RPA-142) is applied last, below, once the per-question groups the
+    // older migrations produce are settled.
     // v7 adds a draft UI preference; pre-existing drafts start hidden.
     if (version < 7) {
       migrated.ui = Object.assign({}, migrated.ui, { timelineVisible: false });
@@ -7739,6 +7751,19 @@
       migrated.lists = lists;
       migrated.selects = selects;
     }
+    // v10 (RPA-142): Methodology is answered per study, not per question. A
+    // plan saved before studies existed had one methods group per question,
+    // so each group that said anything, or whose question exists, becomes a
+    // study answering exactly that question, with every answer in place. The
+    // radios that ask how many studies show that number. An untouched default
+    // group does not become a study, because nobody declared one.
+    if (version < 10) {
+      const questions = (migrated.lists && migrated.lists.researchQuestions) || [];
+      migrated.studies = PLAN.studiesFromGroups(migrated.methods, questions);
+      migrated.selects = Object.assign({}, migrated.selects);
+      if (migrated.studies.length) migrated.selects.studyCount = PLAN.studyCountChoice(migrated.studies.length);
+      delete migrated.methods;
+    }
     return migrated;
   }
 
@@ -7794,19 +7819,34 @@
       });
     });
 
-    syncMethodsGroups();
-    (draft.methods || []).forEach((saved, i) => {
+    // The studies next: how many, from the radios; then which questions each
+    // answers; then each one's methods group (RPA-142).
+    const countCell = studyCountCell();
+    const savedStudies = Array.isArray(draft.studies) ? draft.studies : [];
+    if (countCell) {
+      // The radios are in the draft: written by the form, or by the
+      // migration for a plan older than studies.
+      const choice = (draft.selects && draft.selects.studyCount) || { v: '', o: '' };
+      applyChoice(countCell, choice);
+      lastStudyCountChoice = choice;
+    }
+    syncStudies();
+    savedStudies.forEach((saved, i) => {
+      const study = PLAN.study(saved);
+      const sg = studyGroupEls()[i];
+      if (sg) sg.querySelectorAll('.study-question-input').forEach((box) => { box.checked = study.questions.indexOf(Number(box.dataset.question)) !== -1; });
       const group = methodsGroupAt(i);
       if (!group) return;
       const list = methodsListIn(group);
       const addBtn = group.querySelector('.add-btn');
-      const values = saved.methods || [];
+      const values = study.methods;
       growTo(() => list.querySelectorAll('.list-row').length, values.length, addBtn);
       const inputs = Array.from(list.querySelectorAll('.list-input'));
       values.forEach((v, j) => { if (inputs[j]) inputs[j].value = v; });
       renumberMethodsGroup(group);
       perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, saved[f.key]));
     });
+    syncStudyQuestions();
 
     scalarFieldEls().forEach((elm) => {
       const key = elm.getAttribute('data-field');
@@ -8174,6 +8214,10 @@
         draft.tables[table.id][row][column].v = value;
       } else if (input.dataset.field) draft.fields[input.dataset.field] = value;
     });
+    // The submission wire format predates studies: one methods group per
+    // question. It is derived from the studies, so Max's collection keeps
+    // its shape (RPA-64, RPA-142).
+    draft.methods = PLAN.perQuestionView((draft.lists || {}).researchQuestions, draft.studies);
     return contract.project(draft);
   }
   function submissionErrors() {
@@ -8209,7 +8253,9 @@
   }
   function resolveSubmissionTarget(error) {
     if (!error.key) return {};
-    const owner = error.question === undefined ? doc : methodsGroupEls()[error.question];
+    // The wire format is one group per question; on the page a question's
+    // group is the first study that answers it (RPA-142).
+    const owner = error.question === undefined ? doc : groupForQuestion(error.question + 1);
     if (!owner) return {};
     const node = owner.querySelector('[data-field="' + error.key + '"], [data-list-key="' + error.key + '"], [data-field-key="' + error.key + '"]');
     const group = node?.closest('.field, .mf, .title-field');
@@ -8390,7 +8436,7 @@
       string(value.v, path + '.v');
       if ('o' in value) string(value.o, path + '.o');
     };
-    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
+    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
     // The sign-off record travels with a backup, so a plan signed on one
     // machine still reads as signed when it is restored (RPA-139). Checked
     // for shape rather than rebuilt: the module is the authority on it.
@@ -8453,6 +8499,15 @@
       if ('userGroups' in group) array(group.userGroups, path + '.userGroups', string);
       if ('sampleSize' in group) choice(group.sampleSize, path + '.sampleSize');
     });
+    // A study answers questions by number (RPA-142).
+    if ('studies' in draft) array(draft.studies, 'studies', (study, path) => {
+      record(study, path, ['questions', 'methods', 'characteristics', 'userGroups', 'sampleSize']);
+      array(study.questions, path + '.questions', (n, p) => { if (!Number.isInteger(n) || n < 1) fail(p); });
+      array(study.methods, path + '.methods', string);
+      if ('characteristics' in study) array(study.characteristics, path + '.characteristics', string);
+      if ('userGroups' in study) array(study.userGroups, path + '.userGroups', string);
+      if ('sampleSize' in study) choice(study.sampleSize, path + '.sampleSize');
+    });
     const renames = version < 5 ? { title: 'researchTitle' } : {};
     if (version < 4) Object.assign(renames, { researcher: 'leadResearcher', projectOwner: 'projectRequester', reportResearch: 'researchReadout' });
     if (version < 3) renames.problem = 'problemStatement';
@@ -8461,6 +8516,8 @@
     });
     if (version < 2 && draft.methods?.length) fail('methods (version 1 uses lists.methods)');
     if (version >= 2 && draft.lists?.methods) fail('lists.methods (use grouped methods)');
+    if (version < 10 && draft.studies) fail('studies (versions before 10 use methods)');
+    if (version >= 10 && draft.methods) fail('methods (version 10 uses studies)');
     return migrateDraft(draft);
   }
 
@@ -8488,7 +8545,7 @@
 
   // Compare what the supplied draft actually restored. This catches valid JSON
   // with values the present controls cannot represent (unknown options, wrong
-  // cell types, extra columns, orphaned Methods, and single-line text loss).
+  // cell types, extra columns, a study's lost answers, and single-line text loss).
   function verifyBackupRestoration(expected, actual) {
     const fail = (path) => { throw new Error('This backup cannot be restored faithfully at ' + path + '.'); };
     const equal = (a, b, path) => { if (a !== b) fail(path); };
@@ -8529,24 +8586,22 @@
         }
       });
     });
-    (expected.methods || []).forEach((group, i) => {
-      if (!actual.methods[i]) fail('methods[' + i + ']');
-      const values = actual.methods[i].methods;
-      if (group.methods.length && group.methods.length !== values.length) fail('methods[' + i + ']');
-      group.methods.forEach((value, j) => equal(value, values[j], 'methods[' + i + '].methods[' + j + ']'));
-      // The question's participant answers (RPA-116): a list that lost rows
-      // or a sample size the radios cannot show is not a faithful restore.
-      ['characteristics', 'userGroups'].forEach((key) => {
-        if (!Array.isArray(group[key])) return;
-        const got = actual.methods[i][key] || [];
-        if (group[key].length && group[key].length !== got.length) fail('methods[' + i + '].' + key);
-        group[key].forEach((value, j) => equal(value, got[j], 'methods[' + i + '].' + key + '[' + j + ']'));
+    // The studies (RPA-142): both sides are read through the migrations, so
+    // an older backup's per-question groups arrive here as studies too. A
+    // study that lost a question, a method, a participant row or a sample
+    // size the radios cannot show is not a faithful restore.
+    (expected.studies || []).forEach((study, i) => {
+      const got = (actual.studies || [])[i];
+      if (!got) fail('studies[' + i + ']');
+      const wanted = PLAN.study(study);
+      const restored = PLAN.study(got);
+      equal(wanted.questions.join(','), restored.questions.join(','), 'studies[' + i + '].questions');
+      ['methods', 'characteristics', 'userGroups'].forEach((key) => {
+        if (wanted[key].length && wanted[key].length !== restored[key].length) fail('studies[' + i + '].' + key);
+        wanted[key].forEach((value, j) => equal(value, restored[key][j], 'studies[' + i + '].' + key + '[' + j + ']'));
       });
-      if (group.sampleSize && typeof group.sampleSize === 'object') {
-        const got = actual.methods[i].sampleSize || { v: '', o: '' };
-        equal(group.sampleSize.v || '', got.v || '', 'methods[' + i + '].sampleSize');
-        equal(group.sampleSize.o || '', got.o || '', 'methods[' + i + '].sampleSize.o');
-      }
+      equal(wanted.sampleSize.v || '', restored.sampleSize.v || '', 'studies[' + i + '].sampleSize');
+      equal(wanted.sampleSize.o || '', restored.sampleSize.o || '', 'studies[' + i + '].sampleSize.o');
     });
   }
 
@@ -8727,12 +8782,17 @@
     // like the lists above: the group count tracks Research Questions, so
     // trimming alone would leave a group behind for every question the reset
     // just removed.
+    // The studies go first (RPA-142): the radios are cleared above, so the
+    // count is none, and the groups follow it.
+    const studiesContainer = studyGroupsEl();
+    if (studiesContainer) studiesContainer.innerHTML = '';
+    lastStudyCountChoice = { v: '', o: '' };
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
       methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || '', methodsContainer.dataset.width));
-      syncMethodsGroups();
     }
+    syncStudies();
     // Reset each dropdown to its own first option rather than hardcoding
     // 'not-started' — that value only exists on the status columns; other
     // .ssel dropdowns (Stage Timeline's Stage column, Sample Size) have

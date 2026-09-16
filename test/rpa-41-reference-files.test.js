@@ -1,5 +1,6 @@
 'use strict';
 const test = require('node:test');
+const PLAN = require('../plan-model');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -68,7 +69,8 @@ for (const [name, configResponse] of [
     methods: src.methods.map((g) => ({ ...g, characteristics: src.lists.characteristics || [], userGroups: src.lists.userGroups || [], sampleSize: src.selects.sampleSize || { v: '', o: '' } })),
   });
   assert.deepEqual(downloaded.lists, perQuestion(source).lists);
-  assert.deepEqual(downloaded.methods, perQuestion(source).methods);
+  // Since RPA-142 each group is a study answering its own question, in the backup as studies.
+  assert.deepEqual(downloaded.studies, PLAN.studiesFromGroups(perQuestion(source).methods, source.lists.researchQuestions));
   // RPA-101 gave every section a hatch; each is written, empty or not.
   assert.deepEqual(downloaded.custom, { ...source.custom, additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.equal(downloaded.createdAt, source.createdAt);

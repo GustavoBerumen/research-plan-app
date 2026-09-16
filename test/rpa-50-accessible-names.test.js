@@ -130,7 +130,9 @@ test('the sample-size radios are a group named by the visible label', async (t) 
   // A <label for> cannot name a set of radios; the group carries the name.
   const app = await populated(t);
   const d = app.document;
-  const radios = Array.from(d.querySelectorAll('input[type=radio]'));
+  // The studies radios come first on the page since RPA-142; this is about
+  // the sample size, so it is asked for by its key.
+  const radios = Array.from(d.querySelectorAll('.select-cell[data-field-key="sampleSize"] input[type=radio]'));
   assert.ok(radios.length >= 4);
   const group = radios[0].closest('[role=radiogroup], fieldset');
   assert.ok(group, 'radios sit in a radiogroup');

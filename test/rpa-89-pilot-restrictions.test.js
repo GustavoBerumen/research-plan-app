@@ -1,5 +1,6 @@
 'use strict';
 const test = require('node:test');
+const PLAN = require('../plan-model');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -229,7 +230,8 @@ for (const [name, configResponse] of [
   assert.deepEqual(saved.tables['requirements-table'], draft.tables['requirements-table']);
   assert.deepEqual(saved.lists.researchQuestions, draft.lists.researchQuestions);
   // RPA-116: a version 7 plan's participant answers land in every question's group.
-  assert.deepEqual(saved.methods, draft.methods.map((g) => ({ ...g, characteristics: draft.lists.characteristics || [], userGroups: draft.lists.userGroups || [], sampleSize: draft.selects.sampleSize || { v: '', o: '' } })));
+  // RPA-142: each of those groups is a study answering its own question.
+  assert.deepEqual(saved.studies, PLAN.studiesFromGroups(draft.methods.map((g) => ({ ...g, characteristics: draft.lists.characteristics || [], userGroups: draft.lists.userGroups || [], sampleSize: draft.selects.sampleSize || { v: '', o: '' } })), draft.lists.researchQuestions));
   assert.equal(saved.createdAt, draft.createdAt);
   assert.equal(saved.fields.project, draft.fields.project);
   assert.equal(saved.evaluations, undefined);

@@ -1,159 +1,199 @@
 'use strict';
 
-// RPA-116. Methodology by research question. Characteristics, User Groups
-// and Sample Size are asked once per research question, inside that
-// question's group under Methods, with the whole question pinned above them
-// while they are answered. They are saved per question in the question's
-// group (draft version 8); a plan saved before this brings its one answer to
-// every question it had. Save and continue judges every question, the check
-// page lists each question's answers by number, and deleting a question
-// warns about its participants. Gus's field-placement table, 14 September
-// 2026: the research question configuration loop.
+// RPA-116 organised Methodology by research question: Methods, Characteristics,
+// User Groups and Sample Size asked once per question, the question pinned
+// above them, and saved per question in draft version 8. RPA-142 moved the
+// unit from the question to the study (Gus's decisions of 16 September
+// 2026): a study answers one or more questions, Methodology is asked once
+// per study with its questions pinned, and the answers are saved per study
+// in draft version 10. What this file holds to is what survived the move:
+// the four fields inside each group, the pinned head, the per-group saving
+// and restoring, the migration of older plans, and the check page and the
+// error summary naming each group.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage } = require('./app-harness');
+const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY } = require('./app-harness');
 
-const DRAFT_KEY = 'research-plan-app:draft';
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
-const steps = (d) => Array.from(d.querySelectorAll('.step'));
-const visible = (d) => steps(d).filter((s) => !s.hidden).map((s) => s.dataset.stepSlug);
-const groupsOf = (d) => Array.from(d.querySelectorAll('.methods-group'));
-const inGroup = (g, key) => Array.from(g.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input'));
-const radioIn = (g, i) => g.querySelectorAll('input[type=radio]')[i];
-const checkedIn = (g) => { const r = g.querySelector('input[type=radio]:checked'); return r ? r.value : ''; };
-const linksOf = (step) => Array.from(step.querySelectorAll('.error-summary-link')).map(text);
-const savedDraft = (window) => JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null');
-function twoQuestions(app) {
+const groups = (d) => Array.from(d.querySelectorAll('.methods-group'));
+const studyGroups = (d) => Array.from(d.querySelectorAll('.study-group'));
+const inGroup = (g, key) => Array.from(g.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')).map((i) => i.value);
+const chosen = (g) => { const r = g.querySelector('.select-cell[data-field-key="sampleSize"] input[type=radio]:checked'); return r ? r.value : ''; };
+const headOf = (g) => Array.from(g.querySelectorAll('.methods-group-text li')).map(text);
+const draftOf = (window) => JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null');
+const settle = () => new Promise((r) => setTimeout(r, 220));
+const stepOf = (d, slug) => Array.from(d.querySelectorAll('.step')).find((s) => s.dataset.stepSlug === slug);
+
+async function twoQuestionsTwoStudies(app) {
   const { document: d, window } = app;
-  const rq = d.querySelector('.list-rows[data-list-key="researchQuestions"]');
-  setValue(window, rq.querySelector('.list-input'), 'Why do people leave?');
-  if (rq.querySelectorAll('.list-input').length < 2) rq.closest('.field').querySelector('.add-btn').click();
-  setValue(window, rq.querySelectorAll('.list-input')[1], 'What do they expect?');
-}
-function fillGroup(app, g, values) {
-  const { window } = app;
-  setValue(window, inGroup(g, 'methods')[0], values.method);
-  setValue(window, inGroup(g, 'characteristics')[0], values.characteristic);
-  setValue(window, inGroup(g, 'userGroups')[0], values.userGroup);
-  const radio = radioIn(g, values.sample);
-  radio.checked = true;
-  radio.dispatchEvent(new window.Event('change', { bubbles: true }));
-  radio.dispatchEvent(new window.Event('input', { bubbles: true }));
+  window.location.hash = '#research';
+  await waitFor(() => listInputs(d, 'researchQuestions').length > 0);
+  setValue(window, listInputs(d, 'researchQuestions')[0], 'Where does choosing a delivery slot break down?');
+  d.querySelector('.list-rows[data-list-key="researchQuestions"]').closest('.field').querySelector('.add-btn').click();
+  setValue(window, listInputs(d, 'researchQuestions')[1], 'Do people understand the delivery fee?');
+  d.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  await settle();
+  studyGroups(d)[0].querySelectorAll('.study-question-input')[0].click();
+  studyGroups(d)[1].querySelectorAll('.study-question-input')[1].click();
+  await settle();
 }
 
-test('each research question carries its own Methods, Characteristics, User Groups and Sample Size, under the whole question pinned above them', async (t) => {
+test('each study carries its own Methods, Characteristics, User Groups and Sample Size, under the questions it answers, pinned', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
-  const d = app.document;
-  twoQuestions(app);
-  const groups = groupsOf(d);
-  assert.equal(groups.length, 2);
-  groups.forEach((g, i) => {
-    const n = i + 1;
-    assert.deepEqual(Array.from(g.querySelectorAll('.field-per-question > .flabel')).map(text),
-      ['Methods for research question ' + n, 'Characteristics for research question ' + n, 'User Groups for research question ' + n, 'How many participants do you need? for research question ' + n]);
-    assert.equal(g.querySelector('.methods-group-head').hidden, false, 'the head shows once there is a question');
-    assert.equal(text(g.querySelector('.methods-group-text')), i === 0 ? 'Why do people leave?' : 'What do they expect?', 'the whole question, not the abbreviation');
-    assert.equal(g.querySelectorAll('.field-per-question > .field-hint-text').length, 4, 'primary hints travel with the fields');
-    assert.equal(g.querySelectorAll('.field-per-question .field-help').length, 4, 'and so do the help links');
+  const { document: d, window } = app;
+  await twoQuestionsTwoStudies(app);
+
+  assert.equal(groups(d).length, 2, 'one group per study');
+  groups(d).forEach((g, i) => {
+    assert.equal(text(g.querySelector('.methods-group-q')), 'Study ' + (i + 1) + ' answers');
+    assert.equal(g.querySelector('.methods-group-head').hidden, false, 'the head shows once a study is declared');
+    ['methods', 'characteristics', 'userGroups'].forEach((key) => assert.ok(g.querySelector('.list-rows[data-list-key="' + key + '"]'), key + ' in group ' + (i + 1)));
+    assert.ok(g.querySelector('.select-cell[data-field-key="sampleSize"]'), 'sample size in group ' + (i + 1));
+    assert.deepEqual(Array.from(g.querySelectorAll('.per-question-of')).map(text), Array(4).fill('for Study ' + (i + 1)), 'each field is named for its study');
   });
-  assert.notEqual(radioIn(groups[0], 0).name, radioIn(groups[1], 0).name, 'each question has its own radio group');
-  const ids = Array.from(d.querySelectorAll('[id]')).map((n) => n.id);
-  assert.equal(new Set(ids).size, ids.length, 'no id is duplicated across questions');
-  assert.ok(Array.from(d.querySelectorAll('.list-rows[data-list-key="characteristics"]')).every((l) => l.closest('.methods-group')), 'no plan-level Characteristics any more');
-  assert.equal(d.querySelector('.field-group-title'), null, 'the Participants group is gone');
+  assert.deepEqual(headOf(groups(d)[0]), ['RQ1 Where does choosing a delivery slot break down?'], 'the whole question, not an abbreviation');
+  assert.deepEqual(headOf(groups(d)[1]), ['RQ2 Do people understand the delivery fee?']);
+  assert.equal(groups(d)[0].getAttribute('aria-label'), 'Methods for Study 1: RQ1 Where does choosing a delivery slot break down?');
+
+  // A question in two studies shows under both, and says so on the studies page.
+  studyGroups(d)[0].querySelectorAll('.study-question-input')[1].click();
+  await settle();
+  assert.deepEqual(headOf(groups(d)[0]), ['RQ1 Where does choosing a delivery slot break down?', 'RQ2 Do people understand the delivery fee?']);
+  assert.equal(text(studyGroups(d)[1].querySelectorAll('.study-question-also')[1]), 'Also answered by Study 1');
+  assert.equal(text(studyGroups(d)[0].querySelectorAll('.study-question-also')[1]), 'Also answered by Study 2');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the answers are saved per question, in draft version 8, and come back per question', async (t) => {
+test('the answers are saved per study, in draft version 10, and come back per study', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
-  twoQuestions(app);
-  const groups = groupsOf(d);
-  fillGroup(app, groups[0], { method: 'Interviews', characteristic: 'Abandoned a basket', userGroup: 'New customers', sample: 0 });
-  fillGroup(app, groups[1], { method: 'Survey', characteristic: 'Regular buyers', userGroup: 'Returning customers', sample: 2 });
-  const saved = await waitFor(() => { const s = savedDraft(window); return s && s.methods && s.methods[1] && s.methods[1].sampleSize && s.methods[1].sampleSize.v ? s : null; }, { message: 'the draft was not saved with the second question' });
-  assert.equal(saved.version, 9);
-  assert.deepEqual(saved.methods[0], { question: 'Why do people leave?', methods: ['Interviews'], characteristics: ['Abandoned a basket'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' } });
-  assert.deepEqual(saved.methods[1], { question: 'What do they expect?', methods: ['Survey'], characteristics: ['Regular buyers'], userGroups: ['Returning customers'], sampleSize: { v: 'Large (13–29)', o: '' } });
-  assert.equal('characteristics' in saved.lists, false, 'no plan-level list any more');
-  assert.equal('sampleSize' in saved.selects, false);
+  await twoQuestionsTwoStudies(app);
+  const [g1, g2] = groups(d);
+  setValue(window, g1.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Moderated usability testing');
+  setValue(window, g1.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a checkout in the last 30 days');
+  setValue(window, g1.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
+  g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Small (1–5)"]').click();
+  setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Online survey');
+  g2.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Very Large (30+)"]').click();
+  const saved = await waitFor(() => { const s = draftOf(window); return s && s.studies && s.studies[1] && s.studies[1].sampleSize.v === 'Very Large (30+)' && s; });
+  assert.equal(saved.version, 10);
+  assert.equal(saved.methods, undefined, 'the per-question shape is gone');
+  assert.deepEqual(saved.selects.studyCount, { v: 'Two', o: '' });
+  assert.deepEqual(saved.studies, [
+    { questions: [1], methods: ['Moderated usability testing'], characteristics: ['Abandoned a checkout in the last 30 days'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' } },
+    { questions: [2], methods: ['Online survey'], characteristics: [''], userGroups: [''], sampleSize: { v: 'Very Large (30+)', o: '' } },
+  ]);
+
   const again = await bootApp({ draft: saved });
   t.after(() => again.close());
-  const back = groupsOf(again.document);
-  assert.equal(back.length, 2);
-  assert.deepEqual(inGroup(back[1], 'characteristics').map((i) => i.value), ['Regular buyers']);
-  assert.deepEqual(inGroup(back[1], 'userGroups').map((i) => i.value), ['Returning customers']);
-  assert.equal(checkedIn(back[0]), 'Small (1–5)');
-  assert.equal(checkedIn(back[1]), 'Large (13–29)');
+  const dd = again.document;
+  assert.equal(groups(dd).length, 2);
+  assert.deepEqual(studyGroups(dd).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], ['2']], 'the ticks come back');
+  assert.deepEqual(inGroup(groups(dd)[0], 'methods'), ['Moderated usability testing']);
+  assert.deepEqual(inGroup(groups(dd)[0], 'characteristics'), ['Abandoned a checkout in the last 30 days']);
+  assert.deepEqual(inGroup(groups(dd)[0], 'userGroups'), ['New customers']);
+  assert.equal(chosen(groups(dd)[0]), 'Small (1–5)');
+  assert.deepEqual(inGroup(groups(dd)[1], 'methods'), ['Online survey']);
+  assert.equal(chosen(groups(dd)[1]), 'Very Large (30+)');
+  assert.deepEqual(headOf(groups(dd)[1]), ['RQ2 Do people understand the delivery fee?']);
+  assert.deepEqual(again.jsdomErrors, []);
 });
 
-test('a version 7 plan brings its one answer to every question it had, and the plan-level keys go', async (t) => {
-  const app = await bootApp({ draft: {
-    version: 7, fields: {}, selects: { sampleSize: { v: 'Medium (6–12)', o: '' } },
-    lists: { researchQuestions: ['Q1?', 'Q2?'], outcomes: ['O1', 'O2'], characteristics: ['Frequent shoppers'], userGroups: ['New', 'Returning'] },
-    methods: [{ question: 'Q1?', methods: ['Interviews'] }, { question: 'Q2?', methods: [] }], tables: {}, custom: {},
-  } });
+test('a version 7 plan brings its one answer to every question it had, and a version 9 plan reads as one study per question', async (t) => {
+  // v7: participant answers were plan-level; v8 put them in every question's
+  // group; v10 makes each group a study answering its own question.
+  const v7 = {
+    version: 7, fields: { researchTitle: 'Old plan' },
+    lists: { researchQuestions: ['Where does it break down?', 'For whom?'], outcomes: ['A list.', 'A map.'], characteristics: ['Abandoned a basket'], userGroups: ['New customers'] },
+    selects: { sampleSize: { v: 'Medium (6–12)', o: '' } },
+    methods: [{ question: 'Where does it break down?', methods: ['Interviews'] }, { question: 'For whom?', methods: ['Survey'] }],
+    tables: {}, custom: {},
+  };
+  const app = await bootApp({ draft: v7 });
   t.after(() => app.close());
   const { document: d, window } = app;
-  const groups = groupsOf(d);
-  assert.equal(groups.length, 2);
-  groups.forEach((g, i) => {
-    assert.deepEqual(inGroup(g, 'characteristics').map((x) => x.value), ['Frequent shoppers'], 'question ' + (i + 1));
-    assert.deepEqual(inGroup(g, 'userGroups').map((x) => x.value), ['New', 'Returning'], 'question ' + (i + 1));
-    assert.equal(checkedIn(g), 'Medium (6–12)', 'question ' + (i + 1));
+  assert.equal(groups(d).length, 2, 'two questions, two studies');
+  assert.deepEqual(studyGroups(d).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], ['2']]);
+  groups(d).forEach((g) => {
+    assert.deepEqual(inGroup(g, 'characteristics'), ['Abandoned a basket'], 'the plan-level answer went to every study');
+    assert.deepEqual(inGroup(g, 'userGroups'), ['New customers']);
+    assert.equal(chosen(g), 'Medium (6–12)');
   });
-  setValue(window, d.querySelector('[data-field="background"]'), 'An edit that saves.');
-  const saved = await waitFor(() => { const s = savedDraft(window); return s && s.fields.background === 'An edit that saves.' ? s : null; });
-  assert.equal(saved.version, 9);
-  assert.equal('characteristics' in saved.lists, false, 'not carried as a leftover');
-  assert.equal('userGroups' in saved.lists, false);
-  assert.equal('sampleSize' in saved.selects, false);
-  assert.deepEqual(saved.methods[1].characteristics, ['Frequent shoppers']);
+  assert.deepEqual(groups(d).map((g) => inGroup(g, 'methods')), [['Interviews'], ['Survey']]);
+  setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Old plan, touched');
+  const saved = await waitFor(() => { const s = draftOf(window); return s && s.fields.researchTitle === 'Old plan, touched' && s; });
+  assert.equal(saved.version, 10);
+  assert.equal(saved.lists.characteristics, undefined, 'the plan-level keys go');
+  assert.equal(saved.selects.sampleSize, undefined);
+  assert.equal(saved.methods, undefined);
+  assert.deepEqual(saved.selects.studyCount, { v: 'Two', o: '' }, 'and the radios say how many');
+  assert.deepEqual(saved.studies.map((s) => s.questions), [[1], [2]]);
+  assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('Save and continue judges every question: a second question left blank lists its four fields by number, and the check page names each question', async (t) => {
+test('Save and continue judges every study: a second study left blank lists its four fields by name, and the check page names each study', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
+  const steps = Array.from(d.querySelectorAll('.step'));
   for (const i of [1, 2, 3]) {
-    window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
-    await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
-    completeStep(app, steps(d)[i]);
+    window.location.hash = '#' + steps[i].dataset.stepSlug;
+    await waitFor(() => steps[i].hidden === false);
+    completeStep(app, steps[i]);
   }
-  twoQuestions(app);
+  await twoQuestionsTwoStudies(app);
   window.location.hash = '#methodology';
-  await waitFor(() => visible(d)[0] === 'methodology');
-  const methodology = steps(d)[4];
-  const groups = groupsOf(d);
-  fillGroup(app, groups[0], { method: 'Interviews', characteristic: 'Abandoned a basket', userGroup: 'New customers', sample: 0 });
-  // One question per page since RPA-108: the first question's four pages
-  // pass, and the second question's Methods page stops with its own error.
-  toCheckPage(methodology);
-  assert.deepEqual(visible(d), ['methodology'], 'stays');
-  assert.deepEqual(linksOf(methodology), ['Add to Methods for research question 2']);
-  fillGroup(app, groups[1], { method: 'Survey', characteristic: 'Regular buyers', userGroup: 'Returning customers', sample: 2 });
-  toCheckPage(methodology);
+  await waitFor(() => stepOf(d, 'methodology').hidden === false);
+  const methodology = stepOf(d, 'methodology');
+  const g1 = groups(d)[0];
+  setValue(window, g1.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
+  setValue(window, g1.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
+  setValue(window, g1.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
+  g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Small (1–5)"]').click();
+  // The last page judges the whole section (RPA-108): eight pages, four per study.
+  window.location.hash = '#methodology/8';
+  await waitFor(() => text(methodology.querySelector('.step-page-caption')) === 'Question 8 of 8');
+  methodology.querySelector('.step-continue').click();
+  const links = Array.from(methodology.querySelectorAll('.error-summary-link')).map(text);
+  assert.deepEqual(links, [
+    'Add to Methods for Study 2',
+    'Add to Characteristics for Study 2',
+    'Add to User Groups for Study 2',
+    'Select a sample size for Study 2',
+  ], 'the second study, by name, field by field');
+  const g2 = groups(d)[1];
+  setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Survey');
+  setValue(window, g2.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Placed an order');
+  setValue(window, g2.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'Returning customers');
+  g2.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Very Large (30+)"]').click();
+  for (let presses = 0; presses < 12 && !methodology.classList.contains('step-checking'); presses++) methodology.querySelector('.step-continue').click();
   assert.ok(methodology.classList.contains('step-checking'), 'complete: the check page');
-  const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.check-answers .summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
-  assert.equal(rows['Methods for research question 1'], 'Interviews');
-  assert.equal(rows['Characteristics for research question 2'], 'Regular buyers');
-  assert.equal(rows['Sample Size for research question 2'], 'Large (13–29)');
-  assert.equal(rows['Additional information'], 'Not provided');
+  const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
+  assert.equal(rows['Methods for Study 1'], 'Interviews');
+  assert.equal(rows['Sample Size for Study 2'], 'Very Large (30+)');
+  assert.equal(rows['User Groups for Study 2'], 'Returning customers');
+  assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('deleting a research question warns about its participants, and the last empty group is trimmed but a filled one is kept', async (t) => {
-  let asked = '';
-  const app = await bootApp({ confirm(message) { asked = message; return false; } });
+test('deleting a research question leaves the studies and their methods; a study left with no question says so, and is not deleted', async (t) => {
+  const confirms = [];
+  const app = await bootApp({ confirm: (message) => { confirms.push(message); return true; } });
   t.after(() => app.close());
-  const { document: d } = app;
-  twoQuestions(app);
-  const groups = groupsOf(d);
-  fillGroup(app, groups[1], { method: '', characteristic: 'Regular buyers', userGroup: '', sample: 1 });
-  const rq = d.querySelector('.list-rows[data-list-key="researchQuestions"]');
-  rq.querySelectorAll('.list-remove')[1].click();
-  assert.match(asked, /Participants RQ2/, 'the warning names the participants');
-  assert.equal(groupsOf(d).length, 2, 'refused, so the group stays');
+  const { document: d, window } = app;
+  await twoQuestionsTwoStudies(app);
+  setValue(window, groups(d)[1].querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Survey');
+  setValue(window, listInputs(d, 'outcomes')[1], 'A fee map.');
+  await settle();
+  listInputs(d, 'researchQuestions')[1].closest('.list-row').querySelector('.list-remove').click();
+  await settle();
+  assert.deepEqual(confirms, ['Deleting Research Question 2 means:\n\n- Outcome 2 will be deleted\n- Study 2 will no longer answer any research question']);
+  assert.equal(groups(d).length, 2, 'the study and its group stay');
+  assert.deepEqual(inGroup(groups(d)[1], 'methods'), ['Survey'], 'and so do its methods');
+  assert.equal(text(groups(d)[1].querySelector('.methods-group-q')), 'Study 2 answers no research question yet');
+  assert.deepEqual(studyGroups(d).map((g) => g.querySelectorAll('.study-question').length), [1, 1], 'one question left to tick');
+  assert.deepEqual(studyGroups(d).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], []]);
+  assert.deepEqual(app.jsdomErrors, []);
 });

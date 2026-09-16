@@ -36,7 +36,7 @@ test('local Save and continue rejects an invalid Other count, focuses that input
   const link = Array.from(step.querySelectorAll('.error-summary-link')).find(a => /valid sample size/.test(a.textContent));
   assert.ok(link); link.click(); assert.equal(d.activeElement, other);
   setValue(app.window, other, 'still invalid');
-  await waitFor(() => JSON.parse(app.window.localStorage.getItem(DRAFT_KEY)).methods[0].sampleSize.o === 'still invalid');
+  await waitFor(() => JSON.parse(app.window.localStorage.getItem(DRAFT_KEY)).studies[0].sampleSize.o === 'still invalid');
   assert.equal(step.classList.contains('step-checking'), false);
   setValue(app.window, other, '5–8'); toCheckPage(step);
   assert.equal(step.classList.contains('step-checking'), true);

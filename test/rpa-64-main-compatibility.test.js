@@ -90,7 +90,7 @@ test('MVP Send preserves the v1 collection boundary while a v9 backup retains br
   assert.equal(received.plan.fields.comments, '');
   assert.doesNotMatch(JSON.stringify(received), /owner@example|other@example|DORMANT COMMENT|synthetic-history/);
   const backup = await backupOf(app);
-  assert.equal(backup.version, 9);
+  assert.equal(backup.version, 10);
   assert.equal(backup.fields.emailAddress, p.fields.emailAddress);
   assert.equal(backup.fields.comments, p.fields.comments);
   assert.deepEqual(backup.signOff, p.signOff);

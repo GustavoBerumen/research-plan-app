@@ -335,7 +335,20 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .methods-grouped .methods-group{border-left:4px solid var(--border);padding-left:16px}
 .methods-group-head{position:sticky;top:var(--site-header-h,0px);z-index:2;background:#fff;padding:6px 0 8px;margin-bottom:10px;border-bottom:1px solid var(--border-light)}
 .methods-group-head[hidden]{display:none}
-.methods-group-text{margin:2px 0 0;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.methods-group-text{margin:2px 0 0;padding:0;list-style:none;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.methods-group-text li{margin:2px 0 0}
+.methods-group-rq{margin-right:6px}
+/* The studies page (RPA-142): one fieldset per study, its checkboxes one
+   per research question, and under a question already claimed a note of
+   which other studies answer it. */
+.field-study-questions{margin-top:18px}
+.study-groups{display:flex;flex-direction:column;gap:32px}
+.study-choices{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.study-question{align-items:flex-start}
+.study-question-label{display:block}
+.study-question-rq{margin-right:2px}
+.study-question-also{display:block;font-size:var(--text-sm);color:var(--text-2)}
+.study-question-also:empty{display:none}
 .methods-group-text[hidden]{display:none}
 .methods-group .field-per-question{margin-top:18px}
 .methods-group .field-question-methods{margin-top:0}

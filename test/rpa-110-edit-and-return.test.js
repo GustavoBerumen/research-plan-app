@@ -29,7 +29,7 @@ const rowsOf = (details) => Array.from(details.querySelectorAll('.summary-row'))
 const changeIn = (details, label) => Array.from(details.querySelectorAll('.summary-change')).find((b) => text(b) === 'Change ' + label);
 async function reachReview(app) {
   const d = app.document;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     app.window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
     completeStep(app, steps(d)[i]);
@@ -159,7 +159,7 @@ test('Plan details is on the review step too, answers and all, and Change there 
   t.after(() => app.close());
   const { document: d, window } = app;
   const review = await reachReview(app);
-  assert.deepEqual(Array.from(review.querySelectorAll('.review-row')).map((r) => r.dataset.slug), ['plan-details', 'context', 'research', 'methodology', 'execution']);
+  assert.deepEqual(Array.from(review.querySelectorAll('.review-row')).map((r) => r.dataset.slug), ['plan-details', 'context', 'research', 'studies', 'methodology', 'execution']);
   assert.equal(text(rowOf(review, 'plan-details').querySelector('.review-name')), 'Plan details');
   const details = answersOf(review, 'plan-details');
   reveal(details);

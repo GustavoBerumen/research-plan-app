@@ -85,7 +85,7 @@ test('every field has one, title and header included; a note not written yet ope
     return next && next.classList.contains('field-help') ? next : null;
   };
   const missing = labels.filter((l) => !helpFor(l)).map((l) => l.id);
-  assert.deepEqual(missing, ['field-emailAddress-label', 'field-lastUpdated-label'], 'every labelled field but the email address, asked before the plan and not about the research (RPA-99), and Last updated, a computed date nobody fills in');
+  assert.deepEqual(missing, ['field-emailAddress-label', 'field-lastUpdated-label', 'field-studyQuestions-label'], 'every labelled field but the email address, asked before the plan and not about the research (RPA-99), and Last updated, a computed date nobody fills in');
   assert.equal(d.querySelectorAll('.field-help').length, new Set(labels.map(helpFor).filter(Boolean)).size, 'one each, never two');
   assert.equal(d.getElementById('field-researchTitle').nextElementSibling, helpFor(d.getElementById('field-researchTitle-label')), 'the title has no wrapper, so it follows the box');
   const jira = d.getElementById('field-jiraProject-label').closest('.mf');

@@ -1,5 +1,6 @@
 'use strict';
 const test = require('node:test');
+const PLAN = require('../plan-model');
 const assert = require('node:assert/strict');
 const { bootApp, waitFor, setValue, DRAFT_KEY } = require('./app-harness');
 const { loadServer } = require('./rpa-89-server-harness.cjs');
@@ -35,7 +36,12 @@ async function backup(app) {
     const reader = new app.window.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(blob);
   }));
 }
-const content = p => Object.fromEntries(['fields', 'selects', 'lists', 'tables', 'custom', 'methods', 'signOff', 'createdAt'].map(k => [k, p[k]]));
+const content = p => Object.fromEntries(['fields', 'selects', 'lists', 'tables', 'custom', 'studies', 'signOff', 'createdAt'].map(k => [k, p[k]]));
+// A version 9 seed reads back as version 10: its groups are studies, and the radios say how many (RPA-142).
+const migrated = p => {
+  const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
+  return { ...p, studies, selects: { ...p.selects, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
+};
 
 test('entering a dead link cancels a pending save and refuses an already queued or direct save', async t => {
   const app = await bootApp({ draft: seed('unknown'), transformScript: (name, source) => name === 'app.js'
@@ -100,7 +106,7 @@ for (const on of [false, true]) for (const timing of ['early', 'late']) for (con
     // Follow the own-plan route by booting the same saved bytes on its normal URL.
     const own = await bootApp({ draft: stored, configResponse: () => response(on) }); t.after(() => own.close());
     const result = await backup(own);
-    assert.deepEqual(content(result), content(draft), 'all fields, sparse rows, methods and review history survive');
+    assert.deepEqual(content(result), content(migrated(draft)), 'all fields, sparse rows, studies and review history survive');
     const restore = own.document.getElementById('backup-file');
     Object.defineProperty(restore, 'files', { value: [new own.window.File([JSON.stringify(result)], 'recovery.json')] });
     restore.dispatchEvent(new own.window.Event('change', { bubbles: true }));
