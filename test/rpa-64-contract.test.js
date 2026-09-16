@@ -62,7 +62,7 @@ test('completed sign-offs contain initials and a real date while recovery struct
   }
 });
 test('schedule dates are real, complete, ordered and within known bounds; every retained row counts', () => {
-  for (const [value, code] of [['', 'date'], ['2026-02-30', 'date'], ['2026-09-13', 'bounds'], ['2027-01-01', 'bounds']]) {
+  for (const [value, code] of [['', 'date'], ['2026-02-30', 'date'], ['2027-01-01', 'bounds']]) {
     const p = plan(); p.tables['stageTimeline-table'][0][1].v = value;
     assert.ok(contract.validate(p).some(e => e.key === 'stageTimeline' && e.column === 'startDate' && e.code === code));
   }

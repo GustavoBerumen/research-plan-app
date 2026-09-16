@@ -155,21 +155,28 @@ test('a pre-filled timeline is not an answered field', async (t) => {
     'defaults the form supplied are not answers the researcher gave');
 });
 
-test('editing a stage makes it count', async (t) => {
+test('one edited date leaves the schedule incomplete; completing every retained row makes it count', async (t) => {
   const app = await bootApp({ textAssets: WITH_ACTIONS });
   t.after(() => app.close());
   const { document, window } = app;
 
   const start = timeline(document).rows[1].querySelectorAll('input[type="date"]')[0];
   setValue(window, start, '2026-10-01');
+  const state = () => Array.from(document.querySelectorAll('.review-row'))
+    .find(r => r.querySelector('.review-name').textContent === 'Execution').querySelector('.review-state').textContent;
+  // Let the ordinary redraw run, then check the reported manual-test defect.
+  setValue(window, document.querySelector('[data-field="background"]'), 'Force a current summary');
+  await waitFor(() => Array.from(document.querySelectorAll('.review-row')).some(r =>
+    r.querySelector('.review-name').textContent === 'Context' && /^1 of/.test(r.querySelector('.review-state').textContent)));
+  assert.match(state(), /^0 of \d+ fields$/, 'an isolated date cannot complete the schedule');
+  timeline(document).rows.forEach(row => row.querySelectorAll('input[type=date]').forEach(input => setValue(window, input, '2026-10-01')));
 
   await waitFor(() => {
     const row = Array.from(document.querySelectorAll('.review-row'))
       .find((r) => r.querySelector('.review-name').textContent === 'Execution');
-    // Since RPA-100 completeness counts required fields only, and Planned
-    // Schedule is Execution's only one: a real edit may complete it outright.
+    // Every retained row now has a real, ordered date pair.
     return /^(1 of \d+ fields|complete)$/.test(row.querySelector('.review-state').textContent);
-  }, { message: 'a real edit should count, even in a pre-filled row' });
+  }, { message: 'a complete schedule should count, including formerly pre-filled rows' });
 });
 
 test('removed stages stay removed across a save and reload', async (t) => {
@@ -314,6 +321,7 @@ test('the hint says the defaults are suggestions', async (t) => {
   const hint = app.document.getElementById('stageTimeline-table')
     .closest('.field').querySelector('.field-hint-text').textContent;
   assert.match(hint, /Suggested stages/, 'it says where the five pre-filled rows came from');
-  assert.match(hint, /bounded by the plan start date and research readout/,
-    'and names the range they sit in');
+  assert.match(hint, /start and completion date, on or before the research readout/,
+    'and names the dates required to complete a stage');
+  assert.match(hint, /Remove stages you do not need/);
 });

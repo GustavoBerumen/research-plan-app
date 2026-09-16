@@ -38,12 +38,12 @@ function today() {
     + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-test('every timeline date has the plan start as its earliest', async (t) => {
+test('document creation does not restrict the stage start picker', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
 
   const start = dateAt(app.document, 1, 0);
-  assert.equal(start.min, today(), 'a plan created today cannot schedule work before today');
+  assert.equal(start.min, '', 'earlier research is allowed in the picker as well as typed input');
 });
 
 test('a date before the plan started is stated, not raised', async (t) => {
@@ -56,7 +56,8 @@ test('a date before the plan started is stated, not raised', async (t) => {
 
   const note = noteFor(cell);
   assert.equal(note.shown, true);
-  assert.match(note.text, /before the plan was started on/);
+  assert.match(note.text, /before this document was created on/);
+  assert.match(note.text, /Earlier research work is allowed; this is only a note/);
   assert.equal(cell.value, '2020-03-01', 'the date is kept');
 
   // The quieter tier: no aria-invalid, and not the alert element part one uses.
@@ -119,18 +120,15 @@ test('a plan that recorded its own start date does get a floor', async (t) => {
   const { document, window } = app;
 
   const cell = dateAt(document, 1, 0);
-  assert.equal(cell.min, '2026-08-03');
+  assert.equal(cell.min, '', 'creation is an advisory note, not a picker constraint');
 
   setValue(window, cell, '2026-07-02');
   const note = noteFor(cell);
   assert.equal(note.shown, true);
-  assert.match(note.text, /before the plan was started on 3 August 2026/);
+  assert.match(note.text, /before this document was created on 3 August 2026/);
 });
 
-test('the floor and the row rule compose rather than overwrite', async (t) => {
-  // attachDateRangeConstraint already sets min on each completion date to keep
-  // it at or after its own start. The floor wants min on the same input, so
-  // whichever is later has to win and both still hold.
+test('completion cannot precede its own start, even when both precede document creation', async (t) => {
   const app = await bootApp({
     draft: {
       version: 7,
@@ -147,13 +145,11 @@ test('the floor and the row rule compose rather than overwrite', async (t) => {
   const start = dateAt(document, 1, 0);
   const end = dateAt(document, 1, 1);
 
-  // Row rule is the later of the two: the stage starts well after the plan did.
   setValue(window, start, '2026-10-05');
-  assert.equal(end.min, '2026-10-05', 'the row rule wins when it is later');
+  assert.equal(end.min, '2026-10-05');
 
-  // Plan floor is the later of the two: the stage starts before the plan did.
   setValue(window, start, '2026-07-01');
-  assert.equal(end.min, '2026-08-03', 'the floor wins when it is later');
+  assert.equal(end.min, '2026-07-01', 'the stage start stays the minimum');
   assert.equal(noteFor(start).shown, true, 'and the start itself is noted');
 });
 

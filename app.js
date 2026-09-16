@@ -4647,7 +4647,9 @@
   // automatically (once) so nobody has to type the date by hand.
   function attachSignOffStamp(input, key) {
     if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return;
-    input.addEventListener('blur', () => stampSignOff(input));
+    input.addEventListener('blur', () => {
+      if (stampSignOff(input)) input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
   }
   function stampSignOff(input) {
     const val = input.value.trim();
@@ -4655,7 +4657,7 @@
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+    input.value = val.toUpperCase() + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
     return true;
   }
   function prepareSubmissionSignOffs() {
@@ -5166,7 +5168,7 @@
   // change first. The answers go to the people building the tool, not into
   // the plan: nothing here carries data-field, so the draft, the backup and
   // the print never see them. Sent to the server as one record; when that
-  // fails, offered as a file so nothing is lost.
+  // fails, offered as a local file. Disabled collection offers no file exchange.
   function renderToolFeedback() {
     const wrap = el('section', 'tool-feedback', { 'aria-labelledby': 'tool-feedback-h' });
     const open = el('button', 'btn btn-ghost', { type: 'button', id: 'tool-feedback-open', 'aria-expanded': 'false', 'aria-controls': 'tool-feedback-form' });
@@ -5233,12 +5235,30 @@
     form.appendChild(actions);
     const status = el('p', 'tool-feedback-status', { id: 'tool-feedback-status', role: 'status', 'aria-live': 'polite' });
     wrap.append(open, form, status);
+    const updateAvailability = () => {
+      const available = capabilities.feedback === true;
+      open.hidden = !available;
+      open.disabled = !available;
+      send.hidden = !available;
+      send.disabled = !available;
+      if (!available) {
+        form.hidden = true;
+        open.setAttribute('aria-expanded', 'false');
+        download.hidden = true;
+        status.textContent = 'Feedback collection is unavailable here.';
+      } else {
+        status.textContent = '';
+      }
+    };
+    updateAvailability();
+    getConfig().then(updateAvailability);
 
     const setOpen = (on) => {
       form.hidden = !on;
       open.setAttribute('aria-expanded', on ? 'true' : 'false');
     };
     open.addEventListener('click', () => {
+      if (!capabilities.feedback) return;
       const opening = form.hidden;
       setOpen(opening);
       if (opening) {
@@ -5265,6 +5285,7 @@
     let lastAnswers = null;
 
     download.addEventListener('click', () => {
+      if (!capabilities.feedback) return;
       const answers = lastAnswers || read();
       let url;
       try {
@@ -5276,7 +5297,7 @@
         link.download = 'Feedback on Research Plan - ' + todayIso() + '.json';
         document.body.appendChild(link);
         try { link.click(); } finally { link.remove(); }
-        say('Download started. Send the file to the person who shared this link.');
+        say('Download started. Keep this feedback file for your own records.');
       } catch (err) {
         say('Could not download your feedback. ' + err.message, true);
       } finally {
@@ -5285,14 +5306,10 @@
     });
 
     send.addEventListener('click', async () => {
+      if (!capabilities.feedback) { updateAvailability(); return; }
       const answers = read();
       if (empty(answers)) { say('Answer at least one question first.', true); return; }
       lastAnswers = answers;
-      if (capabilities.feedback === false) {
-        download.hidden = false;
-        say('Sending is unavailable here. Download your feedback and send it to the person who shared this link.', true);
-        return;
-      }
       send.disabled = true;
       say('Sending your feedback…');
       try {
@@ -5311,7 +5328,7 @@
         say('Thank you. Your feedback is saved for the people building this tool.');
       } catch (err) {
         download.hidden = false;
-        say('Could not send your feedback. Download it and send it to the person who shared this link.', true);
+        say('Could not send your feedback. Your answers are still here. You can try again or download a copy for your own records.', true);
       } finally {
         send.disabled = false;
       }
@@ -5528,7 +5545,9 @@
         const rows = el('dl', 'summary-list');
         const drawRows = () => renderSummaryRows(stepEl, rows, (g) => changeFromReview(stepEl, g, slug));
         const wording = () => { revealText.textContent = (answers.open ? 'Hide' : 'Show') + ' answers'; };
-        answers.addEventListener('toggle', () => { wording(); if (answers.open) drawRows(); });
+        // Restoring an open disclosure draws eagerly below. Its later native
+        // toggle must not replace those controls and discard restored focus.
+        answers.addEventListener('toggle', () => { wording(); if (answers.open && !rows.childElementCount) drawRows(); });
         answers.append(reveal, rows);
         if (revealed.has(slug)) { answers.open = true; drawRows(); }
         wording();
@@ -5779,7 +5798,7 @@
     const otherLabel = el('label', 'flabel', { for: 'sign-off-other-email', id: 'sign-off-other-email-label' });
     otherLabel.textContent = 'What is the other person’s email address?';
     const otherHint = el('div', 'field-hint-text', { id: 'sign-off-other-email-hint' });
-    otherHint.textContent = 'They will be sent a link to read the plan and sign it.';
+    otherHint.textContent = 'This address identifies the other person in this demonstration. Both people review on this device; no email is sent.';
     const otherInput = el('input', 'finput input-w-30', { type: 'email', id: 'sign-off-other-email', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'sign-off-other-email-hint' });
     otherField.append(otherLabel, otherHint, otherInput);
     setup.append(roleField, otherField);
@@ -5863,6 +5882,7 @@
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
       if (!other) { say(['Enter the other person’s email address.']); return; }
+      if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
@@ -5895,11 +5915,19 @@
     }
     function sign(role) {
       if (!judge(role)) return;
+      if (!judgePlan()) return;
       const action = { transition: 'sign', role, declaration: declarationOf(role) };
       if (role === signOffRecord.authorRole) action.contentHash = planContentHash();
       else action.revision = W.currentRevisionNumber(signOffRecord);
       const after = act(action);
       if (after) heading.focus({ preventScroll: true });
+    }
+    function judgePlan() {
+      const errors = localCompletionErrors();
+      if (!errors.length) return true;
+      clearSaid();
+      showSubmissionErrors(errors, summary, { focus: true, final: true });
+      return false;
     }
 
     function sayLinkStatus(message) { linkStatus.textContent = message; }
@@ -5936,16 +5964,16 @@
       if (record) {
         note.textContent = linkRole
           ? 'You are signing as ' + signOffPersonName(linkRole) + ', the ' + signOffRoleName(linkRole).toLowerCase() + ', because that is whose link opened this plan. Not you? Tell the person who sent it.'
-          : 'Both people sign on this one device for now. A plan sent for real reaches the other person through a link of their own.';
+          : 'This is a local review demonstration. Both people sign on this device; links do not open a shared plan on another device.';
       }
       Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
 
       if (!record) {
         if (setupStep === 'role') {
-          stateLine.textContent = 'Say who you are. Whoever writes the plan signs it first, then sends it to the other person.';
+          stateLine.textContent = 'Say who you are. The author signs first, then the other person reviews on this device.';
           actions.appendChild(button('Continue', chooseRole));
         } else if (setupStep === 'sign') {
-          stateLine.textContent = 'Confirm the declaration and sign the plan. You will be asked where to send it next.';
+          stateLine.textContent = 'Confirm the declaration and sign the plan. Next, identify the other person reviewing on this device.';
           pairs[setupRole].hidden = false;
           actions.append(button('Continue', toSend), button('Back', () => back('role'), true));
         } else {
@@ -5954,9 +5982,9 @@
           // and by role where it does not (Gus, 15 September 2026).
           const other = W.otherRole(setupRole);
           const them = signOffPersonNamed(other) || 'the ' + signOffRoleName(other).toLowerCase();
-          stateLine.textContent = 'You have signed. Send the plan to ' + them + ' to approve.';
+          stateLine.textContent = 'Prepare the plan for ' + them + ' to review on this device.';
           otherLabel.textContent = 'What is ' + them + '\u2019s email address?';
-          actions.append(button('Sign and send', create), button('Back', () => back('sign'), true));
+          actions.append(button('Sign for local review', create), button('Back', () => back('sign'), true));
         }
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
         refreshTaskList();
@@ -5975,15 +6003,15 @@
       const otherName = signOffPersonName(other);
 
       if (record.status === 'awaitingCounterparty') {
-        stateLine.textContent = 'Sent to ' + otherName + ' on ' + signOffDate(record.signatures[author].at) + '. Revision ' + revision + '.';
+        stateLine.textContent = 'Ready for ' + otherName + ' to review on this device. Signed ' + signOffDate(record.signatures[author].at) + '. Revision ' + revision + '.';
       } else if (record.status === 'changesRequested') {
         stateLine.textContent = 'Back with ' + authorName + ' to change.';
       } else if (record.status === 'approved') {
         stateLine.textContent = 'Both people have signed revision ' + revision + '.';
       } else {
         stateLine.textContent = !record.revisions.length
-          ? 'Not yet sent. ' + authorName + ' signs first.'
-          : 'The plan has changed since it was last signed. ' + authorName + ' signs it again to send it.';
+          ? 'Not yet signed. ' + authorName + ' signs first.'
+          : 'The plan has changed since it was last signed. ' + authorName + ' signs it again for local review.';
       }
 
       if (record.changeRequest) {
@@ -6047,7 +6075,7 @@
         );
       } else if (allowed.canSign) {
         pairs[me].hidden = false;
-        actions.appendChild(button(me === author ? 'Sign and send' : 'Sign', () => sign(me)));
+        actions.appendChild(button(me === author ? 'Sign for local review' : 'Sign', () => sign(me)));
         if (allowed.canRequestChanges) actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
       } else if (allowed.canRequestChanges) {
         actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
@@ -6204,6 +6232,7 @@
   }
   function groupMessage(g) {
     const label = groupLabel(g);
+    if (customSampleSizeInput(g)) return 'Enter a valid ' + label.toLowerCase() + ': a positive whole number, a range such as 5–8, or a minimum such as 30+';
     if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
     const email = requiredEmailInput(g);
     // The two messages of the GOV.UK email address pattern (RPA-99).
@@ -6214,7 +6243,14 @@
     return 'Enter the ' + label.toLowerCase();
   }
   function groupControl(g) {
+    const sample = customSampleSizeInput(g);
+    if (sample) return sample;
     return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
+  }
+  function customSampleSizeInput(g) {
+    const radios = g.querySelector('.radio-group[data-field-key="sampleSize"]');
+    return radios?.querySelector('input[type="radio"]:checked')?.value === '__other__'
+      ? radios.querySelector('.radio-other-row input[type="text"]') : null;
   }
   function requiredDateInput(g) {
     // Tables retain their existing advisory completeness rule; a standalone
@@ -6235,6 +6271,11 @@
       const question = methodGroup ? methodsGroupEls().indexOf(methodGroup) : undefined;
       return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || error.question === question)));
     }
+    // Drafts stay editable and recoverable; moving on requires an actual count.
+    // Use the same rule as final submission without requiring that capability.
+    const sample = customSampleSizeInput(g);
+    if (sample) return window.RPA_SUBMISSION.validSampleSize(sample.value);
+    if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
     const date = requiredDateInput(g);
     if (date) return Boolean(readDateSegments(date));
     return fieldHasContent(g);
@@ -6281,6 +6322,11 @@
   // Draws the step's errors from scratch against what is missing now. With
   // focus: the person just pressed the button, so the summary takes focus.
   function showStepErrors(stepEl, summary, { focus, groups }) {
+    const checked = groups || requiredGroupsOf(stepEl);
+    if (!capabilities.submissions && checked.length && checked.every(g => unitKey(g) === 'stageTimeline')) {
+      const errors = localCompletionErrors().filter(error => !error.key || error.key === 'stageTimeline');
+      return showSubmissionErrors(errors, summary, { focus });
+    }
     if (capabilities.submissions && !stepEl.classList.contains('email-step')) {
       const errors = submissionErrors().filter(error => {
         const group = submissionTarget(error).group;
@@ -6440,6 +6486,10 @@
   }
   function openDeadLink() {
     if (!deadLinkPage) return;
+    // No editable form exists here. Cancel pending saves before removing it.
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
+    document.querySelectorAll("#options-menu button, #backup-file").forEach(control => { control.disabled = true; });
     steps.forEach((s) => { s.hidden = true; });
     if (startPage) startPage.el.hidden = true;
     if (emailGate) emailGate.el.hidden = true;
@@ -6527,7 +6577,7 @@
   function renderEmailPlayback(input) {
     const box = el('div', 'email-playback');
     const lead = el('p', 'email-playback-lead');
-    lead.textContent = 'A link to your plan will be sent to:';
+    lead.textContent = 'Email address for this browser:';
     const value = el('p', 'email-playback-value');
     box.append(lead, value);
     const refresh = () => { const v = input.value.trim(); value.textContent = v; box.hidden = !v; };
@@ -7211,7 +7261,7 @@
       // Change to go back to the page that asked for it (RPA-99).
       if (person && personEmail) { personEmail.textContent = email().trim(); person.hidden = !personEmail.textContent; }
     };
-    if (change) change.addEventListener('click', () => openEmailGate());
+    if (change) change.addEventListener('click', () => { if (!linkIsDead()) openEmailGate(); });
     // Restore replaces doc. Delegate to a stable parent, and read the current
     // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
@@ -7496,7 +7546,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring) return false;
+    if (!store || draftRestoring || linkIsDead()) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -7534,7 +7584,7 @@
 
   function scheduleDraftSave(event) {
     if (event && !event.target.isConnected) return;
-    if (draftRestoring) return;
+    if (draftRestoring || linkIsDead()) return;
     if (draftTimer) window.clearTimeout(draftTimer);
     draftTimer = window.setTimeout(saveDraft, DRAFT_SAVE_DELAY_MS);
   }
@@ -7970,12 +8020,13 @@
   }
 
   function floorMessage(floor) {
-    return 'This is before the plan was started on ' + formatDateline(floor) + '.';
+    return 'This is before this document was created on ' + formatDateline(floor)
+      + '. Earlier research work is allowed; this is only a note.';
   }
 
-  // min= has to compose rather than overwrite: attachDateRangeConstraint
-  // already sets it on each completion date to keep it at or after its own
-  // start date. Whichever is later wins, and both still hold.
+  // Creation is advisory, so it must not constrain the picker. Only the
+  // stage's start is a minimum for its completion date. Otherwise an earlier
+  // readout would leave min > max, despite earlier work being allowed.
   function rowMinimumFor(input) {
     const tr = input.closest('tr');
     const dates = tr ? tr.querySelectorAll('input[type="date"]') : [];
@@ -7989,8 +8040,7 @@
 
     table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
       const rowMin = rowMinimumFor(input);
-      const effective = [floor, rowMin].filter(Boolean).sort().pop() || '';
-      if (effective) input.min = effective;
+      if (rowMin) input.min = rowMin;
       else input.removeAttribute('min');
 
       const note = input.closest('.date-control').querySelector('.date-note');
@@ -8026,7 +8076,7 @@
     const arrivedAt = location.hash;   // before the restore rewrites it to the saved step
     const restored = restoreDraft();
     resolveLink();   // the plan is in hand, so a link can be judged against it
-    if (linkIsDead()) { openDeadLink(); bindDraftPersistence(); return; }
+    if (linkIsDead()) { openDeadLink(); return; }
     if (!restored) restoreStepPosition(null);
     // The start page: a first visit with nothing saved and no link into a
     // step, or asked for by its address (RPA-81).
@@ -8069,10 +8119,6 @@
       workflowPanel.replaceWith(declarations);
       redrawSignOff = () => {};
     }
-    const emailHint = doc.querySelector('.email-step .field-hint-text');
-    if (emailHint) emailHint.textContent = 'This address identifies your local draft and backup file. Sending a plan does not send an email.';
-    const playbackLead = doc.querySelector('.email-playback-lead');
-    if (playbackLead) playbackLead.textContent = 'Email address for this browser:';
     if (step.querySelector('.submission-panel')) return;
     const owner = doc;
     owner._submissionErrors = null;
@@ -8093,6 +8139,10 @@
     const contract = window.RPA_SUBMISSION;
     const fields = [formSchema.header.title, ...formSchema.header.meta, ...formSchema.sections.flatMap(s => s.fields)];
     if (!contract.matchesSchema(fields, formSchema.header.before)) throw new Error('Unsupported active form schema');
+    return collectCurrentPlan();
+  }
+  function collectCurrentPlan() {
+    const contract = window.RPA_SUBMISSION;
     const draft = backupPayload(collectDraft());
     if (!planCreatedAtExact) delete draft.createdAt;
     doc.querySelectorAll('input[type="date"]').forEach(input => {
@@ -8117,6 +8167,13 @@
     queueMicrotask(() => { owner._submissionErrors = null; });
     try { return (doc._submissionErrors = window.RPA_SUBMISSION.validate(collectSubmissionPlan())); }
     catch (_) { return (doc._submissionErrors = [{ key: null, section: 'review', code: 'schema', message: 'The active form has changed. Keep a backup and contact the organiser before sending.' }]); }
+  }
+  // Basic numeric and schedule checks also apply to browser-local review.
+  // Read unfinished date buffers as incomplete, without changing the saved draft.
+  function localCompletionErrors() {
+    const contract = window.RPA_SUBMISSION;
+    return contract.validate(collectCurrentPlan())
+      .filter(error => !error.key || error.key === 'sampleSize' || error.key === 'stageTimeline');
   }
   function resetSubmissionDeclarations() {
     doc._submissionErrors = null;
@@ -8262,6 +8319,7 @@
   }
 
   function downloadBackup() {
+    if (linkIsDead()) return;
     let url;
     try {
       const backup = collectBackup();
@@ -8567,11 +8625,12 @@
     const download = document.getElementById('download-backup-btn');
     const restore = document.getElementById('restore-backup-btn');
     const picker = document.getElementById('backup-file');
-    download.disabled = false;
-    restore.disabled = false;
+    download.disabled = linkIsDead();
+    restore.disabled = linkIsDead();
     download.addEventListener('click', downloadBackup);
-    restore.addEventListener('click', () => { picker.value = ''; picker.click(); });
+    restore.addEventListener('click', () => { if (linkIsDead()) return; picker.value = ''; picker.click(); });
     picker.addEventListener('change', async () => {
+      if (linkIsDead()) return;
       const file = picker.files[0];
       if (!file) return;
       const initialDoc = doc;
@@ -8603,6 +8662,7 @@
   }
 
   function clearForm() {
+    if (linkIsDead()) return;
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     doc._submission?.replaced();
     resetEvaluationWork();
@@ -8854,7 +8914,7 @@
         initDraftPersistence();
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
-        document.getElementById('print-btn').addEventListener('click', () => window.print());
+        document.getElementById('print-btn').addEventListener('click', () => { if (!linkIsDead()) window.print(); });
         initOptionsMenu();
         initStickyOffsets();
       })
