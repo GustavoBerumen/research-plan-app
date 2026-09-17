@@ -317,8 +317,13 @@
       }
 
       // An indented "Error:" line is what Save and continue says when the
-      // field is left unanswered, for a question the general wording reads
-      // badly for: "Select a other researchers" is not a sentence (RPA-141).
+      // field is left unanswered. It began with a question the general
+      // wording read badly for, "Select a other researchers" (RPA-141);
+      // since RPA-120 every required field has one, written to say what to
+      // do in the words of its question. A field without one keeps the
+      // general wording. On a study's field, "this study" in the message
+      // becomes the study's name, as in its heading; a message that does not
+      // say it has " for Study 2" added.
       const errorMatch = raw.match(/^\s+Error:\s*(.*)$/i);
       if (errorMatch && currentField) {
         currentField.errorMessage = errorMatch[1].trim();
@@ -2677,6 +2682,7 @@
     const mLabel = el('div', 'flabel', { id: 'field-methods-g' + seq + '-label' });
     mLabel.append(document.createTextNode(methodsFieldDef ? headingText(methodsFieldDef) : 'Methods'), perQuestionSuffix());
     if (methodsFieldDef && methodsFieldDef.question) methodsField.dataset.fieldName = methodsFieldDef.label;
+    if (methodsFieldDef && methodsFieldDef.errorMessage) methodsField.dataset.errorMessage = methodsFieldDef.errorMessage;
     methodsField.setAttribute('aria-labelledby', mLabel.id);
     methodsField.appendChild(mLabel);
     const mHint = methodsFieldDef ? renderFieldHint(methodsFieldDef, 'field-methods-g' + seq + '-hint') : null;
@@ -2870,6 +2876,10 @@
       label.firstChild.textContent = names ? asked.replace(/this study/i, studyName) : asked;
       of.textContent = studyName && !names ? ' for ' + studyName : '';
       fieldEl.dataset.groupOf = studyName ? ' for ' + studyName : '';
+      // Its message for an unanswered field follows the same rule (RPA-120).
+      if (fieldEl.dataset.errorTemplate === undefined) fieldEl.dataset.errorTemplate = fieldEl.dataset.errorMessage || '';
+      const said = fieldEl.dataset.errorTemplate;
+      if (said) fieldEl.dataset.errorMessage = !studyName ? said : (/this study/i.test(said) ? said.replace(/this study/i, studyName) : said + ' for ' + studyName);
     });
   }
 
@@ -4948,6 +4958,8 @@
     const wrap = renderFieldOfType(field);
     // The name the check page and the error summary use, when the heading asks a question instead.
     if (field.question && wrap && wrap.dataset && !wrap.dataset.fieldName) wrap.dataset.fieldName = field.label;
+    // And what Save and continue says when it is left unanswered (RPA-120).
+    if (field.errorMessage && wrap && wrap.dataset && !wrap.dataset.errorMessage) wrap.dataset.errorMessage = field.errorMessage;
     return wrap;
   }
   function renderFieldOfType(field) {
@@ -5228,6 +5240,7 @@
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
       label.textContent = headingText(f);
       if (f.question) mf.dataset.fieldName = f.label;
+      if (f.errorMessage) mf.dataset.errorMessage = f.errorMessage;
       // Header fields can be optional too. Project decision is the live case:
       // it is a delivery date the researcher does not set and often nobody has
       // set yet, and its audit verdict is "keep — sourced or optional".
@@ -5382,6 +5395,7 @@
     // with the rest of Plan details: it is required (Gus, 14 September 2026).
     const titleField = el('div', 'title-field');
     if (header.title.question) titleField.dataset.fieldName = header.title.label;
+    if (header.title.errorMessage) titleField.dataset.errorMessage = header.title.errorMessage;
     titleField.appendChild(titleLabel);
     if (titleHint) titleField.appendChild(titleHint);
     titleField.appendChild(titleInput);
@@ -6473,10 +6487,41 @@
     const l = g.querySelector('.flabel, .mlabel, .clbl, label');
     return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
   }
+  // What is missing from a date someone has started: "day", "month and
+  // year", or nothing when all three are there and the date is not a real
+  // one. Null when the date is untouched. The design system's date input
+  // says these three things differently, and so does this (RPA-120).
+  function dateShortfall(nativeInput) {
+    const segments = dateSegments(nativeInput);
+    if (!segments) return null;
+    const parts = [['day', segments.day], ['month', segments.month], ['year', segments.year]];
+    const missing = parts.filter(([, input]) => !input || !input.value.trim()).map(([name]) => name);
+    if (missing.length === parts.length) return null;
+    return missing;
+  }
+  // Not started: no date in it that a person typed. The form fills in the
+  // first stage's start and the last stage's end itself (RPA-76, RPA-59),
+  // and marks what it filled; those do not count.
+  function scheduleNotStarted(g) {
+    const dates = Array.from(g.querySelectorAll('.date-control input[type="date"]'));
+    return dates.length > 0 && dates.every((input) => {
+      const segments = dateSegments(input);
+      const theirs = [input, segments.control, segments.day, segments.month, segments.year];
+      return dateShortfall(input) === null || theirs.some(isPrefilled);
+    });
+  }
   function groupMessage(g) {
-    // The template's own words, where it gives them.
-    if (g.dataset && g.dataset.errorMessage) return g.dataset.errorMessage;
     const label = groupLabel(g);
+    // An answer that is there and wrong is told what is wrong with it; only
+    // an answer that is not there gets the field's own "Error:" words.
+    const started = requiredDateInput(g) ? dateShortfall(requiredDateInput(g)) : null;
+    if (started) {
+      const name = label.replace(/ date$/i, '') + ' date';
+      return started.length ? name + ' must include a ' + started.join(started.length === 2 ? ' and ' : ', ') : name + ' must be a real date';
+    }
+    // The template's own words, where it gives them. Choosing "Other" for the
+    // sample size is an answer begun: its box is asked for in its own words below.
+    if (g.dataset && g.dataset.errorMessage && !customSampleSizeInput(g)) return g.dataset.errorMessage;
     // "Sample Size for Study 2" reads as "sample size for Study 2": the
     // field's name is lowered mid-sentence, the study's is not (RPA-142).
     const lowered = label.replace(/^(.*?)( for Study \d+)?$/, (m, name, of) => name.toLowerCase() + (of || ''));
@@ -6583,7 +6628,14 @@
     const checked = groups || requiredGroupsOf(stepEl);
     if (!capabilities.submissions && checked.length && checked.every(g => unitKey(g) === 'stageTimeline')) {
       const errors = localCompletionErrors().filter(error => !error.key || error.key === 'stageTimeline');
-      return showSubmissionErrors(errors, summary, { focus });
+      // A schedule nobody has started is one thing to do, not a message for
+      // every empty date in it: nine, on the suggested stages. It is asked
+      // for in the template's words, like any unanswered field. Once a date
+      // is in, each row is told exactly what it lacks (RPA-6, RPA-120).
+      const asOne = errors.length && checked.every((g) => g.dataset.errorMessage && scheduleNotStarted(g));
+      checked.forEach(clearGroupError);
+      if (!asOne) return showSubmissionErrors(errors, summary, { focus });
+      showSubmissionErrors([], summary, { focus: false });   // releases any row marks this summary drew
     }
     if (capabilities.submissions && !stepEl.classList.contains('email-step')) {
       const errors = submissionErrors().filter(error => {

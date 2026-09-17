@@ -117,7 +117,7 @@ test('a run of "- " lines is one list where it was written; a paragraph between 
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('an unanswered field is asked for by its name, not by its question, and the check page lists it by name', async (t) => {
+test('an unanswered field is asked for in its own words (RPA-120), never by pasting its question in, and the check page lists it by name', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -126,7 +126,7 @@ test('an unanswered field is asked for by its name, not by its question, and the
   const step = d.querySelector('.step[data-step-slug="context"]');
   const press = () => step.querySelector('.step-continue').click();
   press();
-  assert.deepEqual(Array.from(step.querySelectorAll('.error-summary-link')).map(text), ['Enter the background'], 'not "Enter the what do people need to know..."');
+  assert.deepEqual(Array.from(step.querySelectorAll('.error-summary-link')).map(text), ['Enter what people need to know about this project'], 'not "Enter the what do people need to know..."');
   setValue(window, d.querySelector('[data-field="background"]'), 'Checkout was rebuilt in June and abandonment rose.');
   press(); await settle();
   setValue(window, d.querySelector('[data-field="goal"]'), 'Reduce abandonment at payment.');

@@ -54,7 +54,7 @@ test('Plan details asks one question per page, the two dates together, and Back 
   assert.deepEqual(onScreen(plan), ['What is the name of your research plan?']);
   assert.equal(caption(plan), 'Question 1 of 6');
   press(plan);
-  assert.deepEqual(linksOf(plan), ['Enter the research title'], 'the page judges its own question only');
+  assert.deepEqual(linksOf(plan), ['Enter a name for your research plan'], 'the page judges its own question only');
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
   press(plan);
   assert.deepEqual(onScreen(plan), ['Which project or initiative does this research support?']);
@@ -87,7 +87,7 @@ test('the last page judges the whole section, and a summary link opens the page 
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
   press(plan);
   assert.deepEqual(visible(d), ['plan-details'], 'stays');
-  assert.deepEqual(linksOf(plan), ['Enter the lead researcher']);
+  assert.deepEqual(linksOf(plan), ['Enter the name of the person leading this research']);
   plan.querySelector('.error-summary-link').click();
   assert.deepEqual(onScreen(plan), ['Who is leading this research?'], 'the link opened its page');
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));

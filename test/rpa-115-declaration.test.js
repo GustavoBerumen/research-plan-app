@@ -78,7 +78,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   press('Continue');
   const summary = d.querySelector('.sign-off .error-summary');
   assert.equal(summary.hidden, false, 'a signature without its declaration is refused');
-  assert.match(text(summary), /Confirm the declaration: lead researcher/i);
+  assert.match(text(summary), /Confirm that this plan is complete and current/, 'in the declaration\'s own words (RPA-120)');
   assert.ok(box(d, 'declarationResearcher').closest('.field').classList.contains('field-invalid'), 'and the box is marked');
   assert.equal(reviewStatus(d), 'Not started', 'nothing was signed');
 
