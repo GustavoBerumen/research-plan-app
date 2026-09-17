@@ -68,7 +68,8 @@ for (const [name, configResponse] of [
     lists: Object.fromEntries(Object.entries(src.lists).filter(([k]) => k !== 'characteristics' && k !== 'userGroups')),
     methods: src.methods.map((g) => ({ ...g, characteristics: src.lists.characteristics || [], userGroups: src.lists.userGroups || [], sampleSize: src.selects.sampleSize || { v: '', o: '' } })),
   });
-  assert.deepEqual(downloaded.lists, perQuestion(source).lists);
+  // Plan details asks for other researchers' names since RPA-141; a plan that never said saves an empty row.
+  assert.deepEqual(downloaded.lists, { ...perQuestion(source).lists, researcherNames: [''] });
   // Since RPA-142 each group is a study answering its own question, in the backup as studies.
   assert.deepEqual(downloaded.studies, PLAN.studiesFromGroups(perQuestion(source).methods, source.lists.researchQuestions));
   // RPA-101 gave every section a hatch; each is written, empty or not.

@@ -107,7 +107,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // The page before the plan asks its one question as its heading (RPA-99).
       'What is your email address?',
       'Last updated', 'Research title', 'Jira Project',
-      'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
+      // Whether others are involved asks its question in its legend (RPA-141).
+      'Lead researcher', 'Are other researchers involved in this research?', 'Researcher names', 'Project requester', 'Project decision', 'Research readout',
       // One Additional information hatch closes each section (RPA-101).
       'Background', 'Goal', 'Problem Statement', 'Additional information',
       // Hypothesis is dormant too (RPA-117, later the same day).

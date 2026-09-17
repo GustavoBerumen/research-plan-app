@@ -136,6 +136,8 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)
   expected.studies = expected.methods.map((g, i) => ({ questions: [i + 1], methods: g.methods, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
   expected.selects.studyCount = { v: 'Three', o: '' };   // three groups became three studies
+  expected.selects.otherResearchers = { v: '', o: '' };   // asked since RPA-141, not yet answered
+  expected.lists.researcherNames = [''];
   delete expected.methods;
   delete expected.lists.characteristics; delete expected.lists.userGroups; delete expected.selects.sampleSize;
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');

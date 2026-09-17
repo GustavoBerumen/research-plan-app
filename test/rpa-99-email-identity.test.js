@@ -30,7 +30,7 @@ const emailOf = (d) => d.querySelector('[data-field="emailAddress"]');
 const linksOf = (el) => Array.from(el.querySelectorAll('.error-summary-link')).map(text);
 const errorsOf = (el) => Array.from(el.querySelectorAll('.field-error')).map((e) => text(e).replace(/^Error: /, ''));
 const press = (el) => el.querySelector('.step-continue').click();
-const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]')).map((u) => text(u.querySelector('.flabel, .mlabel, label')));
+const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.hidden && !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]')).map((u) => text(u.querySelector('.flabel, .mlabel, label')));
 const panelOf = (step) => Array.from(step.children).find((c) => c.classList.contains('check-answers'));
 const rowsOf = (step) => Array.from(panelOf(step).querySelectorAll('.summary-row')).map((r) => text(r.querySelector('.summary-key')));
 const draftOf = (window) => JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null');
@@ -120,7 +120,7 @@ test('it stands in front of every step and remembers where the person was going:
   assert.deepEqual(visible(linked.document), ['plan-details'], 'then lands where the link pointed');
   const plan = stepOf(linked.document, 'plan-details');
   assert.deepEqual(onScreen(plan), ['Research title'], 'Plan details is as it was: the address is not one of its questions');
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 5');
+  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 6');
 
   const app = await bootApp({});
   t.after(() => app.close());
@@ -374,7 +374,7 @@ test('not a question of the plan: absent from the check page and the print, kept
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);
   toCheckPage(plan);
-  assert.deepEqual(rowsOf(plan), ['Research title', 'Jira Project', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout'], 'the section\'s own six questions');
+  assert.deepEqual(rowsOf(plan), ['Research title', 'Jira Project', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout'], 'the section\'s own questions, and the address is not among them');
   assert.equal(d.querySelector('.doc-header [data-field="emailAddress"]'), null, 'not in the document\'s header');
   d.getElementById('clear-btn').click();
   assert.equal(emailOf(d).value, 'name@example.com', 'Clear Form resets the plan, not the person');

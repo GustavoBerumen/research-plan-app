@@ -16,7 +16,7 @@ const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const steps = (d) => Array.from(d.querySelectorAll('.step'));
 const visible = (d) => steps(d).filter((s) => !s.hidden).map((s) => s.dataset.stepSlug);
-const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]'));
+const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.hidden && !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]'));
 
 test('on screen, a step\'s header grid is one column, so the two dates stack; print keeps the two-column header', () => {
   const screen = CSS.match(/@media screen\{\.step \.meta-grid\{([^}]*)\}\}/);
@@ -35,8 +35,8 @@ test('the dates page still asks both dates together, decision above readout in t
   await waitFor(() => visible(d)[0] === 'plan-details');
   const plan = steps(d)[1];
   completeStep(app, plan);
-  for (let k = 0; k < 4; k++) plan.querySelector('.step-continue').click();
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 5 of 5');
+  for (let k = 0; k < 6; k++) plan.querySelector('.step-continue').click();   // seven pages with other researchers named (RPA-141)
+  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 7 of 7');
   const shown = onScreen(plan);
   assert.deepEqual(shown.map((u) => text(u.querySelector('.mlabel'))), ['Project decision', 'Research readout'], 'still paired');
   assert.ok(shown[0].compareDocumentPosition(shown[1]) & 4, 'decision comes first in the document, so first down the page');

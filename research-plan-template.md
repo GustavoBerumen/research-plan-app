@@ -119,6 +119,18 @@ Jira Project (text, width=10, key=jiraProject):
   Hint: Jira ticket for the initiative this research supports.
 Lead researcher (text, width=20, key=leadResearcher):
   Hint: Name of the person leading this research.
+<!-- RPA-141, 17 September 2026. Research is often done by more than one
+     person, and the plan had nowhere to say who else. A yes or no question,
+     then their names only if yes. "closed" means the options are the whole
+     set, so no "Other" is offered; "reveals=" names the field asked only
+     when the first option is chosen. Names only, for now: no roles, no
+     email addresses. The sign-off stays between the Lead researcher and the
+     Project requester (RPA-134). Wording is a placeholder for Gus. -->
+Other researchers (radios, closed, reveals=researcherNames, question=Are other researchers involved in this research?, key=otherResearchers): Yes,No
+  Hint: Anyone besides the lead researcher who will plan, run or analyse the research.
+  Error: Select yes if other researchers are involved in this research
+Researcher names (list, width=20, key=researcherNames):
+  Hint: Add each person’s name. Do not include the lead researcher.
 Project requester (text, width=20, key=projectRequester):
   Hint: Name of the person requesting this work.
 Project decision (date, key=projectDecision):
