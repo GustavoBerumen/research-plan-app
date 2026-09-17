@@ -56,6 +56,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(app.scriptSources, [
     'test-profiles.js',
     'plan-model.js',
+    'plan-document.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
@@ -66,6 +67,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(app.executedScripts, [
     'test-profiles.js',
     'plan-model.js',
+    'plan-document.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',

@@ -5719,6 +5719,7 @@
 
     const list = el('div', 'review-list');
     step.appendChild(list);
+    step.appendChild(renderKeepCopy());
 
     // A redraw replaces every element. Whatever in the list had focus, the
     // equivalent element gets it back: the row a person just returned to,
@@ -9073,6 +9074,94 @@
     });
   }
 
+  // ---------- the plan as a Word document (RPA-77) ----------
+  // An editable copy to take away: for a reviewer to comment on, for the
+  // person to carry on in Word. Made here, in the browser, by
+  // plan-document.js, with no library and nothing uploaded. It reads the
+  // live form, not the saved draft, so an edit still waiting for autosave is
+  // in it; and it only reads: the answers, Last updated, the page the person
+  // is on and the saved draft are as they were. One download at a time:
+  // every Word button is off while the file is made, so a second press
+  // cannot start a second download.
+  let wordBusy = false;
+  function wordButtons() { return Array.from(document.querySelectorAll('.download-word')); }
+  function downloadWord(say) {
+    if (planBlocked() || wordBusy) return Promise.resolve(false);
+    wordBusy = true;
+    const buttons = wordButtons();
+    const labels = buttons.map((b) => b.textContent);
+    buttons.forEach((b) => { b.disabled = true; b.setAttribute('aria-busy', 'true'); b.textContent = 'Preparing Word document…'; });
+    say('Preparing your Word document.');
+    // A turn of the event loop first, so the button and the status are seen to change.
+    return new Promise((resolve) => window.setTimeout(resolve, 0)).then(() => {
+      let url;
+      try {
+        const maker = window.RPA_PLAN_DOCUMENT;
+        const planView = maker.view(formSchema, collectDraft(), { today: todayIso() });
+        const blob = new Blob([maker.docx(planView, { when: new Date() })], { type: maker.DOCX_TYPE });
+        const name = maker.filename(planView.title, todayIso());
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        say('Download started: ' + name);
+        return true;
+      } catch (err) {
+        say('The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.', true);
+        return false;
+      } finally {
+        if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        buttons.forEach((b, i) => { b.disabled = planBlocked(); b.removeAttribute('aria-busy'); b.textContent = labels[i]; });
+        wordBusy = false;
+      }
+    });
+  }
+  function wordStatusIn(status) {
+    return (message, error = false) => { status.dataset.error = String(error); status.textContent = message; };
+  }
+  function printPlan() { if (!planBlocked()) window.print(); }
+  function initWordDownload() {
+    const button = document.getElementById('download-word-btn');
+    if (!button) return;
+    button.disabled = planBlocked();
+    button.addEventListener('click', () => downloadWord(wordStatusIn(document.getElementById('word-status'))));
+  }
+  // On Review, where the person finishes: the same two ways of taking the
+  // plan away, under the summary and above the sign-off, so a copy is
+  // offered before signing and not as a reward for it. The Menu is closed
+  // most of the time, and people could not find how to save the plan (Max,
+  // 8 September 2026).
+  function renderKeepCopy() {
+    const panel = el('section', 'keep-copy', { 'aria-labelledby': 'keep-copy-heading' });
+    const heading = el('h3', 'keep-copy-h', { id: 'keep-copy-heading' });
+    heading.textContent = 'Keep a copy of this plan';
+    const lead = el('p', 'keep-copy-lead');
+    lead.textContent = 'The copy holds the plan as it is now, including anything you have just typed.';
+    const actions = el('div', 'keep-copy-actions');
+    const action = (button, helpText, id) => {
+      const wrap = el('div', 'keep-copy-action');
+      const help = el('p', 'menu-help', { id });
+      help.textContent = helpText;
+      button.setAttribute('aria-describedby', id);
+      wrap.append(button, help);
+      return wrap;
+    };
+    const word = el('button', 'btn btn-dark download-word', { type: 'button' });
+    word.textContent = 'Download as Word (.docx)';
+    const print = el('button', 'btn btn-ghost', { type: 'button' });
+    print.textContent = 'Print or save as PDF';
+    print.addEventListener('click', printPlan);
+    actions.append(action(word, 'To edit, or for others to comment on.', 'keep-copy-word-help'), action(print, 'To read or share as it is.', 'keep-copy-print-help'));
+    const status = el('p', 'word-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    word.addEventListener('click', () => downloadWord(wordStatusIn(status)));
+    const inset = el('p', 'keep-copy-inset');
+    inset.textContent = 'Changes made in Word stay in Word. They are not brought back into this form.';
+    panel.append(heading, lead, actions, status, inset);
+    return panel;
+  }
+
   function initBackupControls() {
     const download = document.getElementById('download-backup-btn');
     const restore = document.getElementById('restore-backup-btn');
@@ -9373,7 +9462,8 @@
         initDraftPersistence();
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
-        document.getElementById('print-btn').addEventListener('click', () => { if (!planBlocked()) window.print(); });
+        document.getElementById('print-btn').addEventListener('click', printPlan);
+        initWordDownload();
         initOptionsMenu();
         initStickyOffsets();
       })
