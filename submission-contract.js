@@ -13,7 +13,7 @@
   const FIELDS = ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'projectDecision', 'researchReadout', 'lastUpdated', 'background', 'goal', 'problemStatement', 'objective', 'comments', 'declarationResearcher', 'signOffResearcher', 'declarationRequester', 'signOffProjectOwner'];
   const CUSTOM = ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources'];
   const SECTION = { researchTitle: 'plan-details', jiraProject: 'plan-details', leadResearcher: 'plan-details', projectRequester: 'plan-details', projectDecision: 'plan-details', researchReadout: 'plan-details', lastUpdated: 'plan-details', background: 'context', goal: 'context', problemStatement: 'context', objective: 'research', researchQuestions: 'research', outcomes: 'research', methods: 'methodology', characteristics: 'methodology', userGroups: 'methodology', sampleSize: 'methodology', stageTimeline: 'execution', previousKnowledge: 'execution', additionalContext: 'context', additionalResearch: 'research', additionalMethodology: 'methodology', additionalResources: 'execution', comments: 'review', declarationResearcher: 'review', signOffResearcher: 'review', declarationRequester: 'review', signOffProjectOwner: 'review' };
-  const LABEL = { researchTitle: 'research title', jiraProject: 'Jira project', leadResearcher: 'lead researcher', projectRequester: 'project requester', projectDecision: 'project decision date', researchReadout: 'research readout date', background: 'background', goal: 'goal', problemStatement: 'problem statement', objective: 'objective', researchQuestions: 'research question', outcomes: 'outcome', methods: 'method', characteristics: 'characteristic', userGroups: 'user group', sampleSize: 'sample size', stageTimeline: 'planned schedule', declarationResearcher: 'lead researcher declaration', declarationRequester: 'project requester declaration', signOffResearcher: 'lead researcher sign-off', signOffProjectOwner: 'project requester sign-off' };
+  const LABEL = { researchTitle: 'research title', jiraProject: 'Jira project', leadResearcher: 'lead researcher', projectRequester: 'project requester', projectDecision: 'project decision date', researchReadout: 'research readout date', background: 'background', goal: 'goal', problemStatement: 'problem statement', objective: 'objective', researchQuestions: 'research question', outcomes: 'outcome', methods: 'method', characteristics: 'participant criteria', userGroups: 'user group', sampleSize: 'sample size', stageTimeline: 'planned schedule', declarationResearcher: 'lead researcher declaration', declarationRequester: 'project requester declaration', signOffResearcher: 'lead researcher sign-off', signOffProjectOwner: 'project requester sign-off' };
   const clone = value => JSON.parse(JSON.stringify(value));
   const nonblank = v => typeof v === 'string' && v.trim().length > 0;
   function sampleSize(value) {
@@ -49,6 +49,15 @@
   function fingerprint(plan) {
     const p = clone(plan);
     delete p.savedAt; delete p.ui;
+    // Who takes part is one list since RPA-119; it was two. A receipt taken
+    // while it was two must still recognise the same plan read as one, so
+    // the fingerprint sees a group's participants the way the form now reads
+    // them: its characteristics, then its user groups, blanks aside.
+    (p.methods || []).forEach(g => {
+      const groups = (g.userGroups || []).filter(nonblank);
+      if (groups.length) g.characteristics = (g.characteristics || []).filter(nonblank).concat(groups);
+      g.userGroups = [];
+    });
     if (!p.lastUpdatedManual) delete p.fields.lastUpdated;
     ['signOffResearcher', 'signOffProjectOwner'].forEach(k => { p.fields[k] = p.fields[k]?.replace(/ — \d{2}\/\d{2}\/\d{4}$/, ''); });
     return canonical(p);
@@ -74,6 +83,10 @@
     // RPA-98 made optional plan comments dormant. The wire shape remains v1;
     // current projections carry an empty comments slot, old receipts retain theirs.
     if (!fields.some(f => f.key === 'comments')) delete types.comments;
+    // RPA-119 made user groups and characteristics one question again. The
+    // wire shape keeps its userGroups slot, which new projections leave
+    // empty, exactly as the comments slot above.
+    if (!fields.some(f => f.key === 'userGroups')) delete types.userGroups;
     if (fields.length !== Object.keys(types).length || new Set(fields.map(f => f.key)).size !== fields.length) return false;
     return fields.every(f => {
       if (types[f.key] !== f.type || !!f.optional !== ['comments', 'previousKnowledge'].includes(f.key) ||
@@ -141,7 +154,8 @@
     if (methods.length !== questions.length) add('methods', 'pairing', {}, 'Restore the methods group for each research question.');
     methods.forEach((g, question) => {
       if (g.question !== (questions[question] || '').trim()) add('methods', 'pairing', { question }, 'Check the methods linked to research question ' + (question + 1) + '.');
-      ['methods', 'characteristics', 'userGroups'].forEach(k => list(k, g[k], { question }));
+      // userGroups is a dormant slot since RPA-119: allowed, never required.
+      ['methods', 'characteristics'].forEach(k => list(k, g[k], { question }));
       const c = g.sampleSize;
       if (!c || (!SAMPLE_SIZES.includes(c.v) && c.v !== '__other__')) add('sampleSize', 'choice', { question }, 'Select a sample size for research question ' + (question + 1) + '.');
       else if (c.v === '__other__' && !nonblank(c.o)) add('sampleSize', 'other', { question }, 'Enter the other sample size for research question ' + (question + 1) + '.');

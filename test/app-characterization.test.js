@@ -99,26 +99,30 @@ test('renders the complete form from the real index, template, rubric, and metho
     // belongs to the document, so renderSchema lifts it out of the accordion
     // and renders it after the sections (RPA-55).
     // Research reads 3 with Hypothesis dormant (RPA-117).
-    ['3 fields', '3 fields', '2 fields', '4 fields', '2 fields']
+    ['3 fields', '3 fields', '2 fields', '3 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
       // The page before the plan asks its one question as its heading (RPA-99).
       'What is your email address?',
-      'Last updated', 'Research title', 'Jira Project',
+      // Each field Gus has written the words for asks its question as its
+      // heading (RPA-119); its name is kept for error messages and the check page.
+      'Last updated', 'What is the name of your research plan?', 'Which project or initiative does this research support?',
       // Whether others are involved asks its question in its legend (RPA-141).
-      'Lead researcher', 'Are other researchers involved in this research?', 'Researcher names', 'Project requester', 'Project decision', 'Research readout',
+      'Who is leading this research?', 'Are other researchers involved in this research?', 'Researcher names', 'Who requested this research?',
+      'When will the findings be used to make a decision?', 'When will the findings be shared with the team?',
       // One Additional information hatch closes each section (RPA-101).
-      'Background', 'Goal', 'Problem Statement', 'Additional information',
+      'What do people need to know about this project?', 'What is the goal of this project?', 'What problem are you trying to solve?', 'Additional information',
       // Hypothesis is dormant too (RPA-117, later the same day).
-      'Objective', 'Research Questions', 'Outcomes', 'Additional information',
+      'What do you want to learn from this research?', 'What questions do you need this research to answer?', 'What deliverables will answer your research questions?', 'Additional information',
       // Studies (RPA-142): the radios ask their question in the legend; the
       // studies field's own label is for assistive technology.
       'How many studies will you run?', 'Study questions',
       // Theory and Action Points are dormant (RPA-117).
       // Sample Size asks its question in its legend (RPA-118).
-      'Methods', 'Characteristics', 'User Groups', 'How many participants do you need?', 'Additional information',
+      // Who takes part is one question since RPA-119, where it was Characteristics and User Groups.
+      'Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?', 'Additional information',
       'Planned Schedule',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
@@ -172,7 +176,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // The Participants group is gone: its three fields are asked per research
   // question, inside the question's group under Methods (RPA-116).
   assert.equal(document.querySelector('.field-group-title'), null);
-  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Methods', 'Characteristics', 'User Groups', 'How many participants do you need?']);
+  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?']);
 
   const methodInput = document.querySelector('.methods-group .list-input');
   assert.equal(methodInput.getAttribute('role'), 'combobox');

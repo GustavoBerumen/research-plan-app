@@ -811,6 +811,8 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 .field-help[open] .field-help-summary{margin-bottom:8px}
 .field-help-body{border-left:4px solid var(--border);padding:2px 0 2px 16px;color:var(--text-2)}
 .field-help-body p{margin:0 0 8px}.field-help-body p:last-child{margin-bottom:0}
+.field-help-list{margin:0 0 8px;padding-left:20px}.field-help-list li{margin:0 0 4px}.field-help-list:last-child{margin-bottom:0}
+.field-help-body strong{color:var(--ink)}
 .fw-about-summary{cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;list-style:revert;padding:2px 0}
 .fw-about-summary:hover{color:var(--link-hover)}
 .fw-about-summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}

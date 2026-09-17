@@ -6,8 +6,10 @@
 // unit from the question to the study (Gus's decisions of 16 September
 // 2026): a study answers one or more questions, Methodology is asked once
 // per study with its questions pinned, and the answers are saved per study
-// in draft version 10. What this file holds to is what survived the move:
-// the four fields inside each group, the pinned head, the per-group saving
+// in draft version 10. RPA-119 made who takes part one list, Participant
+// criteria, where it was Characteristics and User Groups (Gus, 17 September
+// 2026). What this file holds to is what survived both moves: the fields
+// inside each group, three now, the pinned head, the per-group saving
 // and restoring, the migration of older plans, and the check page and the
 // error summary naming each group.
 
@@ -39,7 +41,7 @@ async function twoQuestionsTwoStudies(app) {
   await settle();
 }
 
-test('each study carries its own Methods, Characteristics, User Groups and Sample Size, under the questions it answers, pinned', async (t) => {
+test('each study carries its own Methods, Participant criteria and Sample Size, under the questions it answers, pinned', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -49,9 +51,14 @@ test('each study carries its own Methods, Characteristics, User Groups and Sampl
   groups(d).forEach((g, i) => {
     assert.equal(text(g.querySelector('.methods-group-q')), 'Study ' + (i + 1) + ' answers');
     assert.equal(g.querySelector('.methods-group-head').hidden, false, 'the head shows once a study is declared');
-    ['methods', 'characteristics', 'userGroups'].forEach((key) => assert.ok(g.querySelector('.list-rows[data-list-key="' + key + '"]'), key + ' in group ' + (i + 1)));
+    ['methods', 'characteristics'].forEach((key) => assert.ok(g.querySelector('.list-rows[data-list-key="' + key + '"]'), key + ' in group ' + (i + 1)));
+    assert.equal(g.querySelector('.list-rows[data-list-key="userGroups"]'), null, 'who takes part is one list since RPA-119');
     assert.ok(g.querySelector('.select-cell[data-field-key="sampleSize"]'), 'sample size in group ' + (i + 1));
-    assert.deepEqual(Array.from(g.querySelectorAll('.per-question-of')).map(text), Array(4).fill('for Study ' + (i + 1)), 'each field is named for its study');
+    // A heading that asks about "this study" names it; one that does not keeps a hidden suffix (RPA-119).
+    assert.deepEqual(Array.from(g.querySelectorAll('.field-per-question .flabel')).map((l) => l.firstChild.textContent),
+      ['Which research methods will you use for Study ' + (i + 1) + '?', 'Who should take part in Study ' + (i + 1) + '?', 'How many participants do you need?']);
+    assert.deepEqual(Array.from(g.querySelectorAll('.per-question-of')).map(text), ['', '', 'for Study ' + (i + 1)]);
+    assert.deepEqual(Array.from(g.querySelectorAll('.field-per-question')).map((x) => x.dataset.groupOf), Array(3).fill(' for Study ' + (i + 1)), 'and each keeps its name for the check page');
   });
   assert.deepEqual(headOf(groups(d)[0]), ['RQ1 Where does choosing a delivery slot break down?'], 'the whole question, not an abbreviation');
   assert.deepEqual(headOf(groups(d)[1]), ['RQ2 Do people understand the delivery fee?']);
@@ -74,7 +81,6 @@ test('the answers are saved per study, in draft version 10, and come back per st
   const [g1, g2] = groups(d);
   setValue(window, g1.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Moderated usability testing');
   setValue(window, g1.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a checkout in the last 30 days');
-  setValue(window, g1.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
   g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Small (1–5)"]').click();
   setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Online survey');
   g2.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Very Large (30+)"]').click();
@@ -83,8 +89,8 @@ test('the answers are saved per study, in draft version 10, and come back per st
   assert.equal(saved.methods, undefined, 'the per-question shape is gone');
   assert.deepEqual(saved.selects.studyCount, { v: 'Two', o: '' });
   assert.deepEqual(saved.studies, [
-    { questions: [1], methods: ['Moderated usability testing'], characteristics: ['Abandoned a checkout in the last 30 days'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' } },
-    { questions: [2], methods: ['Online survey'], characteristics: [''], userGroups: [''], sampleSize: { v: 'Very Large (30+)', o: '' } },
+    { questions: [1], methods: ['Moderated usability testing'], characteristics: ['Abandoned a checkout in the last 30 days'], sampleSize: { v: 'Small (1–5)', o: '' } },
+    { questions: [2], methods: ['Online survey'], characteristics: [''], sampleSize: { v: 'Very Large (30+)', o: '' } },
   ]);
 
   const again = await bootApp({ draft: saved });
@@ -94,7 +100,6 @@ test('the answers are saved per study, in draft version 10, and come back per st
   assert.deepEqual(studyGroups(dd).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], ['2']], 'the ticks come back');
   assert.deepEqual(inGroup(groups(dd)[0], 'methods'), ['Moderated usability testing']);
   assert.deepEqual(inGroup(groups(dd)[0], 'characteristics'), ['Abandoned a checkout in the last 30 days']);
-  assert.deepEqual(inGroup(groups(dd)[0], 'userGroups'), ['New customers']);
   assert.equal(chosen(groups(dd)[0]), 'Small (1–5)');
   assert.deepEqual(inGroup(groups(dd)[1], 'methods'), ['Online survey']);
   assert.equal(chosen(groups(dd)[1]), 'Very Large (30+)');
@@ -118,8 +123,7 @@ test('a version 7 plan brings its one answer to every question it had, and a ver
   assert.equal(groups(d).length, 2, 'two questions, two studies');
   assert.deepEqual(studyGroups(d).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], ['2']]);
   groups(d).forEach((g) => {
-    assert.deepEqual(inGroup(g, 'characteristics'), ['Abandoned a basket'], 'the plan-level answer went to every study');
-    assert.deepEqual(inGroup(g, 'userGroups'), ['New customers']);
+    assert.deepEqual(inGroup(g, 'characteristics'), ['Abandoned a basket', 'New customers'], 'the plan-level answers went to every study, as one list');
     assert.equal(chosen(g), 'Medium (6–12)');
   });
   assert.deepEqual(groups(d).map((g) => inGroup(g, 'methods')), [['Interviews'], ['Survey']]);
@@ -134,7 +138,7 @@ test('a version 7 plan brings its one answer to every question it had, and a ver
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('Save and continue judges every study: a second study left blank lists its four fields by name, and the check page names each study', async (t) => {
+test('Save and continue judges every study: a second study left blank lists its three fields by name, and the check page names each study', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -151,30 +155,27 @@ test('Save and continue judges every study: a second study left blank lists its 
   const g1 = groups(d)[0];
   setValue(window, g1.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
   setValue(window, g1.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
-  setValue(window, g1.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
   g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Small (1–5)"]').click();
-  // The last page judges the whole section (RPA-108): eight pages, four per study.
-  window.location.hash = '#methodology/8';
-  await waitFor(() => text(methodology.querySelector('.step-page-caption')) === 'Question 8 of 8');
+  // The last page judges the whole section (RPA-108): six pages, three per study.
+  window.location.hash = '#methodology/6';
+  await waitFor(() => text(methodology.querySelector('.step-page-caption')) === 'Question 6 of 6');
   methodology.querySelector('.step-continue').click();
   const links = Array.from(methodology.querySelectorAll('.error-summary-link')).map(text);
   assert.deepEqual(links, [
     'Add to Methods for Study 2',
-    'Add to Characteristics for Study 2',
-    'Add to User Groups for Study 2',
+    'Add to Participant criteria for Study 2',
     'Select a sample size for Study 2',
   ], 'the second study, by name, field by field');
   const g2 = groups(d)[1];
   setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Survey');
   setValue(window, g2.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Placed an order');
-  setValue(window, g2.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'Returning customers');
   g2.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Very Large (30+)"]').click();
   for (let presses = 0; presses < 12 && !methodology.classList.contains('step-checking'); presses++) methodology.querySelector('.step-continue').click();
   assert.ok(methodology.classList.contains('step-checking'), 'complete: the check page');
   const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
   assert.equal(rows['Methods for Study 1'], 'Interviews');
   assert.equal(rows['Sample Size for Study 2'], 'Very Large (30+)');
-  assert.equal(rows['User Groups for Study 2'], 'Returning customers');
+  assert.equal(rows['Participant criteria for Study 2'], 'Placed an order');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
