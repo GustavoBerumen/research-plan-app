@@ -125,7 +125,7 @@ test('the check page and Review show who else is involved', async (t) => {
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('saved in the draft with no new version, restored with the reveal, and the names survive a change of mind', async (t) => {
+test('saved in the v11 draft, restored with the reveal, and the names survive a change of mind', async (t) => {
   const app = await bootApp({});
   const { document: d, window } = app;
   await onPlanDetails(app);
@@ -134,7 +134,8 @@ test('saved in the draft with no new version, restored with the reveal, and the 
   setValue(window, nameInputs(d)[0], 'Sam Okoro');
   const saved = await waitFor(() => { const s = draftOf(window); return s && s.lists.researcherNames && s.lists.researcherNames[0] === 'Sam Okoro' && s; });
   assert.deepEqual(saved.selects.otherResearchers, { v: 'Yes', o: '' });
-  assert.equal(saved.version, 10, 'two new keys in places older builds already carry forward: no version bump, no one-way door');
+  assert.equal(saved.version, 11, 'v11 adds the stable plan identity used by durable submission');
+  assert.match(saved.planId, /^[a-f0-9-]{36}$/);
 
   choose(d, 'No');
   await settle();
@@ -174,7 +175,7 @@ test('Clear Form puts the names away with the answer', async (t) => {
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('nobody else sees the names: evaluation does not, the sign-off is still two people, and receipts do not carry them', async (t) => {
+test('evaluation excludes researcher names, sign-off remains two roles, and approved v2 submission carries the names', async (t) => {
   const app = await bootApp({ evaluate: () => ({ score: 3, justification: 'ok', recommendations: [] }) });
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -188,9 +189,10 @@ test('nobody else sees the names: evaluation does not, the sign-off is still two
   assert.equal(JSON.stringify(app.evaluationRequests).includes('Sam Okoro'), false, 'no evaluation request names them');
   assert.equal(d.querySelectorAll('.sign-off [data-field="signOffResearcher"], .sign-off [data-field="signOffProjectOwner"]').length, 2, 'the sign-off is still the two roles');
 
-  const projected = contract.project({ version: 10, savedAt: '2026-09-17T09:00:00.000Z', createdAt: '2026-09-17', fields: {}, selects: { otherResearchers: { v: 'Yes', o: '' } },
-    lists: { researchQuestions: ['Why?'], outcomes: ['A reason.'], researcherNames: ['Sam Okoro'] }, methods: [], tables: {}, custom: {}, lastUpdatedManual: false, ui: { timelineVisible: false } });
-  assert.equal(JSON.stringify(projected).includes('Sam Okoro'), false, 'the projection does not carry the names');
-  assert.deepEqual(Object.keys(projected.lists).sort(), ['outcomes', 'researchQuestions']);
+  const projected = contract.project({ version: 11, planId: 'b0b8d9d0-9e02-4af6-8d70-8d1966ac77a4', savedAt: '2026-09-17T09:00:00.000Z', createdAt: '2026-09-17', fields: {},
+    selects: { otherResearchers: { v: 'Yes', o: '' }, studyCount: { v: 'One', o: '' } },
+    lists: { researchQuestions: ['Why?'], outcomes: ['A reason.'], researcherNames: ['Sam Okoro'] }, studies: [], tables: {}, custom: {}, lastUpdatedManual: false, ui: { timelineVisible: false } });
+  assert.equal(JSON.stringify(projected).includes('Sam Okoro'), true, 'the approved v2 projection carries the names');
+  assert.deepEqual(Object.keys(projected.lists).sort(), ['outcomes', 'researchQuestions', 'researcherNames']);
   assert.deepEqual(app.jsdomErrors, []);
 });

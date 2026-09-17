@@ -6,7 +6,7 @@
 // unit from the question to the study (Gus's decisions of 16 September
 // 2026): a study answers one or more questions, Methodology is asked once
 // per study with its questions pinned, and the answers are saved per study
-// in draft version 10. RPA-119 made who takes part one list, Participant
+// in draft version 10; v11 adds stable plan identity. RPA-119 made who takes part one list, Participant
 // criteria, where it was Characteristics and User Groups (Gus, 17 September
 // 2026). What this file holds to is what survived both moves: the fields
 // inside each group, three now, the pinned head, the per-group saving
@@ -73,7 +73,7 @@ test('each study carries its own Methods, Participant criteria and Sample Size, 
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the answers are saved per study, in draft version 10, and come back per study', async (t) => {
+test('the answers are saved per study in the current draft, and come back per study', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -85,7 +85,8 @@ test('the answers are saved per study, in draft version 10, and come back per st
   setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Online survey');
   g2.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Very Large (30+)"]').click();
   const saved = await waitFor(() => { const s = draftOf(window); return s && s.studies && s.studies[1] && s.studies[1].sampleSize.v === 'Very Large (30+)' && s; });
-  assert.equal(saved.version, 10);
+  assert.equal(saved.version, 11);
+  assert.match(saved.planId, /^[a-f0-9-]{36}$/);
   assert.equal(saved.methods, undefined, 'the per-question shape is gone');
   assert.deepEqual(saved.selects.studyCount, { v: 'Two', o: '' });
   assert.deepEqual(saved.studies, [
@@ -129,7 +130,7 @@ test('a version 7 plan brings its one answer to every question it had, and a ver
   assert.deepEqual(groups(d).map((g) => inGroup(g, 'methods')), [['Interviews'], ['Survey']]);
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Old plan, touched');
   const saved = await waitFor(() => { const s = draftOf(window); return s && s.fields.researchTitle === 'Old plan, touched' && s; });
-  assert.equal(saved.version, 10);
+  assert.equal(saved.version, 11);
   assert.equal(saved.lists.characteristics, undefined, 'the plan-level keys go');
   assert.equal(saved.selects.sampleSize, undefined);
   assert.equal(saved.methods, undefined);

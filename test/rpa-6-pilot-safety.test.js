@@ -14,6 +14,9 @@ const response = (on = false, feedback = false) => ({ ok: true, json: async () =
 }) });
 function seed(kind) {
   const p = F.plan(); p.version = 9; p.fields.emailAddress = 'owner@example.com';
+  p.methods = p.studies.map(study => ({ question: p.lists.researchQuestions[study.questions[0] - 1] || '', methods: study.methods,
+    characteristics: study.characteristics, userGroups: study.userGroups || [], sampleSize: study.sampleSize }));
+  delete p.studies;
   p.fields.comments = 'Dormant local comment'; p.fields.background = '';
   p.lists.researchQuestions.push('');
   p.lists.outcomes.push('');
@@ -37,12 +40,13 @@ async function backup(app) {
   }));
 }
 const content = p => Object.fromEntries(['fields', 'selects', 'lists', 'tables', 'custom', 'studies', 'signOff', 'createdAt'].map(k => [k, p[k]]));
-// A version 9 seed reads back as version 10: its groups are studies, and the radios say how many (RPA-142).
+// A version 9 seed reads back as the current version: its groups are studies, the radios say how many, and v11 adds plan identity.
 const migrated = p => {
   const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
-  // Plan details also asks whether other researchers are involved (RPA-141): unanswered, and an empty row of names.
-  return { ...p, studies, lists: { ...p.lists, researcherNames: [''] },
-    selects: { ...p.selects, otherResearchers: { v: '', o: '' }, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
+  // Researcher details already present in a saved draft survive migration; only
+  // genuinely absent RPA-141 fields receive defaults in the application.
+  return { ...p, studies,
+    selects: { ...p.selects, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
 };
 
 test('entering a dead link cancels a pending save and refuses an already queued or direct save', async t => {
