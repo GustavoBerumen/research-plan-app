@@ -48,9 +48,10 @@ async function throughResearch(app, questions = ['Where does choosing a delivery
 }
 
 test('the template asks the two studies questions between Research and Methodology, in the design system\'s shapes', () => {
-  const research = TEMPLATE.indexOf('\n# Research\n');
-  const studies = TEMPLATE.indexOf('\n# Studies\n');
-  const methodology = TEMPLATE.indexOf('\n# Methodology\n');
+  const headings = TEMPLATE.split(/\r?\n/);
+  const research = headings.indexOf('# Research');
+  const studies = headings.indexOf('# Studies');
+  const methodology = headings.indexOf('# Methodology');
   assert.ok(research < studies && studies < methodology, 'Research, then Studies, then Methodology');
   assert.match(TEMPLATE, /^Number of studies \(radios, question=How many studies will you run\?, key=studyCount\): One,Two,Three$/m, 'radios: One, Two, Three; More than three is the reveal');
   assert.match(TEMPLATE, /^Study questions \(study-questions, question=Which research questions does this study answer\?, key=studyQuestions\):$/m);

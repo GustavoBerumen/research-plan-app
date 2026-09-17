@@ -146,24 +146,26 @@ test('on paper it is a titled part after the header\'s details when written, and
   assert.match(CSS, /\.doc-header > \.field-custom\{margin-top:24px\}/);
 });
 
-test('the submission record carries it like the others, and a plan with nothing there projects as it always did', () => {
+test('the v2 submission record carries it like the others, and the frozen v1 schema never hears of it', () => {
   assert.equal(contract.CUSTOM[0], 'additionalPlanDetails');
   assert.equal(contract.SECTION.additionalPlanDetails, 'plan-details');
-  const draft = (blocks) => ({ version: 8, savedAt: '2026-09-17T09:00:00.000Z', createdAt: '2026-09-17', fields: { researchTitle: 'Checkout' }, selects: {},
-    lists: { researchQuestions: ['Why?'], outcomes: ['A reason.'] }, methods: [], tables: {}, custom: blocks === undefined ? {} : { additionalPlanDetails: blocks }, lastUpdatedManual: false, ui: { timelineVisible: false } });
+  assert.deepEqual(contract.LEGACY_CUSTOM, ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources'], 'v1 is history: the four keys it always had');
+  const fixtures = require('./rpa-64-fixtures.cjs');
+  const draft = (blocks) => { const d = fixtures.plan(); d.custom = { ...d.custom, additionalPlanDetails: blocks }; return d; };
 
   const written = contract.project(draft([{ label: 'Stakeholders', body: 'Finance want a copy.' }, { label: '', body: '' }]));
   assert.deepEqual(written.custom.additionalPlanDetails, [{ label: 'Stakeholders', body: 'Finance want a copy.' }], 'carried, blank blocks aside');
   assert.doesNotThrow(() => contract.structure(written), 'and the record is a supported structure');
-
-  const before = contract.project(draft(undefined)), empty = contract.project(draft([])), blank = contract.project(draft([{ label: ' ', body: '' }]));
-  assert.equal('additionalPlanDetails' in empty.custom, false, 'nothing written, nothing carried');
-  assert.equal(contract.fingerprint(empty), contract.fingerprint(before), 'so a receipt taken before the hatch existed still matches the same plan');
-  assert.equal(contract.fingerprint(blank), contract.fingerprint(before));
-  assert.notEqual(contract.fingerprint(written), contract.fingerprint(before), 'and something written there is a change');
+  assert.deepEqual(contract.validate(written).filter((e) => e.key === 'additionalPlanDetails'), []);
+  assert.deepEqual(contract.project(draft([])).custom.additionalPlanDetails, [], 'empty, it is an empty list, as the other four are');
+  assert.notEqual(contract.fingerprint(written), contract.fingerprint(contract.project(draft([]))), 'something written there is a change to the plan');
 
   const half = contract.validate(contract.project(draft([{ label: '', body: 'A body with no name.' }]))).filter((e) => e.key === 'additionalPlanDetails');
   assert.deepEqual(half.map((e) => [e.section, e.column]), [['plan-details', 'label']], 'validated as the others are: a block needs a name, and the error belongs to Plan details');
+
+  const legacy = contract.projectLegacy({ ...draft([{ label: 'Stakeholders', body: 'Finance want a copy.' }]), methods: [] });
+  assert.equal('additionalPlanDetails' in legacy.custom, false, 'a v1 projection is exactly the shape v1 always was');
+  assert.throws(() => contract.structureForSchema(contract.LEGACY_SCHEMA, { ...legacy, custom: { ...legacy.custom, additionalPlanDetails: [] } }), 'and a v1 record claiming the new key is not a v1 record');
 });
 
 test('with submissions on the form still matches the collection\'s schema, and a half-written block is asked for on Plan details', async (t) => {

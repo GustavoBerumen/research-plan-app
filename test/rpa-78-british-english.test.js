@@ -131,8 +131,9 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   // section's Additional information hatch is written, empty or not.
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
   Object.assign(expected.custom, { additionalPlanDetails: [], additionalContext: [], additionalResearch: [], additionalMethodology: [] });   // Plan details has one too (RPA-145)
-  // RPA-116: the plan-level participant answers now live in every group; RPA-142: a group is a study, in draft version 10.
-  expected.version = 10;
+  // RPA-116: participant answers live in every group; RPA-142 makes each group a study; v11 adds plan identity.
+  expected.version = 11;
+  expected.planId = saved.planId;
   expected.signOff = null;   // no sign-off has been started (RPA-139)
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
