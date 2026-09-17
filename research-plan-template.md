@@ -61,6 +61,14 @@ Flags (comma-separated inside the parentheses):
                        written about M words". Advisory, never a limit
                        (RPA-114). Two tiers today: 60 for a long answer, 30
                        for a short one.
+  name              — text fields only: a person's name, asked as two labelled
+                       boxes, First name and Surname, under the field's one
+                       question (RPA-146). The field keeps its key and holds
+                       the whole name as one string, "First name Surname",
+                       which is what everything else reads; the parts are
+                       saved beside it as <key>FirstName and <key>Surname.
+                       Give it two Error lines: the first names the first
+                       name, the second the surname.
   jira              — text fields only: the field takes a Jira ticket. It gets
                        the ticket picker (when the server has Jira configured)
                        and shows a chosen ticket as a small tag. No field
@@ -164,9 +172,10 @@ Project name (text, width=20, question=Which project or initiative does this res
   Guidance: Connecting your study to a project helps others find related work, such as existing documentation, previous research, or active Jira tickets.
   Guidance: It also helps to understand the impact of this study and to connect with and include the right stakeholders.
   Guidance: You can update this at any time.
-Lead researcher (text, width=20, question=Who is leading this research?, key=leadResearcher):
+Lead researcher (text, name, width=20, question=Who is leading this research?, key=leadResearcher):
   Hint: Enter the full name of the person responsible for running this study.
-  Error: Enter the name of the person leading this research
+  Error: Enter the first name of the person leading this research
+  Error: Enter the surname of the person leading this research
   Help: Why we ask for the lead researcher
   Guidance: This identifies the main point of contact who will carry out the study and share the findings.
   Guidance: The lead researcher is accountable for:
@@ -188,9 +197,10 @@ Other researchers (radios, closed, reveals=researcherNames, question=Are other r
 Researcher names (list, width=20, key=researcherNames):
   Hint: Add each person’s name. Do not include the lead researcher.
   Error: Enter the name of at least one other researcher
-Project requester (text, width=20, question=Who requested this research?, key=projectRequester):
+Project requester (text, name, width=20, question=Who requested this research?, key=projectRequester):
   Hint: Enter the name of the project lead or stakeholder who asked for this research support.
-  Error: Enter the name of the person who requested this research
+  Error: Enter the first name of the person who requested this research
+  Error: Enter the surname of the person who requested this research
   Help: Why we ask for the project requester
   Guidance: This is usually the person responsible for the wider product or business initiative, such as a product manager, designer, data analyst, or engineer.
   Guidance: Adding their name helps ensure:

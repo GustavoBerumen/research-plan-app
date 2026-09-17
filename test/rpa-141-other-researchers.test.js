@@ -94,7 +94,7 @@ test('the question is required; the names are required only while they are asked
   await settle();
   press(d);
   assert.ok(planOf(d).classList.contains('step-checking'), 'no: the empty names are not asked for, and the section completes');
-  assert.deepEqual(rowsOf(d).filter(([k]) => /researcher/i.test(k)), [['Lead researcher', 'Filled.'], ['Other researchers', 'No']], 'and the check page has no row for a question that was not asked');
+  assert.deepEqual(rowsOf(d).filter(([k]) => /researcher/i.test(k)), [['Lead researcher', 'Filled. Filled.'], ['Other researchers', 'No']], 'and the check page has no row for a question that was not asked');
 
   cellOf(d).querySelectorAll('.radio-input').forEach((r) => { r.checked = false; });
   cellOf(d).querySelector('.radio-input').dispatchEvent(new window.Event('change', { bubbles: true }));

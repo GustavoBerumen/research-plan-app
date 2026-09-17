@@ -22,8 +22,8 @@ test('the identifier-like fields are sized to their answers, in the header and i
   const d = app.document;
   const sized = (key) => widthClass(d.querySelector('[data-field="' + key + '"]'));
   assert.equal(sized('jiraProject'), '20', 'a project name, since RPA-119; it was a ticket key');
-  assert.equal(sized('leadResearcher'), '20', 'a name');
-  assert.equal(sized('projectRequester'), '20', 'a name');
+  // A name is two boxes since RPA-146, each the width of a name.
+  for (const key of ['leadResearcherFirstName', 'leadResearcherSurname', 'projectRequesterFirstName', 'projectRequesterSurname']) assert.equal(sized(key), '20', key);
   assert.equal(sized('signOffResearcher'), '20', 'a name, outside the header');
   assert.equal(sized('signOffProjectOwner'), '20');
 });

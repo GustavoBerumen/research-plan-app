@@ -61,13 +61,14 @@ test('Plan details asks one question per page, the two dates together, and Back 
   assert.equal(caption(plan), 'Question 2 of 6');
   assert.equal(window.location.hash, '#plan-details/2');
   assert.equal(d.activeElement, plan.querySelector('#field-jiraProject-label'), 'focus lands on the question');
-  for (const key of ['jiraProject', 'leadResearcher']) { setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled'); press(plan); }
+  // A name is a first name and a surname since RPA-146; the whole name, set in one go, is read as both.
+  for (const [key, value] of [['jiraProject', 'Filled'], ['leadResearcher', 'Priya Nair']]) { setValue(window, d.querySelector('[data-field="' + key + '"]'), value); press(plan); }
   // Whether anyone else is involved is a page of its own; the names are asked only if so (RPA-141).
   assert.deepEqual(onScreen(plan), ['Are other researchers involved in this research?']);
   assert.equal(caption(plan), 'Question 4 of 6');
   d.querySelector('.select-cell[data-field-key="otherResearchers"] input[value="No"]').click();
   press(plan);
-  setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Filled'); press(plan);
+  setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Tom Reyes'); press(plan);
   assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?', 'When will the findings be shared with the team?'], 'the two dates travel together');
   assert.equal(caption(plan), 'Question 6 of 6');
   plan.querySelector('.step-back').click();
@@ -87,11 +88,11 @@ test('the last page judges the whole section, and a summary link opens the page 
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
   press(plan);
   assert.deepEqual(visible(d), ['plan-details'], 'stays');
-  assert.deepEqual(linksOf(plan), ['Enter the name of the person leading this research']);
+  assert.deepEqual(linksOf(plan), ['Enter the first name of the person leading this research', 'Enter the surname of the person leading this research'], 'each box asks for itself (RPA-146)');
   plan.querySelector('.error-summary-link').click();
   assert.deepEqual(onScreen(plan), ['Who is leading this research?'], 'the link opened its page');
-  assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));
-  setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus');
+  assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcherFirstName"]'), 'the first link goes to the first box');
+  setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Gus Berumen');
   assert.equal(plan.querySelector('.error-summary').hidden, true, 'the error goes as the field is filled');
   press(plan);
   assert.deepEqual(onScreen(plan), ['Are other researchers involved in this research?'], 'on to the next page from there');

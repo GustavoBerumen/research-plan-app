@@ -61,9 +61,11 @@ const WORDS = {
   'plan-details': [
     'Enter a name for your research plan',
     'Enter the project or initiative this research supports',
-    'Enter the name of the person leading this research',
+    'Enter the first name of the person leading this research',
+    'Enter the surname of the person leading this research',
     'Select yes if other researchers are involved in this research',
-    'Enter the name of the person who requested this research',
+    'Enter the first name of the person who requested this research',
+    'Enter the surname of the person who requested this research',
     'Enter the date the findings will be used to make a decision',
     'Enter the date the findings will be shared with the team',
   ],
@@ -257,7 +259,7 @@ test('submissions on: what only the form asks is still required, and an untouche
   t.after(() => app.close());
   const { document: d, window } = app;
   const plan = d.querySelector('.doc-header');
-  for (const key of ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester']) setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled.');
+  for (const key of ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester']) setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled In');   // two words: a name is a first name and a surname (RPA-146)
   for (const key of ['projectDecision', 'researchReadout']) setValue(window, d.querySelector('[data-field="' + key + '"]'), '2026-11-10');
   await toLastPage(app, plan);
   press(plan);

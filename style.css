@@ -239,6 +239,16 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 @media (max-width:600px){.summary-key{flex-basis:100%}}
 .step-top .step-caption{flex-basis:100%;order:2}
+/* RPA-146. A name asked as First name and Surname: one question, two labelled boxes, side by side where there is room and
+   one above the other where there is not. On paper the name reads as one string, as it does everywhere else it is shown. */
+fieldset.mf{border:0;padding:0;margin:0;min-width:0}
+fieldset.mf > legend{padding:0}
+.name-parts{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:6px}
+.name-part{display:flex;flex-direction:column;gap:4px;flex:0 1 auto;min-width:0}
+.name-part-label{font-size:var(--text);font-weight:400;color:var(--ink)}
+.name-print{display:none;margin:4px 0 0}
+@media print{.name-parts{display:none}.name-print{display:block}}
+@media screen and (max-width:600px){.name-part{flex:1 1 100%}}
 /* One question per page (RPA-108): what is not on the page is hidden on screen only; every page prints. */
 @media screen{.page-hidden{display:none!important}}
 .step-page-caption{margin:0;font-size:var(--text);color:var(--text-2)}
