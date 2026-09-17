@@ -6562,18 +6562,27 @@
   // with a dot in it. Nothing is ever sent to the address (RPA-99), so a
   // stricter rule would only turn away real addresses.
   function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
+  // The validator's errors that land on this field. A study's field is
+  // judged for every question the study answers; an error with no key is
+  // about the whole plan, and holds every field back.
+  function submissionErrorsAt(g) {
+    const key = unitKey(g), methodGroup = g.closest('.methods-group');
+    const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
+    return submissionErrors().filter(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
+  }
   function requiredGroupComplete(g) {
     // A question no study answers is unanswered for as long as it exists (RPA-140).
     if (g.classList.contains('study-unclaimed')) return false;
     // Identity is a separate entry page, not a completed-plan requirement.
     const email = requiredEmailInput(g);
     if (email) return emailLooksRight(email.value);
-    if (capabilities.submissions) {
-      const key = unitKey(g), methodGroup = g.closest('.methods-group');
-      // A study's field is judged for every question the study answers.
-      const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
-      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
-    }
+    if (capabilities.submissions && submissionErrorsAt(g).length) return false;
+    // With submissions on the validator's rule comes first, and the form's
+    // own rule still follows it: the validator judges the plan as it is sent,
+    // and has never heard of a question the wire does not carry ("Are other
+    // researchers involved?", "How many studies will you run?"). Judged by
+    // it alone, those could be left unanswered and their sections read
+    // Completed (found in RPA-120; true since RPA-141 and RPA-142).
     // Drafts stay editable and recoverable; moving on requires an actual count.
     // Use the same rule as final submission without requiring that capability.
     const sample = customSampleSizeInput(g);
@@ -6642,7 +6651,16 @@
         const group = submissionTarget(error).group;
         return !error.key || (group && stepEl.contains(group) && (!groups || groups.includes(group)));
       });
-      return showSubmissionErrors(errors, summary, { focus });
+      // What only the form requires, in document order with the rest.
+      const named = new Set(errors.map(error => submissionTarget(error).group).filter(Boolean));
+      const formOnly = checked.filter((g) => !named.has(g) && !requiredGroupComplete(g))
+        .map((g) => ({ key: unitKey(g) || 'form', code: 'required', section: stepEl.dataset.stepSlug, message: groupMessage(g), formGroup: g }));
+      const inOrder = errors.concat(formOnly).sort((a, b) => {
+        const ga = a.formGroup || submissionTarget(a).group, gb = b.formGroup || submissionTarget(b).group;
+        if (!ga || !gb || ga === gb) return 0;
+        return ga.compareDocumentPosition(gb) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+      return showSubmissionErrors(inOrder, summary, { focus });
     }
     const missing = (groups || requiredGroupsOf(stepEl)).filter((g) => !requiredGroupComplete(g));
     requiredGroupsOf(stepEl).forEach(clearGroupError);
@@ -8631,6 +8649,7 @@
     return target;
   }
   function resolveSubmissionTarget(error) {
+    if (error.formGroup) return { group: error.formGroup, control: groupControl(error.formGroup) };
     if (!error.key) return {};
     // The wire format is one group per question; on the page a question's
     // group is the first study that answers it (RPA-142).
@@ -8670,6 +8689,25 @@
     const control = error.code === 'other' ? controls.find(c => c.type === 'text' && localVisible(c)) : controls.find(localVisible);
     return { group, control: control || controls.find(visible) || group.querySelector('button') };
   }
+  // What a submission error says on the page. The validator words its
+  // errors for a plan that is about to be sent, from the wire's names: "Enter
+  // the background.", "Select a sample size for research question 2." The
+  // form has its own words for a field that is unanswered, written in the
+  // template (RPA-120), and its own for a date or a sample size that has been
+  // begun; with submissions on, none of them were shown. Here the form
+  // speaks wherever it has something to say: an unanswered field, a header
+  // date, a declaration, a study's sample size, a schedule nobody has
+  // started. Everything else is the validator's, word for word: a blank row
+  // among filled ones, a date out of bounds, a stage without a name. Which
+  // errors exist, where they point and what the server checks are unchanged.
+  function submissionMessage(error, group) {
+    if (error.formGroup) return groupMessage(error.formGroup);
+    if (!group || !error.key) return error.message;
+    if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
+    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
+    if (error.code === 'required' && !fieldHasContent(group)) return groupMessage(group);
+    return error.message;
+  }
   function showSubmissionErrors(errors, summary, { focus = false, final = false } = {}) {
     // Summaries share inline marks. Release only this summary's claim so a
     // question-level refresh cannot remove the final summary's error or duplicate it.
@@ -8691,21 +8729,30 @@
       mark.remove();
     });
     const list = summary.querySelector('.error-summary-list'); list.replaceChildren();
+    // The wire has one error per research question and per empty date; the
+    // page has one field. Said once per field, not once per error behind it.
+    const saidAt = new Map();
     errors.slice(0, 100).forEach(error => {
       const { group, control } = submissionTarget(error);
+      const said = submissionMessage(error, group);
+      if (group) {
+        const already = saidAt.get(group) || saidAt.set(group, new Set()).get(group);
+        if (already.has(said)) return;
+        already.add(said);
+      }
       const item = el('li');
       const link = el(group ? 'a' : 'span', 'error-summary-link', group ? { href: '#' } : {});
-      link.textContent = error.message;
+      link.textContent = said;
       if (group) {
         const container = control?.closest('td, .list-row, .custom-field-block') || group;
         let mark = Array.from(container.querySelectorAll('[data-submission-error-owner]')).find(mark =>
-          mark._submissionControl === control && mark.textContent === error.message);
+          mark._submissionControl === control && mark.textContent === said);
         if (mark) {
           mark.dataset.submissionErrorOwner = Array.from(new Set(mark.dataset.submissionErrorOwner.split(/\s+/).concat(owner))).join(' ');
         } else {
           mark = el('p', 'field-error', { id: 'submission-error-' + (++fieldErrorSeq), 'data-submission-error-owner': owner });
           mark._submissionControl = control;
-          mark.textContent = error.message;
+          mark.textContent = said;
           container.appendChild(mark);
         }
         if (control) {
