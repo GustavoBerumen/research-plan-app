@@ -127,12 +127,26 @@
     list(studies).forEach((s, index) => { if (!study(s).questions.length) out.push(index); });
     return out;
   }
-  // The questions no study answers yet. A question added after the studies
-  // were declared lands here, which is what RPA-140 will say out loud.
+  // The written questions no study answers. Every research question must be
+  // answered by at least one study, the mirror of every study answering at
+  // least one question (Gus, 17 September 2026, RPA-140). A blank row is not
+  // a question yet: Research judges that, and it needs no study until it
+  // says something.
   function unassigned(questions, studies) {
     const covered = new Set();
     list(studies).forEach((s) => study(s).questions.forEach((n) => covered.add(n)));
-    return numbered(questions).map((q) => q.number).filter((n) => !covered.has(n));
+    return answered(questions).map((q) => q.number).filter((n) => !covered.has(n));
+  }
+  // The unassigned questions worth saying out loud now. While a study still
+  // answers nothing, the person is part-way through saying which questions
+  // go where, and every question they have not reached would be "in no
+  // study"; the empty study is the thing to fix first and says so itself.
+  // Once every study answers something, a question in none of them has been
+  // left over, and that is when the form speaks. Before any study is
+  // declared there is nothing to reopen.
+  function unclaimed(questions, studies) {
+    if (!list(studies).length || emptyStudies(studies).length) return [];
+    return unassigned(questions, studies);
   }
   // Removing question N: the studies drop it, and every question after it
   // moves up one, so the ticks keep pointing at the questions they meant.
@@ -215,7 +229,7 @@
   return {
     numbered, answered, hasAnyQuestion, outcomeCount, questionNumber,
     COUNT_WORDS, studyLabel, studyCount, studyCountChoice, study, studiesOf, groupCount, hasContent,
-    studiesFor, emptyStudies, unassigned, withoutQuestion, studiesFromGroups, perQuestionView,
+    studiesFor, emptyStudies, unassigned, unclaimed, withoutQuestion, studiesFromGroups, perQuestionView,
     link, linksOf,
   };
 });

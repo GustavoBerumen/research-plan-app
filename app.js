@@ -3972,16 +3972,104 @@
       }
     });
     const studies = studiesSnapshot();
+    const missing = PLAN.unclaimed(questions, studies);
     groups.forEach((group, s) => {
       group.querySelectorAll('.study-question').forEach((row, i) => {
         const n = i + 1;
         row.querySelector('.study-question-rq').textContent = PLAN.questionNumber(i);
         row.querySelector('.study-question-text').textContent = questions[i] || '(not written yet)';
         const others = PLAN.studiesFor(studies, n).filter((k) => k !== s).map((k) => PLAN.studyLabel(k));
-        row.querySelector('.study-question-also').textContent = others.length ? 'Also answered by ' + others.join(' and ') : '';
+        row.querySelector('.study-question-also').textContent = others.length ? 'Also answered by ' + others.join(' and ')
+          : (missing.indexOf(n) !== -1 ? 'Not yet answered by any study' : '');
       });
     });
+    refreshUnclaimed();
     syncMethodsGroups();
+  }
+  // ---------- a question no study answers (RPA-140) ----------
+  // Every written research question must be in at least one study. One that
+  // is not blocks Studies from being complete, so the plan cannot reach
+  // sign-off, and the person is told where they are: a notification banner
+  // on Research, a mark under the question in every study's list, an error
+  // on Save and continue, and its name on the check page and in Review. It
+  // is the state that matters, not the moment: a plan opened with such a
+  // question says the same. Before any study is declared there is nothing
+  // to reopen, so nothing is said.
+  function unclaimedQuestions() {
+    return PLAN.unclaimed(researchQuestionTexts(), studiesSnapshot());
+  }
+  function namesInWords(names) {
+    return names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+  function refreshUnclaimed() {
+    const holder = doc.querySelector('.study-unclaimed-list');
+    if (!holder) return;
+    const questions = researchQuestionTexts();
+    const missing = unclaimedQuestions();
+    // A block stays while its question is unclaimed, so an error shown on it
+    // stays with it; it goes the moment any study ticks the question.
+    Array.from(holder.querySelectorAll('.study-unclaimed')).forEach((g) => { if (missing.indexOf(Number(g.dataset.question)) === -1) g.remove(); });
+    missing.forEach((n) => {
+      let g = holder.querySelector('.study-unclaimed[data-question="' + n + '"]');
+      if (!g) {
+        g = el('div', 'field study-unclaimed', { role: 'group' });
+        g.dataset.question = String(n);
+        g.dataset.fieldName = 'Not yet in any study';
+        g.append(el('div', 'flabel'), el('p', 'study-unclaimed-text'));
+        const after = Array.from(holder.querySelectorAll('.study-unclaimed')).find((x) => Number(x.dataset.question) > n);
+        holder.insertBefore(g, after || null);
+      }
+      g.querySelector('.flabel').textContent = PLAN.questionNumber(n - 1) + ' is not yet in any study';
+      g.querySelector('.study-unclaimed-text').textContent = questions[n - 1] || '';
+    });
+    refreshUnclaimedNotice();
+  }
+  let unclaimedNotice = null;
+  function refreshUnclaimedNotice() {
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    const stepEl = rqList ? rqList.closest('.step') : null;
+    if (!stepEl) return;   // the steps are not built yet; the task list's first refresh comes back here
+    if (!unclaimedNotice) {
+      // The design system's notification banner: something the person needs
+      // to know that is about another page than the one they are on.
+      const banner = el('div', 'notification-banner', { role: 'region', 'aria-labelledby': 'unclaimed-notice-title' });
+      const header = el('div', 'notification-banner-header');
+      const title = el('h2', 'notification-banner-title', { id: 'unclaimed-notice-title' });
+      title.textContent = 'Important';
+      header.appendChild(title);
+      const content = el('div', 'notification-banner-content');
+      const heading = el('p', 'notification-banner-heading');
+      const go = el('p', 'notification-banner-go');
+      const link = el('a', 'notification-banner-link', { href: '#studies' });
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const studiesStep = (studyGroupsEl() || { closest: () => null }).closest('.step');
+        showStep(steps.indexOf(studiesStep), { page: 0 });
+      });
+      go.appendChild(link);
+      const wait = el('p', 'notification-banner-wait');
+      content.append(heading, go, wait);
+      banner.append(header, content);
+      const top = stepEl.querySelector('.step-top');
+      if (top) top.insertAdjacentElement('afterend', banner); else stepEl.insertBefore(banner, stepEl.firstChild);
+      unclaimedNotice = { el: banner, heading, go, link, wait };
+    }
+    const missing = unclaimedQuestions();
+    unclaimedNotice.el.hidden = !missing.length;
+    if (!missing.length) return;
+    const names = missing.map((n) => PLAN.questionNumber(n - 1));
+    const it = names.length === 1 ? 'it' : 'them';
+    unclaimedNotice.heading.textContent = namesInWords(names) + (names.length === 1 ? ' is' : ' are') + ' not yet in any study';
+    // Studies opens in order like any section: while this one is unfinished
+    // the banner says what to do next rather than offering a link that
+    // would be refused.
+    const studiesStep = (studyGroupsEl() || { closest: () => null }).closest('.step');
+    const index = steps.indexOf(studiesStep);
+    const open = index > 0 && !stepLocked(index);
+    unclaimedNotice.link.textContent = 'Choose which study answers ' + it;
+    unclaimedNotice.go.hidden = !open;
+    unclaimedNotice.wait.textContent = 'When this section is complete, choose which study answers ' + it + ' in Studies.';
+    unclaimedNotice.wait.hidden = open;
   }
   // Removing question N: every study drops it and later ticks move up one.
   // The ticks are set from the model's answer; the rows themselves follow
@@ -4038,6 +4126,12 @@
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
+    // Written questions no study answers (RPA-140). Each is a block of its
+    // own here, so the one completeness rule the task list, the error
+    // summary, the check page and Review share counts it as unanswered
+    // without learning anything new: it exists only while it is unanswered.
+    const unclaimed = el('div', 'study-unclaimed-list');
+    wrap.appendChild(unclaimed);
     const container = el('div', 'study-groups');
     container.dataset.fieldKey = field.key;
     wrap.appendChild(container);
@@ -5533,7 +5627,9 @@
         name.textContent = s.title;
 
         const state = el('span', 'review-state' + (s.complete ? '' : ' review-state-open'));
-        state.textContent = s.complete ? 'complete' : s.answered + ' of ' + s.total + ' fields';
+        const unclaimed = Array.from(stepEl.querySelectorAll('.study-unclaimed')).map((g) => PLAN.questionNumber(Number(g.dataset.question) - 1));
+        state.textContent = s.complete ? 'complete'
+          : (unclaimed.length ? namesInWords(unclaimed) + ' not yet in any study' : s.answered + ' of ' + s.total + ' fields');
 
         const note = el('span', 'review-note');
         if (s.hasEvaluation && s.staleCount) {
@@ -6261,12 +6357,18 @@
     // The two messages of the GOV.UK email address pattern (RPA-99).
     if (email) return email.value.trim() ? 'Enter an email address in the correct format, like name@example.com' : 'Enter your email address';
     if (g.classList.contains('study-group')) return 'Select at least one research question for ' + label;
+    if (g.classList.contains('study-unclaimed')) return 'Choose a study to answer ' + PLAN.questionNumber(Number(g.dataset.question) - 1);
     if (g.querySelector('input[type=radio]')) return 'Select a ' + lowered;
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
     if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + lowered;
     return 'Enter the ' + lowered;
   }
   function groupControl(g) {
+    // The way to answer an unclaimed question is to tick it in a study: the first one's box for it.
+    if (g.classList.contains('study-unclaimed')) {
+      const first = studyGroupEls()[0];
+      return first ? first.querySelector('.study-question-input[data-question="' + g.dataset.question + '"]') : null;
+    }
     const sample = customSampleSizeInput(g);
     if (sample) return sample;
     return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
@@ -6287,6 +6389,8 @@
   // stricter rule would only turn away real addresses.
   function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
   function requiredGroupComplete(g) {
+    // A question no study answers is unanswered for as long as it exists (RPA-140).
+    if (g.classList.contains('study-unclaimed')) return false;
     // Identity is a separate entry page, not a completed-plan requirement.
     const email = requiredEmailInput(g);
     if (email) return emailLooksRight(email.value);
@@ -6754,6 +6858,7 @@
   }
   function refreshTaskList() {
     if (!taskListEl || !steps.length) return;
+    refreshUnclaimedNotice();
     const { list, progress } = taskListEl;
     list.replaceChildren();
     let done = 0;
@@ -7073,6 +7178,7 @@
       return lines;
     }
     if (g.querySelector('.list-rows')) { g.querySelectorAll('.list-input').forEach((c) => push(c.value)); return lines; }
+    if (g.classList.contains('study-unclaimed')) { push(PLAN.questionNumber(Number(g.dataset.question) - 1) + ' ' + g.querySelector('.study-unclaimed-text').textContent); return lines; }
     if (g.classList.contains('study-group')) {
       g.querySelectorAll('.study-question-input:checked').forEach((c) => {
         const row = c.closest('.study-question');
@@ -7236,6 +7342,8 @@
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
   }
   function showPageOf(stepEl, group) {
+    // An unclaimed question is answered on the first study's page.
+    if (group.classList && group.classList.contains('study-unclaimed') && studyGroupEls()[0]) group = studyGroupEls()[0];
     const idx = stepPages(stepEl).findIndex((p) => p.some((u) => u === group || u.contains(group)));
     if (idx >= 0) showPage(stepEl, idx, { silent: true });
     else if (reviewOnlyUnits(stepEl).some((u) => u === group || u.contains(group))) showPage(stepEl, 'more', { silent: true });

@@ -85,12 +85,22 @@ test('which studies answer a question, which studies answer none, and which ques
   assert.deepEqual(PLAN.studiesFor(studies, 3), [1]);
   assert.deepEqual(PLAN.studiesFor(studies, 4), []);
   assert.deepEqual(PLAN.emptyStudies(studies), [2], 'the third answers nothing, which the check page must say');
-  assert.deepEqual(PLAN.unassigned(['a', 'b', 'c', 'd'], studies), [4], 'the fourth question is in no study, which RPA-140 will say');
+  assert.deepEqual(PLAN.unassigned(['a', 'b', 'c', 'd'], studies), [4], 'the fourth question is in no study');
   assert.deepEqual(PLAN.unassigned(['a'], []), [1]);
+  assert.deepEqual(PLAN.unassigned(['a', '', '  ', 'd'], [{ questions: [1] }]), [4], 'a blank row is not a question yet, so it needs no study (RPA-140)');
   assert.equal(PLAN.hasContent({ questions: [1] }), false, 'a study that has said nothing has no content');
   assert.equal(PLAN.hasContent({ methods: [' Interviews '] }), true);
   assert.equal(PLAN.hasContent({ sampleSize: { v: 'Small (1–5)', o: '' } }), true);
   assert.equal(PLAN.hasContent({ characteristics: ['', ' '] }), false, 'blank rows are not content');
+});
+
+test('when the form speaks about a question in no study: once every study answers something, never before', () => {
+  assert.deepEqual(PLAN.unclaimed(['a', 'b', 'c'], []), [], 'before any study is declared there is nothing to reopen');
+  assert.deepEqual(PLAN.unclaimed(['a', 'b', 'c'], [{ questions: [1] }, { questions: [] }]), [],
+    'part-way through saying which questions go where, the empty study is the thing to fix first');
+  assert.deepEqual(PLAN.unclaimed(['a', 'b', 'c'], [{ questions: [1] }, { questions: [3] }]), [2], 'every study answers something: the second question has been left over');
+  assert.deepEqual(PLAN.unclaimed(['a', 'b', 'c'], [{ questions: [1, 2] }, { questions: [2, 3] }]), [], 'all claimed');
+  assert.deepEqual(PLAN.unclaimed(['a', ''], [{ questions: [1] }]), [], 'a blank row is not left over');
 });
 
 test('removing a question: every study drops it, and the questions after it move up one', () => {

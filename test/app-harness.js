@@ -303,6 +303,9 @@ function completeStep(app, stepEl) {
       schedule.querySelectorAll('tbody input[type=date]').forEach(input => setValue(window, input, '2026-10-01'));
       return;
     }
+    // "Which questions does this study answer?" is answered with all of them,
+    // so no research question is left outside every study (RPA-140).
+    if (g.classList.contains('study-group')) { g.querySelectorAll('input[type=checkbox]').forEach((b) => { if (!b.checked) b.click(); }); return; }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');
