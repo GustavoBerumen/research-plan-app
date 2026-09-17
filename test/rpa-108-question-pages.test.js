@@ -119,7 +119,7 @@ test('Context has three pages; Additional information is not one, but the check 
   assert.deepEqual(onScreen(context), ['Problem Statement'], 'Back from the check page: the last page');
 });
 
-test('Research pairs each question with its outcomes; Methodology loops per research question with the question pinned', async (t) => {
+test('Research pairs each question with its outcomes; Studies asks one study per page; Methodology loops per study with its questions pinned', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -137,19 +137,37 @@ test('Research pairs each question with its outcomes; Methodology loops per rese
   press(research);
   assert.ok(checking(research));
   research.querySelector('.check-continue').click();
+  // Studies (RPA-142): how many, then one page per study saying which
+  // questions it answers. Two studies, one question each, here.
+  const studies = stepOf(d, 'studies');
+  assert.deepEqual(visible(d), ['studies']);
+  assert.equal(caption(studies), 'Question 1 of 1', 'before a number is chosen there is only the number to ask');
+  assert.deepEqual(onScreen(studies), ['How many studies will you run?'], 'the legend asks the question');
+  studies.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  assert.equal(caption(studies), 'Question 1 of 3', 'and then a page per study');
+  press(studies);
+  assert.deepEqual(onScreen(studies), ['Which research questions does Study 1 answer?'], 'the legend names the study');
+  const studyGroups = Array.from(studies.querySelectorAll('.study-group'));
+  studyGroups[0].querySelectorAll('.study-question-input')[0].click();
+  press(studies);
+  assert.deepEqual(onScreen(studies), ['Which research questions does Study 2 answer?']);
+  studyGroups[1].querySelectorAll('.study-question-input')[1].click();
+  press(studies);
+  assert.ok(checking(studies));
+  studies.querySelector('.check-continue').click();
   const methodology = stepOf(d, 'methodology');
   assert.deepEqual(visible(d), ['methodology']);
   assert.equal(caption(methodology), 'Question 1 of 8', 'four fields, twice');
-  assert.deepEqual(onScreen(methodology), ['Methods for research question 1']);
+  assert.deepEqual(onScreen(methodology), ['Methods for Study 1']);
   const groups = Array.from(methodology.querySelectorAll('.methods-group'));
   assert.equal(groups[0].classList.contains('page-hidden'), false);
-  assert.equal(groups[1].classList.contains('page-hidden'), true, 'the other question waits');
-  assert.equal(text(groups[0].querySelector('.methods-group-text')), 'Why do people leave?', 'pinned above the page');
+  assert.equal(groups[1].classList.contains('page-hidden'), true, 'the other study waits');
+  assert.equal(text(groups[0].querySelector('.methods-group-text')), 'RQ1 Why do people leave?', 'pinned above the page');
   for (let k = 0; k < 4; k++) { completeStep(app, methodology); press(methodology); }
   assert.equal(caption(methodology), 'Question 5 of 8');
-  assert.deepEqual(onScreen(methodology), ['Methods for research question 2']);
+  assert.deepEqual(onScreen(methodology), ['Methods for Study 2']);
   assert.equal(groups[0].classList.contains('page-hidden'), true);
-  assert.equal(text(groups[1].querySelector('.methods-group-text')), 'What do they expect?');
+  assert.equal(text(groups[1].querySelector('.methods-group-text')), 'RQ2 What do they expect?');
 });
 
 test('the page is remembered in the URL and the draft; a reload lands on it; Change from the check page opens the page that holds the answer', async (t) => {

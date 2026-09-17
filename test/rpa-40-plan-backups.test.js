@@ -174,14 +174,14 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     assert.equal(stored(app).fields.problemStatement, 'Legacy problem');
     assert.equal(stored(app).fields.leadResearcher, 'Ana');
     assert.equal(stored(app).fields.title, undefined);
-    assert.equal(stored(app).version, 9);
+    assert.equal(stored(app).version, 10);
     assert.equal(stored(app).ui.timelineVisible, false);
-    if (version === 1) assert.deepEqual(stored(app).methods[0].methods, ['Interviews']);
+    if (version === 1) assert.deepEqual(stored(app).studies[0].methods, ['Interviews'], 'the flat list became a group, and the group a study (RPA-142)');
   });
 }
 
 const invalidCases = {
-  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 10, fields: {} },
+  'corrupt JSON': '{bad', 'non-object': '[]', 'missing fields': {}, 'future version': { version: 11, fields: {} },
   'string version': { version: '7', fields: {} }, 'zero version': { version: 0, fields: {} },
   'field nested object': { version: 7, fields: { project: {} } },
   'list wrong nested type': { version: 7, fields: {}, lists: { researchQuestions: ['Valid', null] } },
@@ -212,15 +212,20 @@ for (const [name, invalid] of Object.entries(invalidCases)) {
   });
 }
 
-test('unrepresentable options, columns, orphaned methods and scalar dates roll back without losing the original', async t => {
+test('unrepresentable options, columns and scalar dates roll back without losing the original', async t => {
+  // An orphaned methods group used to be unrepresentable; since RPA-142 it is
+  // a study answering nothing, kept and flagged, so it no longer rolls back.
   const app = await bootApp({ draft: realisticBackup() }); t.after(() => app.close());
   const root = app.document.getElementById('doc');
   const before = app.window.localStorage.getItem(DRAFT_KEY);
   for (const change of [
     d => { d.selects.sampleSize = { v: 'Unknown option', o: '' }; },
     d => { d.tables['previousKnowledge-table'] = [[{ t: 'text', v: 'Extra column' }]]; },
-    d => { d.methods.push({ question: 'Missing question', methods: ['Orphaned method'] }); },
     d => { d.fields.researchReadout = '2026-02-30'; },
+    // A study answering a question the plan does not have (RPA-142): the
+    // tick cannot be shown, so the backup is refused rather than quietly
+    // losing which question the study was for.
+    d => { d.version = 10; d.studies = [{ questions: [2], methods: ['Interviews'] }]; delete d.methods; },
     d => { d.fields.leadResearcher = 'Cannot preserve\nA newline in a single-line control'; },
   ]) {
     const draft = smallBackup(); change(draft);
@@ -332,7 +337,7 @@ test('an imported plan retains inactive Other text and custom property order is 
   assert.match(await importBackup(app, draft), /^Backup restored and saved/);
   const result = (await interceptDownload(app)()).data;
   // Since RPA-116 a plan-level sample size migrates into every question's group.
-  assert.equal(result.methods[0].sampleSize.o, 'Retained Other text');
+  assert.equal(result.studies[0].sampleSize.o, 'Retained Other text');
   assert.equal(result.tables['stageTimeline-table'][0][0].o, 'Retained stage text');
   assert.deepEqual(result.custom.additionalResources, draft.custom.additionalResources);
 });

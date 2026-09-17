@@ -111,7 +111,9 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
     if (!baseline.draft.lists[key]) continue;
     groups().forEach((g, i) => assert.deepEqual(inGroup(g, key), baseline.draft.lists[key], key + ' for question ' + (i + 1)));
   }
-  assert.deepEqual(groups().map(g => g.querySelector('.methods-group-q').title), baseline.draft.lists.researchQuestions);
+  // Each pre-change group is a study answering its own question (RPA-142); the pinned head lists it.
+  assert.deepEqual(groups().map(g => [...g.querySelectorAll('.methods-group-text li')].map(li => li.textContent.replace(/\s+/g, ' ').trim())),
+    baseline.draft.lists.researchQuestions.map((q, i) => [('RQ' + (i + 1) + ' ' + q).trim()]));
   assert.equal(document.querySelector('.timeline-chart').hidden, false);
   assert.equal(document.querySelectorAll('.timeline-row').length, 2);
   assert.deepEqual([...document.querySelectorAll('#stageTimeline-table input[type=date]')].map(e => e.value), ['2026-09-01', '2026-09-07', '2026-09-08', '2026-09-14']);
@@ -126,13 +128,15 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   // section's Additional information hatch is written, empty or not.
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
   Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
-  // RPA-116: the plan-level participant answers now live in every question's group, in draft version 8.
-  expected.version = 9;
+  // RPA-116: the plan-level participant answers now live in every group; RPA-142: a group is a study, in draft version 10.
+  expected.version = 10;
   expected.signOff = null;   // no sign-off has been started (RPA-139)
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
   expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)
-  expected.methods = expected.methods.map((g) => ({ ...g, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
+  expected.studies = expected.methods.map((g, i) => ({ questions: [i + 1], methods: g.methods, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
+  expected.selects.studyCount = { v: 'Three', o: '' };   // three groups became three studies
+  delete expected.methods;
   delete expected.lists.characteristics; delete expected.lists.userGroups; delete expected.selects.sampleSize;
   assert.deepEqual(saved, expected, 'only the chosen visibility and save timestamp change');
 
@@ -147,7 +151,8 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
       assert.match(e.getAttribute('aria-label'), new RegExp(` ${i + 1}$`));
     });
   }
-  assert.deepEqual([...reopened.document.querySelectorAll('.methods-group .list-rows[data-list-key="methods"] .list-input')].map(e => e.value), ['Unassigned method', 'Data Visualization']);
+  // Deleting a question no longer deletes methods: they belong to the study, which is left answering nothing (RPA-142).
+  assert.deepEqual([...reopened.document.querySelectorAll('.methods-group .list-rows[data-list-key="methods"] .list-input')].map(e => e.value), ['Behavioral Mapping', 'Unassigned method', 'Data Visualization']);
   assert.equal(reopened.document.activeElement, listInputs(reopened.document, 'researchQuestions')[0]);
 });
 

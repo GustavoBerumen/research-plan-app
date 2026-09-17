@@ -66,7 +66,8 @@ test('nonsensical Other sample size blocks Send at the text box while the draft 
   const p = draft(); p.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
   const requests = [];
   const app = await boot(t, { draft: p, submit: async body => { requests.push(body); return response(f.receipt(body)); } });
-  const other = app.document.querySelector('.radio-other-row input[type=text]');
+  // The studies radios have a reveal of their own since RPA-142; this is the sample size's.
+  const other = app.document.querySelector('.methods-group .radio-other-row input[type=text]');
   assert.equal(other.value, 'asdf', 'invalid final values still restore as editable drafts');
   send(app).click(); assert.equal(requests.length, 0);
   links(app).find(l => /valid sample size for research question 1/.test(l.textContent)).click();

@@ -60,6 +60,11 @@
         before[0].type !== 'email' || before[0].optional || before[0].perQuestion)) return false;
     const types = Object.fromEntries(FIELDS.map(k => [k, ['projectDecision', 'researchReadout', 'lastUpdated'].includes(k) ? 'date' :
       k.startsWith('declaration') ? 'checkbox' : ['background', 'goal', 'problemStatement', 'objective', 'comments'].includes(k) ? 'textarea' : 'text']));
+    // RPA-142 added a Studies section to the active form. The wire shape is
+    // unchanged: the app derives the per-question methods groups from the
+    // studies before projecting (see collectCurrentPlan), so a receipt reads
+    // as it always did. Only the schema check needs to know the two fields.
+    Object.assign(types, { studyCount: 'radios', studyQuestions: 'study-questions' });
     Object.assign(types, { researchQuestions: 'list', outcomes: 'list', methods: 'list', characteristics: 'list', userGroups: 'list', sampleSize: 'radios', stageTimeline: 'table', previousKnowledge: 'table' });
     CUSTOM.forEach(k => { types[k] = 'custom-fields'; });
     // RPA-98 made optional plan comments dormant. The wire shape remains v1;

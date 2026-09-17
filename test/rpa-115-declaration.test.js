@@ -57,7 +57,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
     completeStep(app, steps(d)[i]);

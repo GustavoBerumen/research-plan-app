@@ -57,10 +57,13 @@ function markerFor(document, field) {
     || document.querySelector('.radio-group[data-field-key="' + field.key + '"]')
     // A custom-fields field renders no control until someone adds a block, so
     // it is found by its empty list rather than by a [data-field].
-    || document.querySelector('.custom-fields-list[data-list-key="' + field.key + '"]');
+    || document.querySelector('.custom-fields-list[data-list-key="' + field.key + '"]')
+    // The studies field renders one fieldset per study, none before a study
+    // is declared, so it is found by its container (RPA-142).
+    || document.querySelector('.study-groups[data-field-key="' + field.key + '"]');
   if (!el) return { found: false };
   // A header field renders into the compact meta block rather than a .field.
-  const wrap = el.closest('.field') || el.closest('.mf');
+  const wrap = el.closest('.field') || el.closest('.mf') || el.closest('.field-study-questions');
   return { found: true, marker: wrap ? wrap.querySelector('.fopt') : null };
 }
 

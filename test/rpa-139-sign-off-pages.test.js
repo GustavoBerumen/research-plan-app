@@ -51,7 +51,7 @@ function sign(app, role, initials) {
 }
 async function onReview(app) {
   const { document: d, window } = app;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => steps(d)[i].hidden === false);
     completeStep(app, steps(d)[i]);
@@ -59,9 +59,9 @@ async function onReview(app) {
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Priya Nair');
   setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Tom Okafor');
   window.location.hash = '#review';
-  await waitFor(() => steps(d)[6].hidden === false);
+  await waitFor(() => steps(d)[7].hidden === false);
   await settle();
-  return steps(d)[6];
+  return steps(d)[7];
 }
 // The three things asked before a plan is sent, in order: which of the two
 // you are, your own declaration and name, and then where it goes. The last
@@ -304,7 +304,7 @@ test('both signatures approve the plan, it prints what was signed, and reopening
     'I confirm this plan meets the needs of the project I am responsible for, and I approve it.',
   ]);
   assert.equal(printedLines(d).length, 3);
-  assert.match(text(d.querySelector('.task-list-progress')), /completed 6 of 6 sections/, 'and the plan is done');
+  assert.match(text(d.querySelector('.task-list-progress')), /completed 7 of 7 sections/, 'and the plan is done');
 
   assert.deepEqual(buttons(d), ['Reopen']);
   assert.equal(pairFor(d, 'projectRequester').hidden, true, 'nothing left to sign');
@@ -313,7 +313,7 @@ test('both signatures approve the plan, it prints what was signed, and reopening
   assert.equal(tagOf(d), 'Not signed');
   assert.equal(noticeLines(d).filter((l) => /^Signed by/.test(l)).length, 0, 'approval does not survive being reopened');
   assert.equal(d.querySelector('[data-field="declarationRequester"]').checked, true, 'the boxes are still ticked');
-  assert.match(text(d.querySelector('.task-list-progress')), /completed 5 of 6 sections/,
+  assert.match(text(d.querySelector('.task-list-progress')), /completed 6 of 7 sections/,
     'and the plan is unfinished again: the review step is done when the plan is approved, not when four boxes are filled');
   assert.deepEqual(printedLines(d), ['This plan is unsigned.']);
   const saved = draftOf(window);
@@ -355,12 +355,12 @@ test('the sign-off travels in the draft and comes back with it; Clear Form clear
   await onReview(app);
   startAndSign(app);
   const saved = await waitFor(() => { const dr = draftOf(window); return dr && dr.signOff && dr.signOff.status === 'awaitingCounterparty' && dr; });
-  assert.equal(saved.version, 9, 'the draft format carries it from version 9');
+  assert.equal(saved.version, 10, 'the draft format carries it from version 10');
 
   const again = await bootApp({ draft: saved });
   t.after(() => again.close());
   again.window.location.hash = '#review';
-  await waitFor(() => steps(again.document)[6].hidden === false);
+  await waitFor(() => steps(again.document)[7].hidden === false);
   await settle();
   assert.equal(tagOf(again.document), 'Awaiting sign-off from the project requester', 'a reload knows where the plan had got to');
   assert.equal(again.document.querySelector('.sign-off-setup').hidden, true, 'and does not ask again');
@@ -387,7 +387,7 @@ test('signing does not re-date the plan: Last updated is for edits', async (t) =
   t.after(() => app.close());
   const { document: d, window } = app;
   window.location.hash = '#review';
-  await waitFor(() => steps(d)[6].hidden === false);
+  await waitFor(() => steps(d)[7].hidden === false);
   await settle();
   sign(app, 'projectRequester', 'TO');
   await settle();

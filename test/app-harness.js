@@ -282,11 +282,20 @@ async function bootApp(options = {}) {
 // skipped, because completeness skips them too.
 function completeStep(app, stepEl) {
   const { window } = app;
-  const groups = stepEl.classList.contains('doc-header')
+  const groupsOf = () => (stepEl.classList.contains('doc-header')
     ? Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'))
     : stepEl.classList.contains('review-step')
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
-      : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
+      : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt')));
+  // Answering one question can add others: choosing how many studies makes a
+  // page per study (RPA-142). So the groups are re-read until nothing new
+  // appears, and each is answered once.
+  const done = new Set();
+  let groups;
+  for (let round = 0; round < 10; round++) {
+    groups = groupsOf().filter((g) => !done.has(g));
+    if (!groups.length) break;
+    groups.forEach((g) => done.add(g));
   groups.forEach((g) => {
     const schedule = g.querySelector('#stageTimeline-table');
     if (schedule) {
@@ -311,6 +320,7 @@ function completeStep(app, stepEl) {
     // An email address is judged by shape (RPA-99), so the answer has one.
     setValue(window, ctl, ctl.type === 'date' ? '2026-10-01' : ctl.type === 'email' ? 'name@example.com' : 'Filled.');
   });
+  }
 }
 
 // Presses Save and continue through the step's pages (RPA-108) and, when the

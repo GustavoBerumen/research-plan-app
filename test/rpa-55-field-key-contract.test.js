@@ -322,9 +322,10 @@ test('both lists save and come back under their own keys', async (t) => {
   await new Promise((resolve) => setTimeout(resolve, 700));
 
   const saved = JSON.parse(window.localStorage.getItem(DRAFT_KEY));
-  // Since RPA-116 both are saved per research question, in the question's group.
-  assert.deepEqual(saved.methods[0].characteristics, ['Abandoned a checkout in the last 30 days']);
-  assert.deepEqual(saved.methods[0].userGroups, ['New customers'],
+  // Since RPA-116 both are saved in the group; since RPA-142 the group is a
+  // study, and writing before a study is declared is kept as one.
+  assert.deepEqual(saved.studies[0].characteristics, ['Abandoned a checkout in the last 30 days']);
+  assert.deepEqual(saved.studies[0].userGroups, ['New customers'],
     'the segments are stored separately, not appended to the criteria');
   app.close();
 

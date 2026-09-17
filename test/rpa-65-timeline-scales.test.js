@@ -181,7 +181,7 @@ for (const [name, scale] of [['38-days', 'days'], ['56-days', 'days'], ['six-mon
         const data = JSON.parse(app.window.localStorage.getItem(DRAFT_KEY));
         return data?.ui.timelineVisible === !visible && data;
       });
-      assert.equal(saved.version, 9);
+      assert.equal(saved.version, 10);
       assert.equal(saved.fields.lastUpdated, '2020-01-01');
       assert.deepEqual(saved.tables['stageTimeline-table'].map(row => row.slice(0, 3)), draft.tables['stageTimeline-table']);
       const restored = await fixture(t, [], { draft: saved });

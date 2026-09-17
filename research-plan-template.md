@@ -163,6 +163,21 @@ Outcomes (list, eval, key=outcomes):
 Additional information (custom-fields, max=1, key=additionalResearch):
   Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
+# Studies
+
+<!-- RPA-142, 16 September 2026. A study is what Methodology is answered
+     for. Between Research and Methodology the plan says how many studies
+     there are and which research questions each one answers; a question may
+     be answered by more than one study, and every study must answer at
+     least one. Methodology is locked in the task list until this section is
+     complete. The radios offer One, Two and Three, with "More than three"
+     revealing a number box (Gus's choice over a bare number box). The
+     wording of both questions and their hints is Gus's to settle. -->
+Number of studies (radios, question=How many studies will you run?, key=studyCount): One,Two,Three
+  Hint: Count each separate piece of research. A usability study and a survey are two studies, even if they answer the same question.
+Study questions (study-questions, question=Which research questions does this study answer?, key=studyQuestions):
+  Hint: Select every question this study helps answer. A question can be answered by more than one study.
+
 # Methodology
 
 <!-- Dormant since RPA-117, 14 September 2026. Theory and Action Points are
@@ -177,8 +192,10 @@ Methods (list, width=20, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
 
 <!-- Since RPA-116, 14 September 2026, the three participant fields below
-     are asked once per research question, inside that question's group
-     under Methods, and saved per question. "perQuestion" marks them. -->
+     are asked inside each group under Methods and saved with it. Since
+     RPA-142 a group is a study rather than a research question, and the
+     "perQuestion" mark now means "asked once per study"; the flag keeps its
+     name so older drafts, tests and the submission contract read as before. -->
 <!-- These were merged into one field earlier in RPA-55, on the grounds that
      both wanted a short noun phrase naming a kind of person. That was true of
      the format and wrong about the function, and Gus reversed it: a screener
@@ -199,7 +216,7 @@ User Groups (list, prose, width=20, perQuestion, key=userGroups):
      person reads it, while the label stays the field's name for messages
      and the check page (RPA-118). -->
 Sample Size (radios, perQuestion, question=How many participants do you need?, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
-  Hint: The number of people this question's methods need.
+  Hint: The number of people this study's methods need.
   Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 
 Additional information (custom-fields, max=1, key=additionalMethodology):

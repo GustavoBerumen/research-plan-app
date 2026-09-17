@@ -45,7 +45,7 @@ test('a first visit opens on the start page: what the form is, how it works, wha
   assert.deepEqual(Array.from(start.querySelectorAll('.start-h')).map(text), ['How it works', 'Before you start', 'Where your writing goes']);
   const how = Array.from(start.querySelectorAll('ol li')).map(text);
   assert.equal(how.length, 4, 'four steps to how it works');
-  assert.match(how[0], /Plan details, Context, Research, Methodology, Execution and Review/, 'the sections, in order');
+  assert.match(how[0], /Plan details, Context, Research, Studies, Methodology, Execution and Review/, 'the sections, in order');
   assert.match(how[2], /does not write the plan for you/, 'what evaluation does, and does not');
   assert.match(how[3], /print or save as a PDF, and a backup file/, 'what you finish with');
   assert.deepEqual(Array.from(start.querySelectorAll('ul li')).map(text), ['the Jira ticket the research supports', 'the date of the decision it will inform', 'who asked for the research']);
