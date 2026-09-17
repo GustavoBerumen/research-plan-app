@@ -61,6 +61,12 @@ Flags (comma-separated inside the parentheses):
                        written about M words". Advisory, never a limit
                        (RPA-114). Two tiers today: 60 for a long answer, 30
                        for a short one.
+  jira              — text fields only: the field takes a Jira ticket. It gets
+                       the ticket picker (when the server has Jira configured)
+                       and shows a chosen ticket as a small tag. No field
+                       uses it today: the project field asks for a project
+                       name since RPA-119, and its key stays jiraProject so
+                       saved plans keep their answer.
   width=N           — text fields and list rows: the input is sized to the
                        answer it expects, in the GOV.UK width classes (2, 3, 4,
                        5, 10, 20 or 30 characters). A ticket key is 10, a name
@@ -138,7 +144,7 @@ Email address (email, width=30, question=What is your email address?, key=emailA
   Guidance: - Identifying issues in the management dashboard
   Guidance: You can change this title at any time.
 
-Jira Project (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
+Project name (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
   Hint: The name of the wider project, programme, or product goal your study relates to. For example, ‘Checkout redesign’ or ‘Billing self-serve’.
   Help: Why we ask for the project name
   Guidance: Connecting your study to a project helps others find related work, such as existing documentation, previous research, or active Jira tickets.
@@ -168,6 +174,7 @@ Researcher names (list, width=20, key=researcherNames):
   Hint: Add each person’s name. Do not include the lead researcher.
 Project requester (text, width=20, question=Who requested this research?, key=projectRequester):
   Hint: Enter the name of the project lead or stakeholder who asked for this research support.
+  Help: Why we ask for the project requester
   Guidance: This is usually the person responsible for the wider product or business initiative, such as a product manager, designer, data analyst, or engineer.
   Guidance: Adding their name helps ensure:
   Guidance: - The research plan aligns with their original request and business goals

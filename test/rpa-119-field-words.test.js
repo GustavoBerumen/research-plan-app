@@ -21,7 +21,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor } = require('./app-harness');
+const { bootApp, setValue, waitFor, withFieldFlag } = require('./app-harness');
 const contract = require('../submission-contract');
 
 const ROOT = path.join(__dirname, '..');
@@ -43,9 +43,9 @@ const asked = (label) => text(label.firstChild);
 // Gus's table, as the form must say it: field, its name, its question, the title of its note.
 const WORDS = [
   ['researchTitle', 'Research title', 'What is the name of your research plan?', 'I am not sure what to name my research'],
-  ['jiraProject', 'Jira Project', 'Which project or initiative does this research support?', 'Why we ask for the project name'],
+  ['jiraProject', 'Project name', 'Which project or initiative does this research support?', 'Why we ask for the project name'],
   ['leadResearcher', 'Lead researcher', 'Who is leading this research?', 'Why we ask for the lead researcher'],
-  ['projectRequester', 'Project requester', 'Who requested this research?', 'Help with this section'],   // his table gives this note no title
+  ['projectRequester', 'Project requester', 'Who requested this research?', 'Why we ask for the project requester'],   // titled at review, in the voice of its siblings
   ['projectDecision', 'Project decision', 'When will the findings be used to make a decision?', 'Why we ask for a decision date'],
   ['researchReadout', 'Research readout', 'When will the findings be shared with the team?', 'Why this date needs to be before the decision date'],
   ['background', 'Background', 'What do people need to know about this project?', 'Why we ask for the background'],
@@ -145,11 +145,40 @@ test('the project field asks for a project name now, in a box sized for one', as
   t.after(() => app.close());
   const d = app.document;
   const input = d.querySelector('[data-field="jiraProject"]');
-  assert.match(TEMPLATE, /^Jira Project \(text, width=20, question=Which project or initiative does this research support\?, key=jiraProject\):/m,
+  assert.match(TEMPLATE, /^Project name \(text, width=20, question=Which project or initiative does this research support\?, key=jiraProject\):/m,
     'the key is unchanged, so every saved plan still has its answer');
   assert.ok(input.classList.contains('input-w-20'), Array.from(input.classList).join(' '));
   const hint = text(wrapOf(d, 'jiraProject').querySelector('.field-hint-text, .mf-hint'));
   assert.doesNotMatch(hint, /\bkey\b|RPA-\d+/i, 'it no longer asks for a Jira key: ' + hint);
+});
+
+test('a project name is typed into a plain box: no ticket search, no ticket tag, nothing said about ticket keys', async (t) => {
+  // Found at review of PR #111. The ticket picker was wired to the field's
+  // key, so the new question kept it: a project name turned into a blue tag,
+  // and the pilot (Jira off) answered every name with "Jira suggestions are
+  // unavailable. You can still enter a ticket key manually."
+  for (const jiraEnabled of [false, true]) {
+    const searched = [];
+    const app = await bootApp({ jiraEnabled, jiraSearch: async (q) => { searched.push(q); return { ok: true, json: async () => ({ issues: [] }) }; } });
+    t.after(() => app.close());
+    const d = app.document;
+    const input = d.querySelector('[data-field="jiraProject"]');
+    setValue(app.window, input, 'Checkout redesign');
+    await settle();
+    await new Promise((r) => setTimeout(r, 400));   // past the picker's search delay
+    assert.equal(input.classList.contains('jira-input'), false, 'not a ticket field');
+    assert.equal(input.classList.contains('jira-filled'), false, 'so a name is not shown as a tag');
+    assert.equal(input.getAttribute('role'), null, 'nor announced as a search');
+    assert.equal(d.querySelector('.jira-status'), null, 'and nothing speaks of ticket keys');
+    assert.deepEqual(searched, [], 'Jira is not searched for a project name');
+    assert.ok(input.classList.contains('input-w-20'), 'it keeps the width its answer needs');
+  }
+  // The picker is kept, behind a flag, for the field that next asks for a ticket.
+  const flagged = await bootApp({ jiraEnabled: true, textAssets: { 'research-plan-template.md': withFieldFlag(TEMPLATE, 'jiraProject', 'jira') } });
+  t.after(() => flagged.close());
+  const picker = flagged.document.querySelector('[data-field="jiraProject"]');
+  assert.ok(picker.classList.contains('jira-input'));
+  assert.equal(picker.getAttribute('role'), 'combobox');
 });
 
 test('a study\'s headings name the study they ask about, once there is one', async (t) => {

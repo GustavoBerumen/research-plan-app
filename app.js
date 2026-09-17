@@ -181,6 +181,13 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "jira": a text field that takes a Jira ticket, so it gets the ticket
+      // picker and shows a chosen ticket as a tag. It was wired to the
+      // jiraProject key until that field began asking for a project name
+      // (RPA-119): a picker that says "enter a ticket key" under a question
+      // about a project name contradicts it. No field carries the flag
+      // today; the picker is kept for the field that next asks for a ticket.
+      jira: typeParts.includes('jira'),
       // "closed": a radios field whose options are the whole set, so no
       // "Other" is offered. Yes or No has no third answer (RPA-141).
       closed: typeParts.includes('closed'),
@@ -5145,7 +5152,7 @@
           control = inp;
         }
         attachSignOffStamp(inp, f.key);
-        const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(inp) : null;
+        const jiraStatus = f.jira ? attachJiraCombobox(inp) : null;
         if (f.type === 'date') {
           control.setAttribute('aria-labelledby', lbl.id);
         } else {
@@ -5239,7 +5246,7 @@
         if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
-      const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
+      const jiraStatus = f.jira ? attachJiraCombobox(input) : null;
       if (f.key === 'lastUpdated') {
         setDateInputValue(input, todayIso());
         // A draft restore replays saved values through this same event, and
@@ -6637,7 +6644,7 @@
   let startPage = null;
   const EXAMPLE_PLAN = [
     ['Research title', 'Usability testing of checkout flow'],
-    ['Jira Project', 'SHOP-412'],
+    ['Project name', 'Checkout redesign'],
     ['Lead researcher', 'Priya Nair'],
     ['Project requester', 'Tom Okafor'],
     ['Project decision', '14 November 2026'],

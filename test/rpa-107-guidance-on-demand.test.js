@@ -50,8 +50,9 @@ test('a field with Guidance lines gets a closed block under its box, titled by i
   assert.deepEqual(items.map((li) => text(li.querySelector('strong'))), ['Relevant context:', 'Essential terms:', 'Tight focus:'], '**bold** leads each item in');
   assert.ok(items.every((li) => !/\*|^- /.test(text(li))), 'and no markup is left showing');
   const requester = helpIn(app.document.getElementById('field-projectRequester-label').closest('.mf'));
-  assert.equal(text(requester.querySelector('summary')), 'Help with this section', 'a note with no Help line keeps the general title');
-  assert.equal(requester.querySelectorAll('ul.field-help-list > li').length, 3);
+  assert.equal(requester.querySelectorAll('ul.field-help-list > li').length, 3, 'a header field\'s note takes a list too');
+  const sampleSize = app.document.querySelector('.select-cell[data-field-key="sampleSize"]').closest('.field');
+  assert.equal(text(helpIn(sampleSize).querySelector('summary')), 'Help with this section', 'a note with no Help line keeps the general title');
   assert.ok(indexOf(wrap, help) > indexOf(wrap, wrap.querySelector('[data-field="background"]')), 'below the box, not under the hint');
   assert.ok(Array.from(wrap.children).slice(indexOf(wrap, help) + 1).every(isEvaluation), 'only the evaluation controls follow it');
   assert.ok(wrap.querySelector('.eval-controls'), 'the fixture must be an evaluated field');

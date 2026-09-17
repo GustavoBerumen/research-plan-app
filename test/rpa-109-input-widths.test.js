@@ -74,7 +74,7 @@ test('the classes exist with the GOV.UK measures, and only the GOV.UK widths are
     assert.ok(CSS.includes('.input-w-' + n + '{max-width:' + em + '}'), 'input-w-' + n);
   }
   // width=15 is not a GOV.UK class; the flag is ignored rather than inventing one.
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('Jira Project (text, width=20,', 'Jira Project (text, width=15,') } });
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('Project name (text, width=20,', 'Project name (text, width=15,') } });
   t.after(() => app.close());
   assert.equal(widthClass(app.document.querySelector('[data-field="jiraProject"]')), '');
 });

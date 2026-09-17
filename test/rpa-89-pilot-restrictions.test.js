@@ -7,11 +7,12 @@ const path = require('node:path');
 const { once } = require('node:events');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { loadServer, ASSETS, PRIVATE, ROOT, AUTHORIZATION } = require('./rpa-89-server-harness.cjs');
-const { bootApp, waitFor, setValue, DRAFT_KEY, withFieldUncommented } = require('./app-harness');
+const { bootApp, waitFor, setValue, DRAFT_KEY, withFieldUncommented, withFieldFlag } = require('./app-harness');
 
 // RPA-117 made this field dormant in the template; these tests are about it,
 // so the fixture brings it back the way a future template line would.
-const WITH_THEORY = { 'research-plan-template.md': withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory') };
+// Theory is dormant (RPA-117) and no field carries the Jira picker (RPA-119): both are brought back, so the restrictions are still proved against them.
+const WITH_THEORY = { 'research-plan-template.md': withFieldFlag(withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory'), 'jiraProject', 'jira') };
 const { realisticBackup } = require('./rpa-40-fixtures.cjs');
 // Feedback on the tool is the one write a pilot advertises (RPA-98); everything else stays closed.
 const disabled = { submissions: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
