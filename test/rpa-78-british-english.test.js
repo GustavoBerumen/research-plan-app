@@ -63,11 +63,14 @@ for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
     // Retained, not identical: RPA-101 added one Additional information
     // hatch per section, so the contract grows; nothing pre-change may go,
     // except Theory and Action Points, dormant since RPA-117: their keys are
-    // carried in the draft, not rendered.
+    // carried in the draft, not rendered. User Groups went on 17 September
+    // 2026 (RPA-119): Gus made who takes part one list, and a plan saved
+    // with user groups reads them into it (plan-model.js), so the answers
+    // stay though the key does not.
     const contract = keyContract(app.document);
     const retained = structuredClone(baseline.keys);
     for (const attr of ['data-field', 'data-list-key', 'data-field-key']) {
-      retained[attr] = retained[attr].filter((k) => !/theory|actionPoints|comments/.test(k));
+      retained[attr] = retained[attr].filter((k) => !/theory|actionPoints|comments|userGroups/.test(k));
       assert.deepEqual(retained[attr].filter((k) => !contract[attr].includes(k)), [], attr + ' keys retained');
     }
     retained.tables = retained.tables.filter((t) => t.id !== 'actionPoints-table');
@@ -99,15 +102,15 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
     assert.equal(document.querySelector('[data-field="' + key + '"]').value, value, key);
   }
   for (const [key, values] of Object.entries(baseline.draft.lists)) {
-    // Characteristics and User Groups are asked per research question since
-    // RPA-116: a plan-level answer lands in every question's group, checked below.
+    // Who takes part is asked per study since RPA-116 and is one list since
+    // RPA-119: a plan-level answer lands in every group, checked below.
     if (key === 'characteristics' || key === 'userGroups') continue;
     assert.deepEqual(listInputs(document, key).map(e => e.value), values, key);
   }
   const groups = () => [...document.querySelectorAll('.methods-group')];
   const inGroup = (g, key) => [...g.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')].map(e => e.value);
   assert.deepEqual(groups().map(g => inGroup(g, 'methods')), baseline.draft.methods.map(g => g.methods));
-  for (const key of ['characteristics', 'userGroups']) {
+  for (const key of ['characteristics']) {   // user groups are read into it since RPA-119; the baseline's are blank
     if (!baseline.draft.lists[key]) continue;
     groups().forEach((g, i) => assert.deepEqual(inGroup(g, key), baseline.draft.lists[key], key + ' for question ' + (i + 1)));
   }
@@ -134,7 +137,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
   expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)
-  expected.studies = expected.methods.map((g, i) => ({ questions: [i + 1], methods: g.methods, characteristics: expected.lists.characteristics || [], userGroups: expected.lists.userGroups || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
+  expected.studies = expected.methods.map((g, i) => ({ questions: [i + 1], methods: g.methods, characteristics: expected.lists.characteristics || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
   expected.selects.studyCount = { v: 'Three', o: '' };   // three groups became three studies
   expected.selects.otherResearchers = { v: '', o: '' };   // asked since RPA-141, not yet answered
   expected.lists.researcherNames = [''];

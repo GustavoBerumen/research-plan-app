@@ -8,8 +8,14 @@
 // hint; [text](url) links to a page that says more. Only some people need
 // it, so it is not read to a screen reader on arrival (not part of the
 // control's description). Not printed. Every field has the link, title and
-// header fields included (Gus, later the same day); the words are RPA-119,
-// and until a field's note is written its link opens on one honest line.
+// header fields included (Gus, later the same day), and until a field's note
+// is written its link opens on one honest line.
+//
+// RPA-119 wrote the words, and with them two things the first notes did not
+// need: a "Help:" line gives a note its own title ("Why we ask for the
+// background"), since a title that says what is inside is read more than one
+// that does not; and a Guidance line starting "- " is an item of a list.
+// A note with no "Help:" line keeps "Help with this section".
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,7 +32,7 @@ const helpIn = (wrap) => Array.from(wrap.children).find((k) => k.classList.conta
 const indexOf = (wrap, node) => Array.from(wrap.children).indexOf(node);
 const isEvaluation = (k) => k.classList.contains('eval-controls') || k.classList.contains('eval-panel');
 
-test('a field with Guidance lines gets a closed "Help with this section" block under its box, paragraph per line', async (t) => {
+test('a field with Guidance lines gets a closed block under its box, titled by its Help line: a paragraph per line, a list where the lines say so', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const wrap = fieldOf(app.document, '[data-field="background"]');
@@ -34,11 +40,19 @@ test('a field with Guidance lines gets a closed "Help with this section" block u
   assert.ok(help, 'Background has help');
   assert.equal(help.tagName, 'DETAILS');
   assert.equal(help.open, false, 'closed until wanted');
-  assert.equal(text(help.querySelector('summary')), 'Help with this section');
-  const paras = Array.from(help.querySelectorAll('.field-help-body p')).map(text);
-  assert.equal(paras.length, 2, 'two Guidance lines, two paragraphs');
-  assert.match(paras[0], /^Say what the product or service is/);
-  assert.match(paras[1], /^Leave out what you plan to do/);
+  assert.equal(text(help.querySelector('summary')), 'Why we ask for the background', 'the note\'s own title (RPA-119)');
+  const body = help.querySelector('.field-help-body');
+  assert.deepEqual(Array.from(body.children).map((k) => k.tagName), ['P', 'P', 'UL', 'P', 'P'], 'seven Guidance lines: the three that start "- " are one list, where they were written');
+  const paras = Array.from(body.querySelectorAll('p')).map(text);
+  assert.match(paras[0], /^Research always sits within a bigger picture/);
+  assert.equal(paras[3], 'You can edit this at any time.');
+  const items = Array.from(body.querySelectorAll('ul.field-help-list > li'));
+  assert.deepEqual(items.map((li) => text(li.querySelector('strong'))), ['Relevant context:', 'Essential terms:', 'Tight focus:'], '**bold** leads each item in');
+  assert.ok(items.every((li) => !/\*|^- /.test(text(li))), 'and no markup is left showing');
+  const requester = helpIn(app.document.getElementById('field-projectRequester-label').closest('.mf'));
+  assert.equal(requester.querySelectorAll('ul.field-help-list > li').length, 3, 'a header field\'s note takes a list too');
+  const sampleSize = app.document.querySelector('.select-cell[data-field-key="sampleSize"]').closest('.field');
+  assert.equal(text(helpIn(sampleSize).querySelector('summary')), 'Help with this section', 'a note with no Help line keeps the general title');
   assert.ok(indexOf(wrap, help) > indexOf(wrap, wrap.querySelector('[data-field="background"]')), 'below the box, not under the hint');
   assert.ok(Array.from(wrap.children).slice(indexOf(wrap, help) + 1).every(isEvaluation), 'only the evaluation controls follow it');
   assert.ok(wrap.querySelector('.eval-controls'), 'the fixture must be an evaluated field');
@@ -58,7 +72,11 @@ test('it is help on demand, not description: the control is described by its hin
 });
 
 test('a repeated field gets it under its rows and add button, and a [text](url) becomes a link that opens elsewhere safely', async (t) => {
-  const app = await bootApp({});
+  // None of the notes written in RPA-119 links anywhere, so the fixture adds one that does.
+  const tpl = TEMPLATE.replace(/^([^\r\n]*\bkey=researchQuestions\b[^\r\n]*)(\r?\n)/m,
+    '$1$2  Guidance: More in the [service manual on user research](https://www.gov.uk/service-manual/user-research).$2');
+  assert.notEqual(tpl, TEMPLATE, 'the fixture must find the Research Questions field');
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': tpl } });
   t.after(() => app.close());
   const wrap = fieldOf(app.document, '.list-rows[data-list-key="researchQuestions"]');
   const help = helpIn(wrap);
@@ -90,7 +108,7 @@ test('every field has one, title and header included; a note not written yet ope
   assert.equal(d.getElementById('field-researchTitle').nextElementSibling, helpFor(d.getElementById('field-researchTitle-label')), 'the title has no wrapper, so it follows the box');
   const jira = d.getElementById('field-jiraProject-label').closest('.mf');
   assert.equal(jira.lastElementChild, helpIn(jira), 'a header field has it last');
-  assert.equal(text(helpFor(d.getElementById('field-goal-label')).querySelector('.field-help-body')), 'No further help for this field yet.', 'Goal has no note yet and says so');
+  assert.equal(text(helpFor(d.getElementById('field-previousKnowledge-label')).querySelector('.field-help-body')), 'No further help for this field yet.', 'Previous Knowledge has no note yet and says so');
   assert.doesNotMatch(text(helpFor(d.getElementById('field-background-label'))), /No further help/, 'a written note replaces the line');
   assert.equal(d.querySelector('.field-help-body:empty'), null, 'never empty');
 });
@@ -100,12 +118,12 @@ test('italics in a note render as emphasis, and the block does not print', async
   assert.match(print, /\.field-help,/, 'in the print hide-list');
   for (const eol of ['\n', '\r\n']) {
     const source = TEMPLATE.replace(/\r\n/g, '\n').replace(/\n/g, eol);
-    const tpl = source.replace(/^([^\r\n]*\bkey=goal\b[^\r\n]*)(\r?\n)/m,
-      '$1$2  Guidance: Write it as *one sentence*.$2');
-    assert.notEqual(tpl, source, 'the fixture must find the Goal field');
+    const tpl = source.replace(/^([^\r\n]*\bkey=previousKnowledge\b[^\r\n]*)(\r?\n)/m,
+      '$1$2  Guidance: Name it as *one line*.$2');
+    assert.notEqual(tpl, source, 'the fixture must find a field with no note of its own');
     const app = await bootApp({ textAssets: { 'research-plan-template.md': tpl } });
     t.after(() => app.close());
-    const em = fieldOf(app.document, '[data-field="goal"]').querySelector('.field-help-body em');
-    assert.equal(em && em.textContent, 'one sentence', JSON.stringify(eol));
+    const em = app.document.getElementById('field-previousKnowledge-label').closest('.field').querySelector('.field-help-body em');
+    assert.equal(em && em.textContent, 'one line', JSON.stringify(eol));
   }
 });

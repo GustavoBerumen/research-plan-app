@@ -4,7 +4,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, DRAFT_KEY } = require('./app-harness');
+const { bootApp: boot, setValue, waitFor, DRAFT_KEY, withFieldFlag } = require('./app-harness');
+
+// The picker belongs to a text field marked "jira" in the template; none is
+// today (RPA-119), so these tests put the flag back on the project field.
+const WITH_PICKER = { 'research-plan-template.md': withFieldFlag(
+  fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'jiraProject', 'jira') };
+const bootApp = (options = {}) => boot({ textAssets: WITH_PICKER, ...options });
 
 const unavailable = 'Jira suggestions are unavailable. You can still enter a ticket key manually.';
 const failure = 'Jira search is temporarily unavailable. You can still enter a ticket key manually.';

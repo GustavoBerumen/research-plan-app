@@ -71,10 +71,14 @@ test('one methods group per study; before any study is declared there is nothing
 
 test('a study is kept honest: whole, unique, ordered question numbers, never past the questions the plan has', () => {
   assert.deepEqual(PLAN.study({ questions: [3, '1', 3, 0, -2, 1.5, 'x'], methods: ['Interviews'] }), {
-    questions: [1, 3], methods: ['Interviews'], characteristics: [], userGroups: [], sampleSize: { v: '', o: '' },
+    questions: [1, 3], methods: ['Interviews'], characteristics: [], sampleSize: { v: '', o: '' },
   });
   assert.deepEqual(PLAN.study({ questions: [1, 4] }, 3).questions, [1], 'question four does not exist in a plan with three');
-  assert.deepEqual(PLAN.study(null), { questions: [], methods: [], characteristics: [], userGroups: [], sampleSize: { v: '', o: '' } });
+  assert.deepEqual(PLAN.study(null), { questions: [], methods: [], characteristics: [], sampleSize: { v: '', o: '' } });
+  // Who takes part is one list (RPA-119): a plan saved with two reads with its user groups after its characteristics.
+  assert.deepEqual(PLAN.study({ characteristics: ['Abandoned a basket', ''], userGroups: ['', 'New customers'] }).characteristics, ['Abandoned a basket', 'New customers'], 'blanks aside');
+  assert.deepEqual(PLAN.study({ characteristics: ['', 'Kept as typed'], userGroups: [''] }).characteristics, ['', 'Kept as typed'], 'with no user groups to bring in, the list is left exactly as it was');
+  assert.equal('userGroups' in PLAN.study({ userGroups: ['New customers'] }), false, 'and there is no second list any more');
   assert.deepEqual(PLAN.studiesOf({ lists: { researchQuestions: ['a', 'b'] }, studies: [{ questions: [2, 3] }] }).map((s) => s.questions), [[2]]);
   assert.deepEqual(PLAN.studiesOf(null), []);
 });
@@ -121,7 +125,7 @@ test('a plan saved before studies existed reads as one study per group, with eve
   const studies = PLAN.studiesFromGroups(groups, ['Where does it break down?', '', 'For whom?']);
   assert.deepEqual(studies.map((s) => s.questions), [[1], [3]], 'an untouched default group is not a study: nobody declared one');
   assert.deepEqual(studies[0], {
-    questions: [1], methods: ['Usability testing'], characteristics: ['Abandoned a basket'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' },
+    questions: [1], methods: ['Usability testing'], characteristics: ['Abandoned a basket', 'New customers'], sampleSize: { v: 'Small (1–5)', o: '' },
   });
   assert.deepEqual(PLAN.studiesFromGroups([{ methods: ['Survey'] }], []).map((s) => s.questions), [[]],
     'a group with content but no question row becomes a study answering nothing, rather than losing the survey');
@@ -138,8 +142,8 @@ test('the per-question view, for the submission wire format that predates studie
   const view = PLAN.perQuestionView(['Where?', 'For whom?', 'Why?'], studies);
   assert.deepEqual(view.map((g) => g.question), ['Where?', 'For whom?', 'Why?'], 'one group per question, in order');
   assert.deepEqual(view[1].methods, ['Usability testing', 'Survey'], 'a question in two studies gets both, once each, first study first');
-  assert.deepEqual(view[1].characteristics, ['Abandoned a basket']);
-  assert.deepEqual(view[1].userGroups, ['Returning']);
+  assert.deepEqual(view[1].characteristics, ['Abandoned a basket', 'Returning'], 'what was a user group is a participant criterion now');
+  assert.deepEqual(view[1].userGroups, [], 'the wire keeps its user groups slot, empty, as it keeps comments (RPA-98)');
   assert.deepEqual(view[1].sampleSize, { v: 'Small (1–5)', o: '' }, 'the sample size is the first covering study\'s');
   assert.deepEqual(view[2].sampleSize, { v: 'Very Large (30+)', o: '' });
   assert.deepEqual(PLAN.perQuestionView(['Alone?'], []), [{ question: 'Alone?', methods: [], characteristics: [], userGroups: [], sampleSize: { v: '', o: '' } }],
@@ -162,7 +166,7 @@ test('the linked view puts each study with the questions it answers, each with i
       { number: 1, label: 'RQ1', question: 'Where does it break down?', outcome: 'A ranked list.' },
       { number: 3, label: 'RQ3', question: 'For whom?', outcome: 'A segment map.' },
     ],
-    methods: ['Usability testing'], characteristics: ['Abandoned a basket'], userGroups: ['New customers'], sampleSize: { v: 'Small (1–5)', o: '' },
+    methods: ['Usability testing'], characteristics: ['Abandoned a basket', 'New customers'], sampleSize: { v: 'Small (1–5)', o: '' },
   });
   assert.deepEqual(links[1].questions, [{ number: 2, label: 'RQ2', question: '', outcome: '' }], 'the blank question is present and empty, not missing');
   assert.deepEqual(PLAN.link({}), [], 'a plan with no studies reads as none, which is what it is');

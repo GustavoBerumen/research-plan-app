@@ -62,7 +62,6 @@ test('the field keeps its name for the error summary and the check page, while t
   const group = d.querySelector('.methods-group');
   setValue(window, group.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
   setValue(window, group.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
-  setValue(window, group.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
   toCheckPage(methodology);
   assert.deepEqual(linksOf(methodology), ['Select a sample size for Study 1'], 'the message names the field and its study, not the question');
   const fieldset = fieldsetOf(d);

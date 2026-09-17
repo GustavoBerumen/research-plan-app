@@ -89,11 +89,17 @@
   function study(given, questionTotal) {
     const g = record(given);
     const wanted = new Set(list(g.questions).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && (questionTotal === undefined || n <= questionTotal)));
+    // Who takes part is one answer (Gus, 17 September 2026, RPA-119): user
+    // groups and characteristics were two lists, and a plan saved while they
+    // were reads with its user groups after its characteristics. Reading it
+    // this way, rather than migrating once, means no new draft version: an
+    // older build opening a newer plan finds its user groups empty and
+    // everything under characteristics, and loses nothing.
+    const groups = list(g.userGroups).filter((v) => text(v));
     return {
       questions: Array.from(wanted).sort((a, b) => a - b),
       methods: list(g.methods).slice(),
-      characteristics: list(g.characteristics).slice(),
-      userGroups: list(g.userGroups).slice(),
+      characteristics: groups.length ? list(g.characteristics).filter((v) => text(v)).concat(groups) : list(g.characteristics).slice(),
       sampleSize: g.sampleSize && typeof g.sampleSize === 'object' ? Object.assign({ v: '', o: '' }, g.sampleSize) : { v: '', o: '' },
     };
   }
@@ -110,7 +116,7 @@
   }
   function hasContent(s) {
     const st = study(s);
-    return [st.methods, st.characteristics, st.userGroups].some((values) => values.some((v) => text(v)))
+    return [st.methods, st.characteristics].some((values) => values.some((v) => text(v)))
       || Boolean(text(st.sampleSize.v));
   }
   // Which studies answer a question; the first of them is where a suggestion
@@ -188,7 +194,9 @@
         question: q.text,
         methods: union('methods', covering),
         characteristics: union('characteristics', covering),
-        userGroups: union('userGroups', covering),
+        // The wire format keeps its user groups slot, always empty now, the
+        // way it keeps the dormant comments slot (RPA-98).
+        userGroups: [],
         sampleSize: covering.length ? Object.assign({}, covering[0].sampleSize) : { v: '', o: '' },
       };
     });
@@ -214,7 +222,6 @@
         })),
         methods: st.methods,
         characteristics: st.characteristics,
-        userGroups: st.userGroups,
         sampleSize: st.sampleSize,
       };
     });

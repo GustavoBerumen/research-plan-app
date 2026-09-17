@@ -61,6 +61,12 @@ Flags (comma-separated inside the parentheses):
                        written about M words". Advisory, never a limit
                        (RPA-114). Two tiers today: 60 for a long answer, 30
                        for a short one.
+  jira              — text fields only: the field takes a Jira ticket. It gets
+                       the ticket picker (when the server has Jira configured)
+                       and shows a chosen ticket as a small tag. No field
+                       uses it today: the project field asks for a project
+                       name since RPA-119, and its key stays jiraProject so
+                       saved plans keep their answer.
   width=N           — text fields and list rows: the input is sized to the
                        answer it expects, in the GOV.UK width classes (2, 3, 4,
                        5, 10, 20 or 30 characters). A ticket key is 10, a name
@@ -93,12 +99,28 @@ Wrap words in *asterisks* inside a Hint to italicise them, e.g.
   Hint: structured as *If we do this, then this will happen.*
 
 An indented "Guidance:" line is a longer note about the field, shown on
-demand behind a closed "Help with this section" link at the bottom of
-the field, under the box (RPA-107). Every field has the link, the title
-and header fields included; a field with no Guidance line yet opens on
-"No further help for this field yet." (the notes are RPA-119). Several
-Guidance lines make several paragraphs; *italics* work as in a Hint, and
-[text](url) makes a link to a page that says more.
+demand behind a closed link at the bottom of the field, under the box
+(RPA-107). Every field has the link, the title and header fields
+included; a field with no Guidance line yet opens on "No further help for
+this field yet." Several Guidance lines make several paragraphs; *italics*
+work as in a Hint, and [text](url) makes a link to a page that says more.
+
+The words of the notes are RPA-119, and they brought three things:
+  Help: the title of the note      — the words on the closed link, saying
+                                     what is behind it ("Why we ask for a
+                                     decision date"). Without a Help line
+                                     the link reads "Help with this section".
+  Guidance: - an item              — a Guidance line that starts "- " is an
+                                     item of a list; items that follow one
+                                     another make one list, where written.
+  **bold**                         — works in a Hint or a note, beside
+                                     *italics*.
+
+question=... on any field makes that the heading a person reads, as a
+question page asks it ("What is the goal of this project?"). The label
+before the parentheses stays the field's name: error messages, the check
+page and Review use it ("Enter the goal"), so keep it short and do not
+turn it into the question.
 
 The very first "#" line in the file is special: it defines the document
 title field, not a section. Plain field lines right after it (before the
@@ -112,13 +134,32 @@ is the page's heading; its label names it in the Menu and in messages.
 Email address (email, width=30, question=What is your email address?, key=emailAddress):
   Hint: This address identifies your local draft and backup. This app does not send email.
 
-# Research title (text, key=researchTitle):
-  Hint: A short name for the study, for example ‘Usability testing of checkout flow’.
+# Research title (text, question=What is the name of your research plan?, key=researchTitle):
+  Hint: A simple descriptive name for your study, for example ‘Usability testing of checkout flow’.
+  Help: I am not sure what to name my research
+  Guidance: A good title helps colleagues understand what you are testing without reading the rest of the document.
+  Guidance: Try combining the purpose of your study with the feature or solution you want to understand better:
+  Guidance: - Discovery interviews for onboarding
+  Guidance: - Navigation evaluation with power users
+  Guidance: - Identifying issues in the management dashboard
+  Guidance: You can change this title at any time.
 
-Jira Project (text, width=10, key=jiraProject):
-  Hint: Jira ticket for the initiative this research supports.
-Lead researcher (text, width=20, key=leadResearcher):
-  Hint: Name of the person leading this research.
+Project name (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
+  Hint: The name of the wider project, programme, or product goal your study relates to. For example, ‘Checkout redesign’ or ‘Billing self-serve’.
+  Help: Why we ask for the project name
+  Guidance: Connecting your study to a project helps others find related work, such as existing documentation, previous research, or active Jira tickets.
+  Guidance: It also helps to understand the impact of this study and to connect with and include the right stakeholders.
+  Guidance: You can update this at any time.
+Lead researcher (text, width=20, question=Who is leading this research?, key=leadResearcher):
+  Hint: Enter the full name of the person responsible for running this study.
+  Help: Why we ask for the lead researcher
+  Guidance: This identifies the main point of contact who will carry out the study and share the findings.
+  Guidance: The lead researcher is accountable for:
+  Guidance: - Ensuring the research plan aligns with the project objectives
+  Guidance: - Running sessions and collecting data
+  Guidance: - Delivering insights that support the project initiative
+  Guidance: If multiple people are involved, enter the person with overall responsibility.
+  Guidance: You can change this name at any time.
 <!-- RPA-141, 17 September 2026. Research is often done by more than one
      person, and the plan had nowhere to say who else. A yes or no question,
      then their names only if yes. "closed" means the options are the whole
@@ -131,46 +172,105 @@ Other researchers (radios, closed, reveals=researcherNames, question=Are other r
   Error: Select yes if other researchers are involved in this research
 Researcher names (list, width=20, key=researcherNames):
   Hint: Add each person’s name. Do not include the lead researcher.
-Project requester (text, width=20, key=projectRequester):
-  Hint: Name of the person requesting this work.
-Project decision (date, key=projectDecision):
-  Hint: Date of the decision informed by this research.
-Research readout (date, key=researchReadout):
-  Hint: Date findings are shared with the team.
+Project requester (text, width=20, question=Who requested this research?, key=projectRequester):
+  Hint: Enter the name of the project lead or stakeholder who asked for this research support.
+  Help: Why we ask for the project requester
+  Guidance: This is usually the person responsible for the wider product or business initiative, such as a product manager, designer, data analyst, or engineer.
+  Guidance: Adding their name helps ensure:
+  Guidance: - The research plan aligns with their original request and business goals
+  Guidance: - They review the plan before sessions begin
+  Guidance: - The insights from this research will be used to make decisions and drive tangible product changes
+  Guidance: You can update this name at any time.
+Project decision (date, question=When will the findings be used to make a decision?, key=projectDecision):
+  Hint: The date the project requester or team plans to use the insights to take action.
+  Help: Why we ask for a decision date
+  Guidance: Research is most effective when insights arrive before choices are locked in.
+  Guidance: Knowing the decision deadline ensures:
+  Guidance: - Findings are shared, read, and understood in time to influence the work
+  Guidance: - The team has time to act—such as designers updating prototypes, engineers planning sprints, or product managers adjusting requirements
+  Guidance: - The research schedule is planned backwards from when stakeholders actually need answers
+  Guidance: An approximate date is fine. You can update this date if timelines shift.
+Research readout (date, question=When will the findings be shared with the team?, key=researchReadout):
+  Hint: The date you expect to deliver the insights from this research. This date should be a few days before the project decision date.
+  Help: Why this date needs to be before the decision date
+  Guidance: This date should be set before the project decision deadline.
+  Guidance: We recommend sharing insights at least a few days in advance so the team can:
+  Guidance: - Review and understand the findings
+  Guidance: - Ask follow-up questions or request deeper analysis
+  Guidance: - Have a built-in buffer in case sessions or analysis run behind schedule
+  Guidance: An estimated date is fine. You can adjust this timeline as the project progresses.
 Last updated (date, key=lastUpdated):
   Hint: The date this plan was last edited.
 
 # Context {open}
 
-Background (textarea, eval, rows=2, words=60, key=background):
-  Hint: Relevant context and essential terms needed to understand the project.
-  Guidance: Say what the product or service is, who uses it, and what has changed or is about to. Two or three sentences a colleague outside the team could follow.
-  Guidance: Leave out what you plan to do about it; that is the goal.
-Goal (textarea, eval, rows=2, words=30, key=goal): 
-  Hint: The outcome you are trying to achieve, and the expected changes in the product.
-Problem Statement (textarea, eval, rows=2, words=60, key=problemStatement): 
-  Hint: A concise summary of the specific issue, challenge, or gap that needs to be addressed.
-  Guidance: Name the problem as the people who have it would recognise it, and the evidence that it exists: support tickets, analytics, an earlier study.
-  Guidance: A problem statement does not contain a solution.
+Background (textarea, eval, rows=2, words=60, question=What do people need to know about this project?, key=background):
+  Hint: Give essential context about the wider initiative and define any terms needed to understand this research.
+  Help: Why we ask for the background
+  Guidance: Research always sits within a bigger picture. A clear background connects your study to the wider business initiative so stakeholders can easily follow along.
+  Guidance: A good background covers three essential areas:
+  Guidance: - **Relevant context:** Briefly explain what the wider project is, and why this study is needed right now.
+  Guidance: - **Essential terms:** Introduce and define terms early so they make sense when referenced later in your goals and objectives.
+  Guidance: - **Tight focus:** Keep the scope sharp by leaving out general details that do not directly inform this project.
+  Guidance: About 3 sentences are usually enough.
+  Guidance: You can edit this at any time.
+Goal (textarea, eval, rows=2, words=30, question=What is the goal of this project?, key=goal): 
+  Hint: State the outcome the initiative aims to achieve and what will change in the product.
+  Help: How to define the project goal
+  Guidance: Every project aims to change something for the user, the solution or the business. A clear goal defines the future product state once this initiative succeeds.
+  Guidance: A strong project goal covers 3 key areas:
+  Guidance: - **The change:** State what you want to improve, such as increasing conversion or reducing drop-offs.
+  Guidance: - **The future product state:** Describe what the product will do differently after the changes are made.
+  Guidance: - **Outcome over research:** Focus on what the business or product achieves, not what you plan to learn in your sessions.
+  Guidance: Keep it focused on the end result.
+Problem Statement (textarea, eval, rows=2, words=60, question=What problem are you trying to solve?, key=problemStatement): 
+  Hint: Summarise the specific issue, challenge, or gap your research aims to address.
+  Help: How to write a strong problem statement
+  Guidance: Usually research starts with something that needs fixing or improving. A clear problem statement defines the exact challenge the team is trying to solve.
+  Guidance: A strong problem statement covers 3 key areas:
+  Guidance: - **User friction:** Describes the struggle, obstacle, or unmet need without prescribing a design feature or solution.
+  Guidance: - **The measure:** Mention the specific problem and a metric or rate to show its scale (such as drop-offs or error rates).
+  Guidance: - **The impact:** Clarify why fixing this matters to the user or the business.
+  Guidance: Keep it narrow enough to tackle in one study. You can edit this at any time.
 Additional information (custom-fields, max=1, key=additionalContext):
   Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
 # Research
 
-Objective (textarea, eval, rows=2, words=30, key=objective): 
-  Hint: The purpose of the study: what must be learned to guide product decisions.
+Objective (textarea, eval, rows=2, words=30, question=What do you want to learn from this research?, key=objective): 
+  Hint: State the specific unknown you need to uncover about your users to guide product decisions.
+  Help: How to define your research objective
+  Guidance: The research objective focuses on what you need to learn from users. A strong objective covers 3 key areas:
+  Guidance: - **User behaviour and needs:** Focus on how users complete tasks, where they struggle, or why an issue happens, not just feature validation.
+  Guidance: - **A decision to make:** Target a specific unknown that helps your team pick a direction, launch a feature, or prioritise work.
+  Guidance: - **A manageable scope:** Focus on one clear audience and workflow so findings stay conclusive.
+  Guidance: Start with an action verb like Understand, Identify, or Explore.
+  Guidance: You can edit this at any time.
 <!-- Dormant since RPA-117, 14 September 2026, the same day as Theory and
      Action Points. Older drafts keep their text through carryUnrendered.
      Uncomment the three lines to bring it back. -->
 <!-- Hypothesis (textarea, optional, eval, rows=1, words=30, key=hypothesis): -->
 <!-- Hint: An educated assumption about this project's results, structured as: *If we do this, then this will happen.* -->
 <!-- Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one. -->
-Research Questions (list, eval, key=researchQuestions): 
-  Hint: A question that outlines the topic you want to explore and points directly to what you aim to discover. Three is a good number for a balanced study.
-  Guidance: Ask what you need to learn, not what you plan to do. A good question can be answered by watching or asking people, has one subject, and would change a decision whichever way it comes out.
-  Guidance: Three is usually enough for one study; see the [service manual on user research](https://www.gov.uk/service-manual/user-research).
-Outcomes (list, eval, key=outcomes): 
-  Hint: A deliverable built from the findings of a research question, such as a list of issues or a journey map.
+Research Questions (list, eval, question=What questions do you need this research to answer?, key=researchQuestions): 
+  Hint: Frame the specific gaps in your understanding of user experience, needs and issues.
+  Help: How to write strong research questions
+  Guidance: A research question is the core unknown your study must answer to guide product decisions. It is what the team needs to find out through the research.
+  Guidance: A good research question covers 3 key areas:
+  Guidance: - **Target audience:** Identifies who is encountering the situation.
+  Guidance: - **User experience:** Focuses on how users think, make choices, or get stuck.
+  Guidance: - **Specific task:** Tied to an exact trigger, feature, or workflow phase.
+  Guidance: Use open-ended stems like *How*, *Why*, or *What* such as *“Why do new users drop off on the bank-linking screen?”*
+  Guidance: You can edit, remove, or add more questions at any time.
+Outcomes (list, eval, question=What deliverables will answer your research questions?, key=outcomes): 
+  Hint: Add the specific outputs you will deliver. Each outcome should answer one of your research questions.
+  Help: How to define research outcomes
+  Guidance: It is the tangible deliverable that answers a research question and helps your team take action. Avoid vague outputs like “a summary” or “a presentation slide deck.”
+  Guidance: A strong outcome covers 3 key areas:
+  Guidance: - **Direct alignment:** Maps straight back to one research question.
+  Guidance: - **Specific format:** Such as a prioritised list of pain points, an end-to-end journey map, wireframe recommendations.
+  Guidance: - **Action-oriented:** Directly supports an upcoming decision, such as refining the backlog, or updating design flows.
+  Guidance: You can edit, remove, or add more outcomes at any time.
 
 Additional information (custom-fields, max=1, key=additionalResearch):
   Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
@@ -186,7 +286,14 @@ Additional information (custom-fields, max=1, key=additionalResearch):
      revealing a number box (Gus's choice over a bare number box). The
      wording of both questions and their hints is Gus's to settle. -->
 Number of studies (radios, question=How many studies will you run?, key=studyCount): One,Two,Three
-  Hint: Count each separate piece of research. A usability study and a survey are two studies, even if they answer the same question.
+  Hint: Count each separate research activity. A usability study and a survey count as two studies, even if they are for the same question.
+  Help: How to plan your studies
+  Guidance: A study is a distinct research activity with its own method, participant group, and timeline.
+  Guidance: Choose the structure that fits your plan:
+  Guidance: - **One study for all questions:** A single round of interviews or usability tests covers everything if the audience is the same.
+  Guidance: - **One study per question:** Each question needs a different method, such as a survey for scale and interviews for depth.
+  Guidance: - **Multiple studies for one question:** You need to combine methods, like discovery interviews followed by prototype testing.
+  Guidance: You can change this at any time.
 Study questions (study-questions, question=Which research questions does this study answer?, key=studyQuestions):
   Hint: Select every question this study helps answer. A question can be answered by more than one study.
 
@@ -200,30 +307,37 @@ Study questions (study-questions, question=Which research questions does this st
      Hypothesis joined them the same day; see Research above. -->
 <!-- Theory (textarea, optional, rows=2, key=theory): -->
 <!-- Hint: A framework to help ground the study design and analysis. -->
-Methods (list, width=20, key=methods):
-  Hint: A technique to study user behaviours, needs, and experiences that helps answer a research question.
+Methods (list, width=20, question=Which research methods will you use for this study?, key=methods):
+  Hint: A technique to study user behaviours, needs, and experiences that helps answer your research question.
+  Help: What is a research method?
+  Guidance: A research method is the practical technique you use to collect data from users. The right method depends on whether you need to observe what people do, listen to what they say, or measure trends at scale.
+  Guidance: Common methods include:
+  Guidance: - **Usability testing:** Observe how users navigate a prototype or live feature and where they struggle.
+  Guidance: - **User interviews:** Explore motivations, workflows, and the reasons behind user behaviour.
+  Guidance: - **Tree testing:** Test navigation labels, menus, and content structure.
+  Guidance: Read the provided recommendations carefully. You can use them or choose different methods.
 
-<!-- Since RPA-116, 14 September 2026, the three participant fields below
-     are asked inside each group under Methods and saved with it. Since
-     RPA-142 a group is a study rather than a research question, and the
-     "perQuestion" mark now means "asked once per study"; the flag keeps its
-     name so older drafts, tests and the submission contract read as before. -->
-<!-- These were merged into one field earlier in RPA-55, on the grounds that
-     both wanted a short noun phrase naming a kind of person. That was true of
-     the format and wrong about the function, and Gus reversed it: a screener
-     criterion filters who is eligible, a segment sets who must be represented
-     among those who are. One is a filter, the other is a quota, and a study
-     can get the first right and the second wrong. The hints below hold that
-     line, since it is the only thing keeping them from collapsing together
-     again.
-
-     Drafts saved while the fields were merged keep everything in
-     Characteristics: which entries were segments was not recorded, so nothing
-     can sort them back out. Splitting them is forward-looking only. -->
-Characteristics (list, prose, width=30, perQuestion, key=characteristics):
-  Hint: The criteria that decide whether someone is eligible for this study. For example: Abandoned a checkout in the last 30 days.
-User Groups (list, prose, width=20, perQuestion, key=userGroups):
-  Hint: The segments that must be represented among the people you recruit. For example: New customers.
+<!-- Since RPA-116 the participant fields below are asked inside each group
+     under Methods and saved with it; since RPA-142 a group is a study, and
+     "perQuestion" means "asked once per study". The flag keeps its name so
+     older drafts, tests and the submission contract read as before. -->
+<!-- Who takes part is one question again (Gus, 17 September 2026, RPA-119).
+     Characteristics and User Groups were merged once in RPA-55, split again
+     on the grounds that a screener criterion is a filter and a segment is a
+     quota, and are now one list under the question "Who should take part in
+     this study?", with the help note explaining the two kinds of criteria.
+     The field keeps the key "characteristics", so nothing saved moves; a
+     plan saved while there were two lists reads with its user groups after
+     its characteristics (plan-model.js), and no draft version changes. -->
+Participant criteria (list, prose, width=30, perQuestion, question=Who should take part in this study?, key=characteristics):
+  Hint: Define the target participants and screening criteria for this study. For example: *New customers who abandoned a checkout in the last 30 days.*
+  Help: How to define your participants
+  Guidance: Participant criteria define who you need to recruit to answer your research question accurately.
+  Guidance: Include two types of criteria:
+  Guidance: - **User groups:** The broad segments, roles, or personas you need (such as account owners, new sign-ups, or support agents).
+  Guidance: - **User characteristics:** Specific behaviours, conditions, or experience levels that make someone eligible (such as uses the mobile app weekly or has not made a purchase yet).
+  Guidance: You can also mention any profiles to exclude (such as internal staff or users on legacy plans).
+  Guidance: You can edit or add more criteria at any time.
 <!-- "question=" sets the legend of a radios field: the question as a
      person reads it, while the label stays the field's name for messages
      and the check page (RPA-118). -->

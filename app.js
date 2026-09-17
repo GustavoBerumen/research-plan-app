@@ -181,6 +181,13 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "jira": a text field that takes a Jira ticket, so it gets the ticket
+      // picker and shows a chosen ticket as a tag. It was wired to the
+      // jiraProject key until that field began asking for a project name
+      // (RPA-119): a picker that says "enter a ticket key" under a question
+      // about a project name contradicts it. No field carries the flag
+      // today; the picker is kept for the field that next asks for a ticket.
+      jira: typeParts.includes('jira'),
       // "closed": a radios field whose options are the whole set, so no
       // "Other" is offered. Yes or No has no third answer (RPA-141).
       closed: typeParts.includes('closed'),
@@ -299,6 +306,16 @@
       // An indented "Guidance:" line is a longer note about the field, shown
       // on demand behind a "Help with this section" link at the bottom of the
       // field (RPA-107). Several lines make several paragraphs.
+      // An indented "Help:" line is the title of the field's help note, the
+      // words on its closed link: "Why we ask for a decision date" says what
+      // is behind it, where "Help with this section" on every field could
+      // not (RPA-119). Without one, the general words stand.
+      const helpMatch = raw.match(/^\s+Help:\s*(.*)$/i);
+      if (helpMatch && currentField) {
+        currentField.helpTitle = helpMatch[1].trim();
+        return;
+      }
+
       // An indented "Error:" line is what Save and continue says when the
       // field is left unanswered, for a question the general wording reads
       // badly for: "Select a other researchers" is not a sentence (RPA-141).
@@ -2658,7 +2675,8 @@
     // marked per question like the participant fields that follow it.
     const methodsField = el('div', 'field field-per-question field-question-methods', { role: 'group' });
     const mLabel = el('div', 'flabel', { id: 'field-methods-g' + seq + '-label' });
-    mLabel.append(document.createTextNode(methodsFieldDef ? methodsFieldDef.label : 'Methods'), perQuestionSuffix());
+    mLabel.append(document.createTextNode(methodsFieldDef ? headingText(methodsFieldDef) : 'Methods'), perQuestionSuffix());
+    if (methodsFieldDef && methodsFieldDef.question) methodsField.dataset.fieldName = methodsFieldDef.label;
     methodsField.setAttribute('aria-labelledby', mLabel.id);
     methodsField.appendChild(mLabel);
     const mHint = methodsFieldDef ? renderFieldHint(methodsFieldDef, 'field-methods-g' + seq + '-hint') : null;
@@ -2806,8 +2824,8 @@
       const study = studies[i] || { questions: [] };
       const head = group.querySelector('.methods-group-head');
       if (head) head.hidden = !declared;
+      nameStudyFields(group, declared ? PLAN.studyLabel(i) : '');
       if (!declared) {
-        group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ''; });
         group.setAttribute('aria-label', 'Methods');
         return;
       }
@@ -2825,7 +2843,6 @@
         });
         full.hidden = !study.questions.length;
       }
-      group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ' for ' + PLAN.studyLabel(i); });
       label.hidden = false;
       label.textContent = PLAN.studyLabel(i) + (study.questions.length ? ' answers' : ' answers no research question yet');
       label.classList.toggle('methods-group-q-empty', !study.questions.length);
@@ -2834,6 +2851,26 @@
     });
     container.classList.toggle('methods-grouped', studies.length > 0);
     refreshMethodsSuggestSelection();
+  }
+
+  // A study's fields say which study they are for. A heading that asks about
+  // "this study" names it instead, as the studies page does: "Which research
+  // methods will you use for Study 1?". A heading that does not keeps a
+  // hidden " for Study 1" after it, for a screen reader. Either way the
+  // field's name for the check page and the error summary ends the same:
+  // "Methods for Study 1" (RPA-116, RPA-142, RPA-119).
+  function nameStudyFields(group, studyName) {
+    group.querySelectorAll('.field-per-question').forEach((fieldEl) => {
+      const label = fieldEl.querySelector('.flabel');
+      const of = fieldEl.querySelector('.per-question-of');
+      if (!label || !of || !label.firstChild) return;
+      if (label.dataset.heading === undefined) label.dataset.heading = label.firstChild.textContent;
+      const asked = label.dataset.heading;
+      const names = Boolean(studyName) && /this study/i.test(asked);
+      label.firstChild.textContent = names ? asked.replace(/this study/i, studyName) : asked;
+      of.textContent = studyName && !names ? ' for ' + studyName : '';
+      fieldEl.dataset.groupOf = studyName ? ' for ' + studyName : '';
+    });
   }
 
   // Question removal confirms any populated linked content before it mutates
@@ -3370,7 +3407,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3442,7 +3479,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3729,7 +3766,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3875,7 +3912,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -4273,7 +4310,7 @@
     const wrap = el('div', 'field field-checkbox', { role: 'group' });
     const controlId = fieldControlId(field.key);
     const label = el('div', 'flabel', { id: controlId + '-label' });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', label.id);
     wrap.appendChild(label);
@@ -4295,7 +4332,7 @@
     if (!perQuestionFields.length) {
       const labelId = fieldControlId(field.key) + '-label';
       const label = el('div', 'flabel', { id: labelId });
-      label.textContent = field.label;
+      label.textContent = headingText(field);
       markOptional(label, field);
       wrap.setAttribute('aria-labelledby', labelId);
       wrap.appendChild(label);
@@ -4346,9 +4383,13 @@
   // for the two button-row tips that are not tied to a field.
   //
   function appendHintText(target, text) {
-    text.split(/(\*[^*\n]+\*)/).forEach((part) => {
+    text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/).forEach((part) => {
       if (!part) return;
-      if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+      if (part.length > 4 && part.startsWith('**') && part.endsWith('**')) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.slice(2, -2);
+        target.appendChild(strong);
+      } else if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
         const em = document.createElement('em');
         em.textContent = part.slice(1, -1);
         target.appendChild(em);
@@ -4382,13 +4423,36 @@
   // words are their own ticket (RPA-119); until a field's note is written
   // its link opens on one honest line rather than nothing.
   const NO_HELP_YET = 'No further help for this field yet.';
+  // What a field's heading says. "question=" in the template asks the
+  // question a person is answering, as the design system's question pages
+  // do, while the label stays the field's name for error messages, the check
+  // page and Review. RPA-118 did this for radios; RPA-119 does it for every
+  // kind of field, since Gus's words ask a question of each.
+  function headingText(field) { return (field && (field.question || field.label)) || ''; }
+
   function renderFieldHelp(field) {
     const details = el('details', 'field-help');
     const summary = el('summary', 'field-help-summary');
-    summary.textContent = 'Help with this section';
+    summary.textContent = field.helpTitle || 'Help with this section';
     const body = el('div', 'field-help-body');
     const lines = field.guidance && field.guidance.length ? field.guidance : [NO_HELP_YET];
-    lines.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    // A Guidance line that starts with "- " is a list item; items that
+    // follow one another make one list (RPA-119).
+    let listEl = null;
+    lines.forEach((line) => {
+      const item = /^-\s+(.*)$/.exec(line);
+      if (item) {
+        if (!listEl) { listEl = el('ul', 'field-help-list'); body.appendChild(listEl); }
+        const li = el('li');
+        appendGuidanceText(li, item[1]);
+        listEl.appendChild(li);
+        return;
+      }
+      listEl = null;
+      const p = el('p');
+      appendGuidanceText(p, line);
+      body.appendChild(p);
+    });
     details.append(summary, body);
     return details;
   }
@@ -4881,6 +4945,12 @@
   }
 
   function renderField(field) {
+    const wrap = renderFieldOfType(field);
+    // The name the check page and the error summary use, when the heading asks a question instead.
+    if (field.question && wrap && wrap.dataset && !wrap.dataset.fieldName) wrap.dataset.fieldName = field.label;
+    return wrap;
+  }
+  function renderFieldOfType(field) {
     if (field.type === 'table') return renderTableField(field);
     if (field.type === 'list') {
       if (field.key === 'outcomes') return renderLinkedOutcomesField(field);
@@ -4895,7 +4965,7 @@
     const wrap = el('div', 'field');
     const controlId = fieldControlId(field.key);
     const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, controlId + '-hint');
@@ -5082,7 +5152,7 @@
           control = inp;
         }
         attachSignOffStamp(inp, f.key);
-        const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(inp) : null;
+        const jiraStatus = f.jira ? attachJiraCombobox(inp) : null;
         if (f.type === 'date') {
           control.setAttribute('aria-labelledby', lbl.id);
         } else {
@@ -5156,7 +5226,8 @@
       const mf = el('div', 'mf');
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
-      label.textContent = f.label;
+      label.textContent = headingText(f);
+      if (f.question) mf.dataset.fieldName = f.label;
       // Header fields can be optional too. Project decision is the live case:
       // it is a delivery date the researcher does not set and often nobody has
       // set yet, and its audit verdict is "keep — sourced or optional".
@@ -5175,7 +5246,7 @@
         if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
-      const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
+      const jiraStatus = f.jira ? attachJiraCombobox(input) : null;
       if (f.key === 'lastUpdated') {
         setDateInputValue(input, todayIso());
         // A draft restore replays saved values through this same event, and
@@ -5299,7 +5370,7 @@
     // mistaken for a value already filled in.
     const titleId = fieldControlId(header.title.key);
     const titleLabel = el('label', 'flabel', { for: titleId, id: titleId + '-label' });
-    titleLabel.textContent = header.title.label || 'Title';
+    titleLabel.textContent = headingText(header.title) || 'Title';
     const titleHint = renderFieldHint(header.title, titleId + '-hint');
     const titleInput = el('textarea', 'title-inp field-ta', {
       rows: '1',
@@ -5310,6 +5381,7 @@
     // One group, like a meta field, so the title can be judged and marked
     // with the rest of Plan details: it is required (Gus, 14 September 2026).
     const titleField = el('div', 'title-field');
+    if (header.title.question) titleField.dataset.fieldName = header.title.label;
     titleField.appendChild(titleLabel);
     if (titleHint) titleField.appendChild(titleHint);
     titleField.appendChild(titleInput);
@@ -6395,7 +6467,8 @@
     // research question it belongs to.
     if (g.dataset && g.dataset.fieldName) {
       const of = g.querySelector('.per-question-of');
-      return (g.dataset.fieldName + (of ? of.textContent : '')).replace(/\s+/g, ' ').trim();
+      const suffix = g.dataset.groupOf !== undefined ? g.dataset.groupOf : (of ? of.textContent : '');
+      return (g.dataset.fieldName + suffix).replace(/\s+/g, ' ').trim();
     }
     const l = g.querySelector('.flabel, .mlabel, .clbl, label');
     return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
@@ -6571,7 +6644,7 @@
   let startPage = null;
   const EXAMPLE_PLAN = [
     ['Research title', 'Usability testing of checkout flow'],
-    ['Jira Project', 'SHOP-412'],
+    ['Project name', 'Checkout redesign'],
     ['Lead researcher', 'Priya Nair'],
     ['Project requester', 'Tom Okafor'],
     ['Project decision', '14 November 2026'],
@@ -8086,7 +8159,8 @@
       const inputs = Array.from(list.querySelectorAll('.list-input'));
       values.forEach((v, j) => { if (inputs[j]) inputs[j].value = v; });
       renumberMethodsGroup(group);
-      perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, saved[f.key]));
+      // Lists come through the model, which reads an older plan's user groups into its participants (RPA-119).
+      perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, f.type === 'radios' ? saved[f.key] : study[f.key]));
     });
     syncStudyQuestions();
 
@@ -8849,7 +8923,7 @@
       const wanted = PLAN.study(study);
       const restored = PLAN.study(got);
       equal(wanted.questions.join(','), restored.questions.join(','), 'studies[' + i + '].questions');
-      ['methods', 'characteristics', 'userGroups'].forEach((key) => {
+      ['methods', 'characteristics'].forEach((key) => {
         if (wanted[key].length && wanted[key].length !== restored[key].length) fail('studies[' + i + '].' + key);
         wanted[key].forEach((value, j) => equal(value, restored[key][j], 'studies[' + i + '].' + key + '[' + j + ']'));
       });

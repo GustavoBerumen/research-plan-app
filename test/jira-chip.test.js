@@ -13,11 +13,21 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue } = require('./app-harness');
+const fs = require('node:fs');
+const path = require('node:path');
+const { bootApp: boot, setValue, withFieldFlag } = require('./app-harness');
+
+// The picker and its tag belong to a text field marked "jira" in the
+// template. None is today: the project field asks for a project name since
+// RPA-119. These tests put the flag back, so the picker stays in working
+// order for the field that next asks for a ticket.
+const WITH_PICKER = { 'research-plan-template.md': withFieldFlag(
+  fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'jiraProject', 'jira') };
+const bootApp = (options = {}) => boot({ textAssets: WITH_PICKER, ...options });
 
 function jira(document) {
   const input = document.querySelector('[data-field="jiraProject"]');
-  assert.ok(input, 'the Jira Project field renders');
+  assert.ok(input, 'the field renders');
   return input;
 }
 

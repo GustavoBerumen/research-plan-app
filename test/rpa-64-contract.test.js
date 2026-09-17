@@ -17,9 +17,12 @@ test('every required scalar, every retained list row, Other and declarations blo
   for (const key of ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'background', 'goal', 'problemStatement', 'objective', 'signOffResearcher', 'signOffProjectOwner', 'declarationResearcher', 'declarationRequester']) {
     const p = plan(); p.fields[key] = ' \t'; assert.ok(contract.validate(p).some(e => e.key === key), key);
   }
-  for (const key of ['methods', 'characteristics', 'userGroups']) {
+  for (const key of ['methods', 'characteristics']) {
     const p = plan(); p.methods[0][key].push(' '); assert.ok(contract.validate(p).some(e => e.key === key && e.question === 0 && e.row === 1));
   }
+  // userGroups is a dormant wire slot since RPA-119: allowed, never required, like comments since RPA-98.
+  { const p = plan(); p.methods[0].userGroups = []; assert.deepEqual(contract.validate(p), [], 'empty user groups block nothing'); }
+  { const p = plan(); p.methods[0].userGroups.push(' '); assert.equal(contract.validate(p).some(e => e.key === 'userGroups'), false); }
   const p = plan(); p.methods[0].sampleSize = { v: '__other__', o: ' ' };
   assert.equal(contract.validate(p)[0].code, 'other');
   p.methods[0].sampleSize.o = '5'; assert.deepEqual(contract.validate(p), []);
