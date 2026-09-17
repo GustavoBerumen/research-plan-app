@@ -27,7 +27,7 @@ const steps = (d) => Array.from(d.querySelectorAll('.step'));
 const visible = (d) => steps(d).filter((s) => !s.hidden).map((s) => s.dataset.stepSlug);
 const continueOn = (step) => step.querySelector('.step-continue');
 const backOn = (step) => step.querySelector('.step-back');
-const SLUGS = ['sections', 'plan-details', 'context', 'research', 'methodology', 'execution', 'review'];
+const SLUGS = ['sections', 'plan-details', 'context', 'research', 'studies', 'methodology', 'execution', 'review'];
 
 test('Clear Form reopens every capped hatch for the next plan', async (t) => {
   const app = await bootApp();
@@ -67,18 +67,18 @@ function walkTo(app, slug) {
   app.window.location.hash = '#' + slug;
 }
 
-test('the plan opens on the task list; then six sections in order, each with a caption', async (t) => {
+test('the plan opens on the task list; then seven sections in order, each with a caption', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
   assert.deepEqual(steps(d).map((s) => s.dataset.stepSlug), SLUGS);
   assert.deepEqual(visible(d), ['sections']);
-  assert.deepEqual(steps(d).slice(1).map((s) => text(s.querySelector('.step-caption'))), [1, 2, 3, 4, 5, 6].map((n) => 'Section ' + n + ' of 6'));
+  assert.deepEqual(steps(d).slice(1).map((s) => text(s.querySelector('.step-caption'))), [1, 2, 3, 4, 5, 6, 7].map((n) => 'Section ' + n + ' of 7'));
   assert.equal(text(d.querySelector('.doc-header .step-heading')), 'Plan details');
   assert.equal(backOn(steps(d)[0]), null, 'the task list has no Back');
   assert.equal(backOn(steps(d)[1]).hidden, false, 'Plan details goes back to the list');
   assert.equal(continueOn(steps(d)[0]), null, 'the list is entered by its links, not Continue');
-  assert.equal(continueOn(steps(d)[6]), null, 'Review has its own actions, not Continue');
+  assert.equal(continueOn(steps(d)[7]), null, 'Review has its own actions, not Continue');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -151,8 +151,11 @@ test('each section has one Additional information hatch, after its Evaluate cont
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
-  const sections = steps(d).slice(2, 6);
+  // Studies (index 4) asks how the plan is organised, not for content, so it
+  // has no hatch (RPA-142); the four content sections do.
+  const sections = [2, 3, 5, 6].map((i) => steps(d)[i]);
   assert.deepEqual(sections.map((s) => s.querySelectorAll('.field-custom').length), [1, 1, 1, 1]);
+  assert.equal(steps(d)[4].querySelectorAll('.field-custom').length, 0, 'Studies has none');
   assert.deepEqual(sections.map((s) => s.querySelector('.custom-fields-list').dataset.listKey),
     ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources']);
   const context = sections[0];
@@ -179,7 +182,7 @@ test('the hatch is capped at one block, and a restore above the cap keeps every 
   const restored = await bootApp({ draft: { version: 7, fields: {}, lists: {}, tables: {},
     custom: { additionalResources: [{ label: 'Kit', body: 'Two laptops' }, { label: 'Rooms', body: 'Lab B' }] } } });
   t.after(() => restored.close());
-  const execution = steps(restored.document)[5].querySelector('.field-custom');
+  const execution = steps(restored.document)[6].querySelector('.field-custom');
   assert.deepEqual(Array.from(execution.querySelectorAll('.custom-field-name')).map((i) => i.value), ['Kit', 'Rooms'], 'nothing authored is refused');
   assert.equal(execution.querySelector('.add-btn').hidden, true);
 });

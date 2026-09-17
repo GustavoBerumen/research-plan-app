@@ -1,9 +1,31 @@
-# Private JSON exchange — operator steps
+# Private JSON exchange — historical and contingency operator steps
+
+**Accepted by Max, 15 September 2026:** browser-local sequential review with
+submissions OFF; the server/UI feedback gate, OFF for the pilot; and the scoped
+recovery and honest-wording fixes. These decisions do not establish deployment or
+participant acceptance. The accepted code fixes are in [PR #104](https://github.com/GustavoBerumen/research-plan-app/pull/104). Manual testing uses the intended device and browser;
+a desktop is fine and no laptop is required.
+
+**Scope after the 15 September meeting:** manual JSON exchange was rejected as
+the normal reviewer product. Use these steps only for an explicitly selected
+operator contingency or handling of existing records. They are not participant
+instructions or a dependency of the accepted browser-local demonstration. JSON
+backup/recovery and the existing retention/deletion obligations remain in force.
+See the [current release proposal](release-proposal-2026-09-15.md).
 
 Gustavo owns the private Drive parent folder and confirms receipt. Max supports
 technical verification and can read the collected plans and notes. This implements
 the handling decision in [RPA-80 comment 10087](https://turingtestable.atlassian.net/browse/RPA-80?focusedCommentId=10087).
 It does not prove that a folder or its permissions have been configured.
+
+For a separately enabled RPA-64 release, the author can Send the completed plan
+to private R2. An authorised operator can export the active v8 plan into the
+approved private session folder using [SUBMISSIONS.md](../../SUBMISSIONS.md).
+The steps below are available only if that operator contingency is explicitly selected; R2 collection itself does not provide shared review. Exported plans omit browser-only
+email/review history; local v9 backups may include those and should be shared
+deliberately. Keep receipt references associated with the correct snapshot.
+Tool feedback uses a different local server file and needs its own approved
+handling; it is not part of either R2 plan export or this JSON exchange.
 
 ## Prepare with synthetic files
 
@@ -53,7 +75,9 @@ do not claim receipt or retry by overwriting the only good copy.
   remain intact. A successful restore replaces the current plan, including hidden
   and unsaved data. Verify a safety copy before every replacement.
 - Verify the private originals/revisions remain retrievable after an app restart
-  or redeploy. App hosting does not store these plans or back up the Drive folder.
+  or redeploy. Drive files and optional R2 submissions are separate destinations;
+  the app does not independently back up the Drive folder. Tool-feedback files
+  on the Render filesystem have a separate durability limitation.
 - Gus deletes retained plans, revisions and notes four weeks after the final
   session, or sooner on request. Record the due date once the final session date
   is known and adjust it if that date changes. Account for team-held downloads,

@@ -30,7 +30,7 @@ const emailOf = (d) => d.querySelector('[data-field="emailAddress"]');
 const linksOf = (el) => Array.from(el.querySelectorAll('.error-summary-link')).map(text);
 const errorsOf = (el) => Array.from(el.querySelectorAll('.field-error')).map((e) => text(e).replace(/^Error: /, ''));
 const press = (el) => el.querySelector('.step-continue').click();
-const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]')).map((u) => text(u.querySelector('.flabel, .mlabel, label')));
+const onScreen = (step) => Array.from(step.querySelectorAll('.title-field, .mf, .field')).filter((u) => !u.hidden && !u.classList.contains('page-hidden') && !u.closest('.page-hidden') && !u.classList.contains('field-methods') && !u.querySelector('[data-field="lastUpdated"]')).map((u) => text(u.querySelector('.flabel, .mlabel, label')));
 const panelOf = (step) => Array.from(step.children).find((c) => c.classList.contains('check-answers'));
 const rowsOf = (step) => Array.from(panelOf(step).querySelectorAll('.summary-row')).map((r) => text(r.querySelector('.summary-key')));
 const draftOf = (window) => JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null');
@@ -64,7 +64,7 @@ test('the template declares the address above the title, and the form opens on a
   assert.equal(label.getAttribute('for'), emailOf(d).id, 'the heading is the label of the box');
   assert.equal(gate.getAttribute('aria-labelledby'), heading.id);
   const hint = gate.querySelector('.field-hint-text');
-  assert.equal(text(hint), 'We’ll use it to send you a link to your plan, so you can return to it later.');
+  assert.equal(text(hint), 'This address identifies your local draft and backup. This app does not send email.');
   const input = emailOf(d);
   assert.equal(input.type, 'email');
   assert.equal(input.getAttribute('autocomplete'), 'email', 'the browser may offer the address it knows');
@@ -119,8 +119,8 @@ test('it stands in front of every step and remembers where the person was going:
   press(gateOf(linked.document));
   assert.deepEqual(visible(linked.document), ['plan-details'], 'then lands where the link pointed');
   const plan = stepOf(linked.document, 'plan-details');
-  assert.deepEqual(onScreen(plan), ['Research title'], 'Plan details is as it was: the address is not one of its questions');
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 5');
+  assert.deepEqual(onScreen(plan), ['What is the name of your research plan?'], 'Plan details is as it was: the address is not one of its questions');
+  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 6');
 
   const app = await bootApp({});
   t.after(() => app.close());
@@ -245,7 +245,7 @@ test('the address is played back under the box as it is typed, and again when th
   assert.ok(playback.closest('.field-email') && playback.previousElementSibling === emailOf(d), 'inset under the box');
   setValue(window, emailOf(d), 'joeb');
   assert.equal(playback.hidden, false);
-  assert.equal(text(playback.querySelector('.email-playback-lead')), 'A link to your plan will be sent to:');
+  assert.equal(text(playback.querySelector('.email-playback-lead')), 'Email address for this browser:');
   assert.equal(text(playback.querySelector('.email-playback-value')), 'joeb');
   setValue(window, emailOf(d), ' joebloggs@hotmail.com ');
   assert.equal(text(playback.querySelector('.email-playback-value')), 'joebloggs@hotmail.com', 'as typed, the spaces aside');
@@ -374,7 +374,7 @@ test('not a question of the plan: absent from the check page and the print, kept
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);
   toCheckPage(plan);
-  assert.deepEqual(rowsOf(plan), ['Research title', 'Jira Project', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout'], 'the section\'s own six questions');
+  assert.deepEqual(rowsOf(plan), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout'], 'the section\'s own questions, and the address is not among them');
   assert.equal(d.querySelector('.doc-header [data-field="emailAddress"]'), null, 'not in the document\'s header');
   d.getElementById('clear-btn').click();
   assert.equal(emailOf(d).value, 'name@example.com', 'Clear Form resets the plan, not the person');

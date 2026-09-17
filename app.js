@@ -7,6 +7,9 @@
   let doc = document.getElementById('doc');
   let formEvents = new AbortController();
   let formSchema = null;
+  // The plan's linked relationships live in the model, not in counts taken
+  // off the page (RPA-46).
+  const PLAN = window.RPA_PLAN_MODEL;
   const {
     bindTextarea,
     bindTextareas,
@@ -34,6 +37,7 @@
   // before RPA-76, so a plan that predates this gets the earliest date we can
   // honestly claim rather than today — see migrateDraft.
   let planCreatedAt = todayIso();
+  let planId = newPlanId();
   // Whether that date is the plan's own or a stand-in. RPA-76 falls back to
   // savedAt for plans that predate it, which was fine for a suggestion in one
   // cell and is not fine as a boundary: savedAt is the *last* save, so a plan
@@ -58,6 +62,15 @@
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return now.getFullYear() + '-' + mm + '-' + dd;
+  }
+  function newPlanId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
   }
 
   // Last updated re-stamps itself whenever the plan's content changes. Once
@@ -178,6 +191,22 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "jira": a text field that takes a Jira ticket, so it gets the ticket
+      // picker and shows a chosen ticket as a tag. It was wired to the
+      // jiraProject key until that field began asking for a project name
+      // (RPA-119): a picker that says "enter a ticket key" under a question
+      // about a project name contradicts it. No field carries the flag
+      // today; the picker is kept for the field that next asks for a ticket.
+      jira: typeParts.includes('jira'),
+      // "closed": a radios field whose options are the whole set, so no
+      // "Other" is offered. Yes or No has no third answer (RPA-141).
+      closed: typeParts.includes('closed'),
+      // "reveals=someKey": the field with that key is asked only when this
+      // radios field's first option is chosen: the design system's way of
+      // asking a follow-up question only of the people it applies to. Read
+      // raw, like key=.
+      reveals: m[2].split(',').map((part) => part.trim())
+        .map((part) => /^reveals=([A-Za-z][A-Za-z0-9]*)$/.exec(part)).filter(Boolean).map((match) => match[1])[0] || '',
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
       // column, that option already chosen. The stage names are the column's
@@ -287,6 +316,30 @@
       // An indented "Guidance:" line is a longer note about the field, shown
       // on demand behind a "Help with this section" link at the bottom of the
       // field (RPA-107). Several lines make several paragraphs.
+      // An indented "Help:" line is the title of the field's help note, the
+      // words on its closed link: "Why we ask for a decision date" says what
+      // is behind it, where "Help with this section" on every field could
+      // not (RPA-119). Without one, the general words stand.
+      const helpMatch = raw.match(/^\s+Help:\s*(.*)$/i);
+      if (helpMatch && currentField) {
+        currentField.helpTitle = helpMatch[1].trim();
+        return;
+      }
+
+      // An indented "Error:" line is what Save and continue says when the
+      // field is left unanswered. It began with a question the general
+      // wording read badly for, "Select a other researchers" (RPA-141);
+      // since RPA-120 every required field has one, written to say what to
+      // do in the words of its question. A field without one keeps the
+      // general wording. On a study's field, "this study" in the message
+      // becomes the study's name, as in its heading; a message that does not
+      // say it has " for Study 2" added.
+      const errorMatch = raw.match(/^\s+Error:\s*(.*)$/i);
+      if (errorMatch && currentField) {
+        currentField.errorMessage = errorMatch[1].trim();
+        return;
+      }
+
       const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
       if (guideMatch && currentField) {
         currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
@@ -1020,9 +1073,25 @@
       input.select();
     }
 
+    // Selecting a segment's text is deferred by a tick, because a browser
+    // places the caret from the click after the focus event and would undo
+    // an immediate select(). Deferring it means the selection can arrive
+    // after focus has moved on, and then it paints a segment that is no
+    // longer the one being used — two segments showing selected in turn,
+    // which is the flicker Max sees in Opera and Chrome on the first click
+    // after returning to the window (RPA-125). Restoring focus on window
+    // activation and the click that follows are two focus events a tick
+    // apart, which is exactly the gap this closes.
+    //
+    // So a selection only ever paints the segment that still has focus when
+    // it arrives; one that is late does nothing. This is a guard
+    // against a race rather than a reproduction of Max's: an intermittent,
+    // window-activation bug on Windows is not something these tests can
+    // stage, and a stale selection is the only mechanism here that can
+    // paint two segments at once.
     [dayInput, monthInput, yearInput].forEach((input) => {
       input.addEventListener('focus', () => {
-        setTimeout(() => input.select(), 0);
+        setTimeout(() => { if (document.activeElement === input) input.select(); }, 0);
       });
     });
 
@@ -2598,7 +2667,7 @@
   let methodsGroupSeq = 0;
   function perQuestionSuffix() {
     const s = el('span', 'visually-hidden per-question-of');
-    s.textContent = ' for research question 1';
+    s.textContent = ' for Study 1';
     return s;
   }
   function buildMethodsGroup(placeholder, width) {
@@ -2613,7 +2682,7 @@
     head.hidden = true;
     const qLabel = el('div', 'methods-group-q');
     qLabel.hidden = true;
-    const qText = el('p', 'methods-group-text');
+    const qText = el('ul', 'methods-group-text');
     qText.hidden = true;
     head.append(qLabel, qText);
     group.appendChild(head);
@@ -2621,7 +2690,9 @@
     // marked per question like the participant fields that follow it.
     const methodsField = el('div', 'field field-per-question field-question-methods', { role: 'group' });
     const mLabel = el('div', 'flabel', { id: 'field-methods-g' + seq + '-label' });
-    mLabel.append(document.createTextNode(methodsFieldDef ? methodsFieldDef.label : 'Methods'), perQuestionSuffix());
+    mLabel.append(document.createTextNode(methodsFieldDef ? headingText(methodsFieldDef) : 'Methods'), perQuestionSuffix());
+    if (methodsFieldDef && methodsFieldDef.question) methodsField.dataset.fieldName = methodsFieldDef.label;
+    if (methodsFieldDef && methodsFieldDef.errorMessage) methodsField.dataset.errorMessage = methodsFieldDef.errorMessage;
     methodsField.setAttribute('aria-labelledby', mLabel.id);
     methodsField.appendChild(mLabel);
     const mHint = methodsFieldDef ? renderFieldHint(methodsFieldDef, 'field-methods-g' + seq + '-hint') : null;
@@ -2737,202 +2808,19 @@
     renumberMethodsGroup(group);
     refreshMethodsSuggestSelection();
   }
-
-  // A full research question can't fit a third-width column, so group
-  // headings are shortened to "RQ<n> · <topic>". The number is the part that
-  // has to be reliable; the topic is a best-effort hint. Nothing is actually
-  // lost — syncMethodsGroups keeps the full question on the heading's title
-  // and on the group's aria-label.
-  //
-  // The topic is chosen by *what it is*, not by where it sits in the
-  // sentence. Picking the first content words gives "Main pain" for "What
-  // are the main pain points?" — a qualifier plus half a compound. So every
-  // word is classified, maximal runs of adjacent nouns are collected, and
-  // the best run wins.
-
-  // Words that only ever open a question.
-  const QUESTION_LEAD_WORDS = new Set([
-    'what', 'which', 'how', 'why', 'when', 'where', 'who', 'whom', 'whose',
-    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am', 'be',
-    'can', 'could', 'should', 'would', 'will', 'shall', 'may', 'might',
-    'have', 'has', 'had', 'there',
-  ]);
-  // Qualifier adjectives, dropped wherever they appear rather than only at
-  // the front: "the main pain points" is about pain points, not about main.
-  // Ordinals and small cardinals sit here too — a number is never a topic.
-  const QUESTION_QUALIFIERS = new Set([
-    'main', 'key', 'most', 'biggest', 'common', 'important', 'primary', 'top',
-    'major', 'overall', 'general', 'specific', 'various', 'particular',
-    'different', 'best', 'worst', 'more', 'much', 'many', 'some', 'any', 'all',
-    'each', 'every', 'other', 'same', 'such', 'very', 'just', 'only', 'also',
-    'one', 'two', 'three', 'four', 'five', 'first', 'second', 'third',
-    'fourth', 'fifth', 'last', 'next', 'new', 'old',
-  ]);
-  // Verbs describe what is being done, never what the question is about, so
-  // a noun phrase is never allowed to span one. This is also what stops
-  // "users think" and "parts selecting" being read as compounds.
-  const QUESTION_VERBS = new Set([
-    'think', 'thinks', 'feel', 'feels', 'say', 'says', 'want', 'wants',
-    'need', 'needs', 'use', 'uses', 'make', 'makes', 'get', 'gets',
-    'like', 'likes', 'know', 'knows', 'navigate', 'navigates', 'abandon',
-    'abandons', 'experience', 'experiences', 'perceive', 'perceives',
-    'describe', 'describes', 'understand', 'understands', 'expect', 'expects',
-    'prefer', 'prefers', 'choose', 'chooses', 'find', 'finds', 'happen',
-    'happens', 'occur', 'occurs', 'cause', 'causes', 'affect', 'affects',
-    'complete', 'completes', 'select', 'selects', 'enter', 'enters',
-    'leave', 'leaves', 'go', 'goes', 'come', 'comes', 'see', 'sees',
-    'look', 'looks', 'take', 'takes', 'give', 'gives', 'been', 'being',
-  ]);
-  // The people doing the thing. Never the topic on their own — "What do
-  // users think about the checkout?" is about the checkout — but perfectly
-  // good *inside* a compound, which is why "user segment" survives. They
-  // stay as phrase material and are only penalised when a phrase is nothing
-  // but actors.
-  const QUESTION_ACTORS = new Set([
-    'user', 'users', 'person', 'people', 'participant', 'participants',
-    'customer', 'customers', 'shopper', 'shoppers', 'visitor', 'visitors',
-    'respondent', 'respondents', 'someone', 'anyone', 'everyone',
-  ]);
-  // Plural actors are the ones that act as a bare *subject* ("do users
-  // rate…"). A bare singular actor can't be a subject without a determiner,
-  // so it's a modifier instead ("user segment", "customer journey") — which
-  // is why the two are treated differently in questionNounPhrases.
-  const PLURAL_ACTORS = new Set([
-    'users', 'people', 'participants', 'customers', 'shoppers', 'visitors',
-    'respondents',
-  ]);
-  // Auxiliaries that front a question and push the main verb after the
-  // subject: "How do users **rate** …". Without this cue there is no way to
-  // tell that "rate" is the verb and not the noun in "conversion rate".
-  const QUESTION_AUXILIARIES = new Set([
-    'do', 'does', 'did', 'are', 'is', 'was', 'were', 'am',
-    'can', 'could', 'will', 'would', 'should', 'shall', 'may', 'might',
-    'have', 'has', 'had',
-  ]);
-  const QUESTION_STOPWORDS = new Set([
-    'a', 'an', 'the', 'of', 'to', 'in', 'on', 'for', 'with', 'about', 'from',
-    'by', 'at', 'as', 'and', 'or', 'but', 'if', 'than', 'then', 'that', 'this',
-    'these', 'those', 'into', 'over', 'before', 'during', 'between',
-    'through', 'across', 'within', 'without', 'after',
-    'our', 'their', 'its', 'his', 'her', 'my', 'your', 'we', 'they', 'it',
-    'you', 'us', 'them', 'me', 'i', 'not', 'no', 'while', 'because',
-    'here', 'them',
-  ]);
-  // Words ending -ing are verb forms often enough to exclude by default;
-  // these are the ones that are genuinely nouns in this domain.
-  const ING_NOUNS = new Set([
-    'onboarding', 'marketing', 'branding', 'testing', 'training', 'meeting',
-    'briefing', 'pricing', 'shipping', 'listing', 'rating', 'setting',
-    'settings', 'wording', 'funding', 'staffing', 'banking', 'messaging',
-    'reporting', 'booking', 'billing',
-  ]);
-  const SHORT_LABEL_MAX = 20;
-
-  function classifyQuestionWord(word) {
-    if (word.length <= 2) return 'skip';
-    if (QUESTION_LEAD_WORDS.has(word)) return 'skip';
-    if (QUESTION_QUALIFIERS.has(word)) return 'skip';
-    if (QUESTION_STOPWORDS.has(word)) return 'skip';
-    if (QUESTION_VERBS.has(word)) return 'skip';
-    // Crude morphology for the verbs not worth listing ("experienced",
-    // "selecting"). The -ed rule needs a length floor or it would swallow
-    // "need", "feed" and "speed".
-    if (/ing$/.test(word) && !ING_NOUNS.has(word)) return 'skip';
-    if (/ed$/.test(word) && word.length > 5) return 'skip';
-    if (QUESTION_ACTORS.has(word)) return 'actor';
-    return 'noun';
-  }
-
-  // Maximal runs of adjacent noun-ish words. Adjacency is measured on the
-  // *original* word positions, so dropping "main" from "the main pain
-  // points" cannot glue two unrelated words into a compound that was never
-  // there — which is the whole point of rule 2.
-  function questionNounPhrases(question) {
-    const words = (question || '').toLowerCase().match(/[a-z0-9][a-z0-9'’-]*/g) || [];
-    const phrases = [];
-    let current = null;
-    let sawAuxiliary = false;
-    let prevWasPluralActor = false;
-    words.forEach((word, index) => {
-      if (QUESTION_AUXILIARIES.has(word)) sawAuxiliary = true;
-      let kind = classifyQuestionWord(word);
-      // In an auxiliary-fronted question the word straight after a plural
-      // subject is the main verb, whatever else it could be elsewhere:
-      // "How do users **rate** the pricing page?" is about the pricing page,
-      // not about a "users rate". Without this, any noun/verb ambiguity
-      // ("rate", "drop", "order", "design") glues itself to the subject and
-      // produces exactly the dangling fragment rule 5 forbids.
-      if (kind === 'noun' && sawAuxiliary && prevWasPluralActor) kind = 'skip';
-      prevWasPluralActor = PLURAL_ACTORS.has(word);
-      if (kind === 'skip') {
-        current = null;
-        return;
-      }
-      if (current && current.end === index - 1) {
-        current.words.push(word);
-        current.end = index;
-        if (kind === 'noun') current.hasNoun = true;
-      } else {
-        current = { words: [word], start: index, end: index, hasNoun: kind === 'noun' };
-        phrases.push(current);
-      }
-    });
-    return phrases;
-  }
-
-  function pickQuestionPhrase(phrases) {
-    let best = null;
-    let bestScore = -Infinity;
-    phrases.forEach((phrase) => {
-      // Containing a real noun dominates everything: a phrase of nothing but
-      // actors is the people, not the topic, and only wins if the question
-      // offers nothing else. Then longer wins, so a compound beats a bare
-      // noun ("user segment" over "issues"). Position is the last tie-break
-      // only, which is what makes "the X of Y" resolve to X.
-      const score = (phrase.hasNoun ? 1000 : 0) + phrase.words.length * 10 - phrase.start;
-      if (score > bestScore) {
-        bestScore = score;
-        best = phrase;
-      }
-    });
-    return best;
-  }
-
-  function shortQuestionLabel(question, index) {
-    const rq = 'RQ' + (index + 1);
-    const cleaned = (question || '').replace(/[?!.\s]+$/, '').trim();
-    if (!cleaned) return rq;
-
-    const phrase = pickQuestionPhrase(questionNounPhrases(cleaned));
-    if (!phrase) return rq;
-
-    // English compounds are head-final, so the last two words carry the head
-    // plus its nearest modifier. Every word in a phrase is a noun, so this
-    // can never end on a verb or a dangling adjective.
-    let keyword = phrase.words.slice(-2).join(' ');
-    if (keyword.length > SHORT_LABEL_MAX) {
-      // Too long to keep the compound. Fall back to the single most
-      // distinctive word rather than truncating both into a stub —
-      // "Accessibility" reads; "Accessibility barri…" does not.
-      keyword = phrase.words.reduce((a, b) => (b.length > a.length ? b : a));
-    }
-    if (keyword.length > SHORT_LABEL_MAX) {
-      keyword = keyword.slice(0, SHORT_LABEL_MAX - 1).replace(/\s+$/, '') + '…';
-    }
-    return rq + ' · ' + keyword.charAt(0).toUpperCase() + keyword.slice(1);
-  }
-
-  // Keeps one group per Research Question row, in order, and keeps each
-  // group's label in step with the question text as it's edited.
   function syncMethodsGroups() {
     const container = methodsGroupsEl();
     if (!container) return;
-    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    const questions = rqList
-      ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim())
-      : [];
-    const hasAnyQuestion = questions.some(Boolean);
-    const targetCount = hasAnyQuestion ? questions.length : 1;
+    const questions = researchQuestionTexts();
+    // One group per study (RPA-142). The studies page grows and shrinks the
+    // studies, with confirmation where something would be lost, so here the
+    // groups simply follow.
+    const studies = studiesSnapshot();
+    // One group per study, and one before any study is declared: the fields
+    // exist from the start, unlabelled and behind the task list's lock, so
+    // the form always renders every key the template declares. It becomes
+    // Study 1's group the moment a study is.
+    const targetCount = Math.max(PLAN.groupCount(studies), 1);
     const placeholder = container.dataset.placeholder || '';
 
     let groups = methodsGroupEls();
@@ -2940,40 +2828,69 @@
       container.appendChild(buildMethodsGroup(placeholder, container.dataset.width));
       groups = methodsGroupEls();
     }
-    // Incidental sync only trims empty trailing groups. Deliberate Question
-    // deletion confirms linked content and removes the exact indexed group.
     while (groups.length > targetCount) {
-      const last = groups[groups.length - 1];
-      if (groupHasContent(last)) break;
-      last.remove();
+      groups[groups.length - 1].remove();
       groups = methodsGroupEls();
     }
 
     groups.forEach((group, i) => {
       const label = group.querySelector('.methods-group-q');
       if (!label) return;
-      const text = questions[i] || '';
+      const declared = i < studies.length;
+      const study = studies[i] || { questions: [] };
       const head = group.querySelector('.methods-group-head');
-      if (head) head.hidden = !hasAnyQuestion;
-      const full = group.querySelector('.methods-group-text');
-      if (full) { full.textContent = text; full.hidden = !text; }
-      group.querySelectorAll('.per-question-of').forEach((s) => { s.textContent = ' for research question ' + (i + 1); });
-      label.hidden = !hasAnyQuestion;
-      label.textContent = hasAnyQuestion ? shortQuestionLabel(text, i) : '';
-      label.classList.toggle('methods-group-q-empty', hasAnyQuestion && !text);
-      // The heading is abbreviated, so the full question is carried on the
-      // group instead: title for hover, aria-label so screen-reader users
-      // get the whole question rather than just "RQ2 · Checkout".
-      if (hasAnyQuestion && text) {
-        label.title = text;
-        group.setAttribute('aria-label', 'Methods for ' + shortQuestionLabel(text, i) + ': ' + text);
-      } else {
-        label.removeAttribute('title');
-        group.setAttribute('aria-label', hasAnyQuestion ? 'Methods for RQ' + (i + 1) : 'Methods');
+      if (head) head.hidden = !declared;
+      nameStudyFields(group, declared ? PLAN.studyLabel(i) : '');
+      if (!declared) {
+        group.setAttribute('aria-label', 'Methods');
+        return;
       }
+      // The pinned head names the study and lists, in full, the questions it
+      // answers: that is the study's identity, on the page where it matters.
+      const full = group.querySelector('.methods-group-text');
+      if (full) {
+        full.replaceChildren();
+        study.questions.forEach((n) => {
+          const li = el('li');
+          const rq = el('strong', 'methods-group-rq');
+          rq.textContent = PLAN.questionNumber(n - 1);
+          li.append(rq, ' ', questions[n - 1] || '');
+          full.appendChild(li);
+        });
+        full.hidden = !study.questions.length;
+      }
+      label.hidden = false;
+      label.textContent = PLAN.studyLabel(i) + (study.questions.length ? ' answers' : ' answers no research question yet');
+      label.classList.toggle('methods-group-q-empty', !study.questions.length);
+      const said = study.questions.map((n) => PLAN.questionNumber(n - 1) + ' ' + (questions[n - 1] || '')).join('; ');
+      group.setAttribute('aria-label', 'Methods for ' + PLAN.studyLabel(i) + (said ? ': ' + said : ''));
     });
-    container.classList.toggle('methods-grouped', hasAnyQuestion);
+    container.classList.toggle('methods-grouped', studies.length > 0);
     refreshMethodsSuggestSelection();
+  }
+
+  // A study's fields say which study they are for. A heading that asks about
+  // "this study" names it instead, as the studies page does: "Which research
+  // methods will you use for Study 1?". A heading that does not keeps a
+  // hidden " for Study 1" after it, for a screen reader. Either way the
+  // field's name for the check page and the error summary ends the same:
+  // "Methods for Study 1" (RPA-116, RPA-142, RPA-119).
+  function nameStudyFields(group, studyName) {
+    group.querySelectorAll('.field-per-question').forEach((fieldEl) => {
+      const label = fieldEl.querySelector('.flabel');
+      const of = fieldEl.querySelector('.per-question-of');
+      if (!label || !of || !label.firstChild) return;
+      if (label.dataset.heading === undefined) label.dataset.heading = label.firstChild.textContent;
+      const asked = label.dataset.heading;
+      const names = Boolean(studyName) && /this study/i.test(asked);
+      label.firstChild.textContent = names ? asked.replace(/this study/i, studyName) : asked;
+      of.textContent = studyName && !names ? ' for ' + studyName : '';
+      fieldEl.dataset.groupOf = studyName ? ' for ' + studyName : '';
+      // Its message for an unanswered field follows the same rule (RPA-120).
+      if (fieldEl.dataset.errorTemplate === undefined) fieldEl.dataset.errorTemplate = fieldEl.dataset.errorMessage || '';
+      const said = fieldEl.dataset.errorTemplate;
+      if (said) fieldEl.dataset.errorMessage = !studyName ? said : (/this study/i.test(said) ? said.replace(/this study/i, studyName) : said + ' for ' + studyName);
+    });
   }
 
   // Question removal confirms any populated linked content before it mutates
@@ -2981,9 +2898,7 @@
   // same positional Questions instead of silently re-labelling them.
   function removeMethodsGroupAt(index) {
     const group = methodsGroupAt(index);
-    if (!group) return;
-    if (methodsGroupEls().length <= 1) return;
-    group.remove();
+    if (group) group.remove();
   }
 
   function suggestMethods(objective, researchQuestions) {
@@ -3045,8 +2960,11 @@
     // with its ✕ shows exactly the same state as one added from this panel.
     function syncSelection() {
       body.querySelectorAll('.ms-method[data-method-name]').forEach((row) => {
-        const target = methodsGroupAt(Number(row.dataset.groupIndex));
+        const target = groupForQuestion(Number(row.dataset.questionNumber));
         const on = !!target && groupHasMethod(target, row.dataset.methodName);
+        // A question no study answers yet has nowhere to put a method.
+        row.disabled = !target;
+        row.title = target ? '' : 'No study answers this question yet';
         row.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
     }
@@ -3098,10 +3016,10 @@
             row.disabled = true;
           } else {
             row.dataset.methodName = name;
-            row.dataset.groupIndex = String(entry.rowIndex);
+            row.dataset.questionNumber = String(entry.rowIndex + 1);
             row.setAttribute('aria-label', name + ' — add to "' + entry.text + '"');
             row.addEventListener('click', () => {
-              const target = methodsGroupAt(entry.rowIndex);
+              const target = groupForQuestion(entry.rowIndex + 1);
               if (!target) return;
               if (groupHasMethod(target, name)) removeMethodFromGroup(target, name);
               else applyMethodsToGroup(target, [name]);
@@ -3118,7 +3036,7 @@
           const addAll = el('button', 'eval-btn fw-add-btn ms-add-all', { type: 'button' });
           addAll.textContent = 'Add all for this question';
           addAll.addEventListener('click', () => {
-            const target = methodsGroupAt(entry.rowIndex);
+            const target = groupForQuestion(entry.rowIndex + 1);
             if (target) applyMethodsToGroup(target, [...new Set(names)]);
           });
           actions.appendChild(addAll);
@@ -3509,7 +3427,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3581,7 +3499,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3697,10 +3615,7 @@
   // Keeps each visible row's original number even when an earlier row is
   // blank, so Outcomes always pair with the same-position Research Question.
   function collectNumberedListValues(list) {
-    return Array.from(list.querySelectorAll('.list-row')).map((row, index) => ({
-      number: index + 1,
-      text: row.querySelector('.list-input').value.trim(),
-    })).filter((entry) => entry.text);
+    return PLAN.answered(Array.from(list.querySelectorAll('.list-row')).map((row) => row.querySelector('.list-input').value));
   }
 
   // Outcomes is a "linked" list (see renderLinkedOutcomesField below): it has
@@ -3847,17 +3762,19 @@
     const outcomeRow = outcomeList && outcomeList.querySelectorAll('.list-row')[index];
     const outcomeInput = outcomeRow && outcomeRow.querySelector('.list-input');
     const hasOutcome = !!(outcomeInput && outcomeInput.value.trim());
-    const methodsGroup = methodsGroupAt(index);
-    const hasMethods = !!(methodsGroup && methodsGroupValues(methodsGroup).length);
-    const hasParticipants = !!(methodsGroup && groupHasParticipants(methodsGroup));
+    // A study that answers only this question is left answering nothing.
+    // It is not deleted, and neither are its methods: the check page will
+    // say it needs a question (RPA-142, decision 2).
+    const orphaned = studiesSnapshot()
+      .map((study, i) => (study.questions.length === 1 && study.questions[0] === number ? i : -1))
+      .filter((i) => i !== -1);
 
-    if (!hasOutcome && !hasMethods && !hasParticipants) return true;
+    if (!hasOutcome && !orphaned.length) return true;
     const linkedContent = [];
-    if (hasOutcome) linkedContent.push('Outcome ' + number);
-    if (hasMethods) linkedContent.push('Methods RQ' + number);
-    if (hasParticipants) linkedContent.push('Participants RQ' + number);
+    if (hasOutcome) linkedContent.push('Outcome ' + number + ' will be deleted');
+    orphaned.forEach((i) => linkedContent.push(PLAN.studyLabel(i) + ' will no longer answer any research question'));
     return window.confirm(
-      'Deleting Research Question ' + number + ' will also delete:\n\n' +
+      'Deleting Research Question ' + number + ' means:\n\n' +
       linkedContent.map((item) => '- ' + item).join('\n')
     );
   }
@@ -3869,7 +3786,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -3943,7 +3860,7 @@
       if (isGrowable) bindTextarea(inp);
       // Each question's Methods group is labelled with its text, so the label
       // has to track edits as they're typed.
-      if (field.key === 'researchQuestions') inp.addEventListener('input', syncMethodsGroups);
+      if (field.key === 'researchQuestions') inp.addEventListener('input', syncStudyQuestions);
       const removeBtn = el('button', 'list-remove', { type: 'button' });
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', (event) => {
@@ -3955,13 +3872,16 @@
             return;
           }
           removeOutcomeRowAt(index);
-          removeMethodsGroupAt(index);
+          // The studies drop the question and the ones after it move up
+          // one, so every tick keeps pointing at the question it meant
+          // (RPA-142). No methods are deleted: they belong to the study.
+          dropQuestionFromStudies(index + 1);
         }
         row.remove();
         renumber();
         updateResearchQuestionsWarning();
         if (field.key === 'researchQuestions') {
-          syncMethodsGroups();
+          syncStudyQuestions();
           const remaining = list.querySelectorAll('.list-input');
           const nextInput = remaining[Math.min(index, remaining.length - 1)];
           // The removed button is detached by the time its click bubbles.
@@ -3975,7 +3895,7 @@
       renumber();
       if (field.key === 'researchQuestions') {
         addOutcomeRow();
-        syncMethodsGroups();
+        syncStudyQuestions();
       }
       updateResearchQuestionsWarning();
       if (focus) inp.focus();
@@ -4012,7 +3932,7 @@
     const wrap = el('div', 'field', { role: 'group' });
     const labelId = fieldControlId(field.key) + '-label';
     const label = el('div', 'flabel', { id: labelId });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', labelId);
     wrap.appendChild(label);
@@ -4040,10 +3960,287 @@
     return wrap;
   }
 
-  // Methods: a container of question-labelled groups instead of one flat
-  // list. Only the first group is built here — the rest are created, removed
-  // and labelled by syncMethodsGroups, which runs whenever a Research
-  // Question is added, removed or edited, and once from the wire-up below.
+  // ---------- a question asked only when it applies (RPA-141) ----------
+  // A radios field may reveal another field: "Are other researchers
+  // involved?" reveals the list of their names. The revealed field is asked
+  // only while the first option is chosen. While it is not, it is no page
+  // in the step, no required answer, no row on the check page and nothing
+  // in print; what was typed in it is kept, in case the answer changes back.
+  function revealedUnit(key) {
+    const node = doc.querySelector('.list-rows[data-list-key="' + key + '"], [data-field-key="' + key + '"], [data-field="' + key + '"]');
+    return node ? node.closest('.mf, .field') : null;
+  }
+  function syncReveals() {
+    doc.querySelectorAll('.select-cell[data-reveals]').forEach((cell) => {
+      const unit = revealedUnit(cell.dataset.reveals);
+      if (!unit) return;
+      const first = cell.querySelector('.radio-input');
+      const asked = Boolean(first && first.checked);
+      if (unit.hidden === !asked) return;
+      unit.hidden = !asked;
+      // The pages of the step changed under the person: the caption follows.
+      const stepEl = unit.closest('.step');
+      if (stepEl && steps.length && !isChecking(stepEl)) showPage(stepEl, pageOf(stepEl), { silent: true });
+    });
+  }
+
+  // ---------- studies (RPA-142) ----------
+  // Between Research and Methodology the plan says how many studies there
+  // are and which questions each one answers. A study is what Methodology
+  // is then answered for: one methods group per study, its questions pinned.
+  // The rules live in plan-model.js; this is the page that asks them.
+  let studyQuestionsFieldDef = null;
+  let lastStudyCountChoice = { v: '', o: '' };
+  function studyCountCell() {
+    return Array.from(doc.querySelectorAll('.select-cell')).find((c) => c.dataset.fieldKey === 'studyCount' && !c.closest('table')) || null;
+  }
+  function studyGroupsEl() { return doc.querySelector('.study-groups'); }
+  function studyGroupEls() {
+    const container = studyGroupsEl();
+    return container ? Array.from(container.querySelectorAll('.study-group')) : [];
+  }
+  function researchQuestionTexts() {
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    return rqList ? Array.from(rqList.querySelectorAll('.list-input')).map((i) => i.value.trim()) : [];
+  }
+  // The questions a study group has ticked, by number.
+  function studyQuestionsOf(group) {
+    return Array.from(group.querySelectorAll('.study-question-input:checked')).map((c) => Number(c.dataset.question));
+  }
+  // The studies as the page has them, in the draft's shape: what each
+  // answers, and its four answers from its methods group.
+  function studiesSnapshot() {
+    return studyGroupEls().map((group, i) => {
+      const mg = methodsGroupAt(i);
+      const list = mg ? methodsListIn(mg) : null;
+      const entry = {
+        questions: studyQuestionsOf(group),
+        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((inp) => inp.value) : [],
+      };
+      perQuestionFields.forEach((f) => { entry[f.key] = mg ? perQuestionValue(mg, f) : (f.type === 'radios' ? { v: '', o: '' } : []); });
+      return entry;
+    });
+  }
+  // Where a question's methods go: the first study that answers it.
+  function groupForQuestion(number) {
+    const covering = PLAN.studiesFor(studiesSnapshot(), number);
+    return covering.length ? methodsGroupAt(covering[0]) : null;
+  }
+  function buildStudyGroup(index) {
+    const field = studyQuestionsFieldDef || { label: 'Study questions', question: 'Which research questions does this study answer?', key: 'studyQuestions' };
+    const group = el('fieldset', 'field field-radios study-group');
+    group.dataset.studyIndex = String(index);
+    const controlId = fieldControlId(field.key) + '-s' + (index + 1);
+    const legend = el('legend', 'flabel', { id: controlId + '-label' });
+    legend.textContent = (field.question || field.label).replace(/this study/i, PLAN.studyLabel(index));
+    markOptional(legend, field);
+    group.appendChild(legend);
+    // The name the check page and the error summary use (RPA-118's rule).
+    group.dataset.fieldName = PLAN.studyLabel(index);
+    const guidance = renderFieldHint(field, controlId + '-hint');
+    if (guidance) { group.appendChild(guidance); describeControl(group, guidance); }
+    const choices = el('div', 'study-choices', { role: 'group' });
+    group.appendChild(choices);
+    return group;
+  }
+  // The checkbox rows of every study follow the research questions: one per
+  // question, in order, ticks kept by question number, and under each a note
+  // of which other studies answer it, so overlap is visible while choosing.
+  function syncStudyQuestions() {
+    const questions = researchQuestionTexts();
+    const groups = studyGroupEls();
+    groups.forEach((group, s) => {
+      const choices = group.querySelector('.study-choices');
+      if (!choices) return;
+      let rows = Array.from(choices.querySelectorAll('.study-question'));
+      while (rows.length > questions.length) { rows[rows.length - 1].remove(); rows.pop(); }
+      while (rows.length < questions.length) {
+        const n = rows.length + 1;
+        const row = el('div', 'checkbox-item study-question');
+        const id = fieldControlId('studyQuestions') + '-s' + (s + 1) + '-q' + n;
+        const box = el('input', 'checkbox-input study-question-input', { type: 'checkbox', id, 'data-question': String(n), value: String(n) });
+        box.addEventListener('change', () => { syncStudyQuestions(); });
+        const label = el('label', 'checkbox-label study-question-label', { for: id });
+        const rq = el('strong', 'study-question-rq');
+        const text = el('span', 'study-question-text');
+        const also = el('span', 'study-question-also');
+        label.append(rq, ' ', text, also);
+        row.append(box, label);
+        choices.appendChild(row);
+        rows.push(row);
+      }
+    });
+    const studies = studiesSnapshot();
+    const missing = PLAN.unclaimed(questions, studies);
+    groups.forEach((group, s) => {
+      group.querySelectorAll('.study-question').forEach((row, i) => {
+        const n = i + 1;
+        row.querySelector('.study-question-rq').textContent = PLAN.questionNumber(i);
+        row.querySelector('.study-question-text').textContent = questions[i] || '(not written yet)';
+        const others = PLAN.studiesFor(studies, n).filter((k) => k !== s).map((k) => PLAN.studyLabel(k));
+        row.querySelector('.study-question-also').textContent = others.length ? 'Also answered by ' + others.join(' and ')
+          : (missing.indexOf(n) !== -1 ? 'Not yet answered by any study' : '');
+      });
+    });
+    refreshUnclaimed();
+    syncMethodsGroups();
+  }
+  // ---------- a question no study answers (RPA-140) ----------
+  // Every written research question must be in at least one study. One that
+  // is not blocks Studies from being complete, so the plan cannot reach
+  // sign-off, and the person is told where they are: a notification banner
+  // on Research, a mark under the question in every study's list, an error
+  // on Save and continue, and its name on the check page and in Review. It
+  // is the state that matters, not the moment: a plan opened with such a
+  // question says the same. Before any study is declared there is nothing
+  // to reopen, so nothing is said.
+  function unclaimedQuestions() {
+    return PLAN.unclaimed(researchQuestionTexts(), studiesSnapshot());
+  }
+  function namesInWords(names) {
+    return names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+  function refreshUnclaimed() {
+    const holder = doc.querySelector('.study-unclaimed-list');
+    if (!holder) return;
+    const questions = researchQuestionTexts();
+    const missing = unclaimedQuestions();
+    // A block stays while its question is unclaimed, so an error shown on it
+    // stays with it; it goes the moment any study ticks the question.
+    Array.from(holder.querySelectorAll('.study-unclaimed')).forEach((g) => { if (missing.indexOf(Number(g.dataset.question)) === -1) g.remove(); });
+    missing.forEach((n) => {
+      let g = holder.querySelector('.study-unclaimed[data-question="' + n + '"]');
+      if (!g) {
+        g = el('div', 'field study-unclaimed', { role: 'group' });
+        g.dataset.question = String(n);
+        g.dataset.fieldName = 'Not yet in any study';
+        g.append(el('div', 'flabel'), el('p', 'study-unclaimed-text'));
+        const after = Array.from(holder.querySelectorAll('.study-unclaimed')).find((x) => Number(x.dataset.question) > n);
+        holder.insertBefore(g, after || null);
+      }
+      g.querySelector('.flabel').textContent = PLAN.questionNumber(n - 1) + ' is not yet in any study';
+      g.querySelector('.study-unclaimed-text').textContent = questions[n - 1] || '';
+    });
+    refreshUnclaimedNotice();
+  }
+  let unclaimedNotice = null;
+  function refreshUnclaimedNotice() {
+    const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
+    const stepEl = rqList ? rqList.closest('.step') : null;
+    if (!stepEl) return;   // the steps are not built yet; the task list's first refresh comes back here
+    if (!unclaimedNotice) {
+      // The design system's notification banner: something the person needs
+      // to know that is about another page than the one they are on.
+      const banner = el('div', 'notification-banner', { role: 'region', 'aria-labelledby': 'unclaimed-notice-title' });
+      const header = el('div', 'notification-banner-header');
+      const title = el('h2', 'notification-banner-title', { id: 'unclaimed-notice-title' });
+      title.textContent = 'Important';
+      header.appendChild(title);
+      const content = el('div', 'notification-banner-content');
+      const heading = el('p', 'notification-banner-heading');
+      const go = el('p', 'notification-banner-go');
+      const link = el('a', 'notification-banner-link', { href: '#studies' });
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const studiesStep = (studyGroupsEl() || { closest: () => null }).closest('.step');
+        showStep(steps.indexOf(studiesStep), { page: 0 });
+      });
+      go.appendChild(link);
+      const wait = el('p', 'notification-banner-wait');
+      content.append(heading, go, wait);
+      banner.append(header, content);
+      const top = stepEl.querySelector('.step-top');
+      if (top) top.insertAdjacentElement('afterend', banner); else stepEl.insertBefore(banner, stepEl.firstChild);
+      unclaimedNotice = { el: banner, heading, go, link, wait };
+    }
+    const missing = unclaimedQuestions();
+    unclaimedNotice.el.hidden = !missing.length;
+    if (!missing.length) return;
+    const names = missing.map((n) => PLAN.questionNumber(n - 1));
+    const it = names.length === 1 ? 'it' : 'them';
+    unclaimedNotice.heading.textContent = namesInWords(names) + (names.length === 1 ? ' is' : ' are') + ' not yet in any study';
+    // Studies opens in order like any section: while this one is unfinished
+    // the banner says what to do next rather than offering a link that
+    // would be refused.
+    const studiesStep = (studyGroupsEl() || { closest: () => null }).closest('.step');
+    const index = steps.indexOf(studiesStep);
+    const open = index > 0 && !stepLocked(index);
+    unclaimedNotice.link.textContent = 'Choose which study answers ' + it;
+    unclaimedNotice.go.hidden = !open;
+    unclaimedNotice.wait.textContent = 'When this section is complete, choose which study answers ' + it + ' in Studies.';
+    unclaimedNotice.wait.hidden = open;
+  }
+  // Removing question N: every study drops it and later ticks move up one.
+  // The ticks are set from the model's answer; the rows themselves follow
+  // the questions, so the spare last row goes when syncStudyQuestions runs
+  // after the question's own row has gone.
+  function dropQuestionFromStudies(number) {
+    const next = PLAN.withoutQuestion(studiesSnapshot(), number);
+    studyGroupEls().forEach((group, s) => {
+      const wanted = new Set((next[s] || { questions: [] }).questions);
+      group.querySelectorAll('.study-question-input').forEach((box, i) => { box.checked = wanted.has(i + 1); });
+    });
+  }
+  // The studies follow the count the person chose. Growing is free; shrinking
+  // past a study that has ticks or methods asks first, and a refusal puts the
+  // radios back where they were (RPA-38's rule, with the study as the unit).
+  function syncStudies(opts = {}) {
+    const cell = studyCountCell();
+    const container = studyGroupsEl();
+    if (!cell || !container) { syncMethodsGroups(); return; }
+    const choice = choiceSnapshot(cell);
+    const target = PLAN.studyCount(choice);
+    let groups = studyGroupEls();
+    if (groups.length > target) {
+      const studies = studiesSnapshot();
+      const losing = [];
+      for (let i = target; i < groups.length; i++) if (studies[i].questions.length || PLAN.hasContent(studies[i])) losing.push(PLAN.studyLabel(i));
+      if (opts.confirm && losing.length && !window.confirm(
+        'Reducing to ' + (target || 'no') + ' stud' + (target === 1 ? 'y' : 'ies') + ' will delete ' + losing.join(' and ') + ', with the methods and participants written for ' + (losing.length === 1 ? 'it' : 'them') + '. Continue?'
+      )) {
+        applyChoice(cell, lastStudyCountChoice);
+        return;
+      }
+      for (let i = groups.length - 1; i >= target; i--) { groups[i].remove(); removeMethodsGroupAt(i); }
+      groups = studyGroupEls();
+    }
+    while (groups.length < target) { container.appendChild(buildStudyGroup(groups.length)); groups = studyGroupEls(); }
+    lastStudyCountChoice = choice;
+    syncStudyQuestions();
+    // The pages of the step changed under the person: the caption and what
+    // is on screen follow, without moving them off the page they are on.
+    const stepEl = container.closest('.step');
+    if (stepEl && steps.length && !isChecking(stepEl)) showPage(stepEl, pageOf(stepEl), { silent: true });
+  }
+  function renderStudyQuestionsField(field) {
+    studyQuestionsFieldDef = field;
+    // The outer field is only the container: each study presents the
+    // question itself, so each is a page and a row on the check page.
+    const wrap = el('div', 'field-study-questions', { role: 'group' });
+    const labelId = fieldControlId(field.key) + '-label';
+    // The container's own name is for assistive technology and the optional
+    // marker; what a person reads is each study's legend.
+    const label = el('div', 'flabel visually-hidden', { id: labelId });
+    label.textContent = field.label;
+    markOptional(label, field);
+    wrap.setAttribute('aria-labelledby', labelId);
+    wrap.appendChild(label);
+    // Written questions no study answers (RPA-140). Each is a block of its
+    // own here, so the one completeness rule the task list, the error
+    // summary, the check page and Review share counts it as unanswered
+    // without learning anything new: it exists only while it is unanswered.
+    const unclaimed = el('div', 'study-unclaimed-list');
+    wrap.appendChild(unclaimed);
+    const container = el('div', 'study-groups');
+    container.dataset.fieldKey = field.key;
+    wrap.appendChild(container);
+    return wrap;
+  }
+
+  // Methods: a container of study-labelled groups instead of one flat list.
+  // Only the first group is built here — the rest are created, removed and
+  // labelled by syncMethodsGroups, which runs whenever the studies or the
+  // research questions change, and once from the wire-up below.
   let methodsFieldDef = null;
   // Radios in the design system's shape (RPA-118): a fieldset whose legend
   // asks the question, the hint beneath it, the options stacked with a
@@ -4060,12 +4257,14 @@
     legend.textContent = field.question || field.label;
     markOptional(legend, field);
     if (field.question) wrap.dataset.fieldName = field.label;
+    if (field.errorMessage) wrap.dataset.errorMessage = field.errorMessage;
     wrap.appendChild(legend);
     const guidance = renderFieldHint(field, controlId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const group = el('div', 'select-cell radio-group');
     group.dataset.fieldKey = field.key;
+    if (field.reveals) group.dataset.reveals = field.reveals;
 
     const otherRow = el('div', 'select-other-row radio-other-row');
     const otherInput = el('input', 'finput select-other-input', {
@@ -4073,6 +4272,19 @@
       placeholder: 'Type your own value…',
       'aria-label': field.label + ' — other',
     });
+    if (field.key === 'studyCount') {
+      // "More than three" reveals the number (RPA-142, Gus's choice of radios
+      // over a bare number box, 16 September 2026).
+      const hint = el('p', 'field-hint-text', { id: controlId + '-other-hint' });
+      hint.textContent = 'Enter the number of studies.';
+      otherInput.placeholder = '';
+      otherInput.setAttribute('inputmode', 'numeric');
+      otherInput.classList.add('input-w-2');
+      otherInput.setAttribute('aria-describedby', hint.id);
+      otherInput.setAttribute('aria-label', 'How many studies?');
+      otherRow.appendChild(hint);
+      otherInput.addEventListener('input', () => syncStudies({ confirm: true }));
+    }
     if (field.key === 'sampleSize') {
       otherRow.classList.add('sample-size-other');
       const hint = el('p', 'field-hint-text', { id: controlId + '-other-hint' });
@@ -4084,18 +4296,20 @@
     otherRow.appendChild(otherInput);
     otherRow.hidden = true;
 
-    const options = (field.options || []).concat(['__other__']);
+    const options = (field.options || []).concat(field.closed ? [] : ['__other__']);
     options.forEach((value, i) => {
       const item = el('div', 'radio-item');
       const id = controlId + '-opt-' + i;
       const radio = el('input', 'radio-input', { type: 'radio', id: id, name: controlId, value: value });
       const optLabel = el('label', 'radio-label', { for: id });
-      optLabel.textContent = value === '__other__' ? 'Other' : value;
+      optLabel.textContent = value === '__other__' ? (field.key === 'studyCount' ? 'More than three' : 'Other') : value;
       radio.addEventListener('change', () => {
         if (!radio.checked) return;
         const isOther = radio.value === '__other__';
         otherRow.hidden = !isOther;
         if (isOther) otherInput.focus(); else otherInput.value = '';
+        if (field.key === 'studyCount') syncStudies({ confirm: true });
+        if (field.reveals) syncReveals();
       });
       item.append(radio, optLabel);
       group.appendChild(item);
@@ -4116,7 +4330,7 @@
     const wrap = el('div', 'field field-checkbox', { role: 'group' });
     const controlId = fieldControlId(field.key);
     const label = el('div', 'flabel', { id: controlId + '-label' });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.setAttribute('aria-labelledby', label.id);
     wrap.appendChild(label);
@@ -4138,7 +4352,7 @@
     if (!perQuestionFields.length) {
       const labelId = fieldControlId(field.key) + '-label';
       const label = el('div', 'flabel', { id: labelId });
-      label.textContent = field.label;
+      label.textContent = headingText(field);
       markOptional(label, field);
       wrap.setAttribute('aria-labelledby', labelId);
       wrap.appendChild(label);
@@ -4169,14 +4383,15 @@
   }
 
   function initMethodsGroupsSync() {
-    syncMethodsGroups();
+    syncStudies();
   }
 
   function initOutcomesSync() {
     const rqList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
     const outcomesList = outcomesListEl();
     if (!rqList || !outcomesList) return;
-    const targetCount = rqList.querySelectorAll('.list-row').length;
+    // Outcomes track questions row for row; the model says how many.
+    const targetCount = PLAN.outcomeCount(Array.from(rqList.querySelectorAll('.list-input')).map((input) => input.value));
     while (outcomesListEl().querySelectorAll('.list-row').length < targetCount) {
       addOutcomeRow();
     }
@@ -4188,9 +4403,13 @@
   // for the two button-row tips that are not tied to a field.
   //
   function appendHintText(target, text) {
-    text.split(/(\*[^*\n]+\*)/).forEach((part) => {
+    text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/).forEach((part) => {
       if (!part) return;
-      if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+      if (part.length > 4 && part.startsWith('**') && part.endsWith('**')) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.slice(2, -2);
+        target.appendChild(strong);
+      } else if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
         const em = document.createElement('em');
         em.textContent = part.slice(1, -1);
         target.appendChild(em);
@@ -4224,13 +4443,36 @@
   // words are their own ticket (RPA-119); until a field's note is written
   // its link opens on one honest line rather than nothing.
   const NO_HELP_YET = 'No further help for this field yet.';
+  // What a field's heading says. "question=" in the template asks the
+  // question a person is answering, as the design system's question pages
+  // do, while the label stays the field's name for error messages, the check
+  // page and Review. RPA-118 did this for radios; RPA-119 does it for every
+  // kind of field, since Gus's words ask a question of each.
+  function headingText(field) { return (field && (field.question || field.label)) || ''; }
+
   function renderFieldHelp(field) {
     const details = el('details', 'field-help');
     const summary = el('summary', 'field-help-summary');
-    summary.textContent = 'Help with this section';
+    summary.textContent = field.helpTitle || 'Help with this section';
     const body = el('div', 'field-help-body');
     const lines = field.guidance && field.guidance.length ? field.guidance : [NO_HELP_YET];
-    lines.forEach((line) => { const p = el('p'); appendGuidanceText(p, line); body.appendChild(p); });
+    // A Guidance line that starts with "- " is a list item; items that
+    // follow one another make one list (RPA-119).
+    let listEl = null;
+    lines.forEach((line) => {
+      const item = /^-\s+(.*)$/.exec(line);
+      if (item) {
+        if (!listEl) { listEl = el('ul', 'field-help-list'); body.appendChild(listEl); }
+        const li = el('li');
+        appendGuidanceText(li, item[1]);
+        listEl.appendChild(li);
+        return;
+      }
+      listEl = null;
+      const p = el('p');
+      appendGuidanceText(p, line);
+      body.appendChild(p);
+    });
     details.append(summary, body);
     return details;
   }
@@ -4647,7 +4889,9 @@
   // automatically (once) so nobody has to type the date by hand.
   function attachSignOffStamp(input, key) {
     if (key !== 'signOffProjectOwner' && key !== 'signOffResearcher') return;
-    input.addEventListener('blur', () => stampSignOff(input));
+    input.addEventListener('blur', () => {
+      if (stampSignOff(input)) input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
   }
   function stampSignOff(input) {
     const val = input.value.trim();
@@ -4655,7 +4899,7 @@
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    input.value = val + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
+    input.value = val.toUpperCase() + ' — ' + dd + '/' + mm + '/' + now.getFullYear();
     return true;
   }
   function prepareSubmissionSignOffs() {
@@ -4721,6 +4965,14 @@
   }
 
   function renderField(field) {
+    const wrap = renderFieldOfType(field);
+    // The name the check page and the error summary use, when the heading asks a question instead.
+    if (field.question && wrap && wrap.dataset && !wrap.dataset.fieldName) wrap.dataset.fieldName = field.label;
+    // And what Save and continue says when it is left unanswered (RPA-120).
+    if (field.errorMessage && wrap && wrap.dataset && !wrap.dataset.errorMessage) wrap.dataset.errorMessage = field.errorMessage;
+    return wrap;
+  }
+  function renderFieldOfType(field) {
     if (field.type === 'table') return renderTableField(field);
     if (field.type === 'list') {
       if (field.key === 'outcomes') return renderLinkedOutcomesField(field);
@@ -4730,11 +4982,12 @@
     if (field.type === 'custom-fields') return renderCustomFieldsField(field);
     if (field.type === 'checkbox') return renderCheckboxField(field);
     if (field.type === 'radios') return renderRadiosField(field);
+    if (field.type === 'study-questions') return renderStudyQuestionsField(field);
 
     const wrap = el('div', 'field');
     const controlId = fieldControlId(field.key);
     const label = el('label', 'flabel', { for: controlId, id: controlId + '-label' });
-    label.textContent = field.label;
+    label.textContent = headingText(field);
     markOptional(label, field);
     wrap.appendChild(label);
     const guidance = renderFieldHint(field, controlId + '-hint');
@@ -4921,7 +5174,7 @@
           control = inp;
         }
         attachSignOffStamp(inp, f.key);
-        const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(inp) : null;
+        const jiraStatus = f.jira ? attachJiraCombobox(inp) : null;
         if (f.type === 'date') {
           control.setAttribute('aria-labelledby', lbl.id);
         } else {
@@ -4995,7 +5248,9 @@
       const mf = el('div', 'mf');
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
-      label.textContent = f.label;
+      label.textContent = headingText(f);
+      if (f.question) mf.dataset.fieldName = f.label;
+      if (f.errorMessage) mf.dataset.errorMessage = f.errorMessage;
       // Header fields can be optional too. Project decision is the live case:
       // it is a delivery date the researcher does not set and often nobody has
       // set yet, and its audit verdict is "keep — sourced or optional".
@@ -5014,7 +5269,7 @@
         if (f.width) input.classList.add('input-w-' + f.width);
         control = input;
       }
-      const jiraStatus = f.key === 'jiraProject' ? attachJiraCombobox(input) : null;
+      const jiraStatus = f.jira ? attachJiraCombobox(input) : null;
       if (f.key === 'lastUpdated') {
         setDateInputValue(input, todayIso());
         // A draft restore replays saved values through this same event, and
@@ -5110,6 +5365,15 @@
         topRow.appendChild(buildDateline(f));
         return;
       }
+      // A question with options, or a list, is asked the way it is anywhere
+      // else in the form; it takes its place among the header's questions
+      // by being one of them (RPA-141).
+      if (f.type === 'radios' || f.type === 'list') {
+        const unit = renderField(f);
+        unit.classList.add('mf', 'mf-field');
+        metaGrid.appendChild(unit);
+        return;
+      }
       const mf = buildMetaField(f);
       if (f.key === 'jiraProject') {
         // Directly under the title and the same width as it. It identifies
@@ -5129,7 +5393,7 @@
     // mistaken for a value already filled in.
     const titleId = fieldControlId(header.title.key);
     const titleLabel = el('label', 'flabel', { for: titleId, id: titleId + '-label' });
-    titleLabel.textContent = header.title.label || 'Title';
+    titleLabel.textContent = headingText(header.title) || 'Title';
     const titleHint = renderFieldHint(header.title, titleId + '-hint');
     const titleInput = el('textarea', 'title-inp field-ta', {
       rows: '1',
@@ -5140,6 +5404,8 @@
     // One group, like a meta field, so the title can be judged and marked
     // with the rest of Plan details: it is required (Gus, 14 September 2026).
     const titleField = el('div', 'title-field');
+    if (header.title.question) titleField.dataset.fieldName = header.title.label;
+    if (header.title.errorMessage) titleField.dataset.errorMessage = header.title.errorMessage;
     titleField.appendChild(titleLabel);
     if (titleHint) titleField.appendChild(titleHint);
     titleField.appendChild(titleInput);
@@ -5166,7 +5432,7 @@
   // change first. The answers go to the people building the tool, not into
   // the plan: nothing here carries data-field, so the draft, the backup and
   // the print never see them. Sent to the server as one record; when that
-  // fails, offered as a file so nothing is lost.
+  // fails, offered as a local file. Disabled collection offers no file exchange.
   function renderToolFeedback() {
     const wrap = el('section', 'tool-feedback', { 'aria-labelledby': 'tool-feedback-h' });
     const open = el('button', 'btn btn-ghost', { type: 'button', id: 'tool-feedback-open', 'aria-expanded': 'false', 'aria-controls': 'tool-feedback-form' });
@@ -5233,12 +5499,30 @@
     form.appendChild(actions);
     const status = el('p', 'tool-feedback-status', { id: 'tool-feedback-status', role: 'status', 'aria-live': 'polite' });
     wrap.append(open, form, status);
+    const updateAvailability = () => {
+      const available = capabilities.feedback === true;
+      open.hidden = !available;
+      open.disabled = !available;
+      send.hidden = !available;
+      send.disabled = !available;
+      if (!available) {
+        form.hidden = true;
+        open.setAttribute('aria-expanded', 'false');
+        download.hidden = true;
+        status.textContent = 'Feedback collection is unavailable here.';
+      } else {
+        status.textContent = '';
+      }
+    };
+    updateAvailability();
+    getConfig().then(updateAvailability);
 
     const setOpen = (on) => {
       form.hidden = !on;
       open.setAttribute('aria-expanded', on ? 'true' : 'false');
     };
     open.addEventListener('click', () => {
+      if (!capabilities.feedback) return;
       const opening = form.hidden;
       setOpen(opening);
       if (opening) {
@@ -5265,6 +5549,7 @@
     let lastAnswers = null;
 
     download.addEventListener('click', () => {
+      if (!capabilities.feedback) return;
       const answers = lastAnswers || read();
       let url;
       try {
@@ -5276,7 +5561,7 @@
         link.download = 'Feedback on Research Plan - ' + todayIso() + '.json';
         document.body.appendChild(link);
         try { link.click(); } finally { link.remove(); }
-        say('Download started. Send the file to the person who shared this link.');
+        say('Download started. Keep this feedback file for your own records.');
       } catch (err) {
         say('Could not download your feedback. ' + err.message, true);
       } finally {
@@ -5285,14 +5570,10 @@
     });
 
     send.addEventListener('click', async () => {
+      if (!capabilities.feedback) { updateAvailability(); return; }
       const answers = read();
       if (empty(answers)) { say('Answer at least one question first.', true); return; }
       lastAnswers = answers;
-      if (capabilities.feedback === false) {
-        download.hidden = false;
-        say('Sending is unavailable here. Download your feedback and send it to the person who shared this link.', true);
-        return;
-      }
       send.disabled = true;
       say('Sending your feedback…');
       try {
@@ -5311,7 +5592,7 @@
         say('Thank you. Your feedback is saved for the people building this tool.');
       } catch (err) {
         download.hidden = false;
-        say('Could not send your feedback. Download it and send it to the person who shared this link.', true);
+        say('Could not send your feedback. Your answers are still here. You can try again or download a copy for your own records.', true);
       } finally {
         send.disabled = false;
       }
@@ -5496,7 +5777,9 @@
         name.textContent = s.title;
 
         const state = el('span', 'review-state' + (s.complete ? '' : ' review-state-open'));
-        state.textContent = s.complete ? 'complete' : s.answered + ' of ' + s.total + ' fields';
+        const unclaimed = Array.from(stepEl.querySelectorAll('.study-unclaimed')).map((g) => PLAN.questionNumber(Number(g.dataset.question) - 1));
+        state.textContent = s.complete ? 'complete'
+          : (unclaimed.length ? namesInWords(unclaimed) + ' not yet in any study' : s.answered + ' of ' + s.total + ' fields');
 
         const note = el('span', 'review-note');
         if (s.hasEvaluation && s.staleCount) {
@@ -5528,7 +5811,9 @@
         const rows = el('dl', 'summary-list');
         const drawRows = () => renderSummaryRows(stepEl, rows, (g) => changeFromReview(stepEl, g, slug));
         const wording = () => { revealText.textContent = (answers.open ? 'Hide' : 'Show') + ' answers'; };
-        answers.addEventListener('toggle', () => { wording(); if (answers.open) drawRows(); });
+        // Restoring an open disclosure draws eagerly below. Its later native
+        // toggle must not replace those controls and discard restored focus.
+        answers.addEventListener('toggle', () => { wording(); if (answers.open && !rows.childElementCount) drawRows(); });
         answers.append(reveal, rows);
         if (revealed.has(slug)) { answers.open = true; drawRows(); }
         wording();
@@ -5779,7 +6064,7 @@
     const otherLabel = el('label', 'flabel', { for: 'sign-off-other-email', id: 'sign-off-other-email-label' });
     otherLabel.textContent = 'What is the other person’s email address?';
     const otherHint = el('div', 'field-hint-text', { id: 'sign-off-other-email-hint' });
-    otherHint.textContent = 'They will be sent a link to read the plan and sign it.';
+    otherHint.textContent = 'This address identifies the other person in this demonstration. Both people review on this device; no email is sent.';
     const otherInput = el('input', 'finput input-w-30', { type: 'email', id: 'sign-off-other-email', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'sign-off-other-email-hint' });
     otherField.append(otherLabel, otherHint, otherInput);
     setup.append(roleField, otherField);
@@ -5863,6 +6148,7 @@
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
       if (!other) { say(['Enter the other person’s email address.']); return; }
+      if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
       parties[authorRole] = { email: mine, displayName: signOffPersonName(authorRole) };
@@ -5895,11 +6181,19 @@
     }
     function sign(role) {
       if (!judge(role)) return;
+      if (!judgePlan()) return;
       const action = { transition: 'sign', role, declaration: declarationOf(role) };
       if (role === signOffRecord.authorRole) action.contentHash = planContentHash();
       else action.revision = W.currentRevisionNumber(signOffRecord);
       const after = act(action);
       if (after) heading.focus({ preventScroll: true });
+    }
+    function judgePlan() {
+      const errors = localCompletionErrors();
+      if (!errors.length) return true;
+      clearSaid();
+      showSubmissionErrors(errors, summary, { focus: true, final: true });
+      return false;
     }
 
     function sayLinkStatus(message) { linkStatus.textContent = message; }
@@ -5936,16 +6230,16 @@
       if (record) {
         note.textContent = linkRole
           ? 'You are signing as ' + signOffPersonName(linkRole) + ', the ' + signOffRoleName(linkRole).toLowerCase() + ', because that is whose link opened this plan. Not you? Tell the person who sent it.'
-          : 'Both people sign on this one device for now. A plan sent for real reaches the other person through a link of their own.';
+          : 'This is a local review demonstration. Both people sign on this device; links do not open a shared plan on another device.';
       }
       Object.keys(pairs).forEach((role) => { pairs[role].hidden = true; });
 
       if (!record) {
         if (setupStep === 'role') {
-          stateLine.textContent = 'Say who you are. Whoever writes the plan signs it first, then sends it to the other person.';
+          stateLine.textContent = 'Say who you are. The author signs first, then the other person reviews on this device.';
           actions.appendChild(button('Continue', chooseRole));
         } else if (setupStep === 'sign') {
-          stateLine.textContent = 'Confirm the declaration and sign the plan. You will be asked where to send it next.';
+          stateLine.textContent = 'Confirm the declaration and sign the plan. Next, identify the other person reviewing on this device.';
           pairs[setupRole].hidden = false;
           actions.append(button('Continue', toSend), button('Back', () => back('role'), true));
         } else {
@@ -5954,9 +6248,9 @@
           // and by role where it does not (Gus, 15 September 2026).
           const other = W.otherRole(setupRole);
           const them = signOffPersonNamed(other) || 'the ' + signOffRoleName(other).toLowerCase();
-          stateLine.textContent = 'You have signed. Send the plan to ' + them + ' to approve.';
+          stateLine.textContent = 'Prepare the plan for ' + them + ' to review on this device.';
           otherLabel.textContent = 'What is ' + them + '\u2019s email address?';
-          actions.append(button('Sign and send', create), button('Back', () => back('sign'), true));
+          actions.append(button('Sign for local review', create), button('Back', () => back('sign'), true));
         }
         printed.appendChild(line('sign-off-printed-line', 'This plan is unsigned.'));
         refreshTaskList();
@@ -5975,15 +6269,15 @@
       const otherName = signOffPersonName(other);
 
       if (record.status === 'awaitingCounterparty') {
-        stateLine.textContent = 'Sent to ' + otherName + ' on ' + signOffDate(record.signatures[author].at) + '. Revision ' + revision + '.';
+        stateLine.textContent = 'Ready for ' + otherName + ' to review on this device. Signed ' + signOffDate(record.signatures[author].at) + '. Revision ' + revision + '.';
       } else if (record.status === 'changesRequested') {
         stateLine.textContent = 'Back with ' + authorName + ' to change.';
       } else if (record.status === 'approved') {
         stateLine.textContent = 'Both people have signed revision ' + revision + '.';
       } else {
         stateLine.textContent = !record.revisions.length
-          ? 'Not yet sent. ' + authorName + ' signs first.'
-          : 'The plan has changed since it was last signed. ' + authorName + ' signs it again to send it.';
+          ? 'Not yet signed. ' + authorName + ' signs first.'
+          : 'The plan has changed since it was last signed. ' + authorName + ' signs it again for local review.';
       }
 
       if (record.changeRequest) {
@@ -6047,7 +6341,7 @@
         );
       } else if (allowed.canSign) {
         pairs[me].hidden = false;
-        actions.appendChild(button(me === author ? 'Sign and send' : 'Sign', () => sign(me)));
+        actions.appendChild(button(me === author ? 'Sign for local review' : 'Sign', () => sign(me)));
         if (allowed.canRequestChanges) actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
       } else if (allowed.canRequestChanges) {
         actions.appendChild(button('Request changes', () => { requesting = true; clearSaid(); draw(); }, true));
@@ -6152,12 +6446,12 @@
     if (stepEl.classList.contains('email-step')) return Array.from(stepEl.querySelectorAll('.field')).filter((f) => !f.querySelector('.fopt'));
     if (stepEl.classList.contains('doc-header')) {
       // The title counts too: the template does not mark it optional.
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.hidden && !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
     }
     if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
     // The outer Methods field holds one group per research question; the
     // fields inside the groups are the questions to judge (RPA-116).
-    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom):not(.field-methods)')).filter((f) => !f.querySelector('.fopt'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom):not(.field-methods):not(.field-study-questions)')).filter((f) => !f.querySelector('.fopt'));
   }
   function groupsSummary(groups) {
     const answered = groups.filter(requiredGroupComplete).length;
@@ -6197,24 +6491,76 @@
     // research question it belongs to.
     if (g.dataset && g.dataset.fieldName) {
       const of = g.querySelector('.per-question-of');
-      return (g.dataset.fieldName + (of ? of.textContent : '')).replace(/\s+/g, ' ').trim();
+      const suffix = g.dataset.groupOf !== undefined ? g.dataset.groupOf : (of ? of.textContent : '');
+      return (g.dataset.fieldName + suffix).replace(/\s+/g, ' ').trim();
     }
     const l = g.querySelector('.flabel, .mlabel, .clbl, label');
     return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
   }
+  // What is missing from a date someone has started: "day", "month and
+  // year", or nothing when all three are there and the date is not a real
+  // one. Null when the date is untouched. The design system's date input
+  // says these three things differently, and so does this (RPA-120).
+  function dateShortfall(nativeInput) {
+    const segments = dateSegments(nativeInput);
+    if (!segments) return null;
+    const parts = [['day', segments.day], ['month', segments.month], ['year', segments.year]];
+    const missing = parts.filter(([, input]) => !input || !input.value.trim()).map(([name]) => name);
+    if (missing.length === parts.length) return null;
+    return missing;
+  }
+  // Not started: no date in it that a person typed. The form fills in the
+  // first stage's start and the last stage's end itself (RPA-76, RPA-59),
+  // and marks what it filled; those do not count.
+  function scheduleNotStarted(g) {
+    const dates = Array.from(g.querySelectorAll('.date-control input[type="date"]'));
+    return dates.length > 0 && dates.every((input) => {
+      const segments = dateSegments(input);
+      const theirs = [input, segments.control, segments.day, segments.month, segments.year];
+      return dateShortfall(input) === null || theirs.some(isPrefilled);
+    });
+  }
   function groupMessage(g) {
     const label = groupLabel(g);
-    if (requiredDateInput(g)) return 'Enter a complete, valid ' + label.toLowerCase() + ' date';
+    // An answer that is there and wrong is told what is wrong with it; only
+    // an answer that is not there gets the field's own "Error:" words.
+    const started = requiredDateInput(g) ? dateShortfall(requiredDateInput(g)) : null;
+    if (started) {
+      const name = label.replace(/ date$/i, '') + ' date';
+      return started.length ? name + ' must include a ' + started.join(started.length === 2 ? ' and ' : ', ') : name + ' must be a real date';
+    }
+    // The template's own words, where it gives them. Choosing "Other" for the
+    // sample size is an answer begun: its box is asked for in its own words below.
+    if (g.dataset && g.dataset.errorMessage && !customSampleSizeInput(g)) return g.dataset.errorMessage;
+    // "Sample Size for Study 2" reads as "sample size for Study 2": the
+    // field's name is lowered mid-sentence, the study's is not (RPA-142).
+    const lowered = label.replace(/^(.*?)( for Study \d+)?$/, (m, name, of) => name.toLowerCase() + (of || ''));
+    if (customSampleSizeInput(g)) return 'Enter a valid ' + lowered + ': a positive whole number, a range such as 5–8, or a minimum such as 30+';
+    if (requiredDateInput(g)) return 'Enter a complete, valid ' + lowered + ' date';
     const email = requiredEmailInput(g);
     // The two messages of the GOV.UK email address pattern (RPA-99).
     if (email) return email.value.trim() ? 'Enter an email address in the correct format, like name@example.com' : 'Enter your email address';
-    if (g.querySelector('input[type=radio]')) return 'Select a ' + label.toLowerCase();
+    if (g.classList.contains('study-group')) return 'Select at least one research question for ' + label;
+    if (g.classList.contains('study-unclaimed')) return 'Choose a study to answer ' + PLAN.questionNumber(Number(g.dataset.question) - 1);
+    if (g.querySelector('input[type=radio]')) return 'Select a ' + lowered;
     if (g.querySelector('.list-rows, table, .methods-groups')) return 'Add to ' + label;
-    if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + label.toLowerCase();
-    return 'Enter the ' + label.toLowerCase();
+    if (g.querySelector('input[type=checkbox]')) return 'Confirm the ' + lowered;
+    return 'Enter the ' + lowered;
   }
   function groupControl(g) {
+    // The way to answer an unclaimed question is to tick it in a study: the first one's box for it.
+    if (g.classList.contains('study-unclaimed')) {
+      const first = studyGroupEls()[0];
+      return first ? first.querySelector('.study-question-input[data-question="' + g.dataset.question + '"]') : null;
+    }
+    const sample = customSampleSizeInput(g);
+    if (sample) return sample;
     return Array.from(g.querySelectorAll('input:not([type=hidden]):not([type=file]), textarea, select')).find((c) => !c.disabled) || null;
+  }
+  function customSampleSizeInput(g) {
+    const radios = g.querySelector('.radio-group[data-field-key="sampleSize"]');
+    return radios?.querySelector('input[type="radio"]:checked')?.value === '__other__'
+      ? radios.querySelector('.radio-other-row input[type="text"]') : null;
   }
   function requiredDateInput(g) {
     // Tables retain their existing advisory completeness rule; a standalone
@@ -6226,15 +6572,32 @@
   // with a dot in it. Nothing is ever sent to the address (RPA-99), so a
   // stricter rule would only turn away real addresses.
   function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
+  // The validator's errors that land on this field. A study's field is
+  // judged for every question the study answers; an error with no key is
+  // about the whole plan, and holds every field back.
+  function submissionErrorsAt(g) {
+    const key = unitKey(g), methodGroup = g.closest('.methods-group');
+    const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
+    return submissionErrors().filter(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
+  }
   function requiredGroupComplete(g) {
+    // A question no study answers is unanswered for as long as it exists (RPA-140).
+    if (g.classList.contains('study-unclaimed')) return false;
     // Identity is a separate entry page, not a completed-plan requirement.
     const email = requiredEmailInput(g);
     if (email) return emailLooksRight(email.value);
-    if (capabilities.submissions) {
-      const key = unitKey(g), methodGroup = g.closest('.methods-group');
-      const question = methodGroup ? methodsGroupEls().indexOf(methodGroup) : undefined;
-      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || error.question === question)));
-    }
+    if (capabilities.submissions && submissionErrorsAt(g).length) return false;
+    // With submissions on the validator's rule comes first, and the form's
+    // own rule still follows it: the validator judges the plan as it is sent,
+    // and has never heard of a question the wire does not carry ("Are other
+    // researchers involved?", "How many studies will you run?"). Judged by
+    // it alone, those could be left unanswered and their sections read
+    // Completed (found in RPA-120; true since RPA-141 and RPA-142).
+    // Drafts stay editable and recoverable; moving on requires an actual count.
+    // Use the same rule as final submission without requiring that capability.
+    const sample = customSampleSizeInput(g);
+    if (sample) return window.RPA_SUBMISSION.validSampleSize(sample.value);
+    if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
     const date = requiredDateInput(g);
     if (date) return Boolean(readDateSegments(date));
     return fieldHasContent(g);
@@ -6281,12 +6644,33 @@
   // Draws the step's errors from scratch against what is missing now. With
   // focus: the person just pressed the button, so the summary takes focus.
   function showStepErrors(stepEl, summary, { focus, groups }) {
+    const checked = groups || requiredGroupsOf(stepEl);
+    if (!capabilities.submissions && checked.length && checked.every(g => unitKey(g) === 'stageTimeline')) {
+      const errors = localCompletionErrors().filter(error => !error.key || error.key === 'stageTimeline');
+      // A schedule nobody has started is one thing to do, not a message for
+      // every empty date in it: eight, on the five suggested stages. It is asked
+      // for in the template's words, like any unanswered field. Once a date
+      // is in, each row is told exactly what it lacks (RPA-6, RPA-120).
+      const asOne = errors.length && checked.every((g) => g.dataset.errorMessage && scheduleNotStarted(g));
+      checked.forEach(clearGroupError);
+      if (!asOne) return showSubmissionErrors(errors, summary, { focus });
+      showSubmissionErrors([], summary, { focus: false });   // releases any row marks this summary drew
+    }
     if (capabilities.submissions && !stepEl.classList.contains('email-step')) {
       const errors = submissionErrors().filter(error => {
         const group = submissionTarget(error).group;
         return !error.key || (group && stepEl.contains(group) && (!groups || groups.includes(group)));
       });
-      return showSubmissionErrors(errors, summary, { focus });
+      // What only the form requires, in document order with the rest.
+      const named = new Set(errors.map(error => submissionTarget(error).group).filter(Boolean));
+      const formOnly = checked.filter((g) => !named.has(g) && !requiredGroupComplete(g))
+        .map((g) => ({ key: unitKey(g) || 'form', code: 'required', section: stepEl.dataset.stepSlug, message: groupMessage(g), formGroup: g }));
+      const inOrder = errors.concat(formOnly).sort((a, b) => {
+        const ga = a.formGroup || submissionTarget(a).group, gb = b.formGroup || submissionTarget(b).group;
+        if (!ga || !gb || ga === gb) return 0;
+        return ga.compareDocumentPosition(gb) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+      return showSubmissionErrors(inOrder, summary, { focus });
     }
     const missing = (groups || requiredGroupsOf(stepEl)).filter((g) => !requiredGroupComplete(g));
     requiredGroupsOf(stepEl).forEach(clearGroupError);
@@ -6340,7 +6724,7 @@
   let startPage = null;
   const EXAMPLE_PLAN = [
     ['Research title', 'Usability testing of checkout flow'],
-    ['Jira Project', 'SHOP-412'],
+    ['Project name', 'Checkout redesign'],
     ['Lead researcher', 'Priya Nair'],
     ['Project requester', 'Tom Okafor'],
     ['Project decision', '14 November 2026'],
@@ -6351,8 +6735,10 @@
     ['Objective', 'Learn what people expect of the delivery page, where choosing a slot breaks down, and for whom.'],
     ['Research question 1', 'Where does choosing a delivery slot break down, and for whom?'],
     ['Outcome 1', 'A ranked list of the points where people give up, with the evidence for each.'],
-    ['Methods for question 1', 'Moderated usability testing\nSession replay review'],
-    ['Sample size for question 1', '6 to 10'],
+    ['Number of studies', 'One'],
+    ['Study 1 answers', 'RQ1'],
+    ['Methods for Study 1', 'Moderated usability testing\nSession replay review'],
+    ['Sample size for Study 1', '6 to 10'],
     ['Planned schedule', 'Recruitment: 5 to 9 October\nData collection: 12 to 16 October\nAnalysis: 19 to 23 October\nReporting: 26 to 30 October'],
   ];
   function renderStartPage() {
@@ -6365,7 +6751,7 @@
     const h = (text) => { const x = el('h3', 'start-h'); x.textContent = text; return x; };
     const list = (tag, items) => { const l = el(tag); items.forEach((t) => { const li = el('li'); li.textContent = t; l.appendChild(li); }); return l; };
     const how = list('ol', [
-      'Answer one question at a time, section by section: Plan details, Context, Research, Methodology, Execution and Review. A section opens when the one before it is complete, and you can go back to any completed section.',
+      'Answer one question at a time, section by section: Plan details, Context, Research, Studies, Methodology, Execution and Review. A section opens when the one before it is complete, and you can go back to any completed section.',
       'Check your answers at the end of each section. You can change any answer from the review at the end.',
       'Ask for an evaluation of a section when you want a second opinion. It points at gaps and asks questions; it does not write the plan for you.',
       'Finish with a plan you can print or save as a PDF, and a backup file you can restore later.',
@@ -6440,6 +6826,10 @@
   }
   function openDeadLink() {
     if (!deadLinkPage) return;
+    // No editable form exists here. Cancel pending saves before removing it.
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
+    document.querySelectorAll("#options-menu button, #backup-file").forEach(control => { control.disabled = true; });
     steps.forEach((s) => { s.hidden = true; });
     if (startPage) startPage.el.hidden = true;
     if (emailGate) emailGate.el.hidden = true;
@@ -6455,6 +6845,84 @@
     deadLinkPage.heading.focus({ preventScroll: true });
   }
   function linkIsDead() { return linkState === 'revoked' || linkState === 'unknown'; }
+
+  // ---------- a plan saved by a newer version of the form (RPA-143) ----------
+  // A build must not open a draft newer than it understands. It used to:
+  // migrateDraft passes anything at or above its own version through, only
+  // the keys this build knows were restored, and the next autosave wrote the
+  // older shape over the rest. Reproduced on the live build ba9f84f with a
+  // version 10 plan on 17 September 2026: one edit later the studies were
+  // gone. It matters whenever a release is rolled back after people have
+  // saved on the newer one.
+  //
+  // So the stored draft is looked at before anything opens it. If it is
+  // newer, it is left byte for byte as it was, no form is shown, and nothing
+  // saves: the same standing-in page and the same guards a dead link uses
+  // (RPA-137, RPA-6), asked through one predicate. The person can download
+  // exactly what is stored, or choose, after being asked, to remove it and
+  // start again. Backups were already safe: validateBackup refuses a newer
+  // file.
+  let newerDraft = null;   // { version, raw } while the stored draft is newer than this build
+  let newerDraftPage = null;
+  function draftIsNewer(draft) { return Boolean(draft) && Number(draft.version) > DRAFT_VERSION; }
+  function planBlocked() { return linkIsDead() || Boolean(newerDraft); }
+  function renderNewerDraft() {
+    // The page that stands in for a plan that cannot be shown, as for a dead link.
+    const page = el('section', 'dead-link newer-draft', { 'aria-labelledby': 'newer-draft-heading' });
+    const heading = el('h2', 'step-heading', { id: 'newer-draft-heading', tabindex: '-1' });
+    heading.textContent = 'This plan was saved by a newer version of this form';
+    const kept = el('p', 'dead-link-body');
+    kept.textContent = 'It has been kept in this browser exactly as it was saved. This version of the form is older and cannot open it without losing part of it, so it has not been opened and nothing has been changed.';
+    const next = el('p', 'newer-draft-next');
+    next.textContent = 'Reload this page in a few minutes. If you still see this message, download the saved plan and tell the person who sent you this form.';
+    const actions = el('div', 'newer-draft-actions');
+    const download = el('button', 'btn btn-dark newer-draft-download', { type: 'button' });
+    download.textContent = 'Download the saved plan';
+    const startNew = el('button', 'btn newer-draft-new', { type: 'button' });
+    startNew.textContent = 'Start a new plan';
+    actions.append(download, startNew);
+    const status = el('p', 'newer-draft-status', { role: 'status' });
+    download.addEventListener('click', () => {
+      let url;
+      try {
+        // Exactly what is stored, not a backup this build would write.
+        const blob = new Blob([newerDraft.raw], { type: 'application/json' });
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Research plan - saved by a newer version - ' + todayIso() + '.json';
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        status.textContent = 'Download started. Keep the file: it can be restored once this form is up to date.';
+      } catch (err) {
+        status.textContent = 'The saved plan could not be downloaded. It is still kept in this browser.';
+      } finally {
+        if (url) URL.revokeObjectURL(url);
+      }
+    });
+    startNew.addEventListener('click', () => {
+      if (!window.confirm('Start a new plan? The saved plan will be removed from this browser. Download it first if you want to keep it.')) return;
+      clearDraft();
+      download.disabled = true;
+      startNew.disabled = true;
+      status.textContent = 'The saved plan has been removed from this browser. ';
+      const open = el('a', 'dead-link-back', { href: window.location.pathname });
+      open.textContent = 'Open the form';
+      status.appendChild(open);
+    });
+    page.append(heading, kept, next, actions, status);
+    newerDraftPage = { el: page, heading };
+    return page;
+  }
+  function openNewerDraft() {
+    if (!newerDraftPage) renderNewerDraft();
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
+    document.querySelectorAll("#options-menu button, #backup-file").forEach(control => { control.disabled = true; });
+    // Nothing of a form this build would fill in wrongly is left to type into.
+    doc.replaceChildren(newerDraftPage.el);
+    newerDraftPage.heading.focus({ preventScroll: true });
+  }
 
   let emailGate = null;
   // Two things the GOV.UK Pay team did that cut invalid addresses by a
@@ -6527,7 +6995,7 @@
   function renderEmailPlayback(input) {
     const box = el('div', 'email-playback');
     const lead = el('p', 'email-playback-lead');
-    lead.textContent = 'A link to your plan will be sent to:';
+    lead.textContent = 'Email address for this browser:';
     const value = el('p', 'email-playback-value');
     box.append(lead, value);
     const refresh = () => { const v = input.value.trim(); value.textContent = v; box.hidden = !v; };
@@ -6677,6 +7145,7 @@
   }
   function refreshTaskList() {
     if (!taskListEl || !steps.length) return;
+    refreshUnclaimedNotice();
     const { list, progress } = taskListEl;
     list.replaceChildren();
     let done = 0;
@@ -6943,8 +7412,8 @@
   // Every question of the step, optional ones and the hatch included: the
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
-    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.querySelector('[data-field="lastUpdated"]'));
-    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods)'));
+    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
+    return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods):not(.field-study-questions)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
   // label, a date in words, a list by its rows, a table by its rows, methods
@@ -6996,6 +7465,14 @@
       return lines;
     }
     if (g.querySelector('.list-rows')) { g.querySelectorAll('.list-input').forEach((c) => push(c.value)); return lines; }
+    if (g.classList.contains('study-unclaimed')) { push(PLAN.questionNumber(Number(g.dataset.question) - 1) + ' ' + g.querySelector('.study-unclaimed-text').textContent); return lines; }
+    if (g.classList.contains('study-group')) {
+      g.querySelectorAll('.study-question-input:checked').forEach((c) => {
+        const row = c.closest('.study-question');
+        push(row.querySelector('.study-question-rq').textContent + ' ' + row.querySelector('.study-question-text').textContent);
+      });
+      return lines;
+    }
     if (g.querySelector('input[type=radio]')) {
       const radio = g.querySelector('input[type=radio]:checked');
       if (!radio) return lines;
@@ -7098,12 +7575,14 @@
   // one of a research question's fields inside its group.
   function pageUnitsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) {
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
     }
     const units = [];
     const walk = (container) => Array.from(container.children).forEach((c) => {
       if (c.classList.contains('field-methods')) {
         c.querySelectorAll('.methods-group').forEach((g) => units.push(...Array.from(g.children).filter((x) => x.classList.contains('field-per-question'))));
+      } else if (c.classList.contains('field-study-questions')) {
+        units.push(...Array.from(c.querySelectorAll('.study-group')));   // one page per study (RPA-142)
       } else if (c.classList.contains('field')) units.push(c);
       else if (c.classList.contains('field-group')) walk(c);
     });
@@ -7150,6 +7629,8 @@
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
   }
   function showPageOf(stepEl, group) {
+    // An unclaimed question is answered on the first study's page.
+    if (group.classList && group.classList.contains('study-unclaimed') && studyGroupEls()[0]) group = studyGroupEls()[0];
     const idx = stepPages(stepEl).findIndex((p) => p.some((u) => u === group || u.contains(group)));
     if (idx >= 0) showPage(stepEl, idx, { silent: true });
     else if (reviewOnlyUnits(stepEl).some((u) => u === group || u.contains(group))) showPage(stepEl, 'more', { silent: true });
@@ -7211,7 +7692,7 @@
       // Change to go back to the page that asked for it (RPA-99).
       if (person && personEmail) { personEmail.textContent = email().trim(); person.hidden = !personEmail.textContent; }
     };
-    if (change) change.addEventListener('click', () => openEmailGate());
+    if (change) change.addEventListener('click', () => { if (!planBlocked()) openEmailGate(); });
     // Restore replaces doc. Delegate to a stable parent, and read the current
     // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
@@ -7230,7 +7711,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 9;
+  const DRAFT_VERSION = 11;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -7401,26 +7882,17 @@
       lists[list.dataset.listKey] = Array.from(list.querySelectorAll('.list-input')).map((i) => i.value);
     });
 
-    // The question is read from the Research Questions rows, not from the
-    // group's heading — that heading is only the abbreviated "RQ<n> ·
-    // keyword", so reading it back would store a label where a question is
-    // meant. Nothing consumes this on restore (syncMethodsGroups recomputes
-    // headings from the live questions), but it keeps the saved shape
-    // honest for anything that reads a draft later.
-    const rqDraftList = doc.querySelector('.list-rows[data-list-key="researchQuestions"]');
-    const rqDraftTexts = rqDraftList
-      ? Array.from(rqDraftList.querySelectorAll('.list-input')).map((i) => i.value.trim())
-      : [];
-    const methods = methodsGroupEls().map((group, i) => {
-      const list = methodsListIn(group);
-      const entry = {
-        question: rqDraftTexts[i] || '',
-        methods: list ? Array.from(list.querySelectorAll('.list-input')).map((i2) => i2.value) : [],
-      };
-      // The participant answers for this question, under their own keys (RPA-116).
-      perQuestionFields.forEach((f) => { entry[f.key] = perQuestionValue(group, f); });
-      return entry;
-    });
+    // The studies, each with the questions it answers and its four answers
+    // (RPA-142). The questions are numbers: position is identity. Writing
+    // in the group that exists before any study is declared is kept as a
+    // study answering nothing, rather than lost: it is flagged, not deleted.
+    let studies = studiesSnapshot();
+    if (!studies.length && methodsGroupAt(0) && groupHasContent(methodsGroupAt(0))) {
+      const mg = methodsGroupAt(0);
+      const entry = { questions: [], methods: Array.from(methodsListIn(mg).querySelectorAll('.list-input')).map((inp) => inp.value) };
+      perQuestionFields.forEach((f) => { entry[f.key] = perQuestionValue(mg, f); });
+      studies = [entry];
+    }
 
     const tableData = {};
     tables.forEach(({ id }) => {
@@ -7443,7 +7915,7 @@
       custom[list.dataset.listKey] = blocks;
     });
 
-    return { fields, selects, lists, methods, tables: tableData, custom, lastUpdatedManual,
+    return { fields, selects, lists, studies, tables: tableData, custom, lastUpdatedManual,
       // The sign-off record (RPA-139). It lives in the draft because there
       // is no server to hold it yet (RPA-136); the shape is the module's.
       signOff: signOffRecord,
@@ -7496,7 +7968,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring) return false;
+    if (!store || draftRestoring || planBlocked()) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -7513,6 +7985,7 @@
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
+          planId,
           savedAt: new Date().toISOString(),
           // Written on every save but only ever from the value already in
           // memory, so the first save fixes it and later ones carry it.
@@ -7534,7 +8007,7 @@
 
   function scheduleDraftSave(event) {
     if (event && !event.target.isConnected) return;
-    if (draftRestoring) return;
+    if (draftRestoring || planBlocked()) return;
     if (draftTimer) window.clearTimeout(draftTimer);
     draftTimer = window.setTimeout(saveDraft, DRAFT_SAVE_DELAY_MS);
   }
@@ -7586,6 +8059,8 @@
     // v9 carries the sign-off record (RPA-139). A plan written before it
     // has not been sent to anybody, so it starts with none.
     if (version < 9) migrated.signOff = migrated.signOff || null;
+    // v10 (RPA-142) is applied last, below, once the per-question groups the
+    // older migrations produce are settled.
     // v7 adds a draft UI preference; pre-existing drafts start hidden.
     if (version < 7) {
       migrated.ui = Object.assign({}, migrated.ui, { timelineVisible: false });
@@ -7672,6 +8147,22 @@
       migrated.lists = lists;
       migrated.selects = selects;
     }
+    // v10 (RPA-142): Methodology is answered per study, not per question. A
+    // plan saved before studies existed had one methods group per question,
+    // so each group that said anything, or whose question exists, becomes a
+    // study answering exactly that question, with every answer in place. The
+    // radios that ask how many studies show that number. An untouched default
+    // group does not become a study, because nobody declared one.
+    if (version < 10) {
+      const questions = (migrated.lists && migrated.lists.researchQuestions) || [];
+      migrated.studies = PLAN.studiesFromGroups(migrated.methods, questions);
+      migrated.selects = Object.assign({}, migrated.selects);
+      if (migrated.studies.length) migrated.selects.studyCount = PLAN.studyCountChoice(migrated.studies.length);
+      delete migrated.methods;
+    }
+    // v11 gives the plan a stable identity that travels with browser autosave
+    // and JSON backup/restore. Submission attempts still get their own UUIDs.
+    if (version < 11) migrated.planId = migrated.planId || newPlanId();
     return migrated;
   }
 
@@ -7698,6 +8189,7 @@
   }
 
   function applyDraft(draft) {
+    planId = draft.planId || newPlanId();
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     signOffRecord = draft.signOff || null;
     // Not handled in migrateDraft: that returns early for any draft already at
@@ -7727,19 +8219,35 @@
       });
     });
 
-    syncMethodsGroups();
-    (draft.methods || []).forEach((saved, i) => {
+    // The studies next: how many, from the radios; then which questions each
+    // answers; then each one's methods group (RPA-142).
+    const countCell = studyCountCell();
+    const savedStudies = Array.isArray(draft.studies) ? draft.studies : [];
+    if (countCell) {
+      // The radios are in the draft: written by the form, or by the
+      // migration for a plan older than studies.
+      const choice = (draft.selects && draft.selects.studyCount) || { v: '', o: '' };
+      applyChoice(countCell, choice);
+      lastStudyCountChoice = choice;
+    }
+    syncStudies();
+    savedStudies.forEach((saved, i) => {
+      const study = PLAN.study(saved);
+      const sg = studyGroupEls()[i];
+      if (sg) sg.querySelectorAll('.study-question-input').forEach((box) => { box.checked = study.questions.indexOf(Number(box.dataset.question)) !== -1; });
       const group = methodsGroupAt(i);
       if (!group) return;
       const list = methodsListIn(group);
       const addBtn = group.querySelector('.add-btn');
-      const values = saved.methods || [];
+      const values = study.methods;
       growTo(() => list.querySelectorAll('.list-row').length, values.length, addBtn);
       const inputs = Array.from(list.querySelectorAll('.list-input'));
       values.forEach((v, j) => { if (inputs[j]) inputs[j].value = v; });
       renumberMethodsGroup(group);
-      perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, saved[f.key]));
+      // Lists come through the model, which reads an older plan's user groups into its participants (RPA-119).
+      perQuestionFields.forEach((f) => restorePerQuestionValue(group, f, f.type === 'radios' ? saved[f.key] : study[f.key]));
     });
+    syncStudyQuestions();
 
     scalarFieldEls().forEach((elm) => {
       const key = elm.getAttribute('data-field');
@@ -7850,12 +8358,20 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
+    syncReveals();   // a restored answer fires no change event
     restoreStepPosition(draft);
     if (syncCommentsReveal) syncCommentsReveal();
   }
 
   function restoreDraft() {
-    const draft = migrateDraft(readDraft());
+    const stored = readDraft();
+    if (draftIsNewer(stored)) {
+      let raw = null;
+      try { raw = draftStore().getItem(DRAFT_KEY); } catch (err) { /* what was parsed will do */ }
+      newerDraft = { version: Number(stored.version), raw: raw || JSON.stringify(stored) };
+      return false;
+    }
+    const draft = migrateDraft(stored);
     if (!draft) return false;
     draftRestoring = true;
     try {
@@ -7970,12 +8486,13 @@
   }
 
   function floorMessage(floor) {
-    return 'This is before the plan was started on ' + formatDateline(floor) + '.';
+    return 'This is before this document was created on ' + formatDateline(floor)
+      + '. Earlier research work is allowed; this is only a note.';
   }
 
-  // min= has to compose rather than overwrite: attachDateRangeConstraint
-  // already sets it on each completion date to keep it at or after its own
-  // start date. Whichever is later wins, and both still hold.
+  // Creation is advisory, so it must not constrain the picker. Only the
+  // stage's start is a minimum for its completion date. Otherwise an earlier
+  // readout would leave min > max, despite earlier work being allowed.
   function rowMinimumFor(input) {
     const tr = input.closest('tr');
     const dates = tr ? tr.querySelectorAll('input[type="date"]') : [];
@@ -7989,8 +8506,7 @@
 
     table.querySelectorAll('tbody input[type="date"]').forEach((input) => {
       const rowMin = rowMinimumFor(input);
-      const effective = [floor, rowMin].filter(Boolean).sort().pop() || '';
-      if (effective) input.min = effective;
+      if (rowMin) input.min = rowMin;
       else input.removeAttribute('min');
 
       const note = input.closest('.date-control').querySelector('.date-note');
@@ -8025,8 +8541,11 @@
   function initDraftPersistence() {
     const arrivedAt = location.hash;   // before the restore rewrites it to the saved step
     const restored = restoreDraft();
+    // A plan this build cannot read comes before everything, a link included:
+    // there is no plan in hand to judge a link against (RPA-143).
+    if (newerDraft) { openNewerDraft(); return; }
     resolveLink();   // the plan is in hand, so a link can be judged against it
-    if (linkIsDead()) { openDeadLink(); bindDraftPersistence(); return; }
+    if (linkIsDead()) { openDeadLink(); return; }
     if (!restored) restoreStepPosition(null);
     // The start page: a first visit with nothing saved and no link into a
     // step, or asked for by its address (RPA-81).
@@ -8050,7 +8569,7 @@
   }
 
   function backupPayload(draft) {
-    return { version: DRAFT_VERSION, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
+    return { version: DRAFT_VERSION, planId, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
   }
 
   // Submission collects the active form directly. Recovery's dormant-data carry is separate.
@@ -8069,10 +8588,6 @@
       workflowPanel.replaceWith(declarations);
       redrawSignOff = () => {};
     }
-    const emailHint = doc.querySelector('.email-step .field-hint-text');
-    if (emailHint) emailHint.textContent = 'This address identifies your local draft and backup file. Sending a plan does not send an email.';
-    const playbackLead = doc.querySelector('.email-playback-lead');
-    if (playbackLead) playbackLead.textContent = 'Email address for this browser:';
     if (step.querySelector('.submission-panel')) return;
     const owner = doc;
     owner._submissionErrors = null;
@@ -8093,6 +8608,10 @@
     const contract = window.RPA_SUBMISSION;
     const fields = [formSchema.header.title, ...formSchema.header.meta, ...formSchema.sections.flatMap(s => s.fields)];
     if (!contract.matchesSchema(fields, formSchema.header.before)) throw new Error('Unsupported active form schema');
+    return collectCurrentPlan();
+  }
+  function collectCurrentPlan() {
+    const contract = window.RPA_SUBMISSION;
     const draft = backupPayload(collectDraft());
     if (!planCreatedAtExact) delete draft.createdAt;
     doc.querySelectorAll('input[type="date"]').forEach(input => {
@@ -8118,6 +8637,13 @@
     try { return (doc._submissionErrors = window.RPA_SUBMISSION.validate(collectSubmissionPlan())); }
     catch (_) { return (doc._submissionErrors = [{ key: null, section: 'review', code: 'schema', message: 'The active form has changed. Keep a backup and contact the organiser before sending.' }]); }
   }
+  // Basic numeric and schedule checks also apply to browser-local review.
+  // Read unfinished date buffers as incomplete, without changing the saved draft.
+  function localCompletionErrors() {
+    const contract = window.RPA_SUBMISSION;
+    return contract.validate(collectCurrentPlan())
+      .filter(error => !error.key || error.key === 'sampleSize' || error.key === 'stageTimeline');
+  }
   function resetSubmissionDeclarations() {
     doc._submissionErrors = null;
     ['declarationResearcher', 'declarationRequester'].forEach(key => {
@@ -8134,8 +8660,12 @@
     return target;
   }
   function resolveSubmissionTarget(error) {
+    if (error.formGroup) return { group: error.formGroup, control: groupControl(error.formGroup) };
     if (!error.key) return {};
-    const owner = error.question === undefined ? doc : methodsGroupEls()[error.question];
+    // The wire format is one group per question; on the page a question's
+    // group is the first study that answers it (RPA-142).
+    const owner = error.study !== undefined ? methodsGroupAt(error.study) :
+      error.question === undefined ? doc : groupForQuestion(error.question + 1);
     if (!owner) return {};
     const node = owner.querySelector('[data-field="' + error.key + '"], [data-list-key="' + error.key + '"], [data-field-key="' + error.key + '"]');
     const group = node?.closest('.field, .mf, .title-field');
@@ -8171,6 +8701,25 @@
     const control = error.code === 'other' ? controls.find(c => c.type === 'text' && localVisible(c)) : controls.find(localVisible);
     return { group, control: control || controls.find(visible) || group.querySelector('button') };
   }
+  // What a submission error says on the page. The validator words its
+  // errors for a plan that is about to be sent, from the wire's names: "Enter
+  // the background.", "Select a sample size for research question 2." The
+  // form has its own words for a field that is unanswered, written in the
+  // template (RPA-120), and its own for a date or a sample size that has been
+  // begun; with submissions on, none of them were shown. Here the form
+  // speaks wherever it has something to say: an unanswered field, a header
+  // date, a declaration, a study's sample size, a schedule nobody has
+  // started. Everything else is the validator's, word for word: a blank row
+  // among filled ones, a date out of bounds, a stage without a name. Which
+  // errors exist, where they point and what the server checks are unchanged.
+  function submissionMessage(error, group) {
+    if (error.formGroup) return groupMessage(error.formGroup);
+    if (!group || !error.key) return error.message;
+    if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
+    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
+    if (['required', 'choice'].includes(error.code) && !fieldHasContent(group)) return groupMessage(group);
+    return error.message;
+  }
   function showSubmissionErrors(errors, summary, { focus = false, final = false } = {}) {
     // Summaries share inline marks. Release only this summary's claim so a
     // question-level refresh cannot remove the final summary's error or duplicate it.
@@ -8192,21 +8741,30 @@
       mark.remove();
     });
     const list = summary.querySelector('.error-summary-list'); list.replaceChildren();
+    // The wire has one error per research question and per empty date; the
+    // page has one field. Said once per field, not once per error behind it.
+    const saidAt = new Map();
     errors.slice(0, 100).forEach(error => {
       const { group, control } = submissionTarget(error);
+      const said = submissionMessage(error, group);
+      if (group) {
+        const already = saidAt.get(group) || saidAt.set(group, new Set()).get(group);
+        if (already.has(said)) return;
+        already.add(said);
+      }
       const item = el('li');
       const link = el(group ? 'a' : 'span', 'error-summary-link', group ? { href: '#' } : {});
-      link.textContent = error.message;
+      link.textContent = said;
       if (group) {
         const container = control?.closest('td, .list-row, .custom-field-block') || group;
         let mark = Array.from(container.querySelectorAll('[data-submission-error-owner]')).find(mark =>
-          mark._submissionControl === control && mark.textContent === error.message);
+          mark._submissionControl === control && mark.textContent === said);
         if (mark) {
           mark.dataset.submissionErrorOwner = Array.from(new Set(mark.dataset.submissionErrorOwner.split(/\s+/).concat(owner))).join(' ');
         } else {
           mark = el('p', 'field-error', { id: 'submission-error-' + (++fieldErrorSeq), 'data-submission-error-owner': owner });
           mark._submissionControl = control;
-          mark.textContent = error.message;
+          mark.textContent = said;
           container.appendChild(mark);
         }
         if (control) {
@@ -8262,6 +8820,7 @@
   }
 
   function downloadBackup() {
+    if (planBlocked()) return;
     let url;
     try {
       const backup = collectBackup();
@@ -8315,7 +8874,7 @@
       string(value.v, path + '.v');
       if ('o' in value) string(value.o, path + '.o');
     };
-    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
+    record(draft, 'plan', ['version', 'planId', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
     // The sign-off record travels with a backup, so a plan signed on one
     // machine still reads as signed when it is restored (RPA-139). Checked
     // for shape rather than rebuilt: the module is the authority on it.
@@ -8332,6 +8891,7 @@
     if (!Number.isInteger(version) || version < 1 || version > DRAFT_VERSION) {
       throw new Error('Unsupported backup version. This app supports versions 1 to ' + DRAFT_VERSION + '.');
     }
+    if (version >= 11 && !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(draft.planId || '')) fail('planId');
     record(draft.fields, 'fields');
     if ('createdAt' in draft) { date(draft.createdAt, 'createdAt'); if (!draft.createdAt) fail('createdAt'); }
     if ('savedAt' in draft) {
@@ -8378,6 +8938,15 @@
       if ('userGroups' in group) array(group.userGroups, path + '.userGroups', string);
       if ('sampleSize' in group) choice(group.sampleSize, path + '.sampleSize');
     });
+    // A study answers questions by number (RPA-142).
+    if ('studies' in draft) array(draft.studies, 'studies', (study, path) => {
+      record(study, path, ['questions', 'methods', 'characteristics', 'userGroups', 'sampleSize']);
+      array(study.questions, path + '.questions', (n, p) => { if (!Number.isInteger(n) || n < 1) fail(p); });
+      array(study.methods, path + '.methods', string);
+      if ('characteristics' in study) array(study.characteristics, path + '.characteristics', string);
+      if ('userGroups' in study) array(study.userGroups, path + '.userGroups', string);
+      if ('sampleSize' in study) choice(study.sampleSize, path + '.sampleSize');
+    });
     const renames = version < 5 ? { title: 'researchTitle' } : {};
     if (version < 4) Object.assign(renames, { researcher: 'leadResearcher', projectOwner: 'projectRequester', reportResearch: 'researchReadout' });
     if (version < 3) renames.problem = 'problemStatement';
@@ -8386,6 +8955,8 @@
     });
     if (version < 2 && draft.methods?.length) fail('methods (version 1 uses lists.methods)');
     if (version >= 2 && draft.lists?.methods) fail('lists.methods (use grouped methods)');
+    if (version < 10 && draft.studies) fail('studies (versions before 10 use methods)');
+    if (version >= 10 && draft.methods) fail('methods (version 10 uses studies)');
     return migrateDraft(draft);
   }
 
@@ -8413,7 +8984,7 @@
 
   // Compare what the supplied draft actually restored. This catches valid JSON
   // with values the present controls cannot represent (unknown options, wrong
-  // cell types, extra columns, orphaned Methods, and single-line text loss).
+  // cell types, extra columns, a study's lost answers, and single-line text loss).
   function verifyBackupRestoration(expected, actual) {
     const fail = (path) => { throw new Error('This backup cannot be restored faithfully at ' + path + '.'); };
     const equal = (a, b, path) => { if (a !== b) fail(path); };
@@ -8454,24 +9025,22 @@
         }
       });
     });
-    (expected.methods || []).forEach((group, i) => {
-      if (!actual.methods[i]) fail('methods[' + i + ']');
-      const values = actual.methods[i].methods;
-      if (group.methods.length && group.methods.length !== values.length) fail('methods[' + i + ']');
-      group.methods.forEach((value, j) => equal(value, values[j], 'methods[' + i + '].methods[' + j + ']'));
-      // The question's participant answers (RPA-116): a list that lost rows
-      // or a sample size the radios cannot show is not a faithful restore.
-      ['characteristics', 'userGroups'].forEach((key) => {
-        if (!Array.isArray(group[key])) return;
-        const got = actual.methods[i][key] || [];
-        if (group[key].length && group[key].length !== got.length) fail('methods[' + i + '].' + key);
-        group[key].forEach((value, j) => equal(value, got[j], 'methods[' + i + '].' + key + '[' + j + ']'));
+    // The studies (RPA-142): both sides are read through the migrations, so
+    // an older backup's per-question groups arrive here as studies too. A
+    // study that lost a question, a method, a participant row or a sample
+    // size the radios cannot show is not a faithful restore.
+    (expected.studies || []).forEach((study, i) => {
+      const got = (actual.studies || [])[i];
+      if (!got) fail('studies[' + i + ']');
+      const wanted = PLAN.study(study);
+      const restored = PLAN.study(got);
+      equal(wanted.questions.join(','), restored.questions.join(','), 'studies[' + i + '].questions');
+      ['methods', 'characteristics'].forEach((key) => {
+        if (wanted[key].length && wanted[key].length !== restored[key].length) fail('studies[' + i + '].' + key);
+        wanted[key].forEach((value, j) => equal(value, restored[key][j], 'studies[' + i + '].' + key + '[' + j + ']'));
       });
-      if (group.sampleSize && typeof group.sampleSize === 'object') {
-        const got = actual.methods[i].sampleSize || { v: '', o: '' };
-        equal(group.sampleSize.v || '', got.v || '', 'methods[' + i + '].sampleSize');
-        equal(group.sampleSize.o || '', got.o || '', 'methods[' + i + '].sampleSize.o');
-      }
+      equal(wanted.sampleSize.v || '', restored.sampleSize.v || '', 'studies[' + i + '].sampleSize');
+      equal(wanted.sampleSize.o || '', restored.sampleSize.o || '', 'studies[' + i + '].sampleSize.o');
     });
   }
 
@@ -8486,7 +9055,7 @@
     // Keep the original nodes and closures, including feedback, focus and any
     // unsaved text. A failed rebuild never has to reconstruct the original.
     const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
-      syncCommentsReveal, planCreatedAt, planCreatedAtExact, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId, lastUpdatedManual, refreshDateline, refreshReviewSummary,
       signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
       methodsSuggestRefresh, fields: new Map(evaluationFields), batches: new Map(evaluationBatches),
       focus: document.activeElement, signature: lastSavedSignature, recoveredDraft };
@@ -8503,6 +9072,7 @@
       lastUpdatedManual = false;
       planCreatedAtExact = Boolean(draft.createdAt);
       planCreatedAt = draft.createdAt || draft.savedAt?.slice(0, 10) || todayIso();
+      planId = draft.planId || newPlanId();
       renderSchema(formSchema);
       initTextareas(doc);
       initStatusSelects(doc);
@@ -8511,6 +9081,7 @@
       initDeadlineConstraints();
       initOutcomesSync();
       initMethodsGroupsSync();
+      syncReveals();
       applyDraft(draft);
       const rendered = collectDraft();
       verifyBackupRestoration(draft, rendered);
@@ -8530,7 +9101,7 @@
       replacementEvents.abort();
       replacement._submission?.dispose();
       if (replacement.isConnected) replacement.replaceWith(original.doc);
-      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact,
+      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId,
         signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
         lastUpdatedManual, refreshDateline, refreshReviewSummary, methodsSuggestRefresh, recoveredDraft } = original);
       tables.splice(0, tables.length, ...original.tables);
@@ -8567,11 +9138,12 @@
     const download = document.getElementById('download-backup-btn');
     const restore = document.getElementById('restore-backup-btn');
     const picker = document.getElementById('backup-file');
-    download.disabled = false;
-    restore.disabled = false;
+    download.disabled = planBlocked();
+    restore.disabled = planBlocked();
     download.addEventListener('click', downloadBackup);
-    restore.addEventListener('click', () => { picker.value = ''; picker.click(); });
+    restore.addEventListener('click', () => { if (planBlocked()) return; picker.value = ''; picker.click(); });
     picker.addEventListener('change', async () => {
+      if (planBlocked()) return;
       const file = picker.files[0];
       if (!file) return;
       const initialDoc = doc;
@@ -8603,6 +9175,7 @@
   }
 
   function clearForm() {
+    if (planBlocked()) return;
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     doc._submission?.replaced();
     resetEvaluationWork();
@@ -8650,12 +9223,18 @@
     // like the lists above: the group count tracks Research Questions, so
     // trimming alone would leave a group behind for every question the reset
     // just removed.
+    // The studies go first (RPA-142): the radios are cleared above, so the
+    // count is none, and the groups follow it.
+    const studiesContainer = studyGroupsEl();
+    if (studiesContainer) studiesContainer.innerHTML = '';
+    lastStudyCountChoice = { v: '', o: '' };
+    syncReveals();   // the radios are cleared, so what they revealed is put away
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
       methodsContainer.appendChild(buildMethodsGroup(methodsContainer.dataset.placeholder || '', methodsContainer.dataset.width));
-      syncMethodsGroups();
     }
+    syncStudies();
     // Reset each dropdown to its own first option rather than hardcoding
     // 'not-started' — that value only exists on the status columns; other
     // .ssel dropdowns (Stage Timeline's Stage column, Sample Size) have
@@ -8694,6 +9273,7 @@
     // values, so this re-applies both.
     planCreatedAt = todayIso();
     planCreatedAtExact = true;
+    planId = newPlanId();
     // Adding the rows back clicks the add button, and a click schedules a
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.
@@ -8850,11 +9430,12 @@
         initDeadlineConstraints();
         initOutcomesSync();
         initMethodsGroupsSync();
+        syncReveals();
         initTestProfileControls();
         initDraftPersistence();
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
-        document.getElementById('print-btn').addEventListener('click', () => window.print());
+        document.getElementById('print-btn').addEventListener('click', () => { if (!planBlocked()) window.print(); });
         initOptionsMenu();
         initStickyOffsets();
       })

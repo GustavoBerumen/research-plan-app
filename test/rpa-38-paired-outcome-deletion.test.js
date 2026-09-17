@@ -1,5 +1,13 @@
 'use strict';
 
+// RPA-38: deleting a research question deletes the outcome paired with it,
+// after confirming when something written would go. RPA-142 changed what is
+// linked: methods belong to a study, not to a question, so deleting a
+// question never deletes methods. The studies drop the question, the
+// questions after it move up one so every tick keeps pointing at the
+// question it meant, and a study left answering nothing stays, flagged, for
+// the person to fix or remove. The outcome pairing is exactly as it was.
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
@@ -15,22 +23,16 @@ function listNumbers(document, key) {
     '.list-rows[data-list-key="' + key + '"] > .list-row > .list-num'
   )).map((number) => number.textContent);
 }
-
-function methodsGroups(document) {
-  return Array.from(document.querySelectorAll('.methods-group'));
-}
-
+function methodsGroups(document) { return Array.from(document.querySelectorAll('.methods-group')); }
 function methodValues(group) {
-  return Array.from(group.querySelectorAll('.list-input'))
-    .map((input) => input.value)
-    .filter(Boolean);
+  return Array.from(group.querySelectorAll('.list-rows[data-list-key="methods"] .list-input')).map((input) => input.value).filter(Boolean);
 }
-
+function ticks(document) {
+  return Array.from(document.querySelectorAll('.study-group')).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => Number(c.value)));
+}
 function addListRow(document, key) {
-  const list = document.querySelector('.list-rows[data-list-key="' + key + '"]');
-  list.closest('.field').querySelector('.add-btn').click();
+  document.querySelector('.list-rows[data-list-key="' + key + '"]').closest('.field').querySelector('.add-btn').click();
 }
-
 function removeQuestion(document, index) {
   const row = listInputs(document, 'researchQuestions')[index].closest('.list-row');
   const button = row.querySelector('.list-remove');
@@ -38,202 +40,133 @@ function removeQuestion(document, index) {
   button.click();
   return button;
 }
+const settle = () => new Promise((r) => setTimeout(r, 220));
 
-function populateThreePairs(app, options = {}) {
+// Three questions; Study 1 answers RQ1 and RQ2, Study 2 answers RQ2 and RQ3.
+async function threeQuestionsTwoStudies(app, { outcomes = ['O1', 'O2', 'O3'], methods = ['M1', 'M2'] } = {}) {
+  const { document, window } = app;
+  addListRow(document, 'researchQuestions'); addListRow(document, 'researchQuestions');
+  ['Q1', 'Q2', 'Q3'].forEach((v, i) => setValue(window, listInputs(document, 'researchQuestions')[i], v));
+  outcomes.forEach((v, i) => setValue(window, listInputs(document, 'outcomes')[i], v));
+  document.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  await settle();
+  const studies = document.querySelectorAll('.study-group');
+  studies[0].querySelectorAll('.study-question-input')[0].click();
+  studies[0].querySelectorAll('.study-question-input')[1].click();
+  studies[1].querySelectorAll('.study-question-input')[1].click();
+  studies[1].querySelectorAll('.study-question-input')[2].click();
+  methods.forEach((v, i) => setValue(window, methodsGroups(document)[i].querySelector('.list-input'), v));
+  await settle();
+}
+
+test('deleting a Question with an empty paired Outcome, that no study answers alone, needs no confirmation and removes the exact pair', async (t) => {
+  let asked = 0;
+  const app = await bootApp({ confirm: () => { asked++; return true; } });
+  t.after(() => app.close());
   const { document, window } = app;
   addListRow(document, 'researchQuestions');
   addListRow(document, 'researchQuestions');
+  ['Q1', 'Q2', 'Q3'].forEach((v, i) => setValue(window, listInputs(document, 'researchQuestions')[i], v));
+  setValue(window, listInputs(document, 'outcomes')[0], 'O1');
+  setValue(window, listInputs(document, 'outcomes')[2], 'O3');
 
-  ['Question one', 'Question two', 'Question three'].forEach((value, index) => {
-    setValue(window, listInputs(document, 'researchQuestions')[index], value);
-  });
-  (options.outcomes || ['Outcome one', 'Outcome two', 'Outcome three'])
-    .forEach((value, index) => setValue(window, listInputs(document, 'outcomes')[index], value));
+  removeQuestion(document, 1);
+  assert.equal(asked, 0, 'nothing written would go');
+  assert.deepEqual(listInputs(document, 'researchQuestions').map((i) => i.value), ['Q1', 'Q3']);
+  assert.deepEqual(listInputs(document, 'outcomes').map((i) => i.value), ['O1', 'O3'], 'the second outcome went with the second question');
+  assert.deepEqual(listNumbers(document, 'researchQuestions'), ['1.', '2.']);
+  assert.deepEqual(listNumbers(document, 'outcomes'), ['1.', '2.']);
+  assert.deepEqual(app.jsdomErrors, []);
+});
 
-  const values = options.methods || ['Method one', 'Method two', 'Method three'];
-  methodsGroups(document).forEach((group, index) => {
-    if (values[index]) setValue(window, group.querySelector('.list-input'), values[index]);
-  });
-}
+test('confirming deletion removes a populated Outcome; the studies drop the question and later ticks move up; methods stay', async (t) => {
+  const messages = [];
+  const app = await bootApp({ confirm: (m) => { messages.push(m); return true; } });
+  t.after(() => app.close());
+  const { document } = app;
+  await threeQuestionsTwoStudies(app);
+  assert.deepEqual(ticks(document), [[1, 2], [2, 3]]);
 
-function evaluationResult() {
-  return {
-    metrics: [{ name: 'Alignment', score: 2, desc: 'Deterministic result' }],
-    recommendations: ['Keep the positional pairs explicit.'],
+  removeQuestion(document, 1);
+  await settle();
+  assert.deepEqual(messages, ['Deleting Research Question 2 means:\n\n- Outcome 2 will be deleted'], 'the outcome is what goes; the methods belong to the studies');
+  assert.deepEqual(listInputs(document, 'researchQuestions').map((i) => i.value), ['Q1', 'Q3']);
+  assert.deepEqual(listInputs(document, 'outcomes').map((i) => i.value), ['O1', 'O3']);
+  assert.deepEqual(ticks(document), [[1], [2]], 'what was RQ3 is RQ2 now, and Study 2 still answers it');
+  assert.equal(methodsGroups(document).length, 2, 'both studies stay');
+  assert.deepEqual(methodsGroups(document).map(methodValues), [['M1'], ['M2']], 'with their methods');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('a study that answered only the deleted question is warned about, kept, and marked as answering nothing', async (t) => {
+  const messages = [];
+  const app = await bootApp({ confirm: (m) => { messages.push(m); return true; } });
+  t.after(() => app.close());
+  const { document } = app;
+  await threeQuestionsTwoStudies(app);
+  document.querySelectorAll('.study-group')[1].querySelectorAll('.study-question-input')[1].click();   // Study 2 answers RQ3 only now
+  await settle();
+  assert.deepEqual(ticks(document), [[1, 2], [3]]);
+  setValue(app.window, listInputs(document, 'outcomes')[2], '');
+
+  removeQuestion(document, 2);
+  await settle();
+  assert.deepEqual(messages, ['Deleting Research Question 3 means:\n\n- Study 2 will no longer answer any research question']);
+  assert.deepEqual(ticks(document), [[1, 2], []]);
+  assert.equal(methodsGroups(document).length, 2, 'not deleted: the person decides what to do with it');
+  assert.deepEqual(methodValues(methodsGroups(document)[1]), ['M2']);
+  assert.equal(methodsGroups(document)[1].querySelector('.methods-group-q').textContent, 'Study 2 answers no research question yet');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('cancelling populated deletion leaves values, numbering, ticks, controls, and focus unchanged', async (t) => {
+  const app = await bootApp({ confirm: () => false });
+  t.after(() => app.close());
+  const { document } = app;
+  await threeQuestionsTwoStudies(app);
+  const before = {
+    questions: listInputs(document, 'researchQuestions').map((i) => i.value),
+    outcomes: listInputs(document, 'outcomes').map((i) => i.value),
+    numbers: [listNumbers(document, 'researchQuestions'), listNumbers(document, 'outcomes')],
+    ticks: ticks(document),
+    methods: methodsGroups(document).map(methodValues),
+    groups: methodsGroups(document),
   };
-}
-
-async function evaluateOutcomes(app) {
-  const field = app.document
-    .querySelector('.list-rows[data-list-key="outcomes"]')
-    .closest('.field');
-  const button = field.closest('.acc').querySelector('.section-eval-btn');
-  button.click();
-  await waitFor(() => app.evaluationRequests.length === 2);
-  await waitFor(() => !button.disabled);
-}
-
-test('deleting a Question with an empty paired Outcome immediately removes the exact pair', async (t) => {
-  const app = await bootApp({
-    confirm: () => { throw new Error('An empty linked pair should not require confirmation'); },
-  });
-  t.after(() => app.close());
-  populateThreePairs(app, {
-    outcomes: ['Outcome one', '', 'Outcome three'],
-    methods: ['Method one', '', 'Method three'],
-  });
-
-  removeQuestion(app.document, 1);
-
-  assert.deepEqual(listInputs(app.document, 'researchQuestions').map((input) => input.value), [
-    'Question one',
-    'Question three',
-  ]);
-  assert.deepEqual(listInputs(app.document, 'outcomes').map((input) => input.value), [
-    'Outcome one',
-    'Outcome three',
-  ]);
-  assert.deepEqual(listNumbers(app.document, 'researchQuestions'), ['1.', '2.']);
-  assert.deepEqual(listNumbers(app.document, 'outcomes'), ['1.', '2.']);
-  assert.deepEqual(methodsGroups(app.document).map(methodValues), [['Method one'], ['Method three']]);
-  assert.deepEqual(
-    methodsGroups(app.document).map((group) => group.querySelector('.methods-group-q').title),
-    ['Question one', 'Question three']
-  );
-});
-
-test('confirming deletion removes a populated Outcome and its exact Methods group', async (t) => {
-  const confirmations = [];
-  const app = await bootApp({
-    confirm: (message) => {
-      confirmations.push(message);
-      return true;
-    },
-  });
-  t.after(() => app.close());
-  populateThreePairs(app);
-  addListRow(app.document, 'outcomes');
-  setValue(app.window, listInputs(app.document, 'outcomes')[3], 'Legitimate extra Outcome');
-
-  removeQuestion(app.document, 1);
-
-  assert.equal(confirmations.length, 1);
-  assert.equal(
-    confirmations[0],
-    'Deleting Research Question 2 will also delete:\n\n- Outcome 2\n- Methods RQ2'
-  );
-  assert.deepEqual(listInputs(app.document, 'researchQuestions').map((input) => input.value), [
-    'Question one',
-    'Question three',
-  ]);
-  assert.deepEqual(listInputs(app.document, 'outcomes').map((input) => input.value), [
-    'Outcome one',
-    'Outcome three',
-    'Legitimate extra Outcome',
-  ]);
-  assert.deepEqual(methodsGroups(app.document).map(methodValues), [['Method one'], ['Method three']]);
-
-  const extraRemove = listInputs(app.document, 'outcomes')[2]
-    .closest('.list-row').querySelector('.list-remove');
-  assert.equal(extraRemove.disabled, false);
-  extraRemove.click();
-  assert.deepEqual(listInputs(app.document, 'outcomes').map((input) => input.value), [
-    'Outcome one',
-    'Outcome three',
-  ]);
-});
-
-test('cancelling populated deletion leaves values, numbering, controls, and focus unchanged', async (t) => {
-  const confirmations = [];
-  const app = await bootApp({
-    confirm: (message) => {
-      confirmations.push(message);
-      return false;
-    },
-  });
-  t.after(() => app.close());
-  populateThreePairs(app);
-
-  const questionRows = Array.from(app.document.querySelectorAll(
-    '.list-rows[data-list-key="researchQuestions"] > .list-row'
-  ));
-  const outcomeRows = Array.from(app.document.querySelectorAll(
-    '.list-rows[data-list-key="outcomes"] > .list-row'
-  ));
-  const groups = methodsGroups(app.document);
-  const removeButton = removeQuestion(app.document, 1);
-
-  assert.equal(confirmations.length, 1);
-  assert.equal(app.document.activeElement, removeButton);
-  assert.deepEqual(
-    Array.from(app.document.querySelectorAll('.list-rows[data-list-key="researchQuestions"] > .list-row')),
-    questionRows
-  );
-  assert.deepEqual(
-    Array.from(app.document.querySelectorAll('.list-rows[data-list-key="outcomes"] > .list-row')),
-    outcomeRows
-  );
-  assert.deepEqual(methodsGroups(app.document), groups);
-  assert.deepEqual(listInputs(app.document, 'researchQuestions').map((input) => input.value), [
-    'Question one', 'Question two', 'Question three',
-  ]);
-  assert.deepEqual(listInputs(app.document, 'outcomes').map((input) => input.value), [
-    'Outcome one', 'Outcome two', 'Outcome three',
-  ]);
-  assert.deepEqual(listNumbers(app.document, 'researchQuestions'), ['1.', '2.', '3.']);
-  assert.deepEqual(listNumbers(app.document, 'outcomes'), ['1.', '2.', '3.']);
-  assert.deepEqual(methodsGroups(app.document).map(methodValues), [
-    ['Method one'], ['Method two'], ['Method three'],
-  ]);
-  assert.ok(questionRows.every((row) => row.querySelector('.list-remove')));
-  assert.ok(outcomeRows.every((row) => row.querySelector('.list-remove')));
-  assert.ok(groups.every((group) => group.querySelector('.add-btn')));
+  const button = removeQuestion(document, 1);
+  await settle();
+  assert.deepEqual(listInputs(document, 'researchQuestions').map((i) => i.value), before.questions);
+  assert.deepEqual(listInputs(document, 'outcomes').map((i) => i.value), before.outcomes);
+  assert.deepEqual([listNumbers(document, 'researchQuestions'), listNumbers(document, 'outcomes')], before.numbers);
+  assert.deepEqual(ticks(document), before.ticks);
+  assert.deepEqual(methodsGroups(document).map(methodValues), before.methods);
+  assert.deepEqual(methodsGroups(document), before.groups, 'the same nodes, not rebuilt ones');
+  assert.equal(document.activeElement, button, 'focus stays on the button that was pressed');
+  assert.deepEqual(app.jsdomErrors, []);
 });
 
 test('the confirmed structure saves, restores, and evaluates without re-pairing later entries', async (t) => {
-  const first = await bootApp({
-    confirm: () => true,
-    evaluate: () => evaluationResult(),
-  });
-  populateThreePairs(first);
-  removeQuestion(first.document, 1);
-  await evaluateOutcomes(first);
+  const app = await bootApp({ confirm: () => true });
+  t.after(() => app.close());
+  const { document, window } = app;
+  await threeQuestionsTwoStudies(app);
+  removeQuestion(document, 0);
+  await settle();
+  assert.deepEqual(ticks(document), [[1], [1, 2]], 'RQ2 and RQ3 became RQ1 and RQ2; Study 1 answers the first, Study 2 both');
+  const saved = await waitFor(() => { const s = JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null'); return s && s.lists.researchQuestions.length === 2 && s; });
+  assert.deepEqual(saved.lists.researchQuestions, ['Q2', 'Q3']);
+  assert.deepEqual(saved.lists.outcomes, ['O2', 'O3']);
+  assert.deepEqual(saved.studies.map((s) => [s.questions, s.methods]), [[[1], ['M1']], [[1, 2], ['M2']]]);
 
-  assert.deepEqual(first.evaluationRequests.find(request => request.body.fieldKey === 'outcomes').body.entries, [
-    { number: 1, text: 'Outcome one' },
-    { number: 2, text: 'Outcome three' },
-  ]);
-  assert.deepEqual(first.evaluationRequests.find(request => request.body.fieldKey === 'outcomes').body.researchQuestions, [
-    { number: 1, text: 'Question one' },
-    { number: 2, text: 'Question three' },
-  ]);
-
-  // The address given before the plan is already saved (RPA-99): wait for the deletion itself.
-  const savedRaw = await waitFor(() => { const r = first.window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Question three') && !r.includes('Question two') && r; }, {
-    timeout: 5000,
-    message: 'The confirmed deletion was not saved',
-  });
-  const saved = JSON.parse(savedRaw);
-  first.close();
-
-  const restored = await bootApp({ draft: saved });
-  t.after(() => restored.close());
-  assert.deepEqual(listInputs(restored.document, 'researchQuestions').map((input) => input.value), [
-    'Question one', 'Question three',
-  ]);
-  assert.deepEqual(listInputs(restored.document, 'outcomes').map((input) => input.value), [
-    'Outcome one', 'Outcome three',
-  ]);
-  assert.deepEqual(methodsGroups(restored.document).map(methodValues), [
-    ['Method one'], ['Method three'],
-  ]);
-  assert.deepEqual(
-    methodsGroups(restored.document).map((group) => group.querySelector('.methods-group-q').title),
-    ['Question one', 'Question three']
-  );
+  const again = await bootApp({ draft: saved, confirm: () => true });
+  t.after(() => again.close());
+  assert.deepEqual(listInputs(again.document, 'researchQuestions').map((i) => i.value), ['Q2', 'Q3']);
+  assert.deepEqual(listInputs(again.document, 'outcomes').map((i) => i.value), ['O2', 'O3']);
+  assert.deepEqual(ticks(again.document), [[1], [1, 2]]);
+  assert.deepEqual(methodsGroups(again.document).map(methodValues), [['M1'], ['M2']]);
+  assert.deepEqual(again.jsdomErrors, []);
 });
 
-test('test-profile loading still builds matching Question, Outcome, and Methods structures', async (t) => {
+test('test-profile loading still builds matching Question and Outcome structures, with one group holding the methods until a study is declared', async (t) => {
   const app = await bootApp({ url: 'https://research-plan.test/?test' });
   t.after(() => app.close());
   const select = app.document.querySelector('.test-profile-select');
@@ -250,7 +183,8 @@ test('test-profile loading still builds matching Question, Outcome, and Methods 
     listInputs(app.document, 'outcomes').map((input) => input.value),
     Array.from(profile.fields.outcomes)
   );
-  assert.equal(methodsGroups(app.document).length, profile.fields.researchQuestions.length);
+  assert.equal(methodsGroups(app.document).length, 1, 'a profile declares no studies (RPA-142)');
+  if (profile.fields.methods) assert.deepEqual(methodValues(methodsGroups(app.document)[0]), Array.from(profile.fields.methods));
   assert.equal(app.document.querySelectorAll('.section-eval-btn').length, 2);
   assert.ok(Array.from(app.document.querySelectorAll('.eval-controls > .eval-btn')).every(button => button.hidden));
 });

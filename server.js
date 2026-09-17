@@ -20,6 +20,13 @@ if (pilotSetting !== undefined && pilotSetting !== 'true' && pilotSetting !== 'f
   throw new Error('RPA_PILOT_MODE must be true or false');
 }
 const PILOT_MODE = pilotSetting === 'true';
+// Tool feedback is separate from completed-plan submissions. Pilot collection
+// needs an explicit choice; retain the existing non-pilot default.
+const feedbackSetting = process.env.RPA_FEEDBACK_ENABLED;
+if (feedbackSetting !== undefined && feedbackSetting !== 'true' && feedbackSetting !== 'false') {
+  throw new Error('RPA_FEEDBACK_ENABLED must be true or false');
+}
+const FEEDBACK_ENABLED = feedbackSetting === undefined ? !PILOT_MODE : feedbackSetting === 'true';
 const pilotGuard = createPilotGuard({ pilot: PILOT_MODE, env: process.env });
 
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -63,7 +70,7 @@ const CAPABILITIES = Object.freeze({
   // The sequential sign-off over HTTP (RPA-138), off until a durable
   // destination is chosen. Max's MVP keeps the sign-off in the browser.
   signOff: signOff.enabled,
-  feedback: true,
+  feedback: FEEDBACK_ENABLED,
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
   addFramework: !PILOT_MODE,
@@ -79,6 +86,7 @@ const PUBLIC_ASSETS = new Map([
   ['/style.css', 'style.css'],
   ['/favicon.svg', 'favicon.svg'],
   ['/app.js', 'app.js'],
+  ['/plan-model.js', 'plan-model.js'],
   ['/plan-workflow.js', 'plan-workflow.js'],
   ['/submission-contract.js', 'submission-contract.js'],
   ['/submission-ui.js', 'submission-ui.js'],

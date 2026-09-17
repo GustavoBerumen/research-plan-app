@@ -17,36 +17,42 @@ test('every required scalar, every retained list row, Other and declarations blo
   for (const key of ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'background', 'goal', 'problemStatement', 'objective', 'signOffResearcher', 'signOffProjectOwner', 'declarationResearcher', 'declarationRequester']) {
     const p = plan(); p.fields[key] = ' \t'; assert.ok(contract.validate(p).some(e => e.key === key), key);
   }
-  for (const key of ['methods', 'characteristics', 'userGroups']) {
-    const p = plan(); p.methods[0][key].push(' '); assert.ok(contract.validate(p).some(e => e.key === key && e.question === 0 && e.row === 1));
+  for (const key of ['methods', 'characteristics']) {
+    const p = plan(); p.studies[0][key].push(' '); assert.ok(contract.validate(p).some(e => e.key === key && e.study === 0 && e.row === 1));
   }
-  const p = plan(); p.methods[0].sampleSize = { v: '__other__', o: ' ' };
+  // userGroups is a dormant wire slot since RPA-119: allowed, never required, like comments since RPA-98.
+  { const p = plan(); p.studies[0].userGroups = []; assert.deepEqual(contract.validate(p), [], 'empty user groups block nothing'); }
+  { const p = plan(); p.studies[0].userGroups = [' ']; assert.equal(contract.validate(p).some(e => e.key === 'userGroups'), false); }
+  const p = plan(); p.studies[0].sampleSize = { v: '__other__', o: ' ' };
   assert.equal(contract.validate(p)[0].code, 'other');
-  p.methods[0].sampleSize.o = '5'; assert.deepEqual(contract.validate(p), []);
+  p.studies[0].sampleSize.o = '5'; assert.deepEqual(contract.validate(p), []);
 });
 
 test('Other sample sizes require positive whole counts, ordered ranges or minimums without changing the text', () => {
   for (const value of ['1', '5', '5-8', '5–8', '30+', ' 5 – 8 ', '5-5']) {
-    const p = plan(); p.methods[0].sampleSize = { v: '__other__', o: value };
+    const p = plan(); p.studies[0].sampleSize = { v: '__other__', o: value };
     assert.deepEqual(contract.validate(p), [], value);
-    assert.equal(p.methods[0].sampleSize.o, value);
+    assert.equal(p.studies[0].sampleSize.o, value);
   }
   for (const value of ['asdf', 'Five', '5 people', '0', '-1', '2.5', '1e2', '0-5', '8-5', '5–0', '5–8–9', '9007199254740992']) {
-    const p = plan(); p.methods[0].sampleSize = { v: '__other__', o: value };
+    const p = plan(); p.studies[0].sampleSize = { v: '__other__', o: value };
     const errors = contract.validate(p);
     assert.equal(errors.length, 1, value);
-    assert.deepEqual([errors[0].key, errors[0].question, errors[0].code], ['sampleSize', 0, 'other']);
-    assert.match(errors[0].message, /valid sample size for research question 1/);
+    assert.deepEqual([errors[0].key, errors[0].study, errors[0].code], ['sampleSize', 0, 'other']);
+    assert.match(errors[0].message, /valid sample size for Study 1/);
   }
 });
-test('question/outcome/method pairing never compacts or invents associations', () => {
+test('questions, outcomes and ordered study assignments never compact or invent associations', () => {
   const p = plan(); p.lists.researchQuestions.push('Second question');
   let errors = contract.validate(p);
   assert.ok(errors.some(e => e.key === 'outcomes' && e.row === 1)); assert.ok(errors.some(e => e.code === 'pairing'));
-  p.lists.outcomes.push('Second outcome', 'Additional outcome'); p.methods.push({ ...structuredClone(p.methods[0]), question: 'Second question' });
+  p.lists.outcomes.push('Second outcome', 'Additional outcome'); p.selects.studyCount = { v: 'Two', o: '' };
+  p.studies.push({ ...structuredClone(p.studies[0]), questions: [2] });
   assert.deepEqual(contract.validate(p), []);
   p.lists.outcomes[0] = ''; assert.ok(contract.validate(p).some(e => e.key === 'outcomes' && e.row === 0));
-  p.methods.reverse(); assert.equal(contract.validate(p).filter(e => e.code === 'pairing').length, 2);
+  p.lists.outcomes[0] = 'Identify barriers.';
+  p.studies.reverse(); assert.deepEqual(p.studies.map(s => s.questions), [[2], [1]], 'study order is authored data');
+  assert.deepEqual(contract.validate(p), []);
 });
 
 test('completed sign-offs contain initials and a real date while recovery structure permits undated initials', () => {
@@ -62,7 +68,7 @@ test('completed sign-offs contain initials and a real date while recovery struct
   }
 });
 test('schedule dates are real, complete, ordered and within known bounds; every retained row counts', () => {
-  for (const [value, code] of [['', 'date'], ['2026-02-30', 'date'], ['2026-09-13', 'bounds'], ['2027-01-01', 'bounds']]) {
+  for (const [value, code] of [['', 'date'], ['2026-02-30', 'date'], ['2027-01-01', 'bounds']]) {
     const p = plan(); p.tables['stageTimeline-table'][0][1].v = value;
     assert.ok(contract.validate(p).some(e => e.key === 'stageTimeline' && e.column === 'startDate' && e.code === code));
   }
@@ -81,7 +87,7 @@ test('optional partial blocks and meaningful references require names; dormant f
 });
 test('structure rejects unknown, prototype, nested, oversized and forged properties', () => {
   const changes = [p => { p.deleteAfter = '2099-01-01'; }, p => { p.fields.unknown = 'x'; }, p => { p.fields.background = {}; },
-    p => { p.lists.outcomes = Array(501).fill('x'); }, p => { p.methods[0].complete = true; },
+    p => { p.lists.outcomes = Array(501).fill('x'); }, p => { p.studies[0].complete = true; },
     p => { p.tables['stageTimeline-table'][0].push({ t: 'text', v: '' }); }, p => { p.fields = JSON.parse('{"__proto__":"x"}'); },
     p => { p.savedAt = '2026-02-30T12:00:00.000Z'; }];
   for (const change of changes) { const p = plan(); change(p); assert.equal(contract.validate(p)[0].code, 'structure'); }

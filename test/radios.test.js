@@ -46,7 +46,7 @@ test('renders one radio per option plus Other, with the reveal put away', async 
   // The design system's shape since RPA-118: a fieldset whose legend asks the question.
   const fieldset = g.el.closest('fieldset');
   assert.ok(fieldset && fieldset.classList.contains('field'), 'a fieldset');
-  assert.equal(fieldset.querySelector('legend').textContent.trim(), 'How many participants do you need? for research question 1', 'the question as legend, named for its research question since RPA-116');
+  assert.equal(fieldset.querySelector('legend').textContent.trim(), 'How many participants do you need?', 'the question as legend; it is named for its study once one is declared (RPA-142), named for its research question since RPA-116');
 
   // Every radio has a real label bound to it, so the text is a hit target.
   g.radios.forEach((radio) => {
@@ -82,7 +82,7 @@ test('the choice is saved and restored in the shape a dropdown used', async (t) 
     message: 'the draft was never saved',
   });
   const saved = JSON.parse(raw);
-  assert.deepEqual(saved.methods[0].sampleSize, { v: 'Large (13–29)', o: '' }, 'saved with its research question since RPA-116');
+  assert.deepEqual(saved.studies[0].sampleSize, { v: 'Large (13–29)', o: '' }, 'saved with its study since RPA-142; written before a study is declared, it is kept as one');
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());

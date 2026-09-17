@@ -40,7 +40,7 @@ function press(d, label) {
 }
 async function onReview(app) {
   const { document: d, window } = app;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => steps(d)[i].hidden === false);
     completeStep(app, steps(d)[i]);
@@ -48,7 +48,7 @@ async function onReview(app) {
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), 'Priya Nair');
   setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Tom Okafor');
   window.location.hash = '#review';
-  await waitFor(() => steps(d)[6].hidden === false);
+  await waitFor(() => steps(d)[7].hidden === false);
   await settle();
 }
 function startAndSign(app, role = 'leadResearcher') {
@@ -60,7 +60,7 @@ function startAndSign(app, role = 'leadResearcher') {
   setValue(window, d.querySelector('[data-field="' + KEYS[role].name + '"]'), 'PN');
   press(d, 'Continue');
   setValue(window, d.getElementById('sign-off-other-email'), 'tom@example.com');
-  press(d, 'Sign and send');
+  press(d, 'Sign for local review');
 }
 // A plan sent to Tom, and the draft it was saved in.
 async function sent(t) {
@@ -159,7 +159,7 @@ test('the other person’s link opens the plan as them, and says whose link it w
   const theirs = await bootApp({ draft, url: 'https://research-plan.test/?as=' + token + '#review' });
   t.after(() => theirs.close());
   const d = theirs.document;
-  await waitFor(() => steps(d)[6].hidden === false);
+  await waitFor(() => steps(d)[7].hidden === false);
   await settle();
   assert.deepEqual(visible(d), ['review']);
   assert.equal(noteOf(d),
@@ -176,7 +176,7 @@ test('a link names you even when the plan is waiting on the other person', async
   const mine = await bootApp({ draft, url: 'https://research-plan.test/?as=' + token + '#review' });
   t.after(() => mine.close());
   const d = mine.document;
-  await waitFor(() => steps(d)[6].hidden === false);
+  await waitFor(() => steps(d)[7].hidden === false);
   await settle();
   assert.match(noteOf(d), /^You are signing as Priya Nair, the lead researcher/);
   assert.equal(text(d.querySelector('.sign-off-waiting')), 'Nothing for you to do. This plan is with Tom Okafor.');

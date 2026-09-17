@@ -29,7 +29,7 @@ const rowsOf = (details) => Array.from(details.querySelectorAll('.summary-row'))
 const changeIn = (details, label) => Array.from(details.querySelectorAll('.summary-change')).find((b) => text(b) === 'Change ' + label);
 async function reachReview(app) {
   const d = app.document;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     app.window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
     completeStep(app, steps(d)[i]);
@@ -77,6 +77,21 @@ test('pressing Show answers keeps focus on it through the redraw the press itsel
   d.dispatchEvent(new window.Event('input', { bubbles: true }));
   await new Promise((r) => setTimeout(r, 200));
   assert.equal(d.activeElement, changeIn(answersOf(review, 'research'), 'Outcomes'), 'so does a Change a person tabbed to');
+});
+
+test('a delayed disclosure toggle does not replace the Change button that has focus', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const review = await reachReview(app);
+  const details = answersOf(review, 'research');
+  reveal(details);
+  const change = changeIn(details, 'Outcomes');
+  change.focus();
+  // Native toggle delivery can follow the eager draw that restores an open
+  // disclosure, or a synthetic toggle used by an interaction harness.
+  details.dispatchEvent(new app.window.Event('toggle'));
+  assert.equal(app.document.activeElement, change);
+  assert.equal(changeIn(details, 'Outcomes'), change, 'the already current answer rows keep their controls');
 });
 
 test('the return path is one-shot and only for that section: the next Save and continue goes to the check page as usual', async (t) => {
@@ -144,11 +159,11 @@ test('Plan details is on the review step too, answers and all, and Change there 
   t.after(() => app.close());
   const { document: d, window } = app;
   const review = await reachReview(app);
-  assert.deepEqual(Array.from(review.querySelectorAll('.review-row')).map((r) => r.dataset.slug), ['plan-details', 'context', 'research', 'methodology', 'execution']);
+  assert.deepEqual(Array.from(review.querySelectorAll('.review-row')).map((r) => r.dataset.slug), ['plan-details', 'context', 'research', 'studies', 'methodology', 'execution']);
   assert.equal(text(rowOf(review, 'plan-details').querySelector('.review-name')), 'Plan details');
   const details = answersOf(review, 'plan-details');
   reveal(details);
-  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Research title', 'Jira Project', 'Lead researcher', 'Project requester', 'Project decision', 'Research readout']);
+  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout']);
   changeIn(details, 'Lead researcher').click();
   assert.deepEqual(visible(d), ['plan-details']);
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcher"]'));

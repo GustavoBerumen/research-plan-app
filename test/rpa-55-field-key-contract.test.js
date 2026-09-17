@@ -257,13 +257,14 @@ test('a draft saved before the RPA-55 header renames restores into the new field
   assert.equal(valueOf('projectDecision'), '2026-09-25');
 });
 
-test('a draft saved before the merge finds User Groups still there', async (t) => {
-  // RPA-55 merged these two and then reversed it: a screener criterion filters
-  // who is eligible, a segment sets who must be represented among those who
-  // are. While they were one field a migration folded userGroups into
-  // characteristics. That fold is gone, and its absence is the behaviour under
-  // test — running it now would move somebody's segments into the wrong field
-  // and delete the key they came from.
+test('a draft saved while there were two lists reads with its user groups after its characteristics', async (t) => {
+  // The history, because it has gone back and forth: RPA-55 merged
+  // Characteristics and User Groups, then reversed it on the grounds that one
+  // is a filter and the other a quota. On 17 September 2026 (RPA-119) Gus
+  // made them one question again, "Who should take part in this study?",
+  // with the help note keeping the two kinds of criteria apart. The old
+  // fold was a migration that deleted a key; this one is a way of reading,
+  // so nothing saved is rewritten until the person edits the plan.
   const app = await bootApp({
     draft: {
       version: 5,
@@ -282,56 +283,65 @@ test('a draft saved before the merge finds User Groups still there', async (t) =
     app.document.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')
   ).map((input) => input.value);
 
-  assert.ok(app.document.querySelector('.list-rows[data-list-key="userGroups"]'),
-    'User Groups renders again');
-  assert.deepEqual(listValues('userGroups'), ['New customers', 'Returning customers'],
-    'the segments stay segments');
-  assert.deepEqual(listValues('characteristics'), ['Frequent mobile shoppers'],
-    'and nothing was folded in on top of them');
+  assert.equal(app.document.querySelector('.list-rows[data-list-key="userGroups"]'), null, 'there is one list now');
+  assert.deepEqual(listValues('characteristics'), ['Frequent mobile shoppers', 'New customers', 'Returning customers'],
+    'the segments follow the criteria, and nothing anyone wrote is lost');
+
+  // A plan saved the day before the change is already at the current
+  // version, so no migration touches it: opening it is the only reading it
+  // gets. Its stored draft is left as it was until the person edits.
+  const stored = {
+    version: 10, savedAt: '2026-09-16T09:00:00.000Z', createdAt: '2026-09-16', fields: { researchTitle: 'Saved the day before' },
+    selects: { studyCount: { v: 'One', o: '' } }, lists: { researchQuestions: ['Where do people give up?'], outcomes: ['A list.'] },
+    studies: [{ questions: [1], methods: ['Interviews'], characteristics: ['Abandoned a basket', ''], userGroups: ['New customers'], sampleSize: { v: '', o: '' } }],
+    tables: {}, custom: {}, lastUpdatedManual: false, signOff: null, ui: { timelineVisible: false },
+  };
+  const recent = await bootApp({ draft: stored });
+  t.after(() => recent.close());
+  assert.deepEqual(
+    Array.from(recent.document.querySelectorAll('.methods-group .list-rows[data-list-key="characteristics"] .list-input')).map((i) => i.value),
+    ['Abandoned a basket', 'New customers'], 'a current-version plan reads the same way');
+  assert.deepEqual(JSON.parse(recent.window.localStorage.getItem(DRAFT_KEY)).studies[0].userGroups, ['New customers'], 'and opening it rewrites nothing');
 });
 
-test('the two fields ask different questions, and say so', async (t) => {
-  // The merge argued that both wanted a short noun phrase naming a kind of
-  // person. True of the format, wrong about the function — and the hints are
-  // the only thing keeping them from collapsing back together, so they are
-  // worth pinning. If a rewording ever makes both say the same thing again,
-  // this is the test that should object.
+test('one question asks who takes part, and its help note keeps the two kinds of criteria apart', async (t) => {
+  // What used to be held by two hints is held by the note: a rewording that
+  // drops either kind of criterion is what this should object to.
   const app = await bootApp();
   t.after(() => app.close());
-
-  const hintFor = (key) => {
-    const list = app.document.querySelector('.list-rows[data-list-key="' + key + '"]');
-    return list.closest('.field').querySelector('.field-hint-text').textContent.trim();
-  };
-
-  const characteristics = hintFor('characteristics');
-  const userGroups = hintFor('userGroups');
-  assert.notEqual(characteristics, userGroups);
-  assert.match(characteristics, /eligib/i, 'Characteristics is about who qualifies');
-  assert.match(userGroups, /represent/i, 'User Groups is about who must be present');
+  const field = app.document.querySelector('.list-rows[data-list-key="characteristics"]').closest('.field');
+  assert.equal(field.querySelector('.flabel').firstChild.textContent, 'Who should take part in this study?');
+  assert.equal(field.dataset.fieldName, 'Participant criteria', 'the name the check page and the error summary use');
+  assert.match(field.querySelector('.field-hint-text').textContent, /target participants and screening criteria/);
+  const help = field.querySelector('.field-help');
+  assert.equal(help.querySelector('summary').textContent, 'How to define your participants');
+  const kinds = Array.from(help.querySelectorAll('.field-help-list li strong')).map((n) => n.textContent);
+  assert.deepEqual(kinds, ['User groups:', 'User characteristics:']);
+  const items = Array.from(help.querySelectorAll('.field-help-list li')).map((n) => n.textContent);
+  assert.match(items[0], /segments, roles, or personas/, 'who must be represented');
+  assert.match(items[1], /make someone eligible/, 'who qualifies');
 });
 
-test('both lists save and come back under their own keys', async (t) => {
+test('the one list saves under its key, and nothing is saved as user groups', async (t) => {
   const app = await bootApp();
   const { document, window } = app;
 
-  const inputFor = (key) => document
-    .querySelector('.list-rows[data-list-key="' + key + '"] .list-input');
-  setValue(window, inputFor('characteristics'), 'Abandoned a checkout in the last 30 days');
-  setValue(window, inputFor('userGroups'), 'New customers');
+  const list = document.querySelector('.list-rows[data-list-key="characteristics"]');
+  setValue(window, list.querySelector('.list-input'), 'Abandoned a checkout in the last 30 days');
+  list.closest('.field').querySelector('.add-btn').click();
+  setValue(window, list.querySelectorAll('.list-input')[1], 'New customers');
   await new Promise((resolve) => setTimeout(resolve, 700));
 
   const saved = JSON.parse(window.localStorage.getItem(DRAFT_KEY));
-  // Since RPA-116 both are saved per research question, in the question's group.
-  assert.deepEqual(saved.methods[0].characteristics, ['Abandoned a checkout in the last 30 days']);
-  assert.deepEqual(saved.methods[0].userGroups, ['New customers'],
-    'the segments are stored separately, not appended to the criteria');
+  // Saved with the study (RPA-142); written before a study is declared, it is kept as one.
+  assert.deepEqual(saved.studies[0].characteristics, ['Abandoned a checkout in the last 30 days', 'New customers']);
+  assert.equal('userGroups' in saved.studies[0], false);
   app.close();
 
   const reopened = await bootApp({ draft: saved });
   t.after(() => reopened.close());
-  assert.equal(
-    reopened.document.querySelector('.list-rows[data-list-key="userGroups"] .list-input').value,
-    'New customers'
+  assert.deepEqual(
+    Array.from(reopened.document.querySelectorAll('.list-rows[data-list-key="characteristics"] .list-input')).map((i) => i.value),
+    ['Abandoned a checkout in the last 30 days', 'New customers']
   );
 });

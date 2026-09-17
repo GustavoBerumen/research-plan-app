@@ -220,7 +220,9 @@ async function bootApp(options = {}) {
     if (!scriptPath.startsWith(ROOT + path.sep)) {
       throw new Error('Refusing to load script outside the repository: ' + source);
     }
-    window.eval(fs.readFileSync(scriptPath, 'utf8') + '\n//# sourceURL=' + source);
+    const script = fs.readFileSync(scriptPath, 'utf8');
+    // Test-only instrumentation for callbacks that cannot be reached after a page is removed.
+    window.eval((options.transformScript ? options.transformScript(source, script) : script) + '\n//# sourceURL=' + source);
     executedScripts.push(source);
   });
 
@@ -280,12 +282,30 @@ async function bootApp(options = {}) {
 // skipped, because completeness skips them too.
 function completeStep(app, stepEl) {
   const { window } = app;
-  const groups = stepEl.classList.contains('doc-header')
+  const groupsOf = () => (stepEl.classList.contains('doc-header')
     ? Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'))
     : stepEl.classList.contains('review-step')
       ? Array.from(stepEl.querySelectorAll('.review-signoffs .field'))
-      : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt'));
+      : Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-custom)')).filter((f) => !f.querySelector('.fopt')));
+  // Answering one question can add others: choosing how many studies makes a
+  // page per study (RPA-142). So the groups are re-read until nothing new
+  // appears, and each is answered once.
+  const done = new Set();
+  let groups;
+  for (let round = 0; round < 10; round++) {
+    groups = groupsOf().filter((g) => !done.has(g));
+    if (!groups.length) break;
+    groups.forEach((g) => done.add(g));
   groups.forEach((g) => {
+    const schedule = g.querySelector('#stageTimeline-table');
+    if (schedule) {
+      // Complete each retained row with a real, ordered date pair.
+      schedule.querySelectorAll('tbody input[type=date]').forEach(input => setValue(window, input, '2026-10-01'));
+      return;
+    }
+    // "Which questions does this study answer?" is answered with all of them,
+    // so no research question is left outside every study (RPA-140).
+    if (g.classList.contains('study-group')) { g.querySelectorAll('input[type=checkbox]').forEach((b) => { if (!b.checked) b.click(); }); return; }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');
@@ -303,6 +323,7 @@ function completeStep(app, stepEl) {
     // An email address is judged by shape (RPA-99), so the answer has one.
     setValue(window, ctl, ctl.type === 'date' ? '2026-10-01' : ctl.type === 'email' ? 'name@example.com' : 'Filled.');
   });
+  }
 }
 
 // Presses Save and continue through the step's pages (RPA-108) and, when the

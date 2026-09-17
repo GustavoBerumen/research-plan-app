@@ -158,14 +158,20 @@ test('answers are shown as given: a date in words, a radio by its label, a list 
   assert.equal(researchRows['Research Questions'], 'Why do people leave? What do they expect?', 'a list by its rows');
   assert.equal(researchRows['Hypothesis'], 'Not provided', 'an optional field left blank says so');
   panelOf(research).querySelector('.check-continue').click();
-  const methodology = steps(d)[4];
+  // Two studies, one question each (RPA-142), so each has rows of its own.
+  const studies = steps(d)[4];
+  studies.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  const studyGroups = studies.querySelectorAll('.study-group');
+  studyGroups[0].querySelectorAll('.study-question-input')[0].click();
+  studyGroups[1].querySelectorAll('.study-question-input')[1].click();
+  saveAndContinue(studies);
+  const methodology = steps(d)[5];
   completeStep(app, methodology);
   toCheckPage(methodology);
   const methodologyRows = Object.fromEntries(rowsOf(methodology));
-  // Since RPA-116 each research question has its own rows, named for the question.
-  assert.equal(methodologyRows['Sample Size for research question 1'], 'Small (1–5)', 'a radio by its label');
-  assert.equal(methodologyRows['Methods for research question 1'], 'Filled.', 'methods for that question');
-  assert.equal(methodologyRows['Methods for research question 2'], 'Filled.', 'the second question has rows of its own');
+  assert.equal(methodologyRows['Sample Size for Study 1'], 'Small (1–5)', 'a radio by its label');
+  assert.equal(methodologyRows['Methods for Study 1'], 'Filled.', 'methods for that study');
+  assert.equal(methodologyRows['Methods for Study 2'], 'Filled.', 'the second study has rows of its own');
 });
 
 test('the check page does not print, and Change from the review step lands on the answers, not the check page', async (t) => {

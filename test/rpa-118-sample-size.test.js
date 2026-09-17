@@ -29,7 +29,7 @@ test('Sample Size is a fieldset: the question as its legend, the hint beneath, s
   assert.equal(fieldset.tagName, 'FIELDSET');
   const legend = fieldset.querySelector(':scope > legend');
   assert.ok(legend, 'the question is the legend');
-  assert.equal(text(legend), 'How many participants do you need? for research question 1', 'a plain-English question, named for its research question');
+  assert.equal(text(legend), 'How many participants do you need?', 'a plain-English question; named for its study once one is declared (RPA-142)');
   const hint = fieldset.querySelector(':scope > .field-hint-text');
   assert.equal(legend.nextElementSibling, hint, 'the hint sits under the legend');
   assert.match(text(hint), /^The number of people/);
@@ -47,32 +47,31 @@ test('Sample Size is a fieldset: the question as its legend, the hint beneath, s
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the field keeps its name for the error summary and the check page, while the legend asks the question', async (t) => {
+test('the field keeps its name for the check page and has its own words for the error summary, while the legend asks the question', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
-  for (const i of [1, 2, 3]) {
+  for (const i of [1, 2, 3, 4]) {
     window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
     completeStep(app, steps(d)[i]);
   }
   window.location.hash = '#methodology';
   await waitFor(() => visible(d)[0] === 'methodology');
-  const methodology = steps(d)[4];
+  const methodology = steps(d)[5];
   const group = d.querySelector('.methods-group');
   setValue(window, group.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
   setValue(window, group.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
-  setValue(window, group.querySelector('.list-rows[data-list-key="userGroups"] .list-input'), 'New customers');
   toCheckPage(methodology);
-  assert.deepEqual(linksOf(methodology), ['Select a sample size for research question 1'], 'the message names the field, not the question');
+  assert.deepEqual(linksOf(methodology), ['Select how many participants you need for Study 1'], 'the message says what to do and names the study (RPA-120)');
   const fieldset = fieldsetOf(d);
   assert.ok(fieldset.classList.contains('field-invalid'), 'the fieldset is marked');
-  assert.match(text(fieldset.querySelector('.field-error')), /^Error: Select a sample size/);
+  assert.match(text(fieldset.querySelector('.field-error')), /^Error: Select how many participants you need for Study 1$/);
   fieldset.querySelector('input[type=radio]').click();
   assert.equal(fieldset.classList.contains('field-invalid'), false, 'and the mark goes with the choice');
   toCheckPage(methodology);
   const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.check-answers .summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
-  assert.equal(rows['Sample Size for research question 1'], 'Small (1–5)', 'the check page row keeps the field\'s name');
+  assert.equal(rows['Sample Size for Study 1'], 'Small (1–5)', 'the check page row keeps the field\'s name');
 });
 
 test('the stylesheet gives the radios the design system\'s shape: 40px targets, a drawn circle, a dot made of border so it prints, a visible focus', () => {

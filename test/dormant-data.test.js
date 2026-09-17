@@ -150,11 +150,11 @@ test('older plan survives repeated edits and reloads, then resets without revivi
     setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), title);
     await waitFor(() => storedDraft(app.window).fields.researchTitle === title);
   }
-  assert.equal(app.document.querySelector('.radio-input[value="__other__"]').checked, true);
-  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, false);
+  assert.equal(app.document.querySelector('.methods-group .radio-input[value="__other__"]').checked, true);
+  assert.equal(app.document.querySelector('.methods-group .radio-group .select-other-row').hidden, false);
   app.document.getElementById('clear-btn').click();
   assert.equal(app.document.querySelectorAll('.radio-input:checked').length, 0);
-  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, true);
+  assert.equal(app.document.querySelector('.methods-group .radio-group .select-other-row').hidden, true);
   setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), 'New plan');
   await waitFor(() => storedDraft(app.window)?.fields.researchTitle === 'New plan');
   const reset = storedDraft(app.window);
@@ -164,7 +164,7 @@ test('older plan survives repeated edits and reloads, then resets without revivi
   app = await bootApp({ draft: reset });
   assert.equal(app.document.querySelector('[data-field="researchTitle"]').value, 'New plan');
   assert.equal(app.document.querySelectorAll('.radio-input:checked').length, 0);
-  assert.equal(app.document.querySelector('.radio-group .select-other-row').hidden, true);
+  assert.equal(app.document.querySelector('.methods-group .radio-group .select-other-row').hidden, true);
   setValue(app.window, app.document.querySelector('[data-field="researchTitle"]'), 'New plan edited');
   await waitFor(() => storedDraft(app.window).fields.researchTitle === 'New plan edited');
   assert.equal(storedDraft(app.window).fields.project, undefined);

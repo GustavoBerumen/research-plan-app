@@ -57,7 +57,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
-  for (const i of [1, 2, 3, 4, 5]) {
+  for (const i of [1, 2, 3, 4, 5, 6]) {
     window.location.hash = '#' + steps(d)[i].dataset.stepSlug;
     await waitFor(() => visible(d)[0] === steps(d)[i].dataset.stepSlug);
     completeStep(app, steps(d)[i]);
@@ -78,7 +78,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   press('Continue');
   const summary = d.querySelector('.sign-off .error-summary');
   assert.equal(summary.hidden, false, 'a signature without its declaration is refused');
-  assert.match(text(summary), /Confirm the declaration: lead researcher/i);
+  assert.match(text(summary), /Confirm that this plan is complete and current/, 'in the declaration\'s own words (RPA-120)');
   assert.ok(box(d, 'declarationResearcher').closest('.field').classList.contains('field-invalid'), 'and the box is marked');
   assert.equal(reviewStatus(d), 'Not started', 'nothing was signed');
 
@@ -86,7 +86,7 @@ test('a declaration is what makes a signature: signing without ticking is refuse
   press('Continue');
   assert.equal(summary.hidden, true, 'the declaration answered, the sign-off stands');
   setValue(window, d.getElementById('sign-off-other-email'), 'max@example.com');
-  press('Sign and send');
+  press('Sign for local review');
   await settle();
   assert.equal(reviewStatus(d), 'Awaiting sign-off from the project requester');
   assert.deepEqual(app.jsdomErrors, []);

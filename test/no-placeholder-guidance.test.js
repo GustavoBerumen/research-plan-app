@@ -104,7 +104,10 @@ test('guidance is never hidden behind a tooltip either', async (t) => {
   // The advice itself survives, where it can be read without hovering.
   const hint = app.document.querySelector('.list-rows[data-list-key="researchQuestions"]')
     .closest('.field').querySelector('.field-hint-text').textContent;
-  assert.match(hint, /[Tt]hree/, 'the recommended number is still stated');
+  // Gus's words of 17 September (RPA-119) no longer name a number in the hint;
+  // the warning that appears past three questions still does, without hovering.
+  assert.match(hint, /gaps in your understanding/, 'the hint says what a research question is');
+  assert.match(source, /more than three/i, 'and the advice about three still exists, as a warning shown when it applies');
 });
 
 test('controls that only exist once revealed are swept too', async (t) => {
@@ -178,10 +181,9 @@ test('the examples that were placeholders now read as hints', async (t) => {
   const hintFor = (selector) => document.querySelector(selector)
     .closest('.field').querySelector('.field-hint-text').textContent.trim();
 
+  // One participants question since RPA-119, with one example in Gus's words.
   assert.match(hintFor('.list-rows[data-list-key="characteristics"]'),
-    /For example: Abandoned a checkout in the last 30 days\./);
-  assert.match(hintFor('.list-rows[data-list-key="userGroups"]'),
-    /For example: New customers\./);
+    /For example: New customers who abandoned a checkout in the last 30 days\./);
   assert.match(hintFor('#previousKnowledge-table'),
     /For example: Q3 Checkout Usability Study\./);
 });

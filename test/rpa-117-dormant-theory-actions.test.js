@@ -31,7 +31,7 @@ test('none of the three renders, and the sections count without them', async (t)
   assert.equal(Array.from(d.querySelectorAll('button')).find((b) => /suggest a framework/i.test(text(b))), undefined, 'no framework suggestion without Theory');
   const counts = Object.fromEntries(Array.from(d.querySelectorAll('.acc')).map((a) => [text(a.querySelector('.acc-title')), text(a.querySelector('.acc-count'))]));
   assert.equal(counts.Research, '3 fields');
-  assert.equal(counts.Methodology, '4 fields');
+  assert.equal(counts.Methodology, '3 fields');   // who takes part is one question since RPA-119
   assert.equal(counts.Execution, '2 fields');
   assert.deepEqual(app.jsdomErrors, []);
 });

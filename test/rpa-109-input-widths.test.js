@@ -21,7 +21,7 @@ test('the identifier-like fields are sized to their answers, in the header and i
   t.after(() => app.close());
   const d = app.document;
   const sized = (key) => widthClass(d.querySelector('[data-field="' + key + '"]'));
-  assert.equal(sized('jiraProject'), '10', 'a ticket key');
+  assert.equal(sized('jiraProject'), '20', 'a project name, since RPA-119; it was a ticket key');
   assert.equal(sized('leadResearcher'), '20', 'a name');
   assert.equal(sized('projectRequester'), '20', 'a name');
   assert.equal(sized('signOffResearcher'), '20', 'a name, outside the header');
@@ -34,10 +34,11 @@ test('short-answer lists are sized too, row by row, including rows added later; 
   t.after(() => app.close());
   const d = app.document;
   const rows = (key) => Array.from(d.querySelectorAll('.list-rows[data-list-key="' + key + '"] .list-input')).map(widthClass);
+  // Who takes part is one list since RPA-119; Researcher names is the short-answer list now (RPA-141).
   assert.deepEqual(rows('characteristics'), ['30']);
-  assert.deepEqual(rows('userGroups'), ['20']);
-  Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add user group/i.test(b.textContent.trim())).click();
-  assert.deepEqual(rows('userGroups'), ['20', '20'], 'a new row is sized like the first');
+  assert.deepEqual(rows('researcherNames'), ['20']);
+  Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add researcher name/i.test(b.textContent.trim())).click();
+  assert.deepEqual(rows('researcherNames'), ['20', '20'], 'a new row is sized like the first');
   // Methods rows are built by the combobox code, not the list builder; the
   // width travels through the list, so a row added later is sized too.
   // The participant lists live in the group too since RPA-116, so the Methods list is named.
@@ -50,7 +51,9 @@ test('short-answer lists are sized too, row by row, including rows added later; 
   setValue(app.window, d.querySelector('.list-rows[data-list-key="researchQuestions"] .list-input'), 'Payment method');
   Array.from(d.querySelectorAll('button')).find((b) => /^\+?\s*add research question$/i.test(b.textContent.trim())).click();
   setValue(app.window, d.querySelectorAll('.list-rows[data-list-key="researchQuestions"] .list-input')[1], 'Mobile shoppers');
-  await waitFor(() => d.querySelectorAll('.methods-group').length === 2, { message: 'a second group for the second question' });
+  // Groups follow studies since RPA-142: two studies, one question each.
+  d.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  await waitFor(() => d.querySelectorAll('.methods-group').length === 2, { message: 'a second group for the second study' });
   assert.deepEqual(methodRows(), ['20', '20', '20'], 'the second question\'s group is sized too');
   assert.deepEqual(rows('researchQuestions'), ['', ''], 'a sentence keeps the line, both questions');
   assert.deepEqual(rows('outcomes'), ['', ''], 'one outcome per question, both full width');
@@ -71,7 +74,7 @@ test('the classes exist with the GOV.UK measures, and only the GOV.UK widths are
     assert.ok(CSS.includes('.input-w-' + n + '{max-width:' + em + '}'), 'input-w-' + n);
   }
   // width=15 is not a GOV.UK class; the flag is ignored rather than inventing one.
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('width=10, key=jiraProject', 'width=15, key=jiraProject') } });
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('Project name (text, width=20,', 'Project name (text, width=15,') } });
   t.after(() => app.close());
   assert.equal(widthClass(app.document.querySelector('[data-field="jiraProject"]')), '');
 });

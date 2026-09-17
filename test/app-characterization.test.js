@@ -55,6 +55,7 @@ test('renders the complete form from the real index, template, rubric, and metho
 
   assert.deepEqual(app.scriptSources, [
     'test-profiles.js',
+    'plan-model.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
@@ -64,6 +65,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   ]);
   assert.deepEqual(app.executedScripts, [
     'test-profiles.js',
+    'plan-model.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
@@ -89,7 +91,7 @@ test('renders the complete form from the real index, template, rubric, and metho
     // and sign-off) closes; the two deadlines moved up into the header.
     // Alignment became the review step (RPA-55), which is deliberately not an
     // accordion, so it no longer appears among the collapsible sections.
-    ['Context', 'Research', 'Methodology', 'Execution']
+    ['Context', 'Research', 'Studies', 'Methodology', 'Execution']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
@@ -97,22 +99,30 @@ test('renders the complete form from the real index, template, rubric, and metho
     // belongs to the document, so renderSchema lifts it out of the accordion
     // and renders it after the sections (RPA-55).
     // Research reads 3 with Hypothesis dormant (RPA-117).
-    ['3 fields', '3 fields', '4 fields', '2 fields']
+    ['3 fields', '3 fields', '2 fields', '3 fields', '2 fields']
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.mlabel, .clbl, .flabel')).map(ownText),
     [
       // The page before the plan asks its one question as its heading (RPA-99).
       'What is your email address?',
-      'Last updated', 'Research title', 'Jira Project',
-      'Lead researcher', 'Project requester', 'Project decision', 'Research readout',
+      // Each field Gus has written the words for asks its question as its
+      // heading (RPA-119); its name is kept for error messages and the check page.
+      'Last updated', 'What is the name of your research plan?', 'Which project or initiative does this research support?',
+      // Whether others are involved asks its question in its legend (RPA-141).
+      'Who is leading this research?', 'Are other researchers involved in this research?', 'Researcher names', 'Who requested this research?',
+      'When will the findings be used to make a decision?', 'When will the findings be shared with the team?',
       // One Additional information hatch closes each section (RPA-101).
-      'Background', 'Goal', 'Problem Statement', 'Additional information',
+      'What do people need to know about this project?', 'What is the goal of this project?', 'What problem are you trying to solve?', 'Additional information',
       // Hypothesis is dormant too (RPA-117, later the same day).
-      'Objective', 'Research Questions', 'Outcomes', 'Additional information',
+      'What do you want to learn from this research?', 'What questions do you need this research to answer?', 'What deliverables will answer your research questions?', 'Additional information',
+      // Studies (RPA-142): the radios ask their question in the legend; the
+      // studies field's own label is for assistive technology.
+      'How many studies will you run?', 'Study questions',
       // Theory and Action Points are dormant (RPA-117).
       // Sample Size asks its question in its legend (RPA-118).
-      'Methods', 'Characteristics', 'User Groups', 'How many participants do you need?', 'Additional information',
+      // Who takes part is one question since RPA-119, where it was Characteristics and User Groups.
+      'Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?', 'Additional information',
       'Planned Schedule',
       'Previous Knowledge', 'Additional information',
       // The review step closes the document, and Feedback closes the review
@@ -166,7 +176,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   // The Participants group is gone: its three fields are asked per research
   // question, inside the question's group under Methods (RPA-116).
   assert.equal(document.querySelector('.field-group-title'), null);
-  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Methods', 'Characteristics', 'User Groups', 'How many participants do you need?']);
+  assert.deepEqual(Array.from(document.querySelectorAll('.methods-group .field-per-question .flabel')).map(ownText), ['Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?']);
 
   const methodInput = document.querySelector('.methods-group .list-input');
   assert.equal(methodInput.getAttribute('role'), 'combobox');
@@ -210,7 +220,7 @@ test('keeps Outcome rows aligned positionally with Research Questions in valid s
   assert.deepEqual(outcomes.map((input) => input.value), ['Outcome one', 'Outcome two']);
 });
 
-test('keeps Methods grouped under their Research Question positions', async (t) => {
+test('keeps Methods grouped under their studies, each study naming the questions it answers', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
   const { document, window } = app;
@@ -226,12 +236,17 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
     listInputs(document, 'researchQuestions')[1],
     'How do shoppers interpret payment requirements?'
   );
+  // Groups follow studies since RPA-142: two studies, one question each.
+  document.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  const studyGroups = document.querySelectorAll('.study-group');
+  studyGroups[0].querySelectorAll('.study-question-input')[0].click();
+  studyGroups[1].querySelectorAll('.study-question-input')[1].click();
 
   const groups = Array.from(document.querySelectorAll('.methods-group'));
   assert.equal(groups.length, 2);
   assert.deepEqual(
-    groups.map((group) => group.querySelector('.methods-group-q').title),
-    ['What causes checkout abandonment?', 'How do shoppers interpret payment requirements?']
+    groups.map((group) => Array.from(group.querySelectorAll('.methods-group-text li')).map((li) => li.textContent.replace(/\s+/g, ' ').trim())),
+    [['RQ1 What causes checkout abandonment?'], ['RQ2 How do shoppers interpret payment requirements?']]
   );
 
   setValue(window, groups[0].querySelector('.list-input'), 'Interviews');
@@ -241,11 +256,11 @@ test('keeps Methods grouped under their Research Question positions', async (t) 
 
   assert.deepEqual(methodValues(groups[0]), ['Interviews', 'Survey']);
   assert.deepEqual(methodValues(groups[1]), ['Usability Testing']);
-  assert.match(groups[0].getAttribute('aria-label'), /^Methods for RQ1/);
-  assert.match(groups[1].getAttribute('aria-label'), /^Methods for RQ2/);
+  assert.match(groups[0].getAttribute('aria-label'), /^Methods for Study 1: RQ1 /);
+  assert.match(groups[1].getAttribute('aria-label'), /^Methods for Study 2: RQ2 /);
 });
 
-test('round-trips a draft-v7 with Research Questions restored before dependent rows', async (t) => {
+test('round-trips a draft with Research Questions restored before dependent rows', async (t) => {
   const first = await bootApp();
   const { document, window } = first;
 
@@ -256,6 +271,10 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
   setValue(window, listInputs(document, 'researchQuestions')[1], 'Question two');
   setValue(window, listInputs(document, 'outcomes')[0], 'Outcome one');
   setValue(window, listInputs(document, 'outcomes')[1], 'Outcome two');
+  document.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  const studyGroups = document.querySelectorAll('.study-group');
+  studyGroups[0].querySelectorAll('.study-question-input')[0].click();
+  studyGroups[1].querySelectorAll('.study-question-input')[1].click();
 
   const groups = Array.from(document.querySelectorAll('.methods-group'));
   setValue(window, groups[0].querySelector('.list-input'), 'Interviews');
@@ -266,11 +285,12 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
   // The address given before the plan is already saved (RPA-99): wait for the last edit.
   const savedRaw = await waitFor(() => { const r = window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Survey') && r; }, {
     timeout: 5000,
-    message: 'The v7 draft was not saved',
+    message: 'The draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 9);
+  assert.equal(saved.version, 11);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(saved.studies.map((s) => s.questions), [[1], [2]], 'each study says which question it answers, by number');
 
   const { researchQuestions, outcomes, ...otherLists } = saved.lists;
   saved.lists = { outcomes, ...otherLists, researchQuestions };
@@ -294,8 +314,8 @@ test('round-trips a draft-v7 with Research Questions restored before dependent r
     ['Usability Testing', 'Survey'],
   ]);
   assert.deepEqual(
-    restoredGroups.map((group) => group.querySelector('.methods-group-q').title),
-    ['Question one', 'Question two']
+    restoredGroups.map((group) => Array.from(group.querySelectorAll('.methods-group-text li')).map((li) => li.textContent.replace(/\s+/g, ' ').trim())),
+    [['RQ1 Question one'], ['RQ2 Question two']]
   );
 });
 
