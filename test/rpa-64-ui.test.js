@@ -32,7 +32,8 @@ test('submission remains absent on older/disabled configuration; complete active
 });
 test('missing later outcome and per-question Other text open the exact page/control and preserve hint associations', async t => {
   const p = draft(); p.lists.researchQuestions.push('Second question'); p.lists.outcomes.push('Second outcome');
-  p.methods.push({ ...structuredClone(p.methods[0]), question: 'Second question' });
+  p.selects.studyCount = { v: 'Two', o: '' };
+  p.studies.push({ ...structuredClone(p.studies[0]), questions: [2] });
   let calls = 0; const app = await boot(t, { draft: p, submit: async () => { calls++; } });
   const outcomes = app.document.querySelectorAll('[data-list-key="outcomes"] .list-input');
   setValue(app.window, outcomes[1], '');
@@ -64,7 +65,7 @@ test('missing later outcome and per-question Other text open the exact page/cont
 });
 
 test('nonsensical Other sample size blocks Send at the text box while the draft remains editable', async t => {
-  const p = draft(); p.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  const p = draft(); p.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   const requests = [];
   const app = await boot(t, { draft: p, submit: async body => { requests.push(body); return response(f.receipt(body)); } });
   // The studies radios have a reveal of their own since RPA-142; this is the sample size's.
@@ -77,11 +78,11 @@ test('nonsensical Other sample size blocks Send at the text box while the draft 
   setValue(app.window, other, '5–8');
   assert.equal(other.hasAttribute('aria-invalid'), false);
   send(app).click(); await waitFor(() => /privately saved/.test(status(app)));
-  assert.equal(requests[0].plan.methods[0].sampleSize.o, '5–8');
+  assert.equal(requests[0].plan.studies[0].sampleSize.o, '5–8');
 });
 
 test('a receipt from before validation tightened remains readable and an update still needs correction', async t => {
-  const original = f.request(); original.plan.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  const original = f.request(); original.plan.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   const stored = { version: 1, state: 'stored', request: original, fingerprint: contract.fingerprint(original.plan), receipt: f.receipt(original) };
   const app = await boot(t, { draft: { ...original.plan, ui: { section: 'review' } }, storage: { [KEY]: JSON.stringify(stored) } });
   assert.match(status(app), /privately saved/); assert.equal(send(app).disabled, true);

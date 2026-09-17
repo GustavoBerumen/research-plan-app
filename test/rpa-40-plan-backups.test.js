@@ -174,7 +174,7 @@ for (const version of [1, 2, 3, 4, 5, 6]) {
     assert.equal(stored(app).fields.problemStatement, 'Legacy problem');
     assert.equal(stored(app).fields.leadResearcher, 'Ana');
     assert.equal(stored(app).fields.title, undefined);
-    assert.equal(stored(app).version, 10);
+    assert.equal(stored(app).version, 11);
     assert.equal(stored(app).ui.timelineVisible, false);
     if (version === 1) assert.deepEqual(stored(app).studies[0].methods, ['Interviews'], 'the flat list became a group, and the group a study (RPA-142)');
   });

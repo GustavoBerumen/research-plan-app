@@ -4,6 +4,8 @@
   const contract = window.RPA_SUBMISSION;
   const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
   window.createSubmissionUI = function ({ doc, config, collect, showErrors, resetDeclarations, prepare = () => {}, isRestoring = () => false }) {
+    // Keep the original browser key so an upgrade can find and retry a frozen
+    // v1 request byte-for-byte. The record version distinguishes new v2 state.
     const key = 'research-plan-app:submission:v1:' + config.deployment + ':' + config.cohort;
     const root = document.createElement('section');
     root.className = 'submission-panel';
@@ -12,7 +14,7 @@
     heading.id = 'submission-heading'; heading.textContent = 'Send your research plan';
     const notice = document.createElement('p'); notice.className = 'submission-notice'; notice.textContent = config.notice;
     const scope = document.createElement('p');
-    scope.textContent = 'Send the active plan and declarations to the organisers. Older answers that are no longer in the form stay in your browser and backup. Reference files are not sent; any saved file names or links are included. Your browser email address and draft review history are not sent. This does not send an email.';
+    scope.textContent = 'Send the active plan, its studies, named researchers and declarations to the organisers. Older answers that are no longer in the form stay in your browser and backup. Reference files are not sent; any saved file names or links are included. Your browser email address and draft review history are not sent. This does not send an email.';
     const status = document.createElement('p'); status.className = 'submission-status'; status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const send = document.createElement('button'); send.type = 'button'; send.className = 'btn btn-dark submission-send'; send.textContent = 'Send plan';
     root.append(heading, notice, scope, status, send);
@@ -21,10 +23,12 @@
       try {
         const raw = window.localStorage.getItem(key);
         record = raw ? JSON.parse(raw) : null;
-        if (record && (record.version !== 1 || !['pending', 'stored', 'rejected', 'deleted'].includes(record.state) ||
+        if (record && (![1, 2].includes(record.version) || !['pending', 'stored', 'rejected', 'deleted'].includes(record.state) ||
             !UUID.test(record.request?.submissionId || '') || typeof record.fingerprint !== 'string' ||
-            !contract.structure(record.request.plan) || !record.request.formSchemaVersion || !record.request.collectionPolicyVersion ||
-            (record.state === 'stored' && (record.receipt?.submissionId !== record.request.submissionId || !/^[a-f0-9]{64}$/.test(record.receipt?.contentSha256 || ''))))) throw new Error('Unsupported local receipt');
+            !contract.structureForSchema(record.request.formSchemaVersion, record.request.plan) || !record.request.collectionPolicyVersion ||
+            (record.request.formSchemaVersion === contract.SCHEMA && record.request.supersedesSubmissionId !== null && !UUID.test(record.request.supersedesSubmissionId || '')) ||
+            (record.state === 'stored' && (record.receipt?.submissionId !== record.request.submissionId || !/^[a-f0-9]{64}$/.test(record.receipt?.contentSha256 || '') ||
+              (record.request.formSchemaVersion === contract.SCHEMA && (record.receipt?.planId !== record.request.plan.planId || record.receipt?.formSchemaVersion !== contract.SCHEMA)))))) throw new Error('Unsupported local receipt');
         // Historical receipts and frozen retries survive stricter completion rules.
         // New/updated plans still pass current validation in submit and on the server.
         blocked = false;
@@ -71,7 +75,9 @@
           credentials: 'same-origin', body: JSON.stringify(snapshot.request), signal: abort.signal });
         const body = await response.json();
         // Never accept a vague 2xx response as a durable receipt.
-        if ([200, 201].includes(response.status) && body.status === 'stored' && body.submissionId === snapshot.request.submissionId &&
+        const v2Receipt = snapshot.request.formSchemaVersion !== contract.SCHEMA ||
+          (body.planId === snapshot.request.plan.planId && body.formSchemaVersion === contract.SCHEMA);
+        if ([200, 201].includes(response.status) && body.status === 'stored' && body.submissionId === snapshot.request.submissionId && v2Receipt &&
             /^[a-f0-9]{64}$/.test(body.contentSha256 || '') && typeof body.submittedAt === 'string' && Number.isFinite(Date.parse(body.submittedAt))) {
           const completed = { ...snapshot, state: 'stored', receipt: body, prepared: false };
           try { save(completed); } catch (_) { record = completed; message = 'Plan received and privately saved. Reference ' + body.submissionId + ', ' + body.submittedAt + '. The receipt could not be saved in this browser; keep this reference. Reloading can safely retry the saved snapshot.'; }
@@ -122,9 +128,10 @@
       }
       const errors = contract.validate(plan);
       if (errors.length) { showErrors(errors, true); return; }
-      const snapshot = { version: 1, state: 'pending', fingerprint: contract.fingerprint(plan), request: {
+      const snapshot = { version: 2, state: 'pending', fingerprint: contract.fingerprint(plan), request: {
         submissionId: window.crypto.randomUUID(), formSchemaVersion: config.formSchemaVersion,
-        collectionPolicyVersion: config.collectionPolicyVersion, plan } };
+        collectionPolicyVersion: config.collectionPolicyVersion,
+        supersedesSubmissionId: record?.state === 'stored' ? record.receipt.submissionId : null, plan } };
       if (new Blob([JSON.stringify(snapshot.request)]).size > contract.MAX_BYTES) {
         message = 'This plan is too large to send. Keep a backup and contact the organiser.'; refresh(); return;
       }
