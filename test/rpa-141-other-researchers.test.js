@@ -17,7 +17,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, DRAFT_KEY, pageOfTotal } = require('./app-harness');
 const contract = require('../submission-contract');
 
 const ROOT = path.join(__dirname, '..');
@@ -26,7 +26,8 @@ const CSS = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const settle = () => new Promise((r) => setTimeout(r, 260));
 const planOf = (d) => d.querySelector('.doc-header');
-const caption = (d) => text(planOf(d).querySelector('.step-page-caption'));
+// No caption says "Question 2 of 7" since RPA-149; the form still keeps the page and the count, and a test may read them.
+const caption = (d) => pageOfTotal(planOf(d));
 const cellOf = (d) => d.querySelector('.select-cell[data-field-key="otherResearchers"]');
 const namesUnit = (d) => d.querySelector('.list-rows[data-list-key="researcherNames"]').closest('.mf');
 const nameInputs = (d) => Array.from(namesUnit(d).querySelectorAll('.list-input'));
@@ -58,12 +59,12 @@ test('yes or no, with no "Other"; the names are not asked until the answer is ye
   assert.deepEqual(Array.from(cellOf(d).querySelectorAll('.radio-label')).map(text), ['Yes', 'No'], 'a closed set: there is no third answer');
   assert.equal(cellOf(d).querySelector('.radio-other-row'), null);
   assert.equal(namesUnit(d).hidden, true, 'not asked yet');
-  assert.equal(caption(d), 'Question 1 of 7', 'seven pages while nobody else is involved (the two dates have a page each since RPA-144)');
+  assert.equal(caption(d), '1 of 7', 'seven pages while nobody else is involved (the two dates have a page each since RPA-144)');
 
   choose(d, 'Yes');
   await settle();
   assert.equal(namesUnit(d).hidden, false, 'asked');
-  assert.equal(caption(d), 'Question 1 of 8', 'and it is a page of its own');
+  assert.equal(caption(d), '1 of 8', 'and it is a page of its own');
   assert.equal(text(namesUnit(d).querySelector('.add-btn')), '+ Add researcher name');
   namesUnit(d).querySelector('.add-btn').click();
   assert.deepEqual(nameInputs(d).map((i) => i.getAttribute('aria-label')), ['Researcher name 1', 'Researcher name 2'], 'each row names itself');
@@ -71,7 +72,7 @@ test('yes or no, with no "Other"; the names are not asked until the answer is ye
   choose(d, 'No');
   await settle();
   assert.equal(namesUnit(d).hidden, true, 'put away again');
-  assert.equal(caption(d), 'Question 1 of 7');
+  assert.equal(caption(d), '1 of 7');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -83,7 +84,7 @@ test('the question is required; the names are required only while they are asked
   completeStep(app, planOf(d));   // answers Yes and gives a name
   window.location.hash = '#plan-details/8';
   await settle();
-  assert.equal(caption(d), 'Question 8 of 8');
+  assert.equal(caption(d), '8 of 8');
   nameInputs(d).forEach((i) => setValue(window, i, ''));
   press(d);
   assert.deepEqual(links(d), ['Enter the name of at least one other researcher'], 'yes, but nobody named');
