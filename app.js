@@ -37,6 +37,7 @@
   // before RPA-76, so a plan that predates this gets the earliest date we can
   // honestly claim rather than today — see migrateDraft.
   let planCreatedAt = todayIso();
+  let planId = newPlanId();
   // Whether that date is the plan's own or a stand-in. RPA-76 falls back to
   // savedAt for plans that predate it, which was fine for a suggestion in one
   // cell and is not fine as a boundary: savedAt is the *last* save, so a plan
@@ -61,6 +62,15 @@
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return now.getFullYear() + '-' + mm + '-' + dd;
+  }
+  function newPlanId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
   }
 
   // Last updated re-stamps itself whenever the plan's content changes. Once
@@ -7701,7 +7711,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 10;
+  const DRAFT_VERSION = 11;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -7975,6 +7985,7 @@
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
+          planId,
           savedAt: new Date().toISOString(),
           // Written on every save but only ever from the value already in
           // memory, so the first save fixes it and later ones carry it.
@@ -8149,6 +8160,9 @@
       if (migrated.studies.length) migrated.selects.studyCount = PLAN.studyCountChoice(migrated.studies.length);
       delete migrated.methods;
     }
+    // v11 gives the plan a stable identity that travels with browser autosave
+    // and JSON backup/restore. Submission attempts still get their own UUIDs.
+    if (version < 11) migrated.planId = migrated.planId || newPlanId();
     return migrated;
   }
 
@@ -8175,6 +8189,7 @@
   }
 
   function applyDraft(draft) {
+    planId = draft.planId || newPlanId();
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     signOffRecord = draft.signOff || null;
     // Not handled in migrateDraft: that returns early for any draft already at
@@ -8554,7 +8569,7 @@
   }
 
   function backupPayload(draft) {
-    return { version: DRAFT_VERSION, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
+    return { version: DRAFT_VERSION, planId, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
   }
 
   // Submission collects the active form directly. Recovery's dormant-data carry is separate.
@@ -8611,10 +8626,6 @@
         draft.tables[table.id][row][column].v = value;
       } else if (input.dataset.field) draft.fields[input.dataset.field] = value;
     });
-    // The submission wire format predates studies: one methods group per
-    // question. It is derived from the studies, so Max's collection keeps
-    // its shape (RPA-64, RPA-142).
-    draft.methods = PLAN.perQuestionView((draft.lists || {}).researchQuestions, draft.studies);
     return contract.project(draft);
   }
   function submissionErrors() {
@@ -8653,7 +8664,8 @@
     if (!error.key) return {};
     // The wire format is one group per question; on the page a question's
     // group is the first study that answers it (RPA-142).
-    const owner = error.question === undefined ? doc : groupForQuestion(error.question + 1);
+    const owner = error.study !== undefined ? methodsGroupAt(error.study) :
+      error.question === undefined ? doc : groupForQuestion(error.question + 1);
     if (!owner) return {};
     const node = owner.querySelector('[data-field="' + error.key + '"], [data-list-key="' + error.key + '"], [data-field-key="' + error.key + '"]');
     const group = node?.closest('.field, .mf, .title-field');
@@ -8705,7 +8717,7 @@
     if (!group || !error.key) return error.message;
     if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
     if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
-    if (error.code === 'required' && !fieldHasContent(group)) return groupMessage(group);
+    if (['required', 'choice'].includes(error.code) && !fieldHasContent(group)) return groupMessage(group);
     return error.message;
   }
   function showSubmissionErrors(errors, summary, { focus = false, final = false } = {}) {
@@ -8862,7 +8874,7 @@
       string(value.v, path + '.v');
       if ('o' in value) string(value.o, path + '.o');
     };
-    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
+    record(draft, 'plan', ['version', 'planId', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
     // The sign-off record travels with a backup, so a plan signed on one
     // machine still reads as signed when it is restored (RPA-139). Checked
     // for shape rather than rebuilt: the module is the authority on it.
@@ -8879,6 +8891,7 @@
     if (!Number.isInteger(version) || version < 1 || version > DRAFT_VERSION) {
       throw new Error('Unsupported backup version. This app supports versions 1 to ' + DRAFT_VERSION + '.');
     }
+    if (version >= 11 && !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(draft.planId || '')) fail('planId');
     record(draft.fields, 'fields');
     if ('createdAt' in draft) { date(draft.createdAt, 'createdAt'); if (!draft.createdAt) fail('createdAt'); }
     if ('savedAt' in draft) {
@@ -9042,7 +9055,7 @@
     // Keep the original nodes and closures, including feedback, focus and any
     // unsaved text. A failed rebuild never has to reconstruct the original.
     const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
-      syncCommentsReveal, planCreatedAt, planCreatedAtExact, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId, lastUpdatedManual, refreshDateline, refreshReviewSummary,
       signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
       methodsSuggestRefresh, fields: new Map(evaluationFields), batches: new Map(evaluationBatches),
       focus: document.activeElement, signature: lastSavedSignature, recoveredDraft };
@@ -9059,6 +9072,7 @@
       lastUpdatedManual = false;
       planCreatedAtExact = Boolean(draft.createdAt);
       planCreatedAt = draft.createdAt || draft.savedAt?.slice(0, 10) || todayIso();
+      planId = draft.planId || newPlanId();
       renderSchema(formSchema);
       initTextareas(doc);
       initStatusSelects(doc);
@@ -9087,7 +9101,7 @@
       replacementEvents.abort();
       replacement._submission?.dispose();
       if (replacement.isConnected) replacement.replaceWith(original.doc);
-      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact,
+      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId,
         signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
         lastUpdatedManual, refreshDateline, refreshReviewSummary, methodsSuggestRefresh, recoveredDraft } = original);
       tables.splice(0, tables.length, ...original.tables);
@@ -9259,6 +9273,7 @@
     // values, so this re-applies both.
     planCreatedAt = todayIso();
     planCreatedAtExact = true;
+    planId = newPlanId();
     // Adding the rows back clicks the add button, and a click schedules a
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.

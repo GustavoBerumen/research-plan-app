@@ -288,7 +288,7 @@ test('round-trips a draft with Research Questions restored before dependent rows
     message: 'The draft was not saved',
   });
   const saved = JSON.parse(savedRaw);
-  assert.equal(saved.version, 10);
+  assert.equal(saved.version, 11);
   assert.match(saved.savedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(saved.studies.map((s) => s.questions), [[1], [2]], 'each study says which question it answers, by number');
 
