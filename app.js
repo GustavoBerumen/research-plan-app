@@ -6637,6 +6637,84 @@
   }
   function linkIsDead() { return linkState === 'revoked' || linkState === 'unknown'; }
 
+  // ---------- a plan saved by a newer version of the form (RPA-143) ----------
+  // A build must not open a draft newer than it understands. It used to:
+  // migrateDraft passes anything at or above its own version through, only
+  // the keys this build knows were restored, and the next autosave wrote the
+  // older shape over the rest. Reproduced on the live build ba9f84f with a
+  // version 10 plan on 17 September 2026: one edit later the studies were
+  // gone. It matters whenever a release is rolled back after people have
+  // saved on the newer one.
+  //
+  // So the stored draft is looked at before anything opens it. If it is
+  // newer, it is left byte for byte as it was, no form is shown, and nothing
+  // saves: the same standing-in page and the same guards a dead link uses
+  // (RPA-137, RPA-6), asked through one predicate. The person can download
+  // exactly what is stored, or choose, after being asked, to remove it and
+  // start again. Backups were already safe: validateBackup refuses a newer
+  // file.
+  let newerDraft = null;   // { version, raw } while the stored draft is newer than this build
+  let newerDraftPage = null;
+  function draftIsNewer(draft) { return Boolean(draft) && Number(draft.version) > DRAFT_VERSION; }
+  function planBlocked() { return linkIsDead() || Boolean(newerDraft); }
+  function renderNewerDraft() {
+    // The page that stands in for a plan that cannot be shown, as for a dead link.
+    const page = el('section', 'dead-link newer-draft', { 'aria-labelledby': 'newer-draft-heading' });
+    const heading = el('h2', 'step-heading', { id: 'newer-draft-heading', tabindex: '-1' });
+    heading.textContent = 'This plan was saved by a newer version of this form';
+    const kept = el('p', 'dead-link-body');
+    kept.textContent = 'It has been kept in this browser exactly as it was saved. This version of the form is older and cannot open it without losing part of it, so it has not been opened and nothing has been changed.';
+    const next = el('p', 'newer-draft-next');
+    next.textContent = 'Reload this page in a few minutes. If you still see this message, download the saved plan and tell the person who sent you this form.';
+    const actions = el('div', 'newer-draft-actions');
+    const download = el('button', 'btn btn-dark newer-draft-download', { type: 'button' });
+    download.textContent = 'Download the saved plan';
+    const startNew = el('button', 'btn newer-draft-new', { type: 'button' });
+    startNew.textContent = 'Start a new plan';
+    actions.append(download, startNew);
+    const status = el('p', 'newer-draft-status', { role: 'status' });
+    download.addEventListener('click', () => {
+      let url;
+      try {
+        // Exactly what is stored, not a backup this build would write.
+        const blob = new Blob([newerDraft.raw], { type: 'application/json' });
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Research plan - saved by a newer version - ' + todayIso() + '.json';
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        status.textContent = 'Download started. Keep the file: it can be restored once this form is up to date.';
+      } catch (err) {
+        status.textContent = 'The saved plan could not be downloaded. It is still kept in this browser.';
+      } finally {
+        if (url) URL.revokeObjectURL(url);
+      }
+    });
+    startNew.addEventListener('click', () => {
+      if (!window.confirm('Start a new plan? The saved plan will be removed from this browser. Download it first if you want to keep it.')) return;
+      clearDraft();
+      download.disabled = true;
+      startNew.disabled = true;
+      status.textContent = 'The saved plan has been removed from this browser. ';
+      const open = el('a', 'dead-link-back', { href: window.location.pathname });
+      open.textContent = 'Open the form';
+      status.appendChild(open);
+    });
+    page.append(heading, kept, next, actions, status);
+    newerDraftPage = { el: page, heading };
+    return page;
+  }
+  function openNewerDraft() {
+    if (!newerDraftPage) renderNewerDraft();
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = null;
+    document.querySelectorAll("#options-menu button, #backup-file").forEach(control => { control.disabled = true; });
+    // Nothing of a form this build would fill in wrongly is left to type into.
+    doc.replaceChildren(newerDraftPage.el);
+    newerDraftPage.heading.focus({ preventScroll: true });
+  }
+
   let emailGate = null;
   // Two things the GOV.UK Pay team did that cut invalid addresses by a
   // third (Gus, 15 September 2026). The address is played back under the
@@ -7405,7 +7483,7 @@
       // Change to go back to the page that asked for it (RPA-99).
       if (person && personEmail) { personEmail.textContent = email().trim(); person.hidden = !personEmail.textContent; }
     };
-    if (change) change.addEventListener('click', () => { if (!linkIsDead()) openEmailGate(); });
+    if (change) change.addEventListener('click', () => { if (!planBlocked()) openEmailGate(); });
     // Restore replaces doc. Delegate to a stable parent, and read the current
     // form so a detached plan's name does not survive it.
     document.addEventListener('input', (e) => { if (doc.contains(e.target)) refreshOptionsMenu(); });
@@ -7681,7 +7759,7 @@
 
   function saveDraft() {
     const store = draftStore();
-    if (!store || draftRestoring || linkIsDead()) return false;
+    if (!store || draftRestoring || planBlocked()) return false;
     try {
       let draft = carryUnrendered(collectDraft());
       // Date the plan only when its content actually moved. save is also
@@ -7719,7 +7797,7 @@
 
   function scheduleDraftSave(event) {
     if (event && !event.target.isConnected) return;
-    if (draftRestoring || linkIsDead()) return;
+    if (draftRestoring || planBlocked()) return;
     if (draftTimer) window.clearTimeout(draftTimer);
     draftTimer = window.setTimeout(saveDraft, DRAFT_SAVE_DELAY_MS);
   }
@@ -8070,7 +8148,14 @@
   }
 
   function restoreDraft() {
-    const draft = migrateDraft(readDraft());
+    const stored = readDraft();
+    if (draftIsNewer(stored)) {
+      let raw = null;
+      try { raw = draftStore().getItem(DRAFT_KEY); } catch (err) { /* what was parsed will do */ }
+      newerDraft = { version: Number(stored.version), raw: raw || JSON.stringify(stored) };
+      return false;
+    }
+    const draft = migrateDraft(stored);
     if (!draft) return false;
     draftRestoring = true;
     try {
@@ -8240,6 +8325,9 @@
   function initDraftPersistence() {
     const arrivedAt = location.hash;   // before the restore rewrites it to the saved step
     const restored = restoreDraft();
+    // A plan this build cannot read comes before everything, a link included:
+    // there is no plan in hand to judge a link against (RPA-143).
+    if (newerDraft) { openNewerDraft(); return; }
     resolveLink();   // the plan is in hand, so a link can be judged against it
     if (linkIsDead()) { openDeadLink(); return; }
     if (!restored) restoreStepPosition(null);
@@ -8490,7 +8578,7 @@
   }
 
   function downloadBackup() {
-    if (linkIsDead()) return;
+    if (planBlocked()) return;
     let url;
     try {
       const backup = collectBackup();
@@ -8805,12 +8893,12 @@
     const download = document.getElementById('download-backup-btn');
     const restore = document.getElementById('restore-backup-btn');
     const picker = document.getElementById('backup-file');
-    download.disabled = linkIsDead();
-    restore.disabled = linkIsDead();
+    download.disabled = planBlocked();
+    restore.disabled = planBlocked();
     download.addEventListener('click', downloadBackup);
-    restore.addEventListener('click', () => { if (linkIsDead()) return; picker.value = ''; picker.click(); });
+    restore.addEventListener('click', () => { if (planBlocked()) return; picker.value = ''; picker.click(); });
     picker.addEventListener('change', async () => {
-      if (linkIsDead()) return;
+      if (planBlocked()) return;
       const file = picker.files[0];
       if (!file) return;
       const initialDoc = doc;
@@ -8842,7 +8930,7 @@
   }
 
   function clearForm() {
-    if (linkIsDead()) return;
+    if (planBlocked()) return;
     if (!window.confirm('Reset all fields? This cannot be undone.')) return;
     doc._submission?.replaced();
     resetEvaluationWork();
@@ -9099,7 +9187,7 @@
         initDraftPersistence();
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
-        document.getElementById('print-btn').addEventListener('click', () => { if (!linkIsDead()) window.print(); });
+        document.getElementById('print-btn').addEventListener('click', () => { if (!planBlocked()) window.print(); });
         initOptionsMenu();
         initStickyOffsets();
       })
