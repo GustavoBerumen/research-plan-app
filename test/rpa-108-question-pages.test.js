@@ -1,9 +1,9 @@
 'use strict';
 
 // RPA-108. One question per page, or one set whose answers depend on each
-// other. Within a step, Save and continue walks the pages: the two plan
-// dates travel together, each research question with its outcomes,
-// everything else one at a time. Methodology loops per research question
+// other. Within a step, Save and continue walks the pages: each research
+// question with its outcomes, everything else one at a time. The two plan
+// dates travelled together until RPA-144 gave each a page of its own. Methodology loops per research question
 // with that question pinned above its pages. Additional information is
 // not a page in the flow: the check page's Change opens it on its own, and
 // Save and continue there returns to the check page. A page judges its own
@@ -46,33 +46,38 @@ async function reach(app, slug) {
   return onStep(app, slug);
 }
 
-test('Plan details asks one question per page, the two dates together, and Back walks the pages', async (t) => {
+test('Plan details asks one question per page, the two dates included (RPA-144), and Back walks the pages', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
   const plan = await onStep(app, 'plan-details');
   assert.deepEqual(onScreen(plan), ['What is the name of your research plan?']);
-  assert.equal(caption(plan), 'Question 1 of 6');
+  assert.equal(caption(plan), 'Question 1 of 7');
   press(plan);
   assert.deepEqual(linksOf(plan), ['Enter a name for your research plan'], 'the page judges its own question only');
   setValue(window, d.querySelector('[data-field="researchTitle"]'), 'Usability testing of checkout flow');
   press(plan);
   assert.deepEqual(onScreen(plan), ['Which project or initiative does this research support?']);
-  assert.equal(caption(plan), 'Question 2 of 6');
+  assert.equal(caption(plan), 'Question 2 of 7');
   assert.equal(window.location.hash, '#plan-details/2');
   assert.equal(d.activeElement, plan.querySelector('#field-jiraProject-label'), 'focus lands on the question');
   for (const key of ['jiraProject', 'leadResearcher']) { setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled'); press(plan); }
   // Whether anyone else is involved is a page of its own; the names are asked only if so (RPA-141).
   assert.deepEqual(onScreen(plan), ['Are other researchers involved in this research?']);
-  assert.equal(caption(plan), 'Question 4 of 6');
+  assert.equal(caption(plan), 'Question 4 of 7');
   d.querySelector('.select-cell[data-field-key="otherResearchers"] input[value="No"]').click();
   press(plan);
   setValue(window, d.querySelector('[data-field="projectRequester"]'), 'Filled'); press(plan);
-  assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?', 'When will the findings be shared with the team?'], 'the two dates travel together');
-  assert.equal(caption(plan), 'Question 6 of 6');
+  assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?'], 'the decision first, alone, as the work happens');
+  assert.equal(caption(plan), 'Question 6 of 7');
+  setValue(window, d.querySelector('[data-field="projectDecision"]'), '2026-11-20');
+  press(plan);
+  assert.deepEqual(onScreen(plan), ['When will the findings be shared with the team?'], 'then the readout, alone');
+  assert.equal(caption(plan), 'Question 7 of 7');
   plan.querySelector('.step-back').click();
-  assert.deepEqual(onScreen(plan), ['Who requested this research?']);
-  assert.equal(window.location.hash, '#plan-details/5');
+  assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?'], 'Back from the readout is the decision');
+  assert.equal(d.querySelector('[data-field="projectDecision"]').value, '2026-11-20', 'with its date intact');
+  assert.equal(window.location.hash, '#plan-details/6');
   assert.deepEqual(app.jsdomErrors, []);
 });
 
@@ -82,8 +87,8 @@ test('the last page judges the whole section, and a summary link opens the page 
   const { document: d, window } = app;
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);   // answers Yes to other researchers, so their names are a page too
-  for (let k = 0; k < 6; k++) press(plan);
-  assert.equal(caption(plan), 'Question 7 of 7');
+  for (let k = 0; k < 7; k++) press(plan);
+  assert.equal(caption(plan), 'Question 8 of 8');
   setValue(window, d.querySelector('[data-field="leadResearcher"]'), '');
   press(plan);
   assert.deepEqual(visible(d), ['plan-details'], 'stays');
@@ -100,7 +105,9 @@ test('the last page judges the whole section, and a summary link opens the page 
   press(plan);
   assert.deepEqual(onScreen(plan), ['Who requested this research?']);
   press(plan);
-  assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?', 'When will the findings be shared with the team?']);
+  assert.deepEqual(onScreen(plan), ['When will the findings be used to make a decision?']);
+  press(plan);
+  assert.deepEqual(onScreen(plan), ['When will the findings be shared with the team?']);
   press(plan);
   assert.ok(checking(plan), 'and the check page after the last');
 });
