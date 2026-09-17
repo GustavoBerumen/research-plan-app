@@ -344,6 +344,10 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .field-study-questions{margin-top:18px}
 /* A written question no study answers (RPA-140): a block on the Studies
    pages, and the design system's notification banner on Research. */
+/* The page that stands in for a plan saved by a newer version (RPA-143). */
+.newer-draft-next{margin:0 0 20px;max-width:64ch}
+.newer-draft-actions{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 16px}
+.newer-draft-status{margin:0;min-height:1.4em;max-width:64ch}
 .study-unclaimed-list{display:flex;flex-direction:column;gap:12px;margin:0 0 24px}
 .study-unclaimed-list:empty{display:none}
 .study-unclaimed{border-left:4px solid var(--border);padding-left:16px;margin:0}
