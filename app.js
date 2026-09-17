@@ -6629,7 +6629,7 @@
     if (!capabilities.submissions && checked.length && checked.every(g => unitKey(g) === 'stageTimeline')) {
       const errors = localCompletionErrors().filter(error => !error.key || error.key === 'stageTimeline');
       // A schedule nobody has started is one thing to do, not a message for
-      // every empty date in it: nine, on the suggested stages. It is asked
+      // every empty date in it: eight, on the five suggested stages. It is asked
       // for in the template's words, like any unanswered field. Once a date
       // is in, each row is told exactly what it lacks (RPA-6, RPA-120).
       const asOne = errors.length && checked.every((g) => g.dataset.errorMessage && scheduleNotStarted(g));
