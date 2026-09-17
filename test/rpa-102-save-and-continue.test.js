@@ -48,12 +48,13 @@ test('partial and impossible required dates stay on the step, and a completed co
     parts.forEach((part, i) => { part.value = values[i]; });
     parts[2].dispatchEvent(new window.Event('input', { bubbles: true }));
   };
-  for (const values of [['12', '', ''], ['31', 'Feb', '2026']]) {
+  // A date begun is told what it lacks, in the design system's words for a date (RPA-120).
+  for (const [values, said] of [[['12', '', ''], 'Project decision date must include a month and year'], [['31', 'Feb', '2026'], 'Project decision date must be a real date']]) {
     enter(values);
     saveAndContinue(step);
     assert.deepEqual(visible(d), ['plan-details']);
     assert.equal(summaryOf(step).hidden, false);
-    assert.ok(linksOf(step).includes('Enter a complete, valid project decision date'));
+    assert.ok(linksOf(step).includes(said), linksOf(step).join(' | '));
     assert.equal(d.activeElement, summaryOf(step));
     step.querySelector('.step-all').click();
     const task = Array.from(d.querySelectorAll('.task-item')).find(row => text(row.querySelector('.task-name')) === 'Plan details');
@@ -104,7 +105,7 @@ test('pressing it on an incomplete section shows the summary, takes focus there,
   assert.equal(text(summary.querySelector('.error-summary-title')), 'There is a problem');
   assert.equal(d.activeElement, summary, 'focus moves to the summary');
   // One question per page since RPA-108: the first page judges the title alone.
-  assert.deepEqual(linksOf(step), ['Enter the research title']);
+  assert.deepEqual(linksOf(step), ['Enter a name for your research plan']);
   assert.deepEqual(errorsOf(step), linksOf(step), 'the same message at the field');
   const title = d.querySelector('[data-field="researchTitle"]');
   const group = title.closest('.title-field');
@@ -143,7 +144,7 @@ test('the research title counts: Plan details does not complete without it, and 
   setValue(window, d.querySelector('[data-field="researchTitle"]'), '');
   saveAndContinue(step);
   assert.deepEqual(visible(d), ['plan-details'], 'stays: the template does not mark the title optional (Gus, 14 September 2026)');
-  assert.deepEqual(linksOf(step), ['Enter the research title']);
+  assert.deepEqual(linksOf(step), ['Enter a name for your research plan']);
   const group = d.querySelector('[data-field="researchTitle"]').closest('.title-field');
   assert.ok(group.classList.contains('field-invalid'), 'marked like any other field');
   assert.ok(group.querySelector('.field-error').previousElementSibling.classList.contains('field-hint-text'), 'below the hint, above the box');
@@ -170,7 +171,7 @@ test('it saves either way, and a section\'s errors name only its required fields
   saveAndContinue(context);
   // One question per page since RPA-108: the first page judges Background
   // alone. Additional information is never a page in the flow.
-  assert.deepEqual(linksOf(context), ['Enter the background'], 'Additional information is not required');
+  assert.deepEqual(linksOf(context), ['Enter what people need to know about this project'], 'Additional information is not required');
   completeStep(app, context);
   saveAndContinue(context);
   await waitFor(() => visible(d)[0] === 'research');
@@ -181,7 +182,7 @@ test('it saves either way, and a section\'s errors name only its required fields
   saveAndContinue(researchStep);
   const research = linksOf(researchStep);
   assert.ok(!research.some((m) => /hypothesis/i.test(m)), 'an optional field is never an error: ' + research.join(', '));
-  assert.ok(research.includes('Add to Research Questions'), research.join(', '));
+  assert.ok(research.includes('Enter at least one research question'), research.join(', '));
 });
 
 test('errors do not print, and the marked field prints clean', () => {

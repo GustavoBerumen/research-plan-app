@@ -125,7 +125,7 @@ test('the three steps come in the order a person does them: who you are, your si
 
   press(d, 'Continue');
   assert.deepEqual(Array.from(summaryOf(d).querySelectorAll('li')).map(text),
-    ['Confirm the declaration: lead researcher', 'Enter the sign off: lead researcher'], 'the sign-off is asked for before the address');
+    ['Confirm that this plan is complete and current', 'Enter your initials to sign this plan'], 'the sign-off is asked for before the address');
 
   const box = d.querySelector('[data-field="declarationResearcher"]');
   box.checked = true;

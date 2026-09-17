@@ -162,9 +162,9 @@ test('Save and continue judges every study: a second study left blank lists its 
   methodology.querySelector('.step-continue').click();
   const links = Array.from(methodology.querySelectorAll('.error-summary-link')).map(text);
   assert.deepEqual(links, [
-    'Add to Methods for Study 2',
-    'Add to Participant criteria for Study 2',
-    'Select a sample size for Study 2',
+    'Enter at least one research method for Study 2',
+    'Enter who should take part in Study 2',
+    'Select how many participants you need for Study 2',
   ], 'the second study, by name, field by field');
   const g2 = groups(d)[1];
   setValue(window, g2.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Survey');

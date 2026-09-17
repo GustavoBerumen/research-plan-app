@@ -116,6 +116,18 @@ The words of the notes are RPA-119, and they brought three things:
   **bold**                         — works in a Hint or a note, beside
                                      *italics*.
 
+An indented "Error:" line is what Save and continue says, in the error
+summary and at the field, when a required field is left unanswered
+(RPA-120). Say what to do, in the words of the field's question: "Enter
+the goal of this project", "Select how many studies you will run". No
+full stop, no "please", nothing about what the person did wrong. On a
+field asked once per study, "this study" becomes the study's name, and a
+message that does not say it has " for Study 2" added. A field without an
+Error line gets the general wording made from its label ("Enter the
+goal"). What the form says about an answer that is there and wrong (a
+date with no year, a date that is not real, an email address without an
+@) is not written here: it is the same for every field of that kind.
+
 question=... on any field makes that the heading a person reads, as a
 question page asks it ("What is the goal of this project?"). The label
 before the parentheses stays the field's name: error messages, the check
@@ -136,6 +148,7 @@ Email address (email, width=30, question=What is your email address?, key=emailA
 
 # Research title (text, question=What is the name of your research plan?, key=researchTitle):
   Hint: A simple descriptive name for your study, for example ‘Usability testing of checkout flow’.
+  Error: Enter a name for your research plan
   Help: I am not sure what to name my research
   Guidance: A good title helps colleagues understand what you are testing without reading the rest of the document.
   Guidance: Try combining the purpose of your study with the feature or solution you want to understand better:
@@ -146,12 +159,14 @@ Email address (email, width=30, question=What is your email address?, key=emailA
 
 Project name (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
   Hint: The name of the wider project, programme, or product goal your study relates to. For example, ‘Checkout redesign’ or ‘Billing self-serve’.
+  Error: Enter the project or initiative this research supports
   Help: Why we ask for the project name
   Guidance: Connecting your study to a project helps others find related work, such as existing documentation, previous research, or active Jira tickets.
   Guidance: It also helps to understand the impact of this study and to connect with and include the right stakeholders.
   Guidance: You can update this at any time.
 Lead researcher (text, width=20, question=Who is leading this research?, key=leadResearcher):
   Hint: Enter the full name of the person responsible for running this study.
+  Error: Enter the name of the person leading this research
   Help: Why we ask for the lead researcher
   Guidance: This identifies the main point of contact who will carry out the study and share the findings.
   Guidance: The lead researcher is accountable for:
@@ -172,8 +187,10 @@ Other researchers (radios, closed, reveals=researcherNames, question=Are other r
   Error: Select yes if other researchers are involved in this research
 Researcher names (list, width=20, key=researcherNames):
   Hint: Add each person’s name. Do not include the lead researcher.
+  Error: Enter the name of at least one other researcher
 Project requester (text, width=20, question=Who requested this research?, key=projectRequester):
   Hint: Enter the name of the project lead or stakeholder who asked for this research support.
+  Error: Enter the name of the person who requested this research
   Help: Why we ask for the project requester
   Guidance: This is usually the person responsible for the wider product or business initiative, such as a product manager, designer, data analyst, or engineer.
   Guidance: Adding their name helps ensure:
@@ -183,6 +200,7 @@ Project requester (text, width=20, question=Who requested this research?, key=pr
   Guidance: You can update this name at any time.
 Project decision (date, question=When will the findings be used to make a decision?, key=projectDecision):
   Hint: The date the project requester or team plans to use the insights to take action.
+  Error: Enter the date the findings will be used to make a decision
   Help: Why we ask for a decision date
   Guidance: Research is most effective when insights arrive before choices are locked in.
   Guidance: Knowing the decision deadline ensures:
@@ -192,6 +210,7 @@ Project decision (date, question=When will the findings be used to make a decisi
   Guidance: An approximate date is fine. You can update this date if timelines shift.
 Research readout (date, question=When will the findings be shared with the team?, key=researchReadout):
   Hint: The date you expect to deliver the insights from this research. This date should be a few days before the project decision date.
+  Error: Enter the date the findings will be shared with the team
   Help: Why this date needs to be before the decision date
   Guidance: This date should be set before the project decision deadline.
   Guidance: We recommend sharing insights at least a few days in advance so the team can:
@@ -206,6 +225,7 @@ Last updated (date, key=lastUpdated):
 
 Background (textarea, eval, rows=2, words=60, question=What do people need to know about this project?, key=background):
   Hint: Give essential context about the wider initiative and define any terms needed to understand this research.
+  Error: Enter what people need to know about this project
   Help: Why we ask for the background
   Guidance: Research always sits within a bigger picture. A clear background connects your study to the wider business initiative so stakeholders can easily follow along.
   Guidance: A good background covers three essential areas:
@@ -216,6 +236,7 @@ Background (textarea, eval, rows=2, words=60, question=What do people need to kn
   Guidance: You can edit this at any time.
 Goal (textarea, eval, rows=2, words=30, question=What is the goal of this project?, key=goal): 
   Hint: State the outcome the initiative aims to achieve and what will change in the product.
+  Error: Enter the goal of this project
   Help: How to define the project goal
   Guidance: Every project aims to change something for the user, the solution or the business. A clear goal defines the future product state once this initiative succeeds.
   Guidance: A strong project goal covers 3 key areas:
@@ -225,6 +246,7 @@ Goal (textarea, eval, rows=2, words=30, question=What is the goal of this projec
   Guidance: Keep it focused on the end result.
 Problem Statement (textarea, eval, rows=2, words=60, question=What problem are you trying to solve?, key=problemStatement): 
   Hint: Summarise the specific issue, challenge, or gap your research aims to address.
+  Error: Enter the problem you are trying to solve
   Help: How to write a strong problem statement
   Guidance: Usually research starts with something that needs fixing or improving. A clear problem statement defines the exact challenge the team is trying to solve.
   Guidance: A strong problem statement covers 3 key areas:
@@ -239,6 +261,7 @@ Additional information (custom-fields, max=1, key=additionalContext):
 
 Objective (textarea, eval, rows=2, words=30, question=What do you want to learn from this research?, key=objective): 
   Hint: State the specific unknown you need to uncover about your users to guide product decisions.
+  Error: Enter what you want to learn from this research
   Help: How to define your research objective
   Guidance: The research objective focuses on what you need to learn from users. A strong objective covers 3 key areas:
   Guidance: - **User behaviour and needs:** Focus on how users complete tasks, where they struggle, or why an issue happens, not just feature validation.
@@ -254,6 +277,7 @@ Objective (textarea, eval, rows=2, words=30, question=What do you want to learn 
 <!-- Guidance: Specific enough to be wrong. Leave it blank if the study is exploratory and you do not yet have one. -->
 Research Questions (list, eval, question=What questions do you need this research to answer?, key=researchQuestions): 
   Hint: Frame the specific gaps in your understanding of user experience, needs and issues.
+  Error: Enter at least one research question
   Help: How to write strong research questions
   Guidance: A research question is the core unknown your study must answer to guide product decisions. It is what the team needs to find out through the research.
   Guidance: A good research question covers 3 key areas:
@@ -264,6 +288,7 @@ Research Questions (list, eval, question=What questions do you need this researc
   Guidance: You can edit, remove, or add more questions at any time.
 Outcomes (list, eval, question=What deliverables will answer your research questions?, key=outcomes): 
   Hint: Add the specific outputs you will deliver. Each outcome should answer one of your research questions.
+  Error: Enter at least one deliverable that will answer your research questions
   Help: How to define research outcomes
   Guidance: It is the tangible deliverable that answers a research question and helps your team take action. Avoid vague outputs like “a summary” or “a presentation slide deck.”
   Guidance: A strong outcome covers 3 key areas:
@@ -287,6 +312,7 @@ Additional information (custom-fields, max=1, key=additionalResearch):
      wording of both questions and their hints is Gus's to settle. -->
 Number of studies (radios, question=How many studies will you run?, key=studyCount): One,Two,Three
   Hint: Count each separate research activity. A usability study and a survey count as two studies, even if they are for the same question.
+  Error: Select how many studies you will run
   Help: How to plan your studies
   Guidance: A study is a distinct research activity with its own method, participant group, and timeline.
   Guidance: Choose the structure that fits your plan:
@@ -309,6 +335,7 @@ Study questions (study-questions, question=Which research questions does this st
 <!-- Hint: A framework to help ground the study design and analysis. -->
 Methods (list, width=20, question=Which research methods will you use for this study?, key=methods):
   Hint: A technique to study user behaviours, needs, and experiences that helps answer your research question.
+  Error: Enter at least one research method for this study
   Help: What is a research method?
   Guidance: A research method is the practical technique you use to collect data from users. The right method depends on whether you need to observe what people do, listen to what they say, or measure trends at scale.
   Guidance: Common methods include:
@@ -331,6 +358,7 @@ Methods (list, width=20, question=Which research methods will you use for this s
      its characteristics (plan-model.js), and no draft version changes. -->
 Participant criteria (list, prose, width=30, perQuestion, question=Who should take part in this study?, key=characteristics):
   Hint: Define the target participants and screening criteria for this study. For example: *New customers who abandoned a checkout in the last 30 days.*
+  Error: Enter who should take part in this study
   Help: How to define your participants
   Guidance: Participant criteria define who you need to recruit to answer your research question accurately.
   Guidance: Include two types of criteria:
@@ -343,6 +371,7 @@ Participant criteria (list, prose, width=30, perQuestion, question=Who should ta
      and the check page (RPA-118). -->
 Sample Size (radios, perQuestion, question=How many participants do you need?, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
   Hint: The number of people this study's methods need.
+  Error: Select how many participants you need
   Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
 
 Additional information (custom-fields, max=1, key=additionalMethodology):
@@ -361,6 +390,7 @@ Additional information (custom-fields, max=1, key=additionalMethodology):
      completion date follows Research readout until somebody edits it. -->
 Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:stage=Planning,Recruitment,Data Collection,Analysis,Reporting | Start Date:date:startDate | Completion Date:date:completionDate
   Hint: Suggested stages of a standard study. Each stage needs a start and completion date, on or before the research readout. Remove stages you do not need.
+  Error: Enter a start date and a completion date for each stage
 <!-- Dormant since RPA-117, see Theory above. RPA-69, Jira subtasks from
      Action Points, loses its source while this is hidden. -->
 <!-- Action Points (table, optional, key=actionPoints): Action:prose:action | Responsible:prose:responsible -->
@@ -432,9 +462,13 @@ Additional information (custom-fields, max=1, key=additionalResources):
      box agrees to. -->
 Declaration: Lead researcher (checkbox, key=declarationResearcher): I confirm this plan is complete and current, and I will conduct the research as it describes.
   Hint: Tick the box once every section is complete and current, then add your initials below.
+  Error: Confirm that this plan is complete and current
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type initials and the date is added automatically.
+  Error: Enter your initials to sign this plan
 Declaration: Project requester (checkbox, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
   Hint: Tick the box to approve the plan for your project, then add your initials below.
+  Error: Confirm that you approve this plan
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type initials and the date is added automatically.
+  Error: Enter your initials to approve this plan

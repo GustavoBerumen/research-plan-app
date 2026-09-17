@@ -86,7 +86,7 @@ test('the question is required; the names are required only while they are asked
   assert.equal(caption(d), 'Question 7 of 7');
   nameInputs(d).forEach((i) => setValue(window, i, ''));
   press(d);
-  assert.deepEqual(links(d), ['Add to Researcher names'], 'yes, but nobody named');
+  assert.deepEqual(links(d), ['Enter the name of at least one other researcher'], 'yes, but nobody named');
 
   choose(d, 'No');
   await settle();

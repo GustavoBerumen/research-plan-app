@@ -47,7 +47,7 @@ test('Sample Size is a fieldset: the question as its legend, the hint beneath, s
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('the field keeps its name for the error summary and the check page, while the legend asks the question', async (t) => {
+test('the field keeps its name for the check page and has its own words for the error summary, while the legend asks the question', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -63,10 +63,10 @@ test('the field keeps its name for the error summary and the check page, while t
   setValue(window, group.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
   setValue(window, group.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
   toCheckPage(methodology);
-  assert.deepEqual(linksOf(methodology), ['Select a sample size for Study 1'], 'the message names the field and its study, not the question');
+  assert.deepEqual(linksOf(methodology), ['Select how many participants you need for Study 1'], 'the message says what to do and names the study (RPA-120)');
   const fieldset = fieldsetOf(d);
   assert.ok(fieldset.classList.contains('field-invalid'), 'the fieldset is marked');
-  assert.match(text(fieldset.querySelector('.field-error')), /^Error: Select a sample size/);
+  assert.match(text(fieldset.querySelector('.field-error')), /^Error: Select how many participants you need for Study 1$/);
   fieldset.querySelector('input[type=radio]').click();
   assert.equal(fieldset.classList.contains('field-invalid'), false, 'and the mark goes with the choice');
   toCheckPage(methodology);
