@@ -17,12 +17,22 @@
 //
 // The messages below are a draft for Gus to edit: changing one is an edit
 // to the template and to this table.
+//
+// With submissions on (RPA-64), a step's errors come from the submission
+// validator, which words them from the wire's names: "Enter the
+// background.", "Select a sample size for research question 2." The first
+// slice of this ticket left that as it was, so its words showed only while
+// submissions were off. They show either way now: the form speaks wherever
+// it has something to say, once per field, and the validator's words stand
+// everywhere else. What is an error, where its link goes and what the
+// server checks are the validator's still.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { bootApp, setValue, completeStep } = require('./app-harness');
+const submissionFixtures = require('./rpa-64-fixtures.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const TEMPLATE = fs.readFileSync(path.join(ROOT, 'research-plan-template.md'), 'utf8');
@@ -79,8 +89,14 @@ const WORDS = {
   execution: ['Enter a start date and a completion date for each stage'],
 };
 
-test('every section, left empty, asks for each of its fields in that field\'s own words, in the summary and at the field', async (t) => {
-  const app = await bootApp({});
+// The configuration the server gives when plans can be sent (RPA-64).
+const SUBMISSIONS_ON = { configResponse: async () => ({ ok: true, status: 200, json: async () => ({ pilotMode: true,
+  capabilities: { submissions: true, feedback: true, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false }, submissions: submissionFixtures.config }) }) };
+
+for (const [mode, options] of [['submissions off, as in the pilot', {}], ['submissions on', SUBMISSIONS_ON]])
+test(mode + ': every section, left empty, asks for each of its fields in that field\'s own words, in the summary and at the field', async (t) => {
+  const app = await bootApp(options);
+  assert.equal(Boolean(app.document.querySelector('.submission-send')), options === SUBMISSIONS_ON, 'the fixture is in the mode it says');
   t.after(() => app.close());
   const { document: d, window } = app;
   for (const slug of Object.keys(WORDS)) {
@@ -94,6 +110,12 @@ test('every section, left empty, asks for each of its fields in that field\'s ow
       setValue(window, d.querySelector('.list-rows[data-list-key="researchQuestions"] .list-input'), 'Where do people give up?');
       d.querySelector('.list-rows[data-list-key="researchQuestions"]').closest('.field').querySelector('.add-btn').click();
       setValue(window, d.querySelectorAll('.list-rows[data-list-key="researchQuestions"] .list-input')[1], 'What do they expect instead?');
+      // An outcome for each question: the validator asks for one at every
+      // question's place (RPA-64). The second question brought its row with it.
+      const outcomes = d.querySelectorAll('.list-rows[data-list-key="outcomes"] .list-input');
+      assert.equal(outcomes.length, 2);
+      setValue(window, outcomes[0], 'A list of where people give up.');
+      setValue(window, outcomes[1], 'A list of what they expect.');
     }
     if (slug === 'studies') {
       // Two studies, a question each, so Methodology's messages have a study
@@ -223,5 +245,102 @@ test('a schedule nobody has started is asked for once; once a date is in, each r
   const rows = linksOf(execution);
   assert.ok(rows.length > 1 && rows.every((m) => /schedule row \d/.test(m)), 'started: row by row, as before (RPA-6): ' + rows.slice(0, 2).join(' | '));
   assert.equal(execution.querySelectorAll(':scope .field > .field-error').length, 0, 'and the one message is gone from the field');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('submissions on: what only the form asks is still required, and an untouched section does not read Completed', async (t) => {
+  // The validator judges the plan as it is sent, and the wire does not carry
+  // "Are other researchers involved?" or "How many studies will you run?".
+  // Judged by it alone, Plan details completed without the first, and
+  // Studies and Methodology read Completed before anyone had opened them.
+  const app = await bootApp(SUBMISSIONS_ON);
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const plan = d.querySelector('.doc-header');
+  for (const key of ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester']) setValue(window, d.querySelector('[data-field="' + key + '"]'), 'Filled.');
+  for (const key of ['projectDecision', 'researchReadout']) setValue(window, d.querySelector('[data-field="' + key + '"]'), '2026-11-10');
+  await toLastPage(app, plan);
+  press(plan);
+  await settle();
+  assert.equal(plan.classList.contains('step-checking'), false, 'not complete: one question is unanswered');
+  assert.deepEqual(linksOf(plan), ['Select yes if other researchers are involved in this research']);
+  plan.querySelector('.error-summary-link').click();
+  await settle();
+  assert.ok(d.querySelector('.select-cell[data-field-key="otherResearchers"]').contains(d.activeElement), 'its link goes to its radios');
+
+  window.location.hash = '#sections';
+  await settle();
+  const status = Object.fromEntries(Array.from(d.querySelectorAll('.task-item')).map((r) => [text(r.querySelector('.task-name')), text(r.querySelector('.task-status'))]));
+  assert.equal(status['Plan details'], 'Incomplete');
+  assert.notEqual(status.Studies, 'Completed', 'nobody has said how many studies there are');
+  assert.notEqual(status.Methodology, 'Completed');
+
+  d.querySelector('.select-cell[data-field-key="otherResearchers"] input[value="No"]').click();
+  await toLastPage(app, plan);
+  press(plan);
+  await settle();
+  assert.ok(plan.classList.contains('step-checking'), 'answered, it completes');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('submissions on: Send lists an empty plan in the form\'s words, once per field, and keeps the validator\'s where the form has none', async (t) => {
+  const app = await bootApp({ ...SUBMISSIONS_ON, draft: { version: 10, fields: { emailAddress: 'name@example.com' }, selects: { studyCount: { v: 'One', o: '' } }, lists: { researchQuestions: ['Where do people give up?', 'What do they expect?'], outcomes: ['A list.', ''] },
+    studies: [{ questions: [1, 2], methods: [''], characteristics: [''], sampleSize: { v: '', o: '' } }], tables: {}, custom: {}, signOff: null, ui: { section: 'review' } } });
+  t.after(() => app.close());
+  const d = app.document;
+  d.querySelector('.submission-send').click();
+  await settle();
+  const said = Array.from(d.querySelectorAll('.submission-errors .error-summary-link')).map(text);
+  for (const own of ['Enter a name for your research plan', 'Enter what people need to know about this project', 'Enter the date the findings will be used to make a decision',
+    'Confirm that this plan is complete and current', 'Enter at least one research method for Study 1', 'Enter who should take part in Study 1', 'Select how many participants you need for Study 1']) {
+    assert.ok(said.includes(own), own + ' | got: ' + said.join(' | '));
+  }
+  assert.equal(said.filter((m) => m === 'Enter at least one research method for Study 1').length, 1, 'one study answers two questions: said once, not once per question');
+  assert.ok(said.includes('Enter the outcome, row 2.'), 'a blank row among filled ones is the validator\'s to word: ' + said.join(' | '));
+  assert.equal(said.some((m) => /research question \d/.test(m) && /sample size|methods|participant/.test(m)), false, 'a study\'s fields are not called a research question\'s');
+  assert.deepEqual(app.jsdomErrors, []);
+});
+
+test('submissions on: the validator still holds a section back where it is the stricter, and a Studies error still finds its study', async (t) => {
+  const app = await bootApp(SUBMISSIONS_ON);
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  await finish(app, d.querySelector('.doc-header'));
+  await finish(app, stepOf(d, 'context'));
+
+  // The form is content with one outcome; the validator wants every row that is kept to be filled.
+  const research = stepOf(d, 'research');
+  completeStep(app, research);
+  d.querySelector('.list-rows[data-list-key="researchQuestions"]').closest('.field').querySelector('.add-btn').click();
+  setValue(window, d.querySelectorAll('.list-rows[data-list-key="researchQuestions"] .list-input')[1], 'What do they expect instead?');
+  await toLastPage(app, research);
+  press(research);
+  await settle();
+  assert.equal(research.classList.contains('step-checking'), false, 'held back');
+  assert.deepEqual(linksOf(research), ['Enter the outcome, row 2.'], 'in the validator\'s words: the form has none for one blank row among filled ones');
+  // Not only at the button: the task list judges the section by the same rule, and what follows stays locked.
+  const statusOf = (name) => text(Array.from(d.querySelectorAll('.task-item')).find((r) => text(r.querySelector('.task-name')) === name).querySelector('.task-status'));
+  assert.equal(statusOf('Research'), 'Incomplete');
+  assert.equal(statusOf('Studies'), 'Cannot start yet');
+  setValue(window, d.querySelectorAll('.list-rows[data-list-key="outcomes"] .list-input')[1], 'A list of what they expect.');
+  press(research);
+  await settle();
+  assert.ok(research.classList.contains('step-checking'));
+
+  // The wire knows nothing of studies, so a study with no question is the form's to require, and to point at.
+  const studies = stepOf(d, 'studies');
+  d.querySelector('.select-cell[data-field-key="studyCount"] input[value="Two"]').click();
+  await settle();
+  const groups = Array.from(d.querySelectorAll('.study-group'));
+  groups[0].querySelectorAll('input[type=checkbox]').forEach((b) => b.click());   // Study 1 answers both; Study 2 answers nothing
+  await toLastPage(app, studies);
+  press(studies);
+  await settle();
+  assert.deepEqual(linksOf(studies), ['Select at least one research question for Study 2']);
+  const link = studies.querySelector('.error-summary-link');
+  assert.equal(link.tagName, 'A', 'a link, not bare words: it has somewhere to go');
+  link.click();
+  await settle();
+  assert.ok(groups[1].contains(d.activeElement), 'and it goes to Study 2');
   assert.deepEqual(app.jsdomErrors, []);
 });

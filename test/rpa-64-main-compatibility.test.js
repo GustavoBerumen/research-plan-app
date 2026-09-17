@@ -52,7 +52,7 @@ async function restoreInto(app, draft) {
   return app.document.getElementById('backup-status').textContent;
 }
 function draftWithHistory() {
-  const p = compatF.plan(); p.version = 9; p.fields.emailAddress = 'owner@example.com'; p.fields.comments = 'DORMANT COMMENT';
+  const p = compatF.plan(); p.fields.emailAddress = 'owner@example.com'; p.fields.comments = 'DORMANT COMMENT';
   p.signOff = compatW.createPlan({ id: 'synthetic-history', at: p.savedAt, authorRole: 'leadResearcher',
     parties: { leadResearcher: { email: 'owner@example.com', displayName: 'AB' }, projectRequester: { email: 'other@example.com', displayName: 'CD' } } }).plan;
   return p;
@@ -75,7 +75,7 @@ test('late MVP configuration preserves control identity and switches to the test
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('MVP Send preserves the v1 collection boundary while a v9 backup retains browser identity and review history', async t => {
+test('v2 Send preserves the approved collection boundary while a v11 backup retains browser identity and review history', async t => {
   let received;
   const p = draftWithHistory();
   const app = await bootApp({ draft: p, configResponse, submit: async request => {
@@ -84,13 +84,16 @@ test('MVP Send preserves the v1 collection boundary while a v9 backup retains br
   assert.equal(app.document.querySelector('.sign-off'), null);
   app.document.querySelector('.submission-send').click();
   await waitFor(() => /privately saved/.test(app.document.querySelector('.submission-status').textContent));
-  assert.equal(received.plan.version, 8);
+  assert.equal(received.plan.version, 11);
+  assert.equal(received.plan.planId, p.planId);
+  assert.deepEqual(received.plan.lists.researcherNames, ['Sam Okoro']);
   assert.equal(received.plan.fields.emailAddress, undefined);
   assert.equal(received.plan.signOff, undefined);
   assert.equal(received.plan.fields.comments, '');
   assert.doesNotMatch(JSON.stringify(received), /owner@example|other@example|DORMANT COMMENT|synthetic-history/);
   const backup = await backupOf(app);
-  assert.equal(backup.version, 10);
+  assert.equal(backup.version, 11);
+  assert.equal(backup.planId, p.planId);
   assert.equal(backup.fields.emailAddress, p.fields.emailAddress);
   assert.equal(backup.fields.comments, p.fields.comments);
   assert.deepEqual(backup.signOff, p.signOff);
@@ -103,7 +106,7 @@ test('MVP Send preserves the v1 collection boundary while a v9 backup retains br
   assert.deepEqual(app.jsdomErrors.concat(target.jsdomErrors), []);
 });
 
-test('failed v9 restore keeps the original review record and working email-page bindings', async t => {
+test('failed v11 restore keeps the original review record and working email-page bindings', async t => {
   const p = draftWithHistory();
   const app = await bootApp({ draft: p, configResponse }); t.after(() => app.close());
   const originalTitle = control(app, 'researchTitle');

@@ -355,7 +355,7 @@ test('the sign-off travels in the draft and comes back with it; Clear Form clear
   await onReview(app);
   startAndSign(app);
   const saved = await waitFor(() => { const dr = draftOf(window); return dr && dr.signOff && dr.signOff.status === 'awaitingCounterparty' && dr; });
-  assert.equal(saved.version, 10, 'the draft format carries it from version 10');
+  assert.equal(saved.version, 11, 'the current draft format carries sign-off and stable plan identity');
 
   const again = await bootApp({ draft: saved });
   t.after(() => again.close());

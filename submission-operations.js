@@ -101,11 +101,11 @@ async function exportBundle(store, config, { journalOnly = false, now = Date.now
     if (!verifyRecord(entry.value, config) || key !== submissionKey(config, entry.value.submissionId)) throw new Error('Invalid stored submission.');
     records.push(entry.value);
   }
-  return { recordType: 'research-plan-export', recordVersion: 1, deployment: config.deployment, cohort: config.cohort,
+  return { recordType: 'research-plan-export', recordVersion: 2, deployment: config.deployment, cohort: config.cohort,
     exportedAt: new Date(now).toISOString(), journalOnly, cohortMetadata: cohort, records, deletions };
 }
 function validateBundle(bundle, config, journalOnly) {
-  if (!bundle || bundle.recordType !== 'research-plan-export' || bundle.recordVersion !== 1 || bundle.deployment !== config.deployment ||
+  if (!bundle || bundle.recordType !== 'research-plan-export' || ![1, 2].includes(bundle.recordVersion) || bundle.deployment !== config.deployment ||
       bundle.cohort !== config.cohort || bundle.journalOnly !== journalOnly || !validCohort(bundle.cohortMetadata, config) ||
       !Array.isArray(bundle.records) || !Array.isArray(bundle.deletions) || (journalOnly && bundle.records.length) ||
       typeof bundle.exportedAt !== 'string' || !Number.isFinite(Date.parse(bundle.exportedAt))) throw new Error('Incompatible recovery export.');

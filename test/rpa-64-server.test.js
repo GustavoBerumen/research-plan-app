@@ -34,22 +34,22 @@ test('default off, authentication, cross-site, methods and JSON gates precede pa
 test('invalid versions, structure, locators, byte limits and payloads never reach storage or AI', async () => {
   const cases = [ ['broken', 400], [{ ...f.request(), submissionId: [f.ID] }, 400], [{ ...f.request(), deleteAfter: '2099-01-01' }, 400],
     [{ ...f.request(), formSchemaVersion: 'forged' }, 409], [' '.repeat(1024 * 1024 + 1), 413] ];
-  const incomplete = f.request(); incomplete.plan.methods[0].sampleSize = { v: '__other__', o: '' }; cases.push([incomplete, 422]);
+  const incomplete = f.request(); incomplete.plan.studies[0].sampleSize = { v: '__other__', o: '' }; cases.push([incomplete, 422]);
   const nested = f.request(); nested.plan.fields.background = { payload: 'PRIVATE SENTINEL' }; cases.push([nested, 422]);
   for (const [body, status] of cases) {
     const { server, store } = fixture(); const response = await post(server, body);
     assert.equal(response.status, status); assert.equal(store.calls.length, 0); assert.equal(server.providerCalls.length, 0);
     assert.equal(response.body.includes('PRIVATE SENTINEL'), false);
-    if (body === incomplete) assert.deepEqual(JSON.parse(response.body).errors.map(e => [e.key, e.question, e.code]), [['sampleSize', 0, 'other']]);
+    if (body === incomplete) assert.deepEqual(JSON.parse(response.body).errors.map(e => [e.key, e.study, e.code]), [['sampleSize', 0, 'other']]);
   }
 });
 test('invalid Other sample sizes are rejected before storage even when client validation is bypassed', async () => {
   for (const value of ['asdf', '-1', '1.5', '8-5']) {
     const { server, store } = fixture(); const body = f.request();
-    body.plan.methods[0].sampleSize = { v: '__other__', o: value };
+    body.plan.studies[0].sampleSize = { v: '__other__', o: value };
     const result = await post(server, body);
     assert.equal(result.status, 422, value);
-    assert.deepEqual(JSON.parse(result.body).errors.map(e => [e.key, e.question, e.code]), [['sampleSize', 0, 'other']]);
+    assert.deepEqual(JSON.parse(result.body).errors.map(e => [e.key, e.study, e.code]), [['sampleSize', 0, 'other']]);
     assert.equal(store.calls.length, 0); assert.equal(server.providerCalls.length, 0);
   }
 });
@@ -171,10 +171,10 @@ test('large valid plans exceed the old pilot body limit, while aggregate complex
   const big = f.request(); big.plan.fields.background = 'Synthetic prose. '.repeat(6000);
   const valid = fixture(); assert.equal((await post(valid.server, big)).status, 201, '1 MiB submission limit is independent of the 64 KiB pilot default');
   const complex = f.request();
-  complex.plan.methods = Array.from({ length: 100 }, () => ({ ...f.plan().methods[0], methods: Array(400).fill('x') }));
+  complex.plan.studies = Array.from({ length: 100 }, () => ({ ...f.plan().studies[0], methods: Array(400).fill('x') }));
   const rejected = fixture(); assert.equal((await post(rejected.server, complex)).status, 422); assert.equal(rejected.store.calls.length, 0);
   const incomplete = f.request(); incomplete.plan.lists.researchQuestions = Array(250).fill('Question'); incomplete.plan.lists.outcomes = Array(250).fill('');
-  incomplete.plan.methods = Array.from({ length: 250 }, () => ({ question: 'Question', methods: [''], characteristics: [''], userGroups: [''], sampleSize: { v: '', o: '' } }));
+  incomplete.plan.studies = Array.from({ length: 250 }, (_, i) => ({ questions: [i + 1], methods: [''], characteristics: [''], userGroups: [''], sampleSize: { v: '', o: '' } }));
   const invalid = fixture(); const result = JSON.parse((await post(invalid.server, incomplete)).body);
   assert.equal(result.errors.length, 200); assert.equal(result.moreErrors, true); assert.equal(invalid.store.calls.length, 0);
 });
