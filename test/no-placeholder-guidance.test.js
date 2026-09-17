@@ -217,6 +217,9 @@ test('no hint was lost when its placeholder went', async (t) => {
     return !hint || !hint.textContent.trim();
   });
 
-  // Last updated is computed and asks nothing, so it has no hint by design.
-  assert.deepEqual(unexplained, ['lastUpdated']);
+  // Last updated is computed and asks nothing, so it has no hint by design. It
+  // was the one field without one; since RPA-148 it is not a field on a page
+  // at all but a line on the task list, so nothing is left unexplained.
+  assert.deepEqual(unexplained, []);
+  assert.equal(app.document.querySelector('.task-list-step [data-field="lastUpdated"]').closest('.dateline').querySelector('.field-hint-text'), null);
 });

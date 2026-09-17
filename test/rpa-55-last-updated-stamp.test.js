@@ -28,7 +28,7 @@ function todayIso() {
     + '-' + String(now.getDate()).padStart(2, '0');
 }
 
-test('sits in the corner slot and is stamped with today on a fresh plan', async (t) => {
+test('sits on the task list, not among the questions, and is stamped with today on a fresh plan', async (t) => {
   const app = await bootApp();
   t.after(() => app.close());
   const { document } = app;
@@ -36,14 +36,15 @@ test('sits in the corner slot and is stamped with today on a fresh plan', async 
   const input = lastUpdated(document);
   assert.equal(input.value, todayIso());
 
-  const mf = input.closest('.mf');
-  assert.ok(mf.classList.contains('mf-compact'), 'rendered in the compact slot');
-  assert.ok(mf.closest('.doc-header-top'), 'in the corner row above the title');
-  assert.equal(document.querySelectorAll('.meta-grid [data-field="lastUpdated"]').length, 0,
-    'not down in the grid of questions');
+  // It sat in the header's corner on every page of Plan details until
+  // RPA-148 moved it to where the plan is looked at as a whole.
+  const line = input.closest('.dateline');
+  assert.ok(line.closest('.task-list-step'), 'on the task list');
+  assert.equal(document.querySelectorAll('.doc-header [data-field="lastUpdated"]').length, 0,
+    'not in the header, neither in its corner nor down in the grid of questions');
 
-  // No hint: the corner has no room, and nobody is asked to fill this in.
-  assert.equal(mf.querySelector('.field-hint-text'), null);
+  // No hint: nobody is asked to fill this in.
+  assert.equal(line.querySelector('.field-hint-text'), null);
 });
 
 test('a hand-set date survives editing the rest of the plan', async (t) => {
