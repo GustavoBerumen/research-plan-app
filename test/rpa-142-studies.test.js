@@ -125,11 +125,15 @@ test('a study with no question cannot continue: the error names the study, and t
   assert.ok(studyGroups(d)[1].classList.contains('field-invalid'));
   studyGroups(d)[1].querySelectorAll('.study-question-input')[2].click();
   assert.equal(studyGroups(d)[1].classList.contains('field-invalid'), false, 'and the mark goes with the tick');
+  // Every study answers something now, so the question neither claimed is the one left over (RPA-140).
+  studies.querySelector('.step-continue').click();
+  assert.deepEqual(Array.from(studies.querySelectorAll('.error-summary-link')).map(text), ['Choose a study to answer RQ2']);
+  studyGroups(d)[0].querySelectorAll('.study-question-input')[1].click();
   studies.querySelector('.step-continue').click();
   assert.ok(studies.classList.contains('step-checking'), 'complete: the check page');
   const summary = Object.fromEntries(Array.from(studies.querySelectorAll('.summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
   assert.equal(summary['Number of studies'], 'Two');
-  assert.equal(summary['Study 1'], 'RQ1 Where does choosing a delivery slot break down?');
+  assert.equal(summary['Study 1'], 'RQ1 Where does choosing a delivery slot break down?RQ2 For whom?', 'one line per question it answers');
   assert.equal(summary['Study 2'], 'RQ3 Do people understand the delivery fee?');
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -214,7 +218,7 @@ test('reducing the number past a study that has ticks or methods asks first, and
   assert.deepEqual(app.jsdomErrors, []);
 });
 
-test('a question added after the studies were declared is in no study yet, and the plan says so on the check page', async (t) => {
+test('a question added after the studies were declared is in no study yet, and no methods group appears for it (what the form then says is RPA-140)', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const { document: d, window } = app;
@@ -231,7 +235,7 @@ test('a question added after the studies were declared is in no study yet, and t
   setValue(window, listInputs(d, 'researchQuestions')[1], 'For whom?');
   await settle();
   assert.deepEqual(studyGroups(d).map((g) => g.querySelectorAll('.study-question').length), [2], 'the new question can be ticked');
-  assert.deepEqual(ticks(d), [[1]], 'but nobody has claimed it: RPA-140 will say so out loud');
+  assert.deepEqual(ticks(d), [[1]], 'but nobody has claimed it');
   assert.equal(d.querySelectorAll('.methods-group').length, 1, 'no group appeared for it: groups follow studies, not questions');
   assert.deepEqual(app.jsdomErrors, []);
 });

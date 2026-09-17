@@ -342,6 +342,24 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
    per research question, and under a question already claimed a note of
    which other studies answer it. */
 .field-study-questions{margin-top:18px}
+/* A written question no study answers (RPA-140): a block on the Studies
+   pages, and the design system's notification banner on Research. */
+.study-unclaimed-list{display:flex;flex-direction:column;gap:12px;margin:0 0 24px}
+.study-unclaimed-list:empty{display:none}
+.study-unclaimed{border-left:4px solid var(--border);padding-left:16px;margin:0}
+.study-unclaimed-text{margin:2px 0 0;font-size:var(--text);color:var(--ink);overflow-wrap:anywhere}
+.notification-banner{border:5px solid #1d70b8;background:#1d70b8;margin:0 0 24px}
+.notification-banner[hidden]{display:none}
+.notification-banner-header{padding:2px 15px 5px}
+.notification-banner-title{margin:0;padding:0;font-size:var(--text);font-weight:700;color:#fff}
+.notification-banner-content{background:#fff;color:var(--ink);padding:15px}
+.notification-banner-content p{margin:0 0 8px;max-width:64ch}
+.notification-banner-content p:last-child{margin-bottom:0}
+.notification-banner-content p[hidden]{display:none}
+.notification-banner-heading{font-size:var(--heading);font-weight:700;line-height:1.15}
+.notification-banner-link{color:var(--link);font-weight:700}
+.notification-banner-link:focus-visible{outline:3px solid transparent;background:var(--focus);color:var(--ink);box-shadow:0 -2px var(--focus),0 4px var(--ink);text-decoration:none}
+@media print{.notification-banner,.study-unclaimed-list{display:none!important}}
 .study-groups{display:flex;flex-direction:column;gap:32px}
 .study-choices{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 .study-question{align-items:flex-start}
