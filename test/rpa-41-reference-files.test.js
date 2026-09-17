@@ -73,7 +73,7 @@ for (const [name, configResponse] of [
   // Since RPA-142 each group is a study answering its own question, in the backup as studies.
   assert.deepEqual(downloaded.studies, PLAN.studiesFromGroups(perQuestion(source).methods, source.lists.researchQuestions));
   // RPA-101 gave every section a hatch; each is written, empty or not.
-  assert.deepEqual(downloaded.custom, { ...source.custom, additionalContext: [], additionalResearch: [], additionalMethodology: [] });
+  assert.deepEqual(downloaded.custom, { ...source.custom, additionalPlanDetails: [], additionalContext: [], additionalResearch: [], additionalMethodology: [] });
   assert.equal(downloaded.createdAt, source.createdAt);
   assert.equal(downloaded.fields.lastUpdated, source.fields.lastUpdated);
   assert.equal(downloaded.evaluations, undefined);

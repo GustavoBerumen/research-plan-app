@@ -158,10 +158,11 @@ test('the escape hatch says what it is, and is scoped to the plan', async (t) =>
   // RPA-101: one hatch per section, rendered inside it after the section's
   // questions and Evaluate control. Execution keeps the original key so
   // older drafts restore into it; the others are named for their section.
+  // Plan details, the document's header, has one too since RPA-145.
   assert.equal(wrap.closest('.acc').querySelector('.acc-title').textContent, 'Execution');
   assert.deepEqual(
     Array.from(document.querySelectorAll('.custom-fields-list')).map((l) => l.dataset.listKey),
-    ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources']
+    ['additionalPlanDetails', 'additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources']
   );
   // Capped at one block each (RPA-82): the control goes at the limit, and
   // the block that exists stays editable and removable.

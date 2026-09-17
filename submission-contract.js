@@ -11,8 +11,9 @@
   const SAMPLE_SIZES = ['Small (1–5)', 'Medium (6–12)', 'Large (13–29)', 'Very Large (30+)'];
   const STAGES = ['Planning', 'Recruitment', 'Data Collection', 'Analysis', 'Reporting'];
   const FIELDS = ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'projectDecision', 'researchReadout', 'lastUpdated', 'background', 'goal', 'problemStatement', 'objective', 'comments', 'declarationResearcher', 'signOffResearcher', 'declarationRequester', 'signOffProjectOwner'];
-  const CUSTOM = ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources'];
-  const SECTION = { researchTitle: 'plan-details', jiraProject: 'plan-details', leadResearcher: 'plan-details', projectRequester: 'plan-details', projectDecision: 'plan-details', researchReadout: 'plan-details', lastUpdated: 'plan-details', background: 'context', goal: 'context', problemStatement: 'context', objective: 'research', researchQuestions: 'research', outcomes: 'research', methods: 'methodology', characteristics: 'methodology', userGroups: 'methodology', sampleSize: 'methodology', stageTimeline: 'execution', previousKnowledge: 'execution', additionalContext: 'context', additionalResearch: 'research', additionalMethodology: 'methodology', additionalResources: 'execution', comments: 'review', declarationResearcher: 'review', signOffResearcher: 'review', declarationRequester: 'review', signOffProjectOwner: 'review' };
+  // Plan details has a hatch too since RPA-145. It comes first, as its section does.
+  const CUSTOM = ['additionalPlanDetails', 'additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources'];
+  const SECTION = { additionalPlanDetails: 'plan-details', researchTitle: 'plan-details', jiraProject: 'plan-details', leadResearcher: 'plan-details', projectRequester: 'plan-details', projectDecision: 'plan-details', researchReadout: 'plan-details', lastUpdated: 'plan-details', background: 'context', goal: 'context', problemStatement: 'context', objective: 'research', researchQuestions: 'research', outcomes: 'research', methods: 'methodology', characteristics: 'methodology', userGroups: 'methodology', sampleSize: 'methodology', stageTimeline: 'execution', previousKnowledge: 'execution', additionalContext: 'context', additionalResearch: 'research', additionalMethodology: 'methodology', additionalResources: 'execution', comments: 'review', declarationResearcher: 'review', signOffResearcher: 'review', declarationRequester: 'review', signOffProjectOwner: 'review' };
   const LABEL = { researchTitle: 'research title', jiraProject: 'project name', leadResearcher: 'lead researcher', projectRequester: 'project requester', projectDecision: 'project decision date', researchReadout: 'research readout date', background: 'background', goal: 'goal', problemStatement: 'problem statement', objective: 'objective', researchQuestions: 'research question', outcomes: 'outcome', methods: 'method', characteristics: 'participant criteria', userGroups: 'user group', sampleSize: 'sample size', stageTimeline: 'planned schedule', declarationResearcher: 'lead researcher declaration', declarationRequester: 'project requester declaration', signOffResearcher: 'lead researcher sign-off', signOffProjectOwner: 'project requester sign-off' };
   const clone = value => JSON.parse(JSON.stringify(value));
   const nonblank = v => typeof v === 'string' && v.trim().length > 0;
@@ -43,6 +44,10 @@
     // Preserve the known table IDs and decorative final cell used by backups.
     ['stageTimeline', 'previousKnowledge'].forEach(k => { plan.tables[k + '-table'] = clone(draft.tables?.[k + '-table'] || []); });
     CUSTOM.forEach(k => { plan.custom[k] = clone(draft.custom?.[k] || []).filter(b => nonblank(b.label) || nonblank(b.body)); });
+    // Carried only when something was written there (RPA-145): a plan with
+    // nothing in it projects exactly as it did before the hatch existed, so
+    // a receipt taken then still matches the same plan now.
+    if (!plan.custom.additionalPlanDetails.length) delete plan.custom.additionalPlanDetails;
     if (!draft.createdAt) delete plan.createdAt; // Legacy backups have no known start boundary.
     return plan;
   }

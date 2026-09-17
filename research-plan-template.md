@@ -220,6 +220,13 @@ Research readout (date, question=When will the findings be shared with the team?
   Guidance: An estimated date is fine. You can adjust this timeline as the project progresses.
 Last updated (date, key=lastUpdated):
   Hint: The date this plan was last edited.
+<!-- RPA-145. Plan details closes with the same hatch as the four content
+     sections (RPA-101, capped at one block by RPA-82). It was the one place
+     a researcher had nowhere to put what the questions did not ask for. It
+     is a header field here, because Plan details is the document's header;
+     the form draws it under the header's questions, not among them. -->
+Additional information (custom-fields, max=1, key=additionalPlanDetails):
+  Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
 # Context {open}
 

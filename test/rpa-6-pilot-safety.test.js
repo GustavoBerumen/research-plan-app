@@ -41,7 +41,8 @@ const content = p => Object.fromEntries(['fields', 'selects', 'lists', 'tables',
 const migrated = p => {
   const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
   // Plan details also asks whether other researchers are involved (RPA-141): unanswered, and an empty row of names.
-  return { ...p, studies, lists: { ...p.lists, researcherNames: [''] },
+  // And it closes with an Additional information hatch, empty, like every section (RPA-145).
+  return { ...p, studies, lists: { ...p.lists, researcherNames: [''] }, custom: { ...p.custom, additionalPlanDetails: [] },
     selects: { ...p.selects, otherResearchers: { v: '', o: '' }, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
 };
 

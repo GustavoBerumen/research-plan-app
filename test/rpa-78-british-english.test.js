@@ -130,7 +130,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   // RPA-101: the draft remembers the step it was left on, and every
   // section's Additional information hatch is written, empty or not.
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
-  Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
+  Object.assign(expected.custom, { additionalPlanDetails: [], additionalContext: [], additionalResearch: [], additionalMethodology: [] });   // Plan details has one too (RPA-145)
   // RPA-116: the plan-level participant answers now live in every group; RPA-142: a group is a study, in draft version 10.
   expected.version = 10;
   expected.signOff = null;   // no sign-off has been started (RPA-139)

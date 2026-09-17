@@ -5350,9 +5350,18 @@
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
     let identifier = null;
+    // The section's Additional information hatch (RPA-145): the same control
+    // the content sections close with, drawn under the header's questions
+    // rather than in their grid. Not a numbered page, never required, and
+    // reached from the check page's Change, as everywhere else (RPA-101).
+    const hatches = [];
     header.meta.forEach((f) => {
       if (f.key === 'lastUpdated') {
         topRow.appendChild(buildDateline(f));
+        return;
+      }
+      if (f.type === 'custom-fields') {
+        hatches.push(renderField(f));
         return;
       }
       // A question with options, or a list, is asked the way it is anywhere
@@ -5402,6 +5411,7 @@
     wrap.appendChild(titleField);
     if (identifier) wrap.appendChild(identifier);
     wrap.appendChild(metaGrid);
+    hatches.forEach((hatch) => wrap.appendChild(hatch));
 
     return wrap;
   }
@@ -7384,7 +7394,7 @@
   // Every question of the step, optional ones and the hatch included: the
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
-    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
+    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf, .field-custom')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
     return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods):not(.field-study-questions)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
@@ -7547,7 +7557,7 @@
   // one of a research question's fields inside its group.
   function pageUnitsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) {
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf, .field-custom')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
     }
     const units = [];
     const walk = (container) => Array.from(container.children).forEach((c) => {
