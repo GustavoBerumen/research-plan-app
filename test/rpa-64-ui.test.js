@@ -54,7 +54,8 @@ test('missing later outcome and per-question Other text open the exact page/cont
   assert.equal(outcomes[1].hasAttribute('aria-invalid'), false);
   outcomes[1].closest('.step').querySelector('.step-continue').click();
   assert.equal(app.document.querySelector('.review-step').hidden, false, 'Save returns to Review');
-  links(app).find(l => /other sample size.*2/.test(l.textContent)).click();
+  // The page words a study's sample size itself and names the study, not the wire's research question (RPA-120).
+  links(app).find(l => /valid sample size for Study 2/.test(l.textContent)).click();
   assert.equal(app.document.activeElement, other); assert.equal(other.closest('.radio-other-row').hidden, false);
   const originalHints = (other.getAttribute('aria-describedby') || '').split(/\s+/).filter(x => !x.startsWith('submission-error-'));
   setValue(app.window, other, '5');
@@ -70,7 +71,7 @@ test('nonsensical Other sample size blocks Send at the text box while the draft 
   const other = app.document.querySelector('.methods-group .radio-other-row input[type=text]');
   assert.equal(other.value, 'asdf', 'invalid final values still restore as editable drafts');
   send(app).click(); assert.equal(requests.length, 0);
-  links(app).find(l => /valid sample size for research question 1/.test(l.textContent)).click();
+  links(app).find(l => /valid sample size for Study 1/.test(l.textContent)).click();
   assert.equal(app.document.activeElement, other);
   assert.equal(other.getAttribute('aria-invalid'), 'true');
   setValue(app.window, other, '5–8');
@@ -87,7 +88,7 @@ test('a receipt from before validation tightened remains readable and an update 
   setValue(app.window, field(app, 'background'), 'An updated context');
   send(app).click();
   assert.match(status(app), /confirm both declarations again/);
-  assert.ok(links(app).some(l => /valid sample size for research question 1/.test(l.textContent)));
+  assert.ok(links(app).some(l => /valid sample size for Study 1/.test(l.textContent)));
   assert.equal(JSON.parse(app.window.localStorage.getItem(KEY)).receipt.submissionId, original.submissionId);
 });
 test('unfinished schedule date buffer blocks a stale valid native date and focuses its incomplete year', async t => {
