@@ -161,6 +161,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 /* A page reads down (RPA-122): on screen, questions asked together stack one under the other, so Project decision sits above Research readout. Print keeps the two-column header of the document. */
 @media screen{.step .meta-grid{grid-template-columns:1fr;gap:20px}}
 .mf{display:flex;flex-direction:column;gap:5px}
+.mf[hidden]{display:none}
+.mf-field{margin:0;border:0;padding:0;min-width:0}
 .mlabel{font-size:var(--text);font-weight:400;color:var(--ink)}
 .minput{font-family:inherit;font-size:var(--text);color:var(--ink);border:2px solid var(--ink);padding:5px;min-height:var(--control-h);outline:none;background:#fff;width:100%}
 .minput::placeholder{color:var(--text-2)}

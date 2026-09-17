@@ -16,6 +16,8 @@ Automated integration evidence is separate from the earlier manual and real R2/D
 
 Since RPA-142 (16 September 2026) the active form asks Methodology per study rather than per research question: a Studies section between Research and Methodology says how many studies there are and which questions each answers, and the draft saves `studies` (version 10) instead of `methods`. The wire shape is unchanged: before projecting, the app derives one methods group per question from the studies (`plan-model.js`, `perQuestionView`), so a receipt reads as it always did; a question answered by two studies carries both studies' methods, and the first study's sample size. The schema check knows the two new fields (`studyCount`, `studyQuestions`). Whether the collection should carry studies as such is a v2 question for the contract's owner.
 
+Since RPA-141 (17 September 2026) Plan details also asks whether other researchers are involved and, if so, their names (`otherResearchers`, `researcherNames`). The schema check knows both fields; the projection does not carry them, so receipts are unchanged and do not name anyone beyond the two roles they already hold.
+
 ## Collection and validation
 
 With the submissions capability enabled, task-list completion, Save and continue, and Send use `submission-contract.js`. Without the capability, the current draft-only journey remains available. The browser checks the rendered schema's keys, types, optional flags, per-question fields, table columns and choice values against the shared contract. A changed schema blocks sending rather than silently dropping a new active field. Requiredness changes need an explicit contract version and tests.

@@ -40,7 +40,9 @@ const content = p => Object.fromEntries(['fields', 'selects', 'lists', 'tables',
 // A version 9 seed reads back as version 10: its groups are studies, and the radios say how many (RPA-142).
 const migrated = p => {
   const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
-  return { ...p, studies, selects: { ...p.selects, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
+  // Plan details also asks whether other researchers are involved (RPA-141): unanswered, and an empty row of names.
+  return { ...p, studies, lists: { ...p.lists, researcherNames: [''] },
+    selects: { ...p.selects, otherResearchers: { v: '', o: '' }, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
 };
 
 test('entering a dead link cancels a pending save and refuses an already queued or direct save', async t => {

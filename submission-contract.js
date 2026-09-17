@@ -65,6 +65,10 @@
     // studies before projecting (see collectCurrentPlan), so a receipt reads
     // as it always did. Only the schema check needs to know the two fields.
     Object.assign(types, { studyCount: 'radios', studyQuestions: 'study-questions' });
+    // RPA-141 added two Plan details questions: whether other researchers are
+    // involved, and their names. The projection does not carry them, so the
+    // wire shape is unchanged; only the schema check needs to know them.
+    Object.assign(types, { otherResearchers: 'radios', researcherNames: 'list' });
     Object.assign(types, { researchQuestions: 'list', outcomes: 'list', methods: 'list', characteristics: 'list', userGroups: 'list', sampleSize: 'radios', stageTimeline: 'table', previousKnowledge: 'table' });
     CUSTOM.forEach(k => { types[k] = 'custom-fields'; });
     // RPA-98 made optional plan comments dormant. The wire shape remains v1;

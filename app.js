@@ -181,6 +181,15 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "closed": a radios field whose options are the whole set, so no
+      // "Other" is offered. Yes or No has no third answer (RPA-141).
+      closed: typeParts.includes('closed'),
+      // "reveals=someKey": the field with that key is asked only when this
+      // radios field's first option is chosen: the design system's way of
+      // asking a follow-up question only of the people it applies to. Read
+      // raw, like key=.
+      reveals: m[2].split(',').map((part) => part.trim())
+        .map((part) => /^reveals=([A-Za-z][A-Za-z0-9]*)$/.exec(part)).filter(Boolean).map((match) => match[1])[0] || '',
       editableHeaders: typeParts.includes('editable-headers'),
       // "prefill" starts a table with one row per option of its first select
       // column, that option already chosen. The stage names are the column's
@@ -290,6 +299,15 @@
       // An indented "Guidance:" line is a longer note about the field, shown
       // on demand behind a "Help with this section" link at the bottom of the
       // field (RPA-107). Several lines make several paragraphs.
+      // An indented "Error:" line is what Save and continue says when the
+      // field is left unanswered, for a question the general wording reads
+      // badly for: "Select a other researchers" is not a sentence (RPA-141).
+      const errorMatch = raw.match(/^\s+Error:\s*(.*)$/i);
+      if (errorMatch && currentField) {
+        currentField.errorMessage = errorMatch[1].trim();
+        return;
+      }
+
       const guideMatch = raw.match(/^\s+Guidance:\s*(.*)$/i);
       if (guideMatch && currentField) {
         currentField.guidance = (currentField.guidance || []).concat(guideMatch[1].trim());
@@ -3885,6 +3903,30 @@
     return wrap;
   }
 
+  // ---------- a question asked only when it applies (RPA-141) ----------
+  // A radios field may reveal another field: "Are other researchers
+  // involved?" reveals the list of their names. The revealed field is asked
+  // only while the first option is chosen. While it is not, it is no page
+  // in the step, no required answer, no row on the check page and nothing
+  // in print; what was typed in it is kept, in case the answer changes back.
+  function revealedUnit(key) {
+    const node = doc.querySelector('.list-rows[data-list-key="' + key + '"], [data-field-key="' + key + '"], [data-field="' + key + '"]');
+    return node ? node.closest('.mf, .field') : null;
+  }
+  function syncReveals() {
+    doc.querySelectorAll('.select-cell[data-reveals]').forEach((cell) => {
+      const unit = revealedUnit(cell.dataset.reveals);
+      if (!unit) return;
+      const first = cell.querySelector('.radio-input');
+      const asked = Boolean(first && first.checked);
+      if (unit.hidden === !asked) return;
+      unit.hidden = !asked;
+      // The pages of the step changed under the person: the caption follows.
+      const stepEl = unit.closest('.step');
+      if (stepEl && steps.length && !isChecking(stepEl)) showPage(stepEl, pageOf(stepEl), { silent: true });
+    });
+  }
+
   // ---------- studies (RPA-142) ----------
   // Between Research and Methodology the plan says how many studies there
   // are and which questions each one answers. A study is what Methodology
@@ -4158,12 +4200,14 @@
     legend.textContent = field.question || field.label;
     markOptional(legend, field);
     if (field.question) wrap.dataset.fieldName = field.label;
+    if (field.errorMessage) wrap.dataset.errorMessage = field.errorMessage;
     wrap.appendChild(legend);
     const guidance = renderFieldHint(field, controlId + '-hint');
     if (guidance) { wrap.appendChild(guidance); describeControl(wrap, guidance); }
 
     const group = el('div', 'select-cell radio-group');
     group.dataset.fieldKey = field.key;
+    if (field.reveals) group.dataset.reveals = field.reveals;
 
     const otherRow = el('div', 'select-other-row radio-other-row');
     const otherInput = el('input', 'finput select-other-input', {
@@ -4195,7 +4239,7 @@
     otherRow.appendChild(otherInput);
     otherRow.hidden = true;
 
-    const options = (field.options || []).concat(['__other__']);
+    const options = (field.options || []).concat(field.closed ? [] : ['__other__']);
     options.forEach((value, i) => {
       const item = el('div', 'radio-item');
       const id = controlId + '-opt-' + i;
@@ -4208,6 +4252,7 @@
         otherRow.hidden = !isOther;
         if (isOther) otherInput.focus(); else otherInput.value = '';
         if (field.key === 'studyCount') syncStudies({ confirm: true });
+        if (field.reveals) syncReveals();
       });
       item.append(radio, optLabel);
       group.appendChild(item);
@@ -5224,6 +5269,15 @@
     header.meta.forEach((f) => {
       if (f.key === 'lastUpdated') {
         topRow.appendChild(buildDateline(f));
+        return;
+      }
+      // A question with options, or a list, is asked the way it is anywhere
+      // else in the form; it takes its place among the header's questions
+      // by being one of them (RPA-141).
+      if (f.type === 'radios' || f.type === 'list') {
+        const unit = renderField(f);
+        unit.classList.add('mf', 'mf-field');
+        metaGrid.appendChild(unit);
         return;
       }
       const mf = buildMetaField(f);
@@ -6296,7 +6350,7 @@
     if (stepEl.classList.contains('email-step')) return Array.from(stepEl.querySelectorAll('.field')).filter((f) => !f.querySelector('.fopt'));
     if (stepEl.classList.contains('doc-header')) {
       // The title counts too: the template does not mark it optional.
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((mf) => !mf.hidden && !mf.querySelector('.fopt') && !mf.querySelector('[data-field="lastUpdated"]'));
     }
     if (stepEl.classList.contains('review-step')) return Array.from(stepEl.querySelectorAll('.review-signoffs .field'));
     // The outer Methods field holds one group per research question; the
@@ -6347,6 +6401,8 @@
     return l ? l.textContent.replace(/\(optional\)/i, '').replace(/\s+/g, ' ').trim() : 'this field';
   }
   function groupMessage(g) {
+    // The template's own words, where it gives them.
+    if (g.dataset && g.dataset.errorMessage) return g.dataset.errorMessage;
     const label = groupLabel(g);
     // "Sample Size for Study 2" reads as "sample size for Study 2": the
     // field's name is lowered mid-sentence, the study's is not (RPA-142).
@@ -7203,7 +7259,7 @@
   // Every question of the step, optional ones and the hatch included: the
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
-    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.querySelector('[data-field="lastUpdated"]'));
+    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
     return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods):not(.field-study-questions)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
@@ -7366,7 +7422,7 @@
   // one of a research question's fields inside its group.
   function pageUnitsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) {
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
     }
     const units = [];
     const walk = (container) => Array.from(container.children).forEach((c) => {
@@ -8143,6 +8199,7 @@
     // Render only after every saved timeline cell/date has been restored.
     timelineVisible = draft.ui?.timelineVisible === true;
     if (updateTimelineVisibility) updateTimelineVisibility();
+    syncReveals();   // a restored answer fires no change event
     restoreStepPosition(draft);
     if (syncCommentsReveal) syncCommentsReveal();
   }
@@ -8837,6 +8894,7 @@
       initDeadlineConstraints();
       initOutcomesSync();
       initMethodsGroupsSync();
+      syncReveals();
       applyDraft(draft);
       const rendered = collectDraft();
       verifyBackupRestoration(draft, rendered);
@@ -8983,6 +9041,7 @@
     const studiesContainer = studyGroupsEl();
     if (studiesContainer) studiesContainer.innerHTML = '';
     lastStudyCountChoice = { v: '', o: '' };
+    syncReveals();   // the radios are cleared, so what they revealed is put away
     const methodsContainer = methodsGroupsEl();
     if (methodsContainer) {
       methodsContainer.innerHTML = '';
@@ -9183,6 +9242,7 @@
         initDeadlineConstraints();
         initOutcomesSync();
         initMethodsGroupsSync();
+        syncReveals();
         initTestProfileControls();
         initDraftPersistence();
         initBackupControls();
