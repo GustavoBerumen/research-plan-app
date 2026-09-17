@@ -32,7 +32,8 @@ test('submission remains absent on older/disabled configuration; complete active
 });
 test('missing later outcome and per-question Other text open the exact page/control and preserve hint associations', async t => {
   const p = draft(); p.lists.researchQuestions.push('Second question'); p.lists.outcomes.push('Second outcome');
-  p.methods.push({ ...structuredClone(p.methods[0]), question: 'Second question' });
+  p.selects.studyCount = { v: 'Two', o: '' };
+  p.studies.push({ ...structuredClone(p.studies[0]), questions: [2] });
   let calls = 0; const app = await boot(t, { draft: p, submit: async () => { calls++; } });
   const outcomes = app.document.querySelectorAll('[data-list-key="outcomes"] .list-input');
   setValue(app.window, outcomes[1], '');
@@ -54,7 +55,8 @@ test('missing later outcome and per-question Other text open the exact page/cont
   assert.equal(outcomes[1].hasAttribute('aria-invalid'), false);
   outcomes[1].closest('.step').querySelector('.step-continue').click();
   assert.equal(app.document.querySelector('.review-step').hidden, false, 'Save returns to Review');
-  links(app).find(l => /other sample size.*2/.test(l.textContent)).click();
+  // The page words a study's sample size itself and names the study, not the wire's research question (RPA-120).
+  links(app).find(l => /valid sample size for Study 2/.test(l.textContent)).click();
   assert.equal(app.document.activeElement, other); assert.equal(other.closest('.radio-other-row').hidden, false);
   const originalHints = (other.getAttribute('aria-describedby') || '').split(/\s+/).filter(x => !x.startsWith('submission-error-'));
   setValue(app.window, other, '5');
@@ -63,31 +65,31 @@ test('missing later outcome and per-question Other text open the exact page/cont
 });
 
 test('nonsensical Other sample size blocks Send at the text box while the draft remains editable', async t => {
-  const p = draft(); p.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  const p = draft(); p.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   const requests = [];
   const app = await boot(t, { draft: p, submit: async body => { requests.push(body); return response(f.receipt(body)); } });
   // The studies radios have a reveal of their own since RPA-142; this is the sample size's.
   const other = app.document.querySelector('.methods-group .radio-other-row input[type=text]');
   assert.equal(other.value, 'asdf', 'invalid final values still restore as editable drafts');
   send(app).click(); assert.equal(requests.length, 0);
-  links(app).find(l => /valid sample size for research question 1/.test(l.textContent)).click();
+  links(app).find(l => /valid sample size for Study 1/.test(l.textContent)).click();
   assert.equal(app.document.activeElement, other);
   assert.equal(other.getAttribute('aria-invalid'), 'true');
   setValue(app.window, other, '5–8');
   assert.equal(other.hasAttribute('aria-invalid'), false);
   send(app).click(); await waitFor(() => /privately saved/.test(status(app)));
-  assert.equal(requests[0].plan.methods[0].sampleSize.o, '5–8');
+  assert.equal(requests[0].plan.studies[0].sampleSize.o, '5–8');
 });
 
 test('a receipt from before validation tightened remains readable and an update still needs correction', async t => {
-  const original = f.request(); original.plan.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  const original = f.request(); original.plan.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   const stored = { version: 1, state: 'stored', request: original, fingerprint: contract.fingerprint(original.plan), receipt: f.receipt(original) };
   const app = await boot(t, { draft: { ...original.plan, ui: { section: 'review' } }, storage: { [KEY]: JSON.stringify(stored) } });
   assert.match(status(app), /privately saved/); assert.equal(send(app).disabled, true);
   setValue(app.window, field(app, 'background'), 'An updated context');
   send(app).click();
   assert.match(status(app), /confirm both declarations again/);
-  assert.ok(links(app).some(l => /valid sample size for research question 1/.test(l.textContent)));
+  assert.ok(links(app).some(l => /valid sample size for Study 1/.test(l.textContent)));
   assert.equal(JSON.parse(app.window.localStorage.getItem(KEY)).receipt.submissionId, original.submissionId);
 });
 test('unfinished schedule date buffer blocks a stale valid native date and focuses its incomplete year', async t => {

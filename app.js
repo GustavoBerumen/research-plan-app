@@ -37,6 +37,7 @@
   // before RPA-76, so a plan that predates this gets the earliest date we can
   // honestly claim rather than today — see migrateDraft.
   let planCreatedAt = todayIso();
+  let planId = newPlanId();
   // Whether that date is the plan's own or a stand-in. RPA-76 falls back to
   // savedAt for plans that predate it, which was fine for a suggestion in one
   // cell and is not fine as a boundary: savedAt is the *last* save, so a plan
@@ -61,6 +62,15 @@
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return now.getFullYear() + '-' + mm + '-' + dd;
+  }
+  function newPlanId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
   }
 
   // Last updated re-stamps itself whenever the plan's content changes. Once
@@ -6563,18 +6573,27 @@
   // with a dot in it. Nothing is ever sent to the address (RPA-99), so a
   // stricter rule would only turn away real addresses.
   function emailLooksRight(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
+  // The validator's errors that land on this field. A study's field is
+  // judged for every question the study answers; an error with no key is
+  // about the whole plan, and holds every field back.
+  function submissionErrorsAt(g) {
+    const key = unitKey(g), methodGroup = g.closest('.methods-group');
+    const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
+    return submissionErrors().filter(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
+  }
   function requiredGroupComplete(g) {
     // A question no study answers is unanswered for as long as it exists (RPA-140).
     if (g.classList.contains('study-unclaimed')) return false;
     // Identity is a separate entry page, not a completed-plan requirement.
     const email = requiredEmailInput(g);
     if (email) return emailLooksRight(email.value);
-    if (capabilities.submissions) {
-      const key = unitKey(g), methodGroup = g.closest('.methods-group');
-      // A study's field is judged for every question the study answers.
-      const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
-      return !submissionErrors().some(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
-    }
+    if (capabilities.submissions && submissionErrorsAt(g).length) return false;
+    // With submissions on the validator's rule comes first, and the form's
+    // own rule still follows it: the validator judges the plan as it is sent,
+    // and has never heard of a question the wire does not carry ("Are other
+    // researchers involved?", "How many studies will you run?"). Judged by
+    // it alone, those could be left unanswered and their sections read
+    // Completed (found in RPA-120; true since RPA-141 and RPA-142).
     // Drafts stay editable and recoverable; moving on requires an actual count.
     // Use the same rule as final submission without requiring that capability.
     const sample = customSampleSizeInput(g);
@@ -6643,7 +6662,16 @@
         const group = submissionTarget(error).group;
         return !error.key || (group && stepEl.contains(group) && (!groups || groups.includes(group)));
       });
-      return showSubmissionErrors(errors, summary, { focus });
+      // What only the form requires, in document order with the rest.
+      const named = new Set(errors.map(error => submissionTarget(error).group).filter(Boolean));
+      const formOnly = checked.filter((g) => !named.has(g) && !requiredGroupComplete(g))
+        .map((g) => ({ key: unitKey(g) || 'form', code: 'required', section: stepEl.dataset.stepSlug, message: groupMessage(g), formGroup: g }));
+      const inOrder = errors.concat(formOnly).sort((a, b) => {
+        const ga = a.formGroup || submissionTarget(a).group, gb = b.formGroup || submissionTarget(b).group;
+        if (!ga || !gb || ga === gb) return 0;
+        return ga.compareDocumentPosition(gb) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+      return showSubmissionErrors(inOrder, summary, { focus });
     }
     const missing = (groups || requiredGroupsOf(stepEl)).filter((g) => !requiredGroupComplete(g));
     requiredGroupsOf(stepEl).forEach(clearGroupError);
@@ -7684,7 +7712,7 @@
   // Version 1 is the pre-grouping shape, where Methods was one flat list
   // stored under lists.methods. Those drafts still load — see migrateDraft.
   const DRAFT_KEY = 'research-plan-app:draft';
-  const DRAFT_VERSION = 10;
+  const DRAFT_VERSION = 11;
   const DRAFT_SAVE_DELAY_MS = 400;
   let draftRestoring = false;
   let lastSavedSignature = null;
@@ -7958,6 +7986,7 @@
       const payload = Object.assign(
         {
           version: DRAFT_VERSION,
+          planId,
           savedAt: new Date().toISOString(),
           // Written on every save but only ever from the value already in
           // memory, so the first save fixes it and later ones carry it.
@@ -8132,6 +8161,9 @@
       if (migrated.studies.length) migrated.selects.studyCount = PLAN.studyCountChoice(migrated.studies.length);
       delete migrated.methods;
     }
+    // v11 gives the plan a stable identity that travels with browser autosave
+    // and JSON backup/restore. Submission attempts still get their own UUIDs.
+    if (version < 11) migrated.planId = migrated.planId || newPlanId();
     return migrated;
   }
 
@@ -8158,6 +8190,7 @@
   }
 
   function applyDraft(draft) {
+    planId = draft.planId || newPlanId();
     lastUpdatedManual = Boolean(draft.lastUpdatedManual);
     signOffRecord = draft.signOff || null;
     // Not handled in migrateDraft: that returns early for any draft already at
@@ -8537,7 +8570,7 @@
   }
 
   function backupPayload(draft) {
-    return { version: DRAFT_VERSION, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
+    return { version: DRAFT_VERSION, planId, savedAt: new Date().toISOString(), createdAt: planCreatedAt, ...draft };
   }
 
   // Submission collects the active form directly. Recovery's dormant-data carry is separate.
@@ -8594,10 +8627,6 @@
         draft.tables[table.id][row][column].v = value;
       } else if (input.dataset.field) draft.fields[input.dataset.field] = value;
     });
-    // The submission wire format predates studies: one methods group per
-    // question. It is derived from the studies, so Max's collection keeps
-    // its shape (RPA-64, RPA-142).
-    draft.methods = PLAN.perQuestionView((draft.lists || {}).researchQuestions, draft.studies);
     return contract.project(draft);
   }
   function submissionErrors() {
@@ -8632,10 +8661,12 @@
     return target;
   }
   function resolveSubmissionTarget(error) {
+    if (error.formGroup) return { group: error.formGroup, control: groupControl(error.formGroup) };
     if (!error.key) return {};
     // The wire format is one group per question; on the page a question's
     // group is the first study that answers it (RPA-142).
-    const owner = error.question === undefined ? doc : groupForQuestion(error.question + 1);
+    const owner = error.study !== undefined ? methodsGroupAt(error.study) :
+      error.question === undefined ? doc : groupForQuestion(error.question + 1);
     if (!owner) return {};
     const node = owner.querySelector('[data-field="' + error.key + '"], [data-list-key="' + error.key + '"], [data-field-key="' + error.key + '"]');
     const group = node?.closest('.field, .mf, .title-field');
@@ -8671,6 +8702,25 @@
     const control = error.code === 'other' ? controls.find(c => c.type === 'text' && localVisible(c)) : controls.find(localVisible);
     return { group, control: control || controls.find(visible) || group.querySelector('button') };
   }
+  // What a submission error says on the page. The validator words its
+  // errors for a plan that is about to be sent, from the wire's names: "Enter
+  // the background.", "Select a sample size for research question 2." The
+  // form has its own words for a field that is unanswered, written in the
+  // template (RPA-120), and its own for a date or a sample size that has been
+  // begun; with submissions on, none of them were shown. Here the form
+  // speaks wherever it has something to say: an unanswered field, a header
+  // date, a declaration, a study's sample size, a schedule nobody has
+  // started. Everything else is the validator's, word for word: a blank row
+  // among filled ones, a date out of bounds, a stage without a name. Which
+  // errors exist, where they point and what the server checks are unchanged.
+  function submissionMessage(error, group) {
+    if (error.formGroup) return groupMessage(error.formGroup);
+    if (!group || !error.key) return error.message;
+    if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
+    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
+    if (['required', 'choice'].includes(error.code) && !fieldHasContent(group)) return groupMessage(group);
+    return error.message;
+  }
   function showSubmissionErrors(errors, summary, { focus = false, final = false } = {}) {
     // Summaries share inline marks. Release only this summary's claim so a
     // question-level refresh cannot remove the final summary's error or duplicate it.
@@ -8692,21 +8742,30 @@
       mark.remove();
     });
     const list = summary.querySelector('.error-summary-list'); list.replaceChildren();
+    // The wire has one error per research question and per empty date; the
+    // page has one field. Said once per field, not once per error behind it.
+    const saidAt = new Map();
     errors.slice(0, 100).forEach(error => {
       const { group, control } = submissionTarget(error);
+      const said = submissionMessage(error, group);
+      if (group) {
+        const already = saidAt.get(group) || saidAt.set(group, new Set()).get(group);
+        if (already.has(said)) return;
+        already.add(said);
+      }
       const item = el('li');
       const link = el(group ? 'a' : 'span', 'error-summary-link', group ? { href: '#' } : {});
-      link.textContent = error.message;
+      link.textContent = said;
       if (group) {
         const container = control?.closest('td, .list-row, .custom-field-block') || group;
         let mark = Array.from(container.querySelectorAll('[data-submission-error-owner]')).find(mark =>
-          mark._submissionControl === control && mark.textContent === error.message);
+          mark._submissionControl === control && mark.textContent === said);
         if (mark) {
           mark.dataset.submissionErrorOwner = Array.from(new Set(mark.dataset.submissionErrorOwner.split(/\s+/).concat(owner))).join(' ');
         } else {
           mark = el('p', 'field-error', { id: 'submission-error-' + (++fieldErrorSeq), 'data-submission-error-owner': owner });
           mark._submissionControl = control;
-          mark.textContent = error.message;
+          mark.textContent = said;
           container.appendChild(mark);
         }
         if (control) {
@@ -8816,7 +8875,7 @@
       string(value.v, path + '.v');
       if ('o' in value) string(value.o, path + '.o');
     };
-    record(draft, 'plan', ['version', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
+    record(draft, 'plan', ['version', 'planId', 'savedAt', 'createdAt', 'fields', 'selects', 'lists', 'methods', 'studies', 'tables', 'custom', 'lastUpdatedManual', 'signOff', 'ui']);
     // The sign-off record travels with a backup, so a plan signed on one
     // machine still reads as signed when it is restored (RPA-139). Checked
     // for shape rather than rebuilt: the module is the authority on it.
@@ -8833,6 +8892,7 @@
     if (!Number.isInteger(version) || version < 1 || version > DRAFT_VERSION) {
       throw new Error('Unsupported backup version. This app supports versions 1 to ' + DRAFT_VERSION + '.');
     }
+    if (version >= 11 && !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(draft.planId || '')) fail('planId');
     record(draft.fields, 'fields');
     if ('createdAt' in draft) { date(draft.createdAt, 'createdAt'); if (!draft.createdAt) fail('createdAt'); }
     if ('savedAt' in draft) {
@@ -8996,7 +9056,7 @@
     // Keep the original nodes and closures, including feedback, focus and any
     // unsaved text. A failed rebuild never has to reconstruct the original.
     const original = { doc, formEvents, tables: tables.slice(), timelineVisible, updateTimelineVisibility,
-      syncCommentsReveal, planCreatedAt, planCreatedAtExact, lastUpdatedManual, refreshDateline, refreshReviewSummary,
+      syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId, lastUpdatedManual, refreshDateline, refreshReviewSummary,
       signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
       methodsSuggestRefresh, fields: new Map(evaluationFields), batches: new Map(evaluationBatches),
       focus: document.activeElement, signature: lastSavedSignature, recoveredDraft };
@@ -9013,6 +9073,7 @@
       lastUpdatedManual = false;
       planCreatedAtExact = Boolean(draft.createdAt);
       planCreatedAt = draft.createdAt || draft.savedAt?.slice(0, 10) || todayIso();
+      planId = draft.planId || newPlanId();
       renderSchema(formSchema);
       initTextareas(doc);
       initStatusSelects(doc);
@@ -9041,7 +9102,7 @@
       replacementEvents.abort();
       replacement._submission?.dispose();
       if (replacement.isConnected) replacement.replaceWith(original.doc);
-      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact,
+      ({ doc, formEvents, timelineVisible, updateTimelineVisibility, syncCommentsReveal, planCreatedAt, planCreatedAtExact, planId,
         signOffRecord, redrawSignOff, startPage, emailGate, steps, currentStep, taskListEl, redrawReviewNow,
         lastUpdatedManual, refreshDateline, refreshReviewSummary, methodsSuggestRefresh, recoveredDraft } = original);
       tables.splice(0, tables.length, ...original.tables);
@@ -9301,6 +9362,7 @@
     // values, so this re-applies both.
     planCreatedAt = todayIso();
     planCreatedAtExact = true;
+    planId = newPlanId();
     // Adding the rows back clicks the add button, and a click schedules a
     // save. Reset deliberately leaves no draft behind until the next real
     // edit, so this must not be the edit that resurrects one.

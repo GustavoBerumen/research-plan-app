@@ -6,9 +6,15 @@ const { createR2Store } = require('./r2-submission-store');
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const sha256 = value => crypto.createHash('sha256').update(contract.canonical(value)).digest('hex');
-const requestOf = record => ({ submissionId: record.submissionId, formSchemaVersion: record.formSchemaVersion,
-  collectionPolicyVersion: record.collectionPolicyVersion, plan: record.plan });
-const receiptOf = record => ({ status: 'stored', submissionId: record.submissionId, submittedAt: record.submittedAt, contentSha256: record.contentSha256 });
+const requestOf = record => record.formSchemaVersion === contract.LEGACY_SCHEMA ?
+  ({ submissionId: record.submissionId, formSchemaVersion: record.formSchemaVersion, collectionPolicyVersion: record.collectionPolicyVersion, plan: record.plan }) :
+  ({ submissionId: record.submissionId, formSchemaVersion: record.formSchemaVersion, collectionPolicyVersion: record.collectionPolicyVersion,
+    supersedesSubmissionId: record.supersedesSubmissionId, plan: record.plan });
+const receiptOf = record => record.formSchemaVersion === contract.LEGACY_SCHEMA ?
+  ({ status: 'stored', submissionId: record.submissionId, submittedAt: record.submittedAt, contentSha256: record.contentSha256 }) :
+  ({ receiptVersion: 2, status: 'stored', submissionId: record.submissionId, planId: record.plan.planId,
+    formSchemaVersion: record.formSchemaVersion, submittedAt: record.submittedAt, contentSha256: record.contentSha256,
+    deployment: record.retention.deployment, cohort: record.retention.cohort });
 
 function namespace(env) {
   const deployment = env.RPA_SUBMISSIONS_DEPLOYMENT, cohort = env.RPA_SUBMISSIONS_COHORT;
@@ -29,10 +35,11 @@ function validCohort(value, config) {
   catch (_) { return false; }
 }
 function verifyRecord(record, config) {
-  return !!record && record.recordType === 'research-plan-submission' && record.recordVersion === 1 && typeof record.submissionId === 'string' && UUID.test(record.submissionId) &&
-    record.formSchemaVersion === contract.SCHEMA && record.retention?.deployment === config.deployment && record.retention?.cohort === config.cohort &&
+  const legacy = record?.formSchemaVersion === contract.LEGACY_SCHEMA;
+  return !!record && record.recordType === 'research-plan-submission' && record.recordVersion === (legacy ? 1 : 2) && typeof record.submissionId === 'string' && UUID.test(record.submissionId) &&
+    [contract.SCHEMA, contract.LEGACY_SCHEMA].includes(record.formSchemaVersion) && record.retention?.deployment === config.deployment && record.retention?.cohort === config.cohort &&
     typeof record.submittedAt === 'string' && Number.isFinite(Date.parse(record.submittedAt)) &&
-    contract.validate(record.plan).length === 0 && record.contentSha256 === sha256(requestOf(record));
+    contract.validateForSchema(record.formSchemaVersion, record.plan).length === 0 && record.contentSha256 === sha256(requestOf(record));
 }
 function readBody(req, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
@@ -79,12 +86,18 @@ function createSubmissions({ env, pilot, build, store, now = () => Date.now(), b
     let id, acquired = false;
     try {
       const body = await readBody(req, bodyTimeoutMs);
-      if (!body || Array.isArray(body) || typeof body !== 'object' || Object.keys(body).length !== 4 ||
-          Object.keys(body).some(k => !['submissionId', 'formSchemaVersion', 'collectionPolicyVersion', 'plan'].includes(k)) || typeof body.submissionId !== 'string' || !UUID.test(body.submissionId)) {
+      if (!body || Array.isArray(body) || typeof body !== 'object' || typeof body.submissionId !== 'string' || !UUID.test(body.submissionId) ||
+          typeof body.formSchemaVersion !== 'string') {
         return reply(res, 400, { code: 'invalid_envelope' });
       }
-      if (body.formSchemaVersion !== contract.SCHEMA || body.collectionPolicyVersion !== config.collectionPolicyVersion) return reply(res, 409, { code: 'version_conflict' });
-      const errors = contract.validate(body.plan);
+      if (![contract.SCHEMA, contract.LEGACY_SCHEMA].includes(body.formSchemaVersion)) return reply(res, 409, { code: 'version_conflict' });
+      const legacy = body.formSchemaVersion === contract.LEGACY_SCHEMA;
+      const allowed = legacy ? ['submissionId', 'formSchemaVersion', 'collectionPolicyVersion', 'plan'] :
+        ['submissionId', 'formSchemaVersion', 'collectionPolicyVersion', 'supersedesSubmissionId', 'plan'];
+      if (Object.keys(body).length !== allowed.length || Object.keys(body).some(k => !allowed.includes(k)) ||
+          (!legacy && body.supersedesSubmissionId !== null && !UUID.test(body.supersedesSubmissionId || ''))) return reply(res, 400, { code: 'invalid_envelope' });
+      if (body.collectionPolicyVersion !== config.collectionPolicyVersion) return reply(res, 409, { code: 'version_conflict' });
+      const errors = contract.validateForSchema(body.formSchemaVersion, body.plan);
       if (errors.length) return reply(res, 422, { code: 'incomplete_plan', errors: errors.slice(0, 200), moreErrors: errors.length > 200 });
       id = body.submissionId;
       if (active.has(id)) return reply(res, 429, { code: 'submission_busy' }, { 'Retry-After': '2' });
@@ -99,7 +112,7 @@ function createSubmissions({ env, pilot, build, store, now = () => Date.now(), b
         const cohort = (await store.get(config.prefix + 'cohort.json'))?.value;
         if (!validCohort(cohort, config)) return reply(res, 503, { code: 'collection_unavailable' });
         if (!cohort.collectionOpen || (cohort.deleteAfter && now() >= Date.parse(cohort.deleteAfter))) return reply(res, 403, { code: 'collection_closed' });
-        const record = { recordType: 'research-plan-submission', recordVersion: 1, ...body, submittedAt: new Date(now()).toISOString(),
+        const record = { recordType: 'research-plan-submission', recordVersion: legacy ? 1 : 2, ...body, submittedAt: new Date(now()).toISOString(),
           applicationBuild: build, contentSha256: digest, retention: { deployment: config.deployment, cohort: config.cohort, policyRef: config.prefix + 'cohort.json' } };
         created = await store.put(key, record, { absent: true });
         saved = await store.get(key); // A possible write is never itself an acknowledgement.

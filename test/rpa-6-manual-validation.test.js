@@ -7,7 +7,7 @@ const W = require('../plan-workflow');
 const contract = require('../submission-contract');
 const text = n => n.textContent.replace(/\s+/g, ' ').trim();
 function fixture(section = 'review') {
-  const p = f.plan(); p.version = 9; p.ui.section = section;
+  const p = f.plan(); p.ui.section = section;
   // Keep the first row separate from the final readout-mirroring row.
   p.tables['stageTimeline-table'].push(structuredClone(p.tables['stageTimeline-table'][0]));
   p.fields.emailAddress = 'author@example.com';
@@ -28,7 +28,7 @@ async function boot(t, draft) {
 }
 
 test('local Save and continue rejects an invalid Other count, focuses that input, and still autosaves it', async t => {
-  const p = fixture('methodology'); p.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  const p = fixture('methodology'); p.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   const app = await boot(t, p), d = app.document;
   const step = d.querySelector('[data-step-slug="methodology"]');
   const other = step.querySelector('.radio-other-row input');
@@ -59,7 +59,7 @@ test('each retained schedule row needs both dates before local Execution can com
 
 for (const problem of ['sample', 'schedule']) test('local author cannot sign a restored draft with invalid ' + problem, async t => {
   const p = fixture();
-  if (problem === 'sample') p.methods[0].sampleSize = { v: '__other__', o: 'asdf' };
+  if (problem === 'sample') p.studies[0].sampleSize = { v: '__other__', o: 'asdf' };
   else p.tables['stageTimeline-table'][0][2] = { t: 'date', v: '' };
   const app = await boot(t, p), d = app.document;
   press(d, 'Sign for local review');
