@@ -29,6 +29,9 @@
     const d = new Date(v + 'T00:00:00.000Z');
     return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v;
   }
+  // Up to ten characters of initials before the date the form adds (RPA-153).
+  const INITIALS_MAX = 10;
+  function initialsTooLong(value) { return String(value).replace(/ — \d{2}\/\d{2}\/\d{4}$/, '').trim().length > INITIALS_MAX; }
   function datedSignOff(value) {
     const match = typeof value === 'string' && /^(.+?) — (\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
     return !!match && nonblank(match[1]) && isoDate(match[4] + '-' + match[3] + '-' + match[2]);
@@ -162,6 +165,7 @@
     ['signOffResearcher', 'signOffProjectOwner'].forEach(k => {
       if (nonblank(f[k]) && !datedSignOff(f[k])) add(k, 'signoff_date', {}, 'Enter initials again for the ' + LABEL[k] + '.');
     });
+    ['signOffResearcher', 'signOffProjectOwner'].forEach(k => { if (nonblank(f[k]) && initialsTooLong(f[k])) add(k, 'signoff_length', {}, 'Enter ' + INITIALS_MAX + ' characters or fewer for the ' + LABEL[k] + '.'); });
     ['projectDecision', 'researchReadout'].forEach(k => { if (!isoDate(f[k])) add(k, 'date', {}, 'Enter a complete, valid ' + LABEL[k] + '.'); });
     ['declarationResearcher', 'declarationRequester'].forEach(k => { if (f[k] !== 'yes') add(k, 'declaration', {}, 'Confirm the ' + LABEL[k] + '.'); });
     function list(key, values, loc = {}) {
@@ -260,6 +264,7 @@
     const f = plan.fields || {};
     ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'background', 'goal', 'problemStatement', 'objective', 'signOffResearcher', 'signOffProjectOwner'].forEach(k => { if (!nonblank(f[k])) add(k, 'required'); });
     ['signOffResearcher', 'signOffProjectOwner'].forEach(k => { if (nonblank(f[k]) && !datedSignOff(f[k])) add(k, 'signoff_date', {}, 'Enter initials again for the ' + LABEL[k] + '.'); });
+    ['signOffResearcher', 'signOffProjectOwner'].forEach(k => { if (nonblank(f[k]) && initialsTooLong(f[k])) add(k, 'signoff_length', {}, 'Enter ' + INITIALS_MAX + ' characters or fewer for the ' + LABEL[k] + '.'); });
     ['projectDecision', 'researchReadout'].forEach(k => { if (!isoDate(f[k])) add(k, 'date', {}, 'Enter a complete, valid ' + LABEL[k] + '.'); });
     ['declarationResearcher', 'declarationRequester'].forEach(k => { if (f[k] !== 'yes') add(k, 'declaration', {}, 'Confirm the ' + LABEL[k] + '.'); });
     function list(key, values, loc = {}) {
