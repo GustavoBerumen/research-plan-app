@@ -18,7 +18,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { loadServer } = require('./rpa-89-server-harness.cjs');
 const { createSignOff } = require('../sign-off-server');
-const { createPlanStore } = require('../plan-store');
+const { createPlanStore, VersionConflictError } = require('../plan-store');
 const W = require('../plan-workflow');
 
 const RESEARCHER = 'I confirm this plan is complete and current, and I will conduct the research as it describes.';
@@ -31,7 +31,40 @@ function memoryStore() {
   return {
     files,
     async read(id) { const text = files.get(id); return text ? JSON.parse(text) : null; },
-    async write(id, record) { files.set(id, JSON.stringify(record)); },
+    async write(id, record, options = {}) {
+      const current = files.has(id) ? JSON.parse(files.get(id)) : null;
+      if (Object.prototype.hasOwnProperty.call(options, 'expectedVersion') &&
+          (!current || current.version !== options.expectedVersion)) {
+        throw new VersionConflictError(current && Number.isInteger(current.version) ? current.version : null);
+      }
+      files.set(id, JSON.stringify(record));
+    },
+  };
+}
+
+function heldReadStore() {
+  const base = memoryStore();
+  let heldId = null, remaining = 0, gate = null, release = null;
+  return {
+    files: base.files,
+    holdNextReads(id, count) {
+      heldId = id;
+      remaining = count;
+      gate = new Promise((resolve) => { release = resolve; });
+    },
+    async read(id) {
+      const record = await base.read(id);
+      if (id !== heldId || remaining <= 0) return record;
+      const waiting = gate;
+      remaining -= 1;
+      if (remaining === 0) {
+        heldId = null;
+        release();
+      }
+      await waiting;
+      return record;
+    },
+    write: (...args) => base.write(...args),
   };
 }
 // One server for the whole file. Running server.js in a fresh context is
@@ -130,6 +163,28 @@ test('a refusal carries the module’s own words, the version that stands, and c
   assert.equal(store.files.get(id), before, 'none of them wrote anything');
 });
 
+test('two transitions that read the same version cannot both commit', async () => {
+  const store = heldReadStore();
+  const server = loadServer({ env: ON, planStore: store });
+  const { id, mine } = await created(server);
+  store.holdNextReads(id, 2);
+
+  const results = await Promise.all([
+    post(server, { id, token: mine, version: 1, transition: 'sign', contentHash: 'hash-1', declaration: RESEARCHER }),
+    post(server, { id, token: mine, version: 1, transition: 'withdraw' }),
+  ]);
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 409], 'one write wins and the raced write conflicts');
+  const accepted = results.find((result) => result.status === 200);
+  const conflicted = results.find((result) => result.status === 409);
+  assert.equal(json(conflicted).code, 'version-conflict');
+  assert.equal(json(conflicted).version, 2, 'the conflict names the version that won');
+
+  const kept = await store.read(id);
+  assert.equal(kept.version, 2);
+  assert.equal(kept.status, json(accepted).plan.status, 'the successful response is the transition that was kept');
+  assert.equal(kept.history.length, 2, 'only create and the winning transition are in the ledger');
+});
+
 test('an edit that says nothing is not written, and one that says something is', async () => {
   const { server, store } = fixture();
   const { id, mine } = await created(server);
@@ -226,8 +281,17 @@ test('a plan is written whole or not at all, and a failed write leaves the one b
   assert.deepEqual(fs.readdirSync(dir), ['plan-1.json'], 'and nothing is left lying beside it');
 
   const signed = W.apply(plan, { transition: 'sign', role: 'leadResearcher', at: 'day-2', version: 1, contentHash: 'h1', declaration: RESEARCHER }).plan;
-  await store.write('plan-1', signed);
-  assert.equal((await store.read('plan-1')).version, 2, 'a second write replaces the first');
+  const withdrawn = W.apply(plan, { transition: 'withdraw', role: 'leadResearcher', at: 'day-2', version: 1 }).plan;
+  const raced = await Promise.allSettled([
+    store.write('plan-1', signed, { expectedVersion: 1 }),
+    store.write('plan-1', withdrawn, { expectedVersion: 1 }),
+  ]);
+  assert.equal(raced[0].status, 'fulfilled', 'the first conditional write wins');
+  assert.equal(raced[1].status, 'rejected', 'the other write is refused');
+  assert.equal(raced[1].reason.code, 'VERSION_CONFLICT');
+  assert.equal(raced[1].reason.version, 2, 'the refusal names the version that stands');
+  assert.equal((await store.read('plan-1')).version, 2, 'exactly one replacement is kept');
+  assert.equal((await store.read('plan-1')).status, 'awaitingCounterparty', 'the winning write remains intact');
 
   await assert.rejects(store.write('../escape', plan), /Invalid plan id/, 'an id cannot walk out of the directory');
   await assert.rejects(store.read('plan 1'), /Invalid plan id/);

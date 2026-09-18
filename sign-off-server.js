@@ -142,7 +142,14 @@ function createSignOff({ env, pilot, store, now = () => new Date().toISOString()
     });
     if (!result.ok) return refuse(res, result);
     if (result.unchanged) return reply(res, 200, { plan: projection(record, found.role), role: found.role, unchanged: true });
-    try { await store.write(id, result.plan); } catch (err) { return reply(res, 500, { error: 'That change could not be kept.' }); }
+    try {
+      await store.write(id, result.plan, { expectedVersion: record.version });
+    } catch (err) {
+      if (err && err.code === 'VERSION_CONFLICT') {
+        return refuse(res, { code: 'version-conflict', message: workflow.MESSAGES['version-conflict'], version: err.version });
+      }
+      return reply(res, 500, { error: 'That change could not be kept.' });
+    }
     return reply(res, 200, { plan: projection(result.plan, found.role), role: found.role });
   }
 
