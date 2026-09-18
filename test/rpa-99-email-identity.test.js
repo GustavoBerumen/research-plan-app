@@ -120,7 +120,7 @@ test('it stands in front of every step and remembers where the person was going:
   assert.deepEqual(visible(linked.document), ['plan-details'], 'then lands where the link pointed');
   const plan = stepOf(linked.document, 'plan-details');
   assert.deepEqual(onScreen(plan), ['What is the name of your research plan?'], 'Plan details is as it was: the address is not one of its questions');
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 6');
+  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 7');
 
   const app = await bootApp({});
   t.after(() => app.close());

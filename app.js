@@ -4950,11 +4950,23 @@
     // max= (constrains the native picker itself) plus a clamp-on-change
     // fallback, same approach as attachDateRangeConstraint for Stage
     // Timeline's start/completion pair (just the ceiling flipped).
-    function clampResearch() {
-      if (decisionInput.value && researchInput.value && researchInput.value > decisionInput.value) {
-        setDateInputValue(researchInput, decisionInput.value);
-      }
+    // Since RPA-144 the two dates are on different pages, so a decision
+    // brought forward moves a readout the person cannot see. That was in
+    // plain view while they shared a page. The decision's page says so, and
+    // says where the readout went; it stops saying it once either date is
+    // touched again, or the plan is cleared. A restore needs no guard: it
+    // sets the readout after the decision, which puts the note away.
+    const moved = el('div', 'field-warning date-moved-note', { role: 'status' });
+    moved.hidden = true;
+    decisionInput.closest('.date-control').insertAdjacentElement('afterend', moved);
+    const inWords = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    function clampResearch(event) {
+      const clamps = Boolean(decisionInput.value && researchInput.value && researchInput.value > decisionInput.value);
+      const byDecision = clamps && event && event.target === decisionInput;
+      if (clamps) setDateInputValue(researchInput, decisionInput.value);
       researchInput.max = decisionInput.value || '';
+      if (byDecision) moved.textContent = 'Research readout was after this date, so it has been moved to ' + inWords(decisionInput.value) + '. You can change it on the next page.';
+      moved.hidden = !byDecision;
     }
     decisionInput.addEventListener('change', clampResearch);
     researchInput.addEventListener('change', clampResearch);
@@ -7601,12 +7613,20 @@
 
   // ---------- one question per page (RPA-108) ----------
   // Within a step, one question at a time, or one set whose answers depend
-  // on each other: the two plan dates, each research question with its
-  // outcomes. Methodology loops per research question, that question pinned
-  // above its pages. Additional information is not a page in the flow: it is
-  // reached from the check page's Change and shown on its own. Gus's
-  // field-placement table, 14 September 2026.
-  const PAGE_PAIRS = [['projectDecision', 'researchReadout'], ['researchQuestions', 'outcomes']];
+  // on each other: each research question with its outcomes. Methodology
+  // loops per study, its questions pinned above its pages. Additional
+  // information is not a page in the flow: it is reached from the check
+  // page's Change and shown on its own. Gus's field-placement table,
+  // 14 September 2026.
+  //
+  // The two plan dates were a pair too, and are not since RPA-144: two
+  // identical date controls on one page invited typing the decision into
+  // the readout, and the rule between them read as the form correcting the
+  // person rather than guiding them. Project decision is asked first, as the
+  // work happens, then Research readout, where the buffer warning appears
+  // beside the date it is about. The rule itself is unchanged (RPA-55): it
+  // reads both dates wherever they are shown.
+  const PAGE_PAIRS = [['researchQuestions', 'outcomes']];
   function unitKey(unit) {
     const keyed = unit.matches('[data-list-key], [data-field], [data-field-key]') ? unit
       : unit.querySelector('[data-list-key], [data-field], [data-field-key]');
@@ -9230,6 +9250,9 @@
     if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
+    // What was said about the old plan's two dates goes with them: the buffer
+    // warning, and the note that a readout was moved (RPA-144).
+    doc.querySelectorAll('.doc-header .field-warning').forEach((w) => { w.hidden = true; });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
