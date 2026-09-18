@@ -112,6 +112,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // Whether others are involved asks its question in its legend (RPA-141).
       'Who is leading this research?', 'Are other researchers involved in this research?', 'Researcher names', 'Who requested this research?',
       'When will the findings be used to make a decision?', 'When will the findings be shared with the team?',
+      // Plan details closes with the hatch every section has (RPA-145).
+      'Additional information',
       // One Additional information hatch closes each section (RPA-101).
       'What do people need to know about this project?', 'What is the goal of this project?', 'What problem are you trying to solve?', 'Additional information',
       // Hypothesis is dormant too (RPA-117, later the same day).

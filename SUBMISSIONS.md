@@ -20,6 +20,8 @@ Plan details asks whether other researchers are involved and, if so, their names
 
 Since RPA-119 who takes part in a study is one question, "Who should take part in this study?" (`characteristics`, named Participant criteria), where it was two lists (`characteristics` and `userGroups`). Historical user-group values remain readable and are folded into the active participant list by the plan model. V2 requires each study's active `methods` and `characteristics`; a historical dormant `userGroups` slot may be retained but is never a new requirement.
 
+Since RPA-145 (17 September 2026) Plan details closes with the same Additional information hatch as the four content sections (`additionalPlanDetails`). The v2 record carries it like the others: it is first in the contract's `CUSTOM` list, mapped to the `plan-details` section, validated the same way (a block needs both a name and a body), and known to the schema check, which would otherwise block Send as an unexpected field. The v1 schema is history and is untouched: it uses `LEGACY_CUSTOM`, the four keys it always had, so historical v1 records, receipts and pending requests read exactly as before.
+
 ## Collection and validation
 
 With the submissions capability enabled, task-list completion, Save and continue, and Send use `submission-contract.js`. Without the capability, the current draft-only journey remains available. The browser checks the rendered schema's keys, types, optional flags, per-question fields, table columns and choice values against the shared contract. A changed schema blocks sending rather than silently dropping a new active field. Requiredness changes need an explicit contract version and tests.

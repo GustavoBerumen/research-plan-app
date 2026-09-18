@@ -374,7 +374,7 @@ test('not a question of the plan: absent from the check page and the print, kept
   const plan = await onStep(app, 'plan-details');
   completeStep(app, plan);
   toCheckPage(plan);
-  assert.deepEqual(rowsOf(plan), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout'], 'the section\'s own questions, and the address is not among them');
+  assert.deepEqual(rowsOf(plan), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout', 'Additional information'], 'the section\'s own questions, and the address is not among them');
   assert.equal(d.querySelector('.doc-header [data-field="emailAddress"]'), null, 'not in the document\'s header');
   d.getElementById('clear-btn').click();
   assert.equal(emailOf(d).value, 'name@example.com', 'Clear Form resets the plan, not the person');
