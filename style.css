@@ -101,6 +101,21 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .options-plan-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 .options-menu .tb-btns{flex-direction:column;align-items:stretch;justify-content:flex-start}
 .options-menu .tb-btns .btn{width:100%;text-align:left}
+/* RPA-77. The Menu's actions in groups, each file-making button with a line saying what its file is for. */
+.menu-group{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--border-light)}
+.menu-group + .menu-group{margin-top:6px}
+.menu-group-title{margin:0;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+.menu-help{margin:0 0 4px;font-size:var(--text-sm);line-height:1.35;color:var(--text-2)}
+.word-status{margin:8px 0 0;font-size:var(--text-sm)}
+.word-status:empty{display:none}
+.word-status[data-error="true"]{color:var(--red-dark);font-weight:700}
+.keep-copy{margin:28px 0 8px;padding-top:20px;border-top:1px solid var(--border)}
+.keep-copy-h{margin:0 0 6px;font-size:19px;line-height:1.3}
+.keep-copy-lead{margin:0 0 14px;max-width:60ch}
+.keep-copy-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 24px}
+.keep-copy-action{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.keep-copy-inset{margin:16px 0 0;padding-left:12px;border-left:4px solid var(--border);color:var(--text-2);font-size:var(--text-sm);max-width:60ch}
+@media screen and (max-width:600px){.keep-copy-action .btn{width:100%;text-align:center}}
 @media screen and (max-width:600px){.options-menu{left:12px;right:12px;max-width:none}}
 /* Phase banner: same shape as GOV.UK's — a tag and a sentence under a rule —
    and a single element, so ending the pilot is one deletion. */
@@ -170,6 +185,12 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .input-w-2{max-width:2.5em}.input-w-3{max-width:3.5em}.input-w-4{max-width:4.5em}.input-w-5{max-width:5.5em}.input-w-10{max-width:11.5em}.input-w-20{max-width:20.5em}.input-w-30{max-width:29.5em}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
+/* RPA-148. On screen Last updated is on the task list; the header's corner holds it for the printed plan only. */
+@media screen{.doc-header-top{display:none}}
+.last-updated-print{margin:0;font-size:var(--text-sm);color:var(--text-2);text-align:right}
+.dateline.task-list-updated{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;margin:0 0 20px;font-size:var(--text);color:var(--text-2)}
+.dateline.task-list-updated .mlabel{margin:0;font-weight:400;font-size:inherit;color:inherit}
+.dateline.task-list-updated .dateline-value{font-size:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 /* The ticket reference sits under the title on its own row, matching its
    width. Narrower looked tidier in isolation but wrapped the hint onto two
    lines and read as a different kind of thing from the title above it. */
@@ -205,7 +226,6 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .step-back{background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .step-back::before{content:"\2039\00a0"}
 .step-back:hover{color:var(--link-hover)}
-.step-caption{margin:0;font-size:var(--text);color:var(--text-2)}
 .step-heading{margin:8px 0 18px;font-size:var(--heading);font-weight:700;line-height:1.1;color:var(--ink)}
 .acc.step .acc-chevron{display:none}
 .acc.step .acc-head{cursor:default}
@@ -218,6 +238,7 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .error-summary-list{margin:0;padding-left:1.2em}
 .error-summary-list li+li{margin-top:6px}
 .error-summary-link{color:var(--red-dark);font-weight:700}
+.date-error-link{color:inherit;font-weight:inherit;text-decoration:underline;text-underline-offset:2px}
 .field-invalid{border-left:5px solid var(--red);padding-left:14px}
 .field-error{margin:2px 0 6px;font-size:var(--text);font-weight:700;color:var(--red-dark)}
 .step-all{margin-left:auto;background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
@@ -238,7 +259,6 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .summary-change:hover{color:var(--link-hover)}
 .summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 @media (max-width:600px){.summary-key{flex-basis:100%}}
-.step-top .step-caption{flex-basis:100%;order:2}
 /* RPA-146. A name asked as First name and Surname: one question, two labelled boxes, side by side where there is room and
    one above the other where there is not. On paper the name reads as one string, as it does everywhere else it is shown. */
 fieldset.mf{border:0;padding:0;margin:0;min-width:0}
@@ -251,9 +271,9 @@ fieldset.mf > legend{padding:0}
 @media screen and (max-width:600px){.name-part{flex:1 1 100%}}
 /* One question per page (RPA-108): what is not on the page is hidden on screen only; every page prints. */
 @media screen{.page-hidden{display:none!important}}
-.step-page-caption{margin:0;font-size:var(--text);color:var(--text-2)}
-.step-top .step-page-caption{flex-basis:100%;order:3}
-.step-page-caption:empty{display:none}
+/* RPA-149. No counting at the top of a question page: not the section's number, not the question's, and not the section's
+   count of fields beside its name, which one question per page had left with nothing to count. Print keeps it. */
+@media screen{.acc.step .acc-count{display:none}}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
 /* The email address before the plan (RPA-99): a page of its own with one question, its label the heading, standing in front of every step until a well-formed address is given. */
@@ -376,6 +396,8 @@ textarea.prose-input{display:block;width:100%;min-width:0;overflow:hidden;resize
 .notification-banner-link{color:var(--link);font-weight:700}
 .notification-banner-link:focus-visible{outline:3px solid transparent;background:var(--focus);color:var(--ink);box-shadow:0 -2px var(--focus),0 4px var(--ink);text-decoration:none}
 @media print{.notification-banner,.study-unclaimed-list{display:none!important}}
+/* Offering a copy is for the screen; the printed plan is the copy (RPA-77). */
+@media print{.keep-copy,.word-status{display:none!important}}
 .study-groups{display:flex;flex-direction:column;gap:32px}
 .study-choices{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 .study-question{align-items:flex-start}
@@ -687,6 +709,11 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 .jira-status:not(:empty){margin-top:8px}
 
 /* ---------- Custom sections and comments ---------- */
+/* RPA-145. Plan details' hatch sits under the header's questions, not in their grid. On paper it is a titled part of the
+   document after the header's details when something was written there, and nothing at all when not: the header is where a
+   reader looks first, and an empty "Additional information" with its hint is not something to find there. */
+.doc-header > .field-custom{margin-top:24px}
+@media print{.doc-header > .field-custom:not(:has(.custom-field-block)){display:none!important}}
 .custom-fields-list{display:flex;flex-direction:column;gap:24px}
 .custom-fields-list:not(:empty){margin-bottom:16px}
 .custom-field-block{display:flex;flex-direction:column;gap:6px}

@@ -45,9 +45,10 @@ const migrated = p => {
   const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
   // Researcher details already present in a saved draft survive migration; only
   // genuinely absent RPA-141 fields receive defaults in the application.
+  // Plan details closes with an Additional information hatch, empty, like every section (RPA-145).
   // A name is kept whole and, beside it, in its two parts, read from the whole at the first space (RPA-146).
   const nameParts = Object.fromEntries(['leadResearcher', 'projectRequester'].flatMap((k) => { const w = String(p.fields[k] || '').trim().split(/\s+/).filter(Boolean); return [[k + 'FirstName', w[0] || ''], [k + 'Surname', w.slice(1).join(' ')]]; }));
-  return { ...p, studies, fields: { ...p.fields, ...nameParts },
+  return { ...p, studies, fields: { ...p.fields, ...nameParts }, custom: { ...p.custom, additionalPlanDetails: [] },
     selects: { ...p.selects, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
 };
 

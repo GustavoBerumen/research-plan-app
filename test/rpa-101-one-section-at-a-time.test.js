@@ -73,7 +73,9 @@ test('the plan opens on the task list; then seven sections in order, each with a
   const d = app.document;
   assert.deepEqual(steps(d).map((s) => s.dataset.stepSlug), SLUGS);
   assert.deepEqual(visible(d), ['sections']);
-  assert.deepEqual(steps(d).slice(1).map((s) => text(s.querySelector('.step-caption'))), [1, 2, 3, 4, 5, 6, 7].map((n) => 'Section ' + n + ' of 7'));
+  // No "Section 3 of 7" since RPA-149: a step says where it is by its name, and the task list says how much is left.
+  assert.equal(d.querySelector('.step-caption, .step-page-caption'), null);
+  assert.deepEqual(steps(d).slice(1).map((s) => s.dataset.stepTitle), ['Plan details', 'Context', 'Research', 'Studies', 'Methodology', 'Execution', 'Review']);
   assert.equal(text(d.querySelector('.doc-header .step-heading')), 'Plan details');
   assert.equal(backOn(steps(d)[0]), null, 'the task list has no Back');
   assert.equal(backOn(steps(d)[1]).hidden, false, 'Plan details goes back to the list');

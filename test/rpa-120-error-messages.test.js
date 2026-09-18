@@ -44,9 +44,8 @@ const inlineOf = (step) => Array.from(step.querySelectorAll('.field-error')).map
 const press = (step) => step.querySelector('.step-continue').click();
 async function toLastPage(app, step) {
   const slug = step.dataset.stepSlug;
-  app.window.location.hash = '#' + slug + '/1'; await settle();
-  const total = Number((/of (\d+)/.exec(text(step.querySelector('.step-page-caption'))) || [0, 1])[1]);
-  app.window.location.hash = '#' + slug + '/' + total; await settle();
+  // A page number past the end is brought back to the last page (no caption counts them since RPA-149).
+  app.window.location.hash = '#' + slug + '/99'; await settle();
 }
 async function finish(app, step) {
   completeStep(app, step);

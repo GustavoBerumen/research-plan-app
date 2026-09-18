@@ -163,7 +163,7 @@ test('Plan details is on the review step too, answers and all, and Change there 
   assert.equal(text(rowOf(review, 'plan-details').querySelector('.review-name')), 'Plan details');
   const details = answersOf(review, 'plan-details');
   reveal(details);
-  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout']);
+  assert.deepEqual(rowsOf(details).map((r) => r[0]), ['Research title', 'Project name', 'Lead researcher', 'Other researchers', 'Researcher names', 'Project requester', 'Project decision', 'Research readout', 'Additional information']);
   changeIn(details, 'Lead researcher').click();
   assert.deepEqual(visible(d), ['plan-details']);
   assert.equal(d.activeElement, d.querySelector('[data-field="leadResearcherFirstName"]'), 'the first of the name\'s two boxes (RPA-146)');

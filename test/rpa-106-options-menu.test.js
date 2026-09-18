@@ -14,7 +14,7 @@ const { smallBackup } = require('./rpa-40-fixtures.cjs');
 
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 
-test('one Menu button in the bar; the panel is closed until pressed, and holds the actions in their old order', async (t) => {
+test('one Menu button in the bar; the panel is closed until pressed, and holds the actions, the plan as a document first', async (t) => {
   const app = await bootApp({});
   t.after(() => app.close());
   const d = app.document;
@@ -28,8 +28,9 @@ test('one Menu button in the bar; the panel is closed until pressed, and holds t
   toggle.click();
   assert.equal(menu.hidden, false);
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
-  assert.deepEqual(Array.from(menu.querySelectorAll('.tb-btns button')).map((b) => b.id), ['download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn']);
-  assert.deepEqual(Array.from(menu.querySelectorAll('button')).map((b) => b.id), ['options-plan-change', 'download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn'], 'nothing else but Change on the email address (RPA-99): no Save progress, autosave does it; no sign out, there is no account to sign out of');
+  // RPA-77 added Download as Word and grouped them: the plan as a document, the backup of this form, then Clear Form.
+  assert.deepEqual(Array.from(menu.querySelectorAll('.tb-btns button')).map((b) => b.id), ['download-word-btn', 'print-btn', 'download-backup-btn', 'restore-backup-btn', 'clear-btn']);
+  assert.deepEqual(Array.from(menu.querySelectorAll('button')).map((b) => b.id), ['options-plan-change', 'download-word-btn', 'print-btn', 'download-backup-btn', 'restore-backup-btn', 'clear-btn'], 'nothing else but Change on the email address (RPA-99): no Save progress, autosave does it; no sign out, there is no account to sign out of');
   assert.equal(d.getElementById('save-status'), null, 'and no save confirmation line in the page');
   toggle.click();
   assert.equal(menu.hidden, true);

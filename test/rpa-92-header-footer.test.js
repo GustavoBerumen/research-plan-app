@@ -115,7 +115,7 @@ test('the phase banner is present during the pilot, and is one element to delete
   // its actions are untouched.
   banner.remove();
   assert.equal(document.querySelectorAll('header .phase-banner').length, 0);
-  assert.equal(document.querySelectorAll('header .tb-btns button').length, 4);
+  assert.equal(document.querySelectorAll('header .tb-btns button').length, 5);
 });
 
 test('the toolbar actions live in the header, and there is only one bar', async (t) => {
@@ -124,8 +124,8 @@ test('the toolbar actions live in the header, and there is only one bar', async 
   const { document } = app;
 
   const inHeader = Array.from(document.querySelectorAll('header .tb-btns button')).map((b) => b.id);
-  assert.deepEqual(inHeader, ['download-backup-btn', 'restore-backup-btn', 'clear-btn', 'print-btn'],
-    'all four actions, in order, inside the banner');
+  assert.deepEqual(inHeader, ['download-word-btn', 'print-btn', 'download-backup-btn', 'restore-backup-btn', 'clear-btn'],
+    'all five actions (Download as Word since RPA-77), in order, inside the banner');
   assert.equal(document.querySelectorAll('.toolbar').length, 0, 'the separate sticky toolbar is gone');
   assert.equal(document.querySelectorAll('.site-bar').length, 1, 'one bar, not two');
 
