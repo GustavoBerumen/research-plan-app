@@ -306,6 +306,9 @@ function completeStep(app, stepEl) {
     // "Which questions does this study answer?" is answered with all of them,
     // so no research question is left outside every study (RPA-140).
     if (g.classList.contains('study-group')) { g.querySelectorAll('input[type=checkbox]').forEach((b) => { if (!b.checked) b.click(); }); return; }
+    // A name asked as First name and Surname needs both (RPA-146).
+    const nameParts = g.querySelectorAll('.name-part-input');
+    if (nameParts.length) { nameParts.forEach((input) => setValue(window, input, 'Filled.')); return; }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');

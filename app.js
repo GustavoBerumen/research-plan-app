@@ -193,6 +193,16 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "name": a person's name, asked as First name and Surname under the
+      // one question (RPA-146). People wrote one box inconsistently: a first
+      // name only, initials, "surname, first name". The field keeps its key
+      // and keeps holding the whole name as one string, first name, a space,
+      // surname, which is what the sign-off, the check page, print, the
+      // backup and the submission record read; the two parts are saved
+      // beside it under <key>FirstName and <key>Surname. So there is no new
+      // draft version and nothing else in the form had to change. Its type
+      // stays "text", which is what the submission contract expects of it.
+      nameParts: typeParts.includes('name'),
       // "jira": a text field that takes a Jira ticket, so it gets the ticket
       // picker and shows a chosen ticket as a tag. It was wired to the
       // jiraProject key until that field began asking for a project name
@@ -338,7 +348,9 @@
       // say it has " for Study 2" added.
       const errorMatch = raw.match(/^\s+Error:\s*(.*)$/i);
       if (errorMatch && currentField) {
-        currentField.errorMessage = errorMatch[1].trim();
+        // A field asked in parts has a message for each, in order (RPA-146).
+        currentField.errorMessages = (currentField.errorMessages || []).concat(errorMatch[1].trim());
+        currentField.errorMessage = currentField.errorMessages[0];
         return;
       }
 
@@ -5281,7 +5293,58 @@
   function renderHeader(header) {
     const wrap = el('div', 'doc-header');
 
+    // A person's name in two parts (RPA-146): one question, so one fieldset
+    // whose legend asks it, with the hint and the help note belonging to the
+    // question as a whole; two labelled boxes, side by side where there is
+    // room. The hidden input carries the field's own key and the whole name.
+    function buildNameField(f) {
+      const mf = el('fieldset', 'mf mf-name');
+      const controlId = fieldControlId(f.key);
+      const legend = el('legend', 'mlabel', { id: controlId + '-label' });
+      legend.textContent = headingText(f);
+      if (f.question) mf.dataset.fieldName = f.label;
+      markOptional(legend, f);
+      const guidance = renderFieldHint(f, controlId + '-hint');
+      const whole = el('input', 'name-whole', { type: 'hidden', 'data-field': f.key });
+      const row = el('div', 'name-parts');
+      const messages = f.errorMessages || [];
+      const part = (suffix, words, i) => {
+        const id = controlId + '-' + suffix;
+        const wrap = el('div', 'name-part');
+        const label = el('label', 'name-part-label', { for: id });
+        label.textContent = words;
+        const input = el('input', 'minput name-part-input', { type: 'text', id, 'data-field': f.key + suffix, autocomplete: 'off' });
+        if (f.width) input.classList.add('input-w-' + f.width);
+        input.dataset.errorMessage = messages[i] || ('Enter the ' + words.toLowerCase() + ' of the ' + f.label.toLowerCase());
+        wrap.append(label, input);
+        row.appendChild(wrap);
+        return input;
+      };
+      const first = part('FirstName', 'First name', 0);
+      const surname = part('Surname', 'Surname', 1);
+      const printed = el('p', 'name-print');   // the whole name, for paper
+      const say = () => { printed.textContent = whole.value; };
+      const join = () => { whole.value = [first.value.trim(), surname.value.trim()].filter(Boolean).join(' '); say(); };
+      [first, surname].forEach((input) => input.addEventListener('input', join));
+      // The whole name arriving by itself, from a plan saved while it was one
+      // box, a backup, or a test profile: the first word is the first name
+      // and the rest the surname. The parts, where a plan has them, are
+      // restored after this and have the last word.
+      whole.addEventListener('input', (e) => {
+        if (e.target !== whole) return;
+        const words = whole.value.trim().split(/\s+/).filter(Boolean);
+        first.value = words[0] || '';
+        surname.value = words.slice(1).join(' ');
+        whole.value = words.join(' ');
+        say();
+      });
+      describeControl(mf, guidance);
+      mf.append(legend, whole, row, printed);
+      if (guidance) legend.insertAdjacentElement('afterend', guidance);
+      return mf;
+    }
     function buildMetaField(f) {
+      if (f.nameParts) return buildNameField(f);
       const mf = el('div', 'mf');
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
@@ -6623,6 +6686,9 @@
       const name = label.replace(/ date$/i, '') + ' date';
       return started.length ? name + ' must include a ' + started.join(started.length === 2 ? ' and ' : ', ') : name + ' must be a real date';
     }
+    // A name asked in parts asks for the part that is missing, in that part's words (RPA-146).
+    const lacking = (namePartsOf(g) || []).find((input) => !input.value.trim());
+    if (lacking) return lacking.dataset.errorMessage;
     // The template's own words, where it gives them. Choosing "Other" for the
     // sample size is an answer begun: its box is asked for in its own words below.
     const initials = signOffInitialsInput(g);
@@ -6676,6 +6742,11 @@
     const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
     return submissionErrors().filter(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
   }
+  // The two boxes of a name asked in parts, or null (RPA-146).
+  function namePartsOf(g) {
+    const inputs = g && g.querySelectorAll ? Array.from(g.querySelectorAll(':scope > .name-parts .name-part-input')) : [];
+    return inputs.length ? inputs : null;
+  }
   function requiredGroupComplete(g) {
     // A question no study answers is unanswered for as long as it exists (RPA-140).
     if (g.classList.contains('study-unclaimed')) return false;
@@ -6691,6 +6762,8 @@
     // Completed (found in RPA-120; true since RPA-141 and RPA-142).
     // Drafts stay editable and recoverable; moving on requires an actual count.
     // Use the same rule as final submission without requiring that capability.
+    const parts = namePartsOf(g);
+    if (parts) return parts.every((input) => input.value.trim());   // a first name alone is not a name
     const sample = customSampleSizeInput(g);
     if (sample) return window.RPA_SUBMISSION.validSampleSize(sample.value);
     if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
@@ -6703,7 +6776,10 @@
   }
   function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
   function clearGroupError(g) {
-    const err = g.querySelector(':scope > .field-error');
+    Array.from(g.querySelectorAll(':scope > .field-error')).forEach(removeGroupError.bind(null, g));
+    g.classList.remove('field-invalid');
+  }
+  function removeGroupError(g, err) {
     if (err) {
       g.querySelectorAll('[aria-describedby]').forEach((c) => {
         const ids = c.getAttribute('aria-describedby').split(/\s+/).filter((id) => id && id !== err.id);
@@ -6714,17 +6790,20 @@
     g.classList.remove('field-invalid');
   }
   let fieldErrorSeq = 0;
-  function markGroupError(g, message) {
-    if (g.querySelector(':scope > .field-error')) return;
+  function markGroupError(g, message, forControl) {
+    // One message per group, except a name asked in parts, which may have one for each box (RPA-146).
+    // Those are drawn afresh each time, every earlier one cleared first, so they need no guard of their own.
+    if (!forControl && g.querySelector(':scope > .field-error')) return;
     const err = el('p', 'field-error', { id: 'field-error-' + (++fieldErrorSeq) });
     const prefix = el('span', 'visually-hidden');
     prefix.textContent = 'Error: ';
     err.append(prefix, document.createTextNode(message));
     // Above the control, below the hint: read in the order a person meets it.
     const hint = g.querySelector(':scope > .field-hint-text, :scope > .field-guidance');
-    const anchor = g.querySelector(':scope > .field-guidance') || hint || g.querySelector(':scope > .flabel, :scope > .mlabel, :scope > label');
+    const earlier = Array.from(g.querySelectorAll(':scope > .field-error')).pop();
+    const anchor = earlier || g.querySelector(':scope > .field-guidance') || hint || g.querySelector(':scope > .flabel, :scope > .mlabel, :scope > label');
     if (anchor) anchor.insertAdjacentElement('afterend', err); else g.insertBefore(err, g.firstChild);
-    const control = groupControl(g);
+    const control = forControl || groupControl(g);
     if (control) {
       const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
       control.setAttribute('aria-describedby', ids.concat(err.id).join(' '));
@@ -6764,7 +6843,14 @@
       const named = new Set(errors.map(error => submissionTarget(error).group).filter(Boolean));
       const formOnly = checked.filter((g) => !named.has(g) && !requiredGroupComplete(g))
         .map((g) => ({ key: unitKey(g) || 'form', code: 'required', section: stepEl.dataset.stepSlug, message: groupMessage(g), formGroup: g }));
-      const inOrder = errors.concat(formOnly).sort((a, b) => {
+      // A name asked in parts is one field to the validator and two boxes to the person: each missing
+      // part is listed in its own words, with its own link, as it is with submissions off (RPA-146).
+      const byPart = (error) => {
+        const g = error.formGroup || submissionTarget(error).group;
+        const lacking = (namePartsOf(g) || []).filter((input) => !input.value.trim());
+        return lacking.length ? lacking.map((input) => ({ key: error.key, code: 'required', section: error.section, message: input.dataset.errorMessage, formGroup: g, formPart: input })) : [error];
+      };
+      const inOrder = errors.concat(formOnly).reduce((all, error) => all.concat(byPart(error)), []).sort((a, b) => {
         const ga = a.formGroup || submissionTarget(a).group, gb = b.formGroup || submissionTarget(b).group;
         if (!ga || !gb || ga === gb) return 0;
         return ga.compareDocumentPosition(gb) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
@@ -6777,20 +6863,24 @@
     list.replaceChildren();
     if (!missing.length) { summary.hidden = true; return false; }
     missing.forEach((g) => {
-      const message = groupMessage(g);
-      markGroupError(g, message);
-      const item = el('li');
-      const a = el('a', 'error-summary-link', { href: '#' });
-      a.textContent = message;
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        showPageOf(stepEl, g);   // the field may sit on another page (RPA-108)
-        rememberPosition();
-        const control = groupControl(g);
-        if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
+      // A name asked in parts lists each part that is missing, and each link goes to its own box (RPA-146).
+      const lacking = (namePartsOf(g) || []).filter((input) => !input.value.trim());
+      const entries = lacking.length ? lacking.map((input) => ({ message: input.dataset.errorMessage, own: input })) : [{ message: groupMessage(g), own: null }];
+      entries.forEach(({ message, own }) => {
+        markGroupError(g, message, own);
+        const item = el('li');
+        const a = el('a', 'error-summary-link', { href: '#' });
+        a.textContent = message;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          showPageOf(stepEl, g);   // the field may sit on another page (RPA-108)
+          rememberPosition();
+          const control = own || groupControl(g);
+          if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
+        });
+        item.appendChild(a);
+        list.appendChild(item);
       });
-      item.appendChild(a);
-      list.appendChild(item);
     });
     summary.hidden = false;
     if (focus) summary.focus();
@@ -7543,6 +7633,8 @@
   function groupAnswer(g) {
     const lines = [];
     const push = (v) => { const t = String(v == null ? '' : v).trim(); if (t) lines.push(t); };
+    // A name asked in parts reads as one: first name, a space, surname (RPA-146).
+    if (namePartsOf(g)) { push((g.querySelector(':scope > .name-whole') || {}).value); return lines; }
     const optionText = (sel) => (sel.options[sel.selectedIndex] || {}).textContent || '';
     const dateWords = (input) => {
       const parsed = readDateSegments(input);
@@ -8836,7 +8928,7 @@
     return target;
   }
   function resolveSubmissionTarget(error) {
-    if (error.formGroup) return { group: error.formGroup, control: groupControl(error.formGroup) };
+    if (error.formGroup) return { group: error.formGroup, control: error.formPart || groupControl(error.formGroup) };
     if (!error.key) return {};
     // The wire format is one group per question; on the page a question's
     // group is the first study that answers it (RPA-142).
@@ -8889,6 +8981,7 @@
   // among filled ones, a date out of bounds, a stage without a name. Which
   // errors exist, where they point and what the server checks are unchanged.
   function submissionMessage(error, group) {
+    if (error.formPart) return error.message;
     if (error.formGroup) return groupMessage(error.formGroup);
     if (!group || !error.key) return error.message;
     if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
@@ -9452,6 +9545,8 @@
     redrawSignOff();
     if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
+    // The whole name is held in a hidden input, which the loop above does not reach (RPA-146).
+    doc.querySelectorAll('.name-whole').forEach((el) => { el.value = ''; el.dispatchEvent(new Event('input')); });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
     // What was said about the old plan's two dates goes with them: the buffer
     // warning, and the note that a readout was moved (RPA-144).
