@@ -100,9 +100,10 @@ test('nothing of the markup shows: no asterisks, no list dashes, no disclosure g
 });
 
 test('a run of "- " lines is one list where it was written; a paragraph between two runs makes two lists', async (t) => {
-  const tpl = TEMPLATE.replace(/^([^\r\n]*\bkey=previousKnowledge\b[^\r\n]*)(\r?\n)/m,
+  // The field's own note (written 18 September 2026) is taken out first, so the fixture's is the only one.
+  const tpl = TEMPLATE.replace(/^([^\r\n]*\bkey=previousKnowledge\b[^\r\n]*)(\r?\n)(?:  (?:Hint|Help|Guidance):[^\r\n]*\r?\n)*/m,
     '$1$2  Help: What counts as previous knowledge$2  Guidance: Before.$2  Guidance: - **One:** first$2  Guidance: - second, with *stress*$2  Guidance: Between.$2  Guidance: - third$2');
-  assert.notEqual(tpl, TEMPLATE, 'the fixture must find a field with no note of its own');
+  assert.notEqual(tpl, TEMPLATE, 'the fixture must find the field');
   const app = await bootApp({ textAssets: { 'research-plan-template.md': tpl } });
   t.after(() => app.close());
   const help = helpOf(app.document, 'previousKnowledge');

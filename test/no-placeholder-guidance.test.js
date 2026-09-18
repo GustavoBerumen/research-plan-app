@@ -186,7 +186,7 @@ test('the examples that were placeholders now read as hints', async (t) => {
   assert.match(hintFor('.list-rows[data-list-key="characteristics"]'),
     /For example: New customers who abandoned a checkout in the last 30 days\./);
   assert.match(hintFor('#previousKnowledge-table'),
-    /For example: Q3 Checkout Usability Study\./);
+    /prior findings, analytics reports, or past studies relevant to this work\./, 'the hint of 18 September 2026');
 });
 
 test('no hint was lost when its placeholder went', async (t) => {

@@ -128,7 +128,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       // Who takes part is one question since RPA-119, where it was Characteristics and User Groups.
       'Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?', 'Additional information',
       'Planned Schedule',
-      'Previous Knowledge', 'Additional information',
+      'Is there any existing research or documentation to review?', 'Additional information',
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
       // whole plan (RPA-55).
