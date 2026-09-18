@@ -31,19 +31,35 @@
     <a class="service-name" href="./"><svg class="logo" aria-hidden="true" focusable="false"><use href="#rpa-mark"></use></svg><span class="service-name-text">Research Plan</span></a>
     <!-- RPA-106. The actions live in one menu, the way the model application
          keeps them: a Menu button, then the plan's name and the same four
-         actions as before with the same ids, in the same order. No sign out
-         until there is a sign in (RPA-99), and no Save progress: autosave
-         already does it (Gus, 14 September 2026). -->
+         actions as before with the same ids. No sign out until there is a
+         sign in (RPA-99), and no Save progress: autosave already does it
+         (Gus, 14 September 2026).
+         RPA-77 added a fifth, Download as Word, and with two buttons that
+         make a file and a third that makes another, grouped them and gave
+         each file a line saying what it is for: a Word document to edit
+         elsewhere, a PDF to read, a backup only this form can open. -->
     <button class="btn btn-ghost menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="options-menu">Menu</button>
     <div class="options-menu" id="options-menu" hidden>
       <p class="options-plan-name" id="options-plan-name">Untitled plan</p>
       <p class="options-plan-person" id="options-plan-person" hidden><span id="options-plan-person-email"></span> <button class="options-plan-change" id="options-plan-change" type="button">Change<span class="visually-hidden"> email address</span></button></p>
       <div class="tb-btns">
-        <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
-        <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
-        <input id="backup-file" type="file" accept=".json,application/json" aria-label="Choose a plan backup" hidden>
-        <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
-        <button class="btn btn-dark" id="print-btn">↓ Print / Save as PDF</button>
+        <div class="menu-group" role="group" aria-labelledby="menu-group-document">
+          <h2 class="menu-group-title" id="menu-group-document">Your plan as a document</h2>
+          <button class="btn btn-dark download-word" id="download-word-btn" type="button" aria-describedby="download-word-help" disabled>Download as Word (.docx)</button>
+          <p class="menu-help" id="download-word-help">To edit, or for others to comment on, outside this form.</p>
+          <button class="btn btn-ghost" id="print-btn" type="button" aria-describedby="print-help">Print or save as PDF</button>
+          <p class="menu-help" id="print-help">To read or share as it is.</p>
+        </div>
+        <div class="menu-group" role="group" aria-labelledby="menu-group-backup">
+          <h2 class="menu-group-title" id="menu-group-backup">Backup of this form</h2>
+          <button class="btn btn-ghost" id="download-backup-btn" type="button" aria-describedby="backup-help" disabled>Download backup</button>
+          <p class="menu-help">A file only this form can open, to carry on later or on another computer.</p>
+          <button class="btn btn-ghost" id="restore-backup-btn" type="button" aria-describedby="backup-help" disabled>Restore backup</button>
+          <input id="backup-file" type="file" accept=".json,application/json" aria-label="Choose a plan backup" hidden>
+        </div>
+        <div class="menu-group">
+          <button class="btn btn-ghost" id="clear-btn">Clear Form</button>
+        </div>
       </div>
     </div>
   </div>
@@ -68,6 +84,7 @@
          Gus will present this information in a different format later. -->
     <p id="backup-help" hidden>Your browser saves a draft automatically, but clearing browser data may delete it. Download a backup to restore your plan here later.</p>
     <p id="backup-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p id="word-status" class="word-status" role="status" aria-live="polite" aria-atomic="true"></p>
     <p id="capability-status" role="status">Checking available features. Calibration feedback, uploads, library changes and integrations are unavailable until confirmed.</p>
   </aside>
   <div class="doc" id="doc">
@@ -85,7 +102,7 @@
       </section>
       <section class="footer-col" aria-labelledby="footer-data">
         <h2 id="footer-data" class="footer-h">Where your writing goes</h2>
-        <p>Drafts save in this browser; evaluation and AI suggestions send relevant writing and context to the AI service. Downloaded backups stay on your device until you share them; PDFs are readable copies and cannot be restored.</p>
+        <p>Drafts save in this browser; evaluation and AI suggestions send relevant writing and context to the AI service. Downloaded backups stay on your device until you share them. A Word document is made in this browser and nothing is uploaded to make it; Word documents and PDFs are copies, and cannot be restored here.</p>
       </section>
       <section class="footer-col" aria-labelledby="footer-help">
         <h2 id="footer-help" class="footer-h">Problems or feedback</h2>
@@ -100,6 +117,7 @@
 
 <script src="test-profiles.js"></script>
 <script src="plan-model.js"></script>
+<script src="plan-document.js"></script>
 <script src="plan-workflow.js"></script>
 <script src="score-classification.js"></script>
 <script src="textarea-autosize.js"></script>
