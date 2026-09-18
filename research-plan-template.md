@@ -53,8 +53,14 @@ Flags (comma-separated inside the parentheses):
                        directly in the UI. Off by default — other table
                        fields (Planned Schedule, Action Points) keep fixed
                        headers unless they also set this flag.
-  prose             — list fields only: rows render as wrapping,
-                       auto-expanding textareas instead of compact inputs.
+  prose             — list fields: rows render as wrapping, auto-expanding
+                       textareas instead of compact inputs. Also a text field
+                       in the plan's header: its box wraps and grows with a
+                       long answer and stays one line for a short one; Enter
+                       does nothing and a pasted line break becomes a space,
+                       so the answer is one line of text and the field's type
+                       is still text (RPA-156). A field that also takes
+                       a Jira ticket keeps its single-line box.
   words=N           — textarea fields only: the design system's word count
                        under the box, "You have N words remaining", counting
                        down as the person types; past N it reads "You've
@@ -157,7 +163,7 @@ Email address (email, width=30, question=What is your email address?, key=emailA
   Guidance: - Identifying issues in the management dashboard
   Guidance: You can change this title at any time.
 
-Project name (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
+Project name (text, prose, width=20, question=Which project or initiative does this research support?, key=jiraProject):
   Hint: The name of the wider project, programme, or product goal your study relates to. For example, ‘Checkout redesign’ or ‘Billing self-serve’.
   Error: Enter the project or initiative this research supports
   Help: Why we ask for the project name
