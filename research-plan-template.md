@@ -471,11 +471,11 @@ Declaration: Lead researcher (checkbox, key=declarationResearcher): I confirm th
   Hint: Tick the box once every section is complete and current, then add your initials below.
   Error: Confirm that this plan is complete and current
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
-  Hint: Lead researcher approval — type initials and the date is added automatically.
+  Hint: Lead researcher approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to sign this plan
 Declaration: Project requester (checkbox, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
   Hint: Tick the box to approve the plan for your project, then add your initials below.
   Error: Confirm that you approve this plan
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):
-  Hint: Project requester approval — type initials and the date is added automatically.
+  Hint: Project requester approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to approve this plan

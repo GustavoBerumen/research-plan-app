@@ -205,7 +205,6 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .step-back{background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .step-back::before{content:"\2039\00a0"}
 .step-back:hover{color:var(--link-hover)}
-.step-caption{margin:0;font-size:var(--text);color:var(--text-2)}
 .step-heading{margin:8px 0 18px;font-size:var(--heading);font-weight:700;line-height:1.1;color:var(--ink)}
 .acc.step .acc-chevron{display:none}
 .acc.step .acc-head{cursor:default}
@@ -238,12 +237,11 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .summary-change:hover{color:var(--link-hover)}
 .summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 @media (max-width:600px){.summary-key{flex-basis:100%}}
-.step-top .step-caption{flex-basis:100%;order:2}
 /* One question per page (RPA-108): what is not on the page is hidden on screen only; every page prints. */
 @media screen{.page-hidden{display:none!important}}
-.step-page-caption{margin:0;font-size:var(--text);color:var(--text-2)}
-.step-top .step-page-caption{flex-basis:100%;order:3}
-.step-page-caption:empty{display:none}
+/* RPA-149. No counting at the top of a question page: not the section's number, not the question's, and not the section's
+   count of fields beside its name, which one question per page had left with nothing to count. Print keeps it. */
+@media screen{.acc.step .acc-count{display:none}}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
 /* The email address before the plan (RPA-99): a page of its own with one question, its label the heading, standing in front of every step until a well-formed address is given. */
