@@ -4893,9 +4893,28 @@
       if (stampSignOff(input)) input.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
+  // What the initials may be (RPA-153, Max's decision of 17 September 2026):
+  // up to ten characters before the date the form adds, in any alphabet,
+  // with the ordinary separators. The date does not count. Nothing is cut
+  // short: a longer value, typed, pasted or restored from an older backup,
+  // is left as it is, not dated, and refused until it is corrected.
+  const INITIALS_MAX = 10;
+  const INITIALS_SHAPE = /^[\p{L}\p{M} .'’-]+$/u;
+  const INITIALS_KEYS = ['signOffResearcher', 'signOffProjectOwner'];
+  function initialsOf(value) { return String(value || '').replace(/ — \d{2}\/\d{2}\/\d{4}$/, '').trim(); }
+  function initialsProblem(value) {
+    const initials = initialsOf(value);
+    if (!initials) return null;   // nothing there is the field's own "Error:" line
+    if (initials.length > INITIALS_MAX) return 'Initials must be ' + INITIALS_MAX + ' characters or fewer';
+    if (!INITIALS_SHAPE.test(initials)) return 'Initials must only include letters, spaces, full stops, apostrophes and hyphens';
+    return null;
+  }
+  function signOffInitialsInput(g) {
+    return INITIALS_KEYS.includes(unitKey(g)) ? g.querySelector('input[data-field]') : null;
+  }
   function stampSignOff(input) {
     const val = input.value.trim();
-    if (!val || / — \d{2}\/\d{2}\/\d{4}$/.test(val)) return false;
+    if (!val || / — \d{2}\/\d{2}\/\d{4}$/.test(val) || initialsProblem(val)) return false;
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -6111,9 +6130,21 @@
       const list = summary.querySelector('.error-summary-list');
       messages.forEach((message, i) => {
         const item = el('li');
-        item.textContent = message;
+        const group = groups && groups[i];
+        if (!group) { item.textContent = message; list.appendChild(item); return; }
+        // Said at the field as well, and the summary's line takes the person
+        // to it, as the summaries elsewhere on the form do (RPA-152).
+        markGroupError(group, message);
+        said.push(group);
+        const link = el('a', 'error-summary-link', { href: '#' });
+        link.textContent = message;
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const control = groupControl(group);
+          if (control) { control.focus(); if (typeof group.scrollIntoView === 'function') group.scrollIntoView({ block: 'center' }); }
+        });
+        item.appendChild(link);
         list.appendChild(item);
-        if (groups && groups[i]) { markGroupError(groups[i], message); said.push(groups[i]); }
       });
       summary.hidden = false;
       summary.focus();
@@ -6159,7 +6190,12 @@
     function create() {
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
-      if (!other) { say(['Enter the other person’s email address.']); return; }
+      // The address is what identifies the other person, so it has to be
+      // one: the shape check the author's own address passed at the start
+      // (RPA-99), before anything is created. Without it, "asdf" was written
+      // into the record and its ledger, and kept (RPA-152).
+      if (!other) { say(['Enter the other person’s email address.'], [otherField]); return; }
+      if (!emailLooksRight(other)) { say(['Enter an email address in the correct format, like name@example.com'], [otherField]); return; }
       if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
@@ -6543,6 +6579,8 @@
     }
     // The template's own words, where it gives them. Choosing "Other" for the
     // sample size is an answer begun: its box is asked for in its own words below.
+    const initials = signOffInitialsInput(g);
+    if (initials && initialsProblem(initials.value)) return initialsProblem(initials.value);
     if (g.dataset && g.dataset.errorMessage && !customSampleSizeInput(g)) return g.dataset.errorMessage;
     // "Sample Size for Study 2" reads as "sample size for Study 2": the
     // field's name is lowered mid-sentence, the study's is not (RPA-142).
@@ -6612,6 +6650,9 @@
     if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
     const date = requiredDateInput(g);
     if (date) return Boolean(readDateSegments(date));
+    // Initials that are there and wrong are not a signature (RPA-153).
+    const initials = signOffInitialsInput(g);
+    if (initials && initialsProblem(initials.value)) return false;
     return fieldHasContent(g);
   }
   function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
@@ -8761,7 +8802,7 @@
     if (error.formGroup) return groupMessage(error.formGroup);
     if (!group || !error.key) return error.message;
     if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
-    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
+    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration' || error.code === 'signoff_length') return groupMessage(group);
     if (['required', 'choice'].includes(error.code) && !fieldHasContent(group)) return groupMessage(group);
     return error.message;
   }
