@@ -25,7 +25,11 @@ const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const settle = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 const planOf = (d) => d.querySelector('.doc-header');
 const hatchOf = (d) => planOf(d).querySelector('.field-custom');
-const caption = (d) => text(planOf(d).querySelector('.step-page-caption'));
+// The page count, read the way the build at hand exposes it: RPA-149 replaces the
+// "N of M" caption with a count on the step, so this holds on either side of it.
+const pageCount = (d) => planOf(d).dataset.pages || (text(planOf(d).querySelector('.step-page-caption')).match(/of (\d+)/) || [])[1] || '';
+// On the review-only page: the hatch alone, named by its own label.
+const onHatchAlone = (d) => shownUnits(d).length === 1 && shownUnits(d)[0] === hatchOf(d) ? text(hatchOf(d).querySelector('.flabel')) : '';
 const press = (d) => planOf(d).querySelector('.step-continue').click();
 const rowsOf = (d) => Array.from(planOf(d).querySelectorAll('.summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]);
 const shownUnits = (d) => Array.from(planOf(d).querySelectorAll('.title-field, .mf, .field-custom')).filter((u) => !u.hidden && !u.classList.contains('page-hidden') && !u.querySelector('[data-field="lastUpdated"]'));
@@ -78,7 +82,7 @@ test('not a numbered page and never required: the count is as it was, Save and c
   assert.equal(hatchOf(without.document), null, 'the fixture has no hatch in Plan details');
   without.window.location.hash = '#plan-details/1';
   await settle();
-  assert.equal(caption(d), caption(without.document), 'the hatch adds no page: ' + caption(d));
+  assert.equal(pageCount(d), pageCount(without.document), 'the hatch adds no page: ' + pageCount(d));
   const seen = [];
   completeStep(app, planOf(d));
   for (let i = 0; i < 12 && !planOf(d).classList.contains('step-checking'); i++) { seen.push(shownUnits(d).includes(hatchOf(d))); press(d); await settle(100); }
@@ -102,7 +106,7 @@ test('the check page lists it, Change opens it alone as "Additional information"
   change.click();
   await settle();
   assert.equal(window.location.hash, '#plan-details/more');
-  assert.equal(caption(d), 'Additional information', 'words, not a number');
+  assert.equal(onHatchAlone(d), 'Additional information', 'the hatch alone, named in words, not a number');
   assert.deepEqual(shownUnits(d), [hatchOf(d)], 'on its own');
   write(app, 'Stakeholders', 'Finance want a copy of the readout.');
   press(d);
@@ -125,7 +129,7 @@ test('#plan-details/more opens it directly; what is written survives the draft a
   t.after(() => again.close());
   const dd = again.document;
   await settle();
-  assert.equal(caption(dd), 'Additional information', 'loading the URL opens the hatch');
+  assert.equal(onHatchAlone(dd), 'Additional information', 'loading the URL opens the hatch');
   assert.deepEqual(shownUnits(dd), [hatchOf(dd)]);
   assert.equal(hatchOf(dd).querySelector('.custom-field-name').value, 'Stakeholders');
   assert.equal(hatchOf(dd).querySelector('.custom-field-body').value, 'Finance want a copy of the readout.');
