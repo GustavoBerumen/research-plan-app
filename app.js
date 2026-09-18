@@ -6099,9 +6099,21 @@
       const list = summary.querySelector('.error-summary-list');
       messages.forEach((message, i) => {
         const item = el('li');
-        item.textContent = message;
+        const group = groups && groups[i];
+        if (!group) { item.textContent = message; list.appendChild(item); return; }
+        // Said at the field as well, and the summary's line takes the person
+        // to it, as the summaries elsewhere on the form do (RPA-152).
+        markGroupError(group, message);
+        said.push(group);
+        const link = el('a', 'error-summary-link', { href: '#' });
+        link.textContent = message;
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const control = groupControl(group);
+          if (control) { control.focus(); if (typeof group.scrollIntoView === 'function') group.scrollIntoView({ block: 'center' }); }
+        });
+        item.appendChild(link);
         list.appendChild(item);
-        if (groups && groups[i]) { markGroupError(groups[i], message); said.push(groups[i]); }
       });
       summary.hidden = false;
       summary.focus();
@@ -6147,7 +6159,12 @@
     function create() {
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
-      if (!other) { say(['Enter the other person’s email address.']); return; }
+      // The address is what identifies the other person, so it has to be
+      // one: the shape check the author's own address passed at the start
+      // (RPA-99), before anything is created. Without it, "asdf" was written
+      // into the record and its ledger, and kept (RPA-152).
+      if (!other) { say(['Enter the other person’s email address.'], [otherField]); return; }
+      if (!emailLooksRight(other)) { say(['Enter an email address in the correct format, like name@example.com'], [otherField]); return; }
       if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
