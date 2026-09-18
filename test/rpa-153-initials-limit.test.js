@@ -153,6 +153,10 @@ for (const role of ['leadResearcher', 'projectRequester']) {
     const draft = plan();
     draft.signOff = null;
     draft.fields.emailAddress = 'name@example.com';
+    // Two-word names: a name is a first name and a surname once RPA-146 lands, and a
+    // one-word name would leave Plan details incomplete and the review locked.
+    draft.fields.leadResearcher = 'Priya Nair';
+    draft.fields.projectRequester = 'Tom Okafor';
     draft.fields[KEYS[role].name] = 'ABCDEFGHIJKLMNOP — 14/09/2026';
     const app = await bootApp({ draft });
     t.after(() => app.close());
@@ -184,6 +188,8 @@ test('submissions on: Send refuses longer initials in the form\'s words, at the 
   const draft = plan();
   draft.signOff = null;
   draft.fields.emailAddress = 'name@example.com';
+  draft.fields.leadResearcher = 'Priya Nair';
+  draft.fields.projectRequester = 'Tom Okafor';
   draft.fields.signOffResearcher = 'ABCDEFGHIJK — 14/09/2026';
   draft.fields.signOffProjectOwner = 'ABCDEFGHIJ — 14/09/2026';
   draft.ui = { section: 'review' };
