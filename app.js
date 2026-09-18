@@ -546,7 +546,7 @@
   // ---------- Google Drive picker ----------
   let configPromise = null;
   // Submissions are independently configured; absent flags from older servers stay off.
-  const unavailableCapabilities = Object.freeze({ submissions: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
+  const unavailableCapabilities = Object.freeze({ submissions: false, signOff: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
   let capabilities = unavailableCapabilities;
   let submissionConfig = null;
 
@@ -567,8 +567,8 @@
       }).then(cfg => {
         if (!cfg || typeof cfg.pilotMode !== 'boolean' || !cfg.capabilities ||
             // feedback may be absent from an older server's map: absent means unavailable, not invalid.
-            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (['feedback', 'submissions'].includes(key) && cfg.capabilities[key] === undefined)) ||
-            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => !['feedback', 'submissions'].includes(key) && value !== false)) ||
+            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (['feedback', 'submissions', 'signOff'].includes(key) && cfg.capabilities[key] === undefined)) ||
+            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => !['feedback', 'submissions', 'signOff'].includes(key) && value !== false)) ||
             (cfg.capabilities.submissions && (!cfg.pilotMode || cfg.submissions?.formSchemaVersion !== window.RPA_SUBMISSION?.SCHEMA ||
               !['deployment', 'cohort', 'collectionPolicyVersion'].every(key => /^[a-z0-9][a-z0-9-]{0,63}$/.test(cfg.submissions?.[key] || '')) ||
               typeof cfg.submissions?.notice !== 'string' || cfg.submissions.notice.trim().length < 40)) ||
