@@ -60,7 +60,8 @@ test('classifies prose controls without changing genuinely compact controls', as
   // Project is dormant, so the Alignment grid holds only compact inputs now.
   // The grid's prose path keeps its coverage in the last test in this file.
   assert.equal(document.querySelectorAll('.atbl textarea.prose-input').length, 0);
-  assert.equal(document.querySelector('[data-field="jiraProject"]').tagName, 'INPUT');
+  // The project name wraps since RPA-156: a textarea by the same flag, one line of text.
+  assert.equal(document.querySelector('[data-field="jiraProject"]').tagName, 'TEXTAREA');
   assert.equal(document.querySelector('[data-field="signOffProjectOwner"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="signOffResearcher"]').tagName, 'INPUT');
   assert.equal(document.querySelector('[data-field="projectDecision"]').type, 'date');

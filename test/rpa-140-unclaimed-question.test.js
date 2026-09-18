@@ -18,7 +18,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY, pagePosition, pageCount } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -101,7 +101,7 @@ test('the person is told on the page they are on: the notification banner on Res
   b.querySelector('.notification-banner-link').click();
   await settle();
   assert.deepEqual(visible(d), ['studies'], 'the link opens Studies');
-  assert.equal(text(stepOf(d, 'studies').querySelector('.step-page-caption')), 'Question 1 of 2', 'from its first page');
+  assert.deepEqual([pagePosition(stepOf(d, 'studies')), await pageCount(app, stepOf(d, 'studies'))], [1, 2], 'from its first page');
   assert.match(CSS, /@media print\{\.notification-banner,\.study-unclaimed-list\{display:none!important\}\}/, 'a notice about the form is not part of the printed plan');
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -177,14 +177,14 @@ test('with several studies the section is judged on the last study\'s page, and 
   await settle();
   window.location.hash = '#studies/3';
   await settle();
-  assert.equal(text(studies.querySelector('.step-page-caption')), 'Question 3 of 3', 'Study 2\'s page, the last');
+  assert.deepEqual([pagePosition(studies), await pageCount(app, studies)], [3, 3], 'Study 2\'s page, the last');
   assert.equal(studyGroups(d)[0].classList.contains('page-hidden'), true, 'Study 1 is on another page');
   studies.querySelector('.step-continue').click();
   const link = Array.from(studies.querySelectorAll('.error-summary-link')).find((a) => text(a) === 'Choose a study to answer RQ2');
   assert.ok(link);
   link.click();
   await settle();
-  assert.equal(text(studies.querySelector('.step-page-caption')), 'Question 2 of 3', 'the link opens Study 1\'s page');
+  assert.equal(pagePosition(studies), 2, 'the link opens Study 1\'s page');
   assert.equal(studyGroups(d)[0].classList.contains('page-hidden'), false);
   assert.equal(d.activeElement, studyGroups(d)[0].querySelectorAll('.study-question-input')[1], 'and lands on its checkbox for RQ2');
   assert.deepEqual(app.jsdomErrors, []);

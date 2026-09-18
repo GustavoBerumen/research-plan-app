@@ -53,8 +53,14 @@ Flags (comma-separated inside the parentheses):
                        directly in the UI. Off by default — other table
                        fields (Planned Schedule, Action Points) keep fixed
                        headers unless they also set this flag.
-  prose             — list fields only: rows render as wrapping,
-                       auto-expanding textareas instead of compact inputs.
+  prose             — list fields: rows render as wrapping, auto-expanding
+                       textareas instead of compact inputs. Also a text field
+                       in the plan's header: its box wraps and grows with a
+                       long answer and stays one line for a short one; Enter
+                       does nothing and a pasted line break becomes a space,
+                       so the answer is one line of text and the field's type
+                       is still text (RPA-156). A field that also takes
+                       a Jira ticket keeps its single-line box.
   words=N           — textarea fields only: the design system's word count
                        under the box, "You have N words remaining", counting
                        down as the person types; past N it reads "You've
@@ -157,7 +163,7 @@ Email address (email, width=30, question=What is your email address?, key=emailA
   Guidance: - Identifying issues in the management dashboard
   Guidance: You can change this title at any time.
 
-Project name (text, width=20, question=Which project or initiative does this research support?, key=jiraProject):
+Project name (text, prose, width=20, question=Which project or initiative does this research support?, key=jiraProject):
   Hint: The name of the wider project, programme, or product goal your study relates to. For example, ‘Checkout redesign’ or ‘Billing self-serve’.
   Error: Enter the project or initiative this research supports
   Help: Why we ask for the project name
@@ -220,6 +226,13 @@ Research readout (date, question=When will the findings be shared with the team?
   Guidance: An estimated date is fine. You can adjust this timeline as the project progresses.
 Last updated (date, key=lastUpdated):
   Hint: The date this plan was last edited.
+<!-- RPA-145. Plan details closes with the same hatch as the four content
+     sections (RPA-101, capped at one block by RPA-82). It was the one place
+     a researcher had nowhere to put what the questions did not ask for. It
+     is a header field here, because Plan details is the document's header;
+     the form draws it under the header's questions, not among them. -->
+Additional information (custom-fields, max=1, key=additionalPlanDetails):
+  Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
 
 # Context {open}
 
@@ -464,11 +477,11 @@ Declaration: Lead researcher (checkbox, key=declarationResearcher): I confirm th
   Hint: Tick the box once every section is complete and current, then add your initials below.
   Error: Confirm that this plan is complete and current
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
-  Hint: Lead researcher approval — type initials and the date is added automatically.
+  Hint: Lead researcher approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to sign this plan
 Declaration: Project requester (checkbox, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
   Hint: Tick the box to approve the plan for your project, then add your initials below.
   Error: Confirm that you approve this plan
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):
-  Hint: Project requester approval — type initials and the date is added automatically.
+  Hint: Project requester approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to approve this plan
