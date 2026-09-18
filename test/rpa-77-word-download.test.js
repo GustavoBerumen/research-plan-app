@@ -85,6 +85,7 @@ const SCHEMA = {
       { label: 'Other researchers', key: 'otherResearchers', type: 'radios', options: ['Yes', 'No'], reveals: 'researcherNames' },
       { label: 'Researcher names', key: 'researcherNames', type: 'list' },
       { label: 'Project decision', key: 'projectDecision', type: 'date', optional: true },
+      { label: 'Additional information', key: 'additionalPlanDetails', type: 'custom-fields', optional: true },
     ],
   },
   sections: [
@@ -119,7 +120,7 @@ const DRAFT = () => ({
     ],
     'previousKnowledge-table': [[{ t: 'text', v: '' }, { t: 'file', v: '', n: 'No file chosen' }]],
   },
-  custom: { additionalContext: [{ label: 'Constraints', body: 'No budget for incentives.' }, { label: '', body: '' }] },
+  custom: { additionalContext: [{ label: 'Constraints', body: 'No budget for incentives.' }, { label: '', body: '' }], additionalPlanDetails: [{ label: 'Budget code', body: 'RX-42' }] },
 });
 
 test('the plan as an outline: the form\'s order, names and answers, and nothing that was not asked', () => {
@@ -136,6 +137,11 @@ test('the plan as an outline: the form\'s order, names and answers, and nothing 
   assert.deepEqual(after('Background'), { type: 'paragraphs', lines: ['Checkout was rebuilt in June.', 'Abandonment rose.'] }, 'a paragraph per line, blank lines aside');
   assert.deepEqual(after('Research Questions'), { type: 'list', ordered: true, items: ['Where do people give up?', 'What do they expect?'] });
   assert.deepEqual(after('Constraints'), { type: 'paragraphs', lines: ['No budget for incentives.'] }, 'a block of additional information under its own name');
+  // Additional information added to the plan's details (RPA-145) is blocks under their own names after the details table, not a row in it.
+  const pairs = blocks.find((b) => b.type === 'pairs');
+  assert.equal(pairs.rows.some((r) => r[0] === 'Additional information'), false, 'not flattened into the table');
+  assert.deepEqual(after('Budget code'), { type: 'paragraphs', lines: ['RX-42'] }, 'under its own name');
+  assert.equal(blocks.indexOf(blocks.find((b) => b.type === 'heading' && b.text === 'Additional information')), blocks.indexOf(pairs) + 1, 'directly after the details');
   assert.deepEqual(after('Previous Knowledge'), { type: 'empty', text: 'Not provided' }, 'an optional field left empty says so, as Review does');
 
   // The document numbers the questions that were written, and a study is said to answer them by those numbers.

@@ -179,8 +179,16 @@
 
     const meta = list(header.meta);
     const hiddenMeta = hiddenKeys(meta, d);
-    const details = meta.filter((f) => !hiddenMeta.has(f.key)).map((f) => [f.label, answerLines(f, d)]);
+    // The plan's details are a table of name and answer. Additional information
+    // the person added to them (RPA-145) is blocks under their own names, as in
+    // a section: flattened into the table, the names would be lost.
+    const added = meta.filter((f) => f.type === 'custom-fields');
+    const details = meta.filter((f) => !hiddenMeta.has(f.key) && f.type !== 'custom-fields').map((f) => [f.label, answerLines(f, d)]);
     if (details.length) blocks.push({ type: 'pairs', rows: details });
+    added.forEach((f) => {
+      const answer = answerBlocks(f, d);
+      if (answer.some((b) => b.type !== 'empty')) blocks.push({ type: 'heading', level: 2, text: f.label }, ...answer);
+    });
 
     const sections = list(s.sections);
     const hasStudies = sections.some((sec) => list(sec.fields).some((f) => f.type === 'study-questions'));
