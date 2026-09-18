@@ -98,7 +98,8 @@ but the public static map does not provide downloads for them.
    404; encoded or traversal paths return 400 or are rejected by the front proxy.
    Do not retrieve real credentials or records as test fixtures.
 3. Verify the complete form loads, restricted actions stay unavailable, and the
-   backup round-trip and Print / Save as PDF work at the deployed address.
+   backup round-trip, Download as Word and Print or save as PDF work at the
+   deployed address.
 4. RPA-1 still requires invited access on every origin/API, bounded AI use,
    appropriate operational logs, and private durable storage with
    restart/redeploy/deletion proof for **every enabled server-side record**.
@@ -118,9 +119,13 @@ Edit in the app, download an updated backup and return it privately. Invalid
 files, cancellation and failed restores preserve the current plan.
 
 Backups retain plan data and attachment references, but no attachment bytes,
-calibration records or evaluation results. **Print / Save as PDF** provides the
-readable copy, which cannot be imported as a backup. Word export, Finish/Send,
-email delivery and automatic synchronisation are deferred.
+calibration records or evaluation results. **Download as Word (.docx)** gives an
+editable copy and **Print or save as PDF** a readable one; neither can be
+imported as a backup, and changes made in Word are not brought back into the
+form. The Word document is made in the browser by `plan-document.js`, with no
+library and nothing uploaded (RPA-77); the checks that need real Word are in
+`test/manual/rpa-77-word-checks.md`. A direct PDF download, Finish/Send, email
+delivery and automatic synchronisation are deferred.
 
 ## Invited pilot instructions
 
@@ -135,6 +140,7 @@ not establish a deployed release; record the actual candidate and acceptance.
 ```
 index.html                  Page shell
 app.js                       All client-side behaviour (schema-driven rendering, evaluate flow, tables, etc.)
+plan-document.js             The plan as an outline, and that outline as a Word document (.docx)
 style.css                    Styling
 server.js                    Node backend — Claude API calls, file uploads, config endpoint
 research-plan-template.md    Form fields and sections

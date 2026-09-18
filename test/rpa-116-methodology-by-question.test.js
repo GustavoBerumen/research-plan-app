@@ -15,7 +15,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY, pagePosition } = require('./app-harness');
 
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const groups = (d) => Array.from(d.querySelectorAll('.methods-group'));
@@ -159,7 +159,7 @@ test('Save and continue judges every study: a second study left blank lists its 
   g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="Small (1–5)"]').click();
   // The last page judges the whole section (RPA-108): six pages, three per study.
   window.location.hash = '#methodology/6';
-  await waitFor(() => text(methodology.querySelector('.step-page-caption')) === 'Question 6 of 6');
+  await waitFor(() => pagePosition(methodology) === 6);   // the last of six; no caption says so since RPA-149
   methodology.querySelector('.step-continue').click();
   const links = Array.from(methodology.querySelectorAll('.error-summary-link')).map(text);
   assert.deepEqual(links, [

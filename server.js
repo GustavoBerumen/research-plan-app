@@ -78,6 +78,7 @@ const PUBLIC_ASSETS = new Map([
   ['/favicon.svg', 'favicon.svg'],
   ['/app.js', 'app.js'],
   ['/plan-model.js', 'plan-model.js'],
+  ['/plan-document.js', 'plan-document.js'],
   ['/plan-workflow.js', 'plan-workflow.js'],
   ['/submission-contract.js', 'submission-contract.js'],
   ['/submission-ui.js', 'submission-ui.js'],

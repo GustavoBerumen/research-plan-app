@@ -14,7 +14,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, listInputs, completeStep, saveAndContinue, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, listInputs, completeStep, saveAndContinue, DRAFT_KEY, pagePosition } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8');
@@ -120,7 +120,7 @@ test('a study with no question cannot continue: the error names the study, and t
   studyGroups(d)[0].querySelectorAll('.study-question-input')[0].click();
   // The last page judges the whole section: Study 2 has nothing ticked.
   window.location.hash = '#studies/3';
-  await waitFor(() => text(studies.querySelector('.step-page-caption')) === 'Question 3 of 3');
+  await waitFor(() => pagePosition(studies) === 3);   // the last of three
   studies.querySelector('.step-continue').click();
   assert.deepEqual(Array.from(studies.querySelectorAll('.error-summary-link')).map(text), ['Select at least one research question for Study 2'], 'decision 2');
   assert.ok(studyGroups(d)[1].classList.contains('field-invalid'));

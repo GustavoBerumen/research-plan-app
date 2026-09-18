@@ -145,7 +145,7 @@ test('the project field asks for a project name now, in a box sized for one', as
   t.after(() => app.close());
   const d = app.document;
   const input = d.querySelector('[data-field="jiraProject"]');
-  assert.match(TEMPLATE, /^Project name \(text, width=20, question=Which project or initiative does this research support\?, key=jiraProject\):/m,
+  assert.match(TEMPLATE, /^Project name \(text, prose, width=20, question=Which project or initiative does this research support\?, key=jiraProject\):/m,
     'the key is unchanged, so every saved plan still has its answer');
   assert.ok(input.classList.contains('input-w-20'), Array.from(input.classList).join(' '));
   const hint = text(wrapOf(d, 'jiraProject').querySelector('.field-hint-text, .mf-hint'));
