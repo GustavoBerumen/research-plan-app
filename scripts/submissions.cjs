@@ -4,11 +4,15 @@
 // Operator-only CLI: this file is never a public asset or HTTP route.
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { createR2Store } = require('../r2-submission-store');
+const path = require('node:path');
+const readline = require('node:readline');
 const { namespace, UUID } = require('../submissions-server');
 const ops = require('../submission-operations');
 
-const HELP = `Private plan submissions (explicit RPA_R2_* and RPA_SUBMISSIONS_* environment required)
+const HELP = `Private plan submissions
+Read-only local verification (no R2 or submission configuration required):
+  node scripts/submissions.cjs verify-backup FILE.rpa-encrypted
+Storage operations (explicit RPA_R2_* and RPA_SUBMISSIONS_* environment required):
   node scripts/submissions.cjs init-cohort
   node scripts/submissions.cjs cohort
   node scripts/submissions.cjs pause-cohort
@@ -29,6 +33,73 @@ Files are created exclusively, read back and hashed. Existing files are never re
 export-plan creates an importable plan backup; export-record includes the operator envelope.
 See SUBMISSIONS.md for credential separation, notice, retention and independent-copy procedures.`;
 
+function readSecret(input = process.stdin, output = process.stderr) {
+  if (!input.isTTY || !output.isTTY) throw new Error('Use an interactive terminal or provide RPA_BACKUP_PASSPHRASE through a private process environment.');
+  return new Promise((resolve, reject) => {
+    const wasRaw = Boolean(input.isRaw), wasPaused = input.isPaused();
+    let value = '';
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      input.off('keypress', onKeypress);
+      input.off('end', onEnd);
+      input.off('error', onError);
+      input.setRawMode(wasRaw);
+      if (wasPaused) input.pause();
+      output.write('\n');
+      if (error) reject(error); else resolve(value);
+    };
+    const onKeypress = (character, key = {}) => {
+      if (key.ctrl && key.name === 'c') return finish(new Error('Passphrase entry cancelled.'));
+      if (['return', 'enter'].includes(key.name)) return finish(null, value);
+      if (key.name === 'backspace') { value = Array.from(value).slice(0, -1).join(''); return; }
+      if (!key.ctrl && !key.meta && character) value += character;
+    };
+    const onEnd = () => finish(new Error('Passphrase entry ended before confirmation.'));
+    const onError = () => finish(new Error('Passphrase input failed.'));
+    output.write('Backup passphrase (input hidden): ');
+    readline.emitKeypressEvents(input);
+    input.setRawMode(true);
+    input.on('keypress', onKeypress);
+    input.once('end', onEnd);
+    input.once('error', onError);
+    input.resume();
+  });
+}
+
+async function verifyBackup(filename, passphrase) {
+  const stat = await fs.stat(filename);
+  if (!stat.isFile() || stat.size > 96 * 1024 * 1024) throw new Error('Recovery export exceeds the pilot utility limit.');
+  const encrypted = await fs.readFile(filename);
+  const bundle = ops.decryptBundle(encrypted.toString('utf8'), passphrase);
+  if (!bundle || typeof bundle.journalOnly !== 'boolean' || !bundle.cohortMetadata) throw new Error('Invalid encrypted export.');
+  const config = {
+    deployment: bundle.deployment,
+    cohort: bundle.cohort,
+    collectionPolicyVersion: bundle.cohortMetadata.collectionPolicyVersion,
+    notice: bundle.cohortMetadata.notice
+  };
+  ops.validateBundle(bundle, config, bundle.journalOnly);
+  return {
+    verified: true,
+    file: path.basename(filename),
+    bytes: encrypted.length,
+    sha256: crypto.createHash('sha256').update(encrypted).digest('hex'),
+    recordType: bundle.recordType,
+    recordVersion: bundle.recordVersion,
+    deployment: bundle.deployment,
+    cohort: bundle.cohort,
+    exportedAt: bundle.exportedAt,
+    journalOnly: bundle.journalOnly,
+    records: bundle.records.length,
+    deletions: bundle.deletions.length,
+    collectionOpen: bundle.cohortMetadata.collectionOpen,
+    finalSessionAt: bundle.cohortMetadata.finalSessionAt,
+    deleteAfter: bundle.cohortMetadata.deleteAfter
+  };
+}
+
 async function writeVerified(filename, text) {
   if (!filename) throw new Error('A new output filename is required.');
   await fs.writeFile(filename, text, { flag: 'wx', mode: 0o600 });
@@ -36,18 +107,23 @@ async function writeVerified(filename, text) {
   if (!saved.equals(Buffer.from(text))) throw new Error('Saved-file verification failed.');
   return { file: filename, bytes: saved.length, sha256: crypto.createHash('sha256').update(saved).digest('hex') };
 }
-async function main(args = process.argv.slice(2), env = process.env, suppliedStore) {
+async function main(args = process.argv.slice(2), env = process.env, suppliedStore, supplied = {}) {
   const [command, first, second] = args;
   if (!command || ['help', '--help'].includes(command)) return HELP;
-  const arity = { 'init-cohort': 1, cohort: 1, 'pause-cohort': 1, 'resume-cohort': 1, list: 1, 'export-record': 3, 'export-plan': 3, backup: 2, journal: 2, delete: 3, 'close-cohort': 3, 'purge-expired': 2, recover: 3 };
+  const arity = { 'verify-backup': 2, 'init-cohort': 1, cohort: 1, 'pause-cohort': 1, 'resume-cohort': 1, list: 1, 'export-record': 3, 'export-plan': 3, backup: 2, journal: 2, delete: 3, 'close-cohort': 3, 'purge-expired': 2, recover: 3 };
   if (arity[command] !== args.length) throw new Error('Unknown command or wrong arguments. Use --help.');
+  if (command === 'verify-backup') {
+    const passphrase = env.RPA_BACKUP_PASSPHRASE || await (supplied.readSecret || readSecret)();
+    if (passphrase.length < 20) throw new Error('An independent backup passphrase is required.');
+    return verifyBackup(first, passphrase);
+  }
   const config = { ...namespace(env), collectionPolicyVersion: env.RPA_SUBMISSIONS_POLICY_VERSION, notice: env.RPA_SUBMISSIONS_NOTICE };
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(config.collectionPolicyVersion || '') || typeof config.notice !== 'string' || config.notice.trim().length < 40) throw new Error('Approved collection policy configuration is required.');
   const maintenance = ['pause-cohort', 'resume-cohort', 'close-cohort', 'backup', 'journal', 'delete', 'purge-expired', 'recover'];
   if (maintenance.includes(command) && env.RPA_SUBMISSIONS_MAINTENANCE !== 'true') throw new Error('Disable acceptance and other operator writes, drain in-flight work, then set RPA_SUBMISSIONS_MAINTENANCE=true.');
   const encrypted = ['backup', 'journal', 'delete', 'close-cohort', 'purge-expired', 'recover'].includes(command);
   if (encrypted && (!env.RPA_BACKUP_PASSPHRASE || env.RPA_BACKUP_PASSPHRASE.length < 20)) throw new Error('An independent backup passphrase is required before changing retention or deleting.');
-  const store = suppliedStore || createR2Store(env);
+  const store = suppliedStore || require('../r2-submission-store').createR2Store(env);
   const journal = async filename => writeVerified(filename, ops.encryptBundle(await ops.exportBundle(store, config, { journalOnly: true }), env.RPA_BACKUP_PASSPHRASE));
   switch (command) {
     case 'init-cohort': return ops.initialiseCohort(store, config);
@@ -85,4 +161,4 @@ if (require.main === module) main().then(result => console.log(typeof result ===
   console.error('The operation was not confirmed. Check configuration and arguments against --help. After a deletion/retention error, repeat the same operation with a new journal filename before resuming acceptance.');
   process.exitCode = 1;
 });
-module.exports = { main, writeVerified };
+module.exports = { main, writeVerified, verifyBackup, readSecret };
