@@ -45,7 +45,8 @@ const migrated = p => {
   const studies = PLAN.studiesFromGroups(p.methods, p.lists.researchQuestions);
   // Researcher details already present in a saved draft survive migration; only
   // genuinely absent RPA-141 fields receive defaults in the application.
-  return { ...p, studies,
+  // Plan details closes with an Additional information hatch, empty, like every section (RPA-145).
+  return { ...p, studies, custom: { ...p.custom, additionalPlanDetails: [] },
     selects: { ...p.selects, ...(studies.length ? { studyCount: PLAN.studyCountChoice(studies.length) } : {}) } };
 };
 
