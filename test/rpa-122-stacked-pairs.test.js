@@ -13,7 +13,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, pagePosition, pageCount } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -39,10 +39,10 @@ test('the two dates are asked one per page since RPA-144, decision then readout,
   const plan = steps(d)[1];
   completeStep(app, plan);
   for (let k = 0; k < 6; k++) plan.querySelector('.step-continue').click();   // eight pages with other researchers named (RPA-141)
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 7 of 8');
+  assert.deepEqual([pagePosition(plan), await pageCount(app, plan)], [7, 8]);
   assert.deepEqual(onScreen(plan).map((u) => text(u.querySelector('.mlabel'))), ['When will the findings be used to make a decision?'], 'the decision, alone');
   plan.querySelector('.step-continue').click();
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 8 of 8');
+  assert.equal(pagePosition(plan), 8);
   assert.deepEqual(onScreen(plan).map((u) => text(u.querySelector('.mlabel'))), ['When will the findings be shared with the team?'], 'then the readout, alone');
   const decision = d.querySelector('[data-field="projectDecision"]').closest('.mf'), readout = d.querySelector('[data-field="researchReadout"]').closest('.mf');
   assert.ok(decision.compareDocumentPosition(readout) & 4, 'decision comes first in the document, so first in the flow and first in print');

@@ -353,7 +353,24 @@ function toCheckPage(stepEl) {
   }
 }
 
+// Where a step is, since RPA-149 took the "Question 2 of 7" caption away: the
+// form still keeps the page, and how many the step has now, in the step's
+// data, and the page in the URL. "2 of 7" here is a test's shorthand, never
+// anything the person sees.
+function pagePosition(stepEl) {
+  const raw = stepEl.dataset.page;
+  return raw === 'more' ? 'more' : (parseInt(raw || '0', 10) || 0) + 1;
+}
+function pageCount(app, stepEl) { return Number((stepEl || app).dataset.pages || 0); }
+function pageOfTotal(stepEl) {
+  const at = pagePosition(stepEl);
+  return at === 'more' ? 'more' : at + ' of ' + pageCount(null, stepEl);
+}
+
 module.exports = {
+  pagePosition,
+  pageCount,
+  pageOfTotal,
   DRAFT_KEY,
   saveAndContinue,
   toCheckPage,

@@ -16,7 +16,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, toCheckPage, DRAFT_KEY, pagePosition } = require('./app-harness');
 const { smallBackup } = require('./rpa-40-fixtures.cjs');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
@@ -120,7 +120,7 @@ test('it stands in front of every step and remembers where the person was going:
   assert.deepEqual(visible(linked.document), ['plan-details'], 'then lands where the link pointed');
   const plan = stepOf(linked.document, 'plan-details');
   assert.deepEqual(onScreen(plan), ['What is the name of your research plan?'], 'Plan details is as it was: the address is not one of its questions');
-  assert.equal(text(plan.querySelector('.step-page-caption')), 'Question 1 of 7');
+  assert.equal(pagePosition(plan), 1);
 
   const app = await bootApp({});
   t.after(() => app.close());

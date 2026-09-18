@@ -17,14 +17,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, DRAFT_KEY } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, DRAFT_KEY, pageOfTotal } = require('./app-harness');
 
 const APP = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
 const settle = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 const planOf = (d) => d.querySelector('.doc-header');
-const caption = (d) => text(planOf(d).querySelector('.step-page-caption'));
+// No caption says "Question 2 of 7" since RPA-149; the form still keeps the page and the count, and a test may read them.
+const caption = (d) => pageOfTotal(planOf(d));
 const onScreen = (d) => Array.from(planOf(d).querySelectorAll('.title-field, .mf')).filter((u) => !u.hidden && !u.classList.contains('page-hidden') && !u.querySelector('[data-field="lastUpdated"]')).map((u) => text(u.querySelector('.mlabel, .title-label, legend')));
 const press = (d) => planOf(d).querySelector('.step-continue').click();
 const links = (d) => Array.from(planOf(d).querySelectorAll('.error-summary-link')).map(text);
@@ -42,7 +43,7 @@ test('each date has a page of its own, decision then readout, each with its hint
   const { document: d, window } = app;
   await go(app, '#plan-details/6');
   assert.deepEqual(onScreen(d), ['When will the findings be used to make a decision?']);
-  assert.equal(caption(d), 'Question 6 of 7', 'seven pages, where there were six: the ticket counted five and six before RPA-141 added one');
+  assert.equal(caption(d), '6 of 7', 'seven pages, where there were six: the ticket counted five and six before RPA-141 added one');
   const decision = unitOf(d, 'projectDecision');
   assert.match(text(decision.querySelector('.field-hint-text, .mf-hint')), /plans to use the insights/);
   assert.equal(text(decision.querySelector('.field-help summary')), 'Why we ask for a decision date');
@@ -52,7 +53,7 @@ test('each date has a page of its own, decision then readout, each with its hint
   press(d);
   await settle();
   assert.deepEqual(onScreen(d), ['When will the findings be shared with the team?']);
-  assert.equal(caption(d), 'Question 7 of 7');
+  assert.equal(caption(d), '7 of 7');
   assert.equal(window.location.hash, '#plan-details/7');
   const readout = unitOf(d, 'researchReadout');
   assert.match(text(readout.querySelector('.field-hint-text, .mf-hint')), /a few days before the project decision date/);

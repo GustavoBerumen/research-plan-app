@@ -7234,6 +7234,15 @@
   // A slug carries the check page ("context/check", RPA-103) or the page
   // within the step ("context/2"; "context/more" for the review-only
   // Additional information, RPA-108).
+  // "Context – Research Plan", "Check your answers – Context – Research
+  // Plan": the tab, the history and a screen reader's page summary say the
+  // section (RPA-149). The task list is the plan itself and keeps the name.
+  const BASE_TITLE = document.title || 'Research Plan';
+  function titleThePage() {
+    const s = currentStep >= 0 && steps[currentStep];
+    const name = s && !s.classList.contains('task-list-step') && s.dataset.stepTitle;
+    document.title = (s && isChecking(s) ? 'Check your answers \u2013 ' : '') + (name ? name + ' \u2013 ' : '') + BASE_TITLE;
+  }
   function currentStepSlug() {
     const s = currentStep >= 0 && steps[currentStep];
     if (!s) return '';
@@ -7277,13 +7286,16 @@
         if (page > 0) { showPage(stepEl, page - 1, { focus: true }); rememberPosition(); return; }
         showStep(i - 1);
       });
-      const caption = el('p', 'step-caption');
-      caption.textContent = 'Section ' + i + ' of ' + (total - 1);
+      // Where the person is is said by the section's name, which every page
+      // already carries as its heading (and the check page under its own).
+      // "Section 3 of 7" and "Question 1 of 2" stood here until RPA-149: two
+      // lines of position before the question, the second a total that
+      // climbed as research questions and studies were added. How much is
+      // left is the task list's to say, one press away on All sections.
       const all = el('button', 'step-all', { type: 'button' });
       all.textContent = 'All sections';
       all.addEventListener('click', () => showStep(0));
-      const pageCaption = el('p', 'step-page-caption');
-      top.append(back, caption, pageCaption, all);
+      top.append(back, all);
       if (stepEl !== hub) stepEl.insertBefore(top, stepEl.firstChild);
       if (stepEl === header) {
         const h = el('h2', 'step-heading', { tabindex: '-1' });
@@ -7392,6 +7404,7 @@
     if (!opts.fromHash && !opts.keepUrl) {
       try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     }
+    titleThePage();
     refreshTaskList();
     // Not without an email address (RPA-99): the page asking for it shows
     // instead, the URL and the draft keep this step, and Continue lands here.
@@ -7446,6 +7459,7 @@
   function showCheck(i) {
     const stepEl = steps[i];
     if (!setChecking(stepEl, true)) { showStep(i + 1); return; }
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     checkPanelOf(stepEl).querySelector('.check-heading').focus({ preventScroll: true });
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
@@ -7455,6 +7469,7 @@
     setChecking(stepEl, false);
     if (group) { showPageOf(stepEl, group); stepEl.dataset.backToCheck = 'true'; }
     else showPage(stepEl, lastRegularPage(stepEl), { silent: true });
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     const target = group ? (groupControl(group) || group.querySelector('button')) : stepEl.querySelector('.step-heading, .acc-head');
     if (target) target.focus({ preventScroll: true });
@@ -7672,6 +7687,7 @@
     if (index === 'more') { current = reviewOnlyUnits(stepEl); if (!current.length) index = pages.length - 1; }
     if (index !== 'more') { index = Math.max(0, Math.min(pages.length - 1, index)); current = pages[index]; }
     stepEl.dataset.page = String(index);
+    stepEl.dataset.pages = String(pages.length);   // how many pages the step has now; nothing shows it (RPA-149), tests and styles may read it
     const shown = new Set(current);
     pageUnitsOf(stepEl).forEach((u) => u.classList.toggle('page-hidden', !shown.has(u)));
     // A research question's group shows only while one of its pages does,
@@ -7679,12 +7695,20 @@
     stepEl.querySelectorAll('.methods-group').forEach((g) => g.classList.toggle('page-hidden', !current.some((u) => g.contains(u))));
     const evaluation = stepEl.querySelector('.acc-body .section-evaluation');
     if (evaluation) evaluation.classList.toggle('page-hidden', index !== 'more' && index !== pages.length - 1);
-    const caption = stepEl.querySelector('.step-page-caption');
-    if (caption) caption.textContent = index === 'more' ? 'Additional information' : 'Question ' + (index + 1) + ' of ' + pages.length;
+    titleThePage();
     if (opts.silent) return;
     const label = current[0].querySelector('.flabel, .mlabel, label');
     if (label) {
       if (!label.hasAttribute('tabindex')) label.setAttribute('tabindex', '-1');
+      // Focus moves to the question, not to the section's heading above it,
+      // so the question is described by its section: a screen reader says
+      // "What is the goal of this project? Context" on every page (RPA-149).
+      const named = stepEl.querySelector('.step-heading, .acc-title');
+      if (named) {
+        if (!named.id) named.id = 'step-name-' + stepEl.dataset.stepSlug;
+        const ids = (label.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+        if (ids.indexOf(named.id) === -1) label.setAttribute('aria-describedby', ids.concat(named.id).join(' '));
+      }
       label.focus({ preventScroll: true });
     }
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
@@ -7698,6 +7722,7 @@
   }
   // The URL and the draft follow a page change the way they follow a step.
   function rememberPosition() {
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     saveDraft();
   }
