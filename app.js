@@ -82,6 +82,8 @@
   // Set by the dateline; the stamp writes the value directly and fires no
   // event, so the visible sentence has to be told to redraw.
   let refreshDateline = () => {};
+  let lastUpdatedLine = null;         // the dateline itself, shown on the task list (RPA-148)
+  let lastUpdatedPrintValue = null;   // and its words in the printed header's corner
   let stampingLastUpdated = false;
 
   function setLastUpdatedToday() {
@@ -5333,7 +5335,7 @@
     // No separate "Change" link — that was tried and rejected as clutter in a
     // corner slot this small.
     function buildDateline(f) {
-      const wrap = el('div', 'mf mf-compact dateline');
+      const wrap = el('div', 'dateline task-list-updated');
       const controlId = fieldControlId(f.key);
       const label = el('div', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
@@ -5352,6 +5354,7 @@
       refreshDateline = () => {
         text.textContent = formatDateline(input.value);
         text.setAttribute('aria-label', f.label + ' ' + formatDateline(input.value) + ', edit');
+        if (lastUpdatedPrintValue) lastUpdatedPrintValue.textContent = formatDateline(input.value);
       };
 
       setDateInputValue(input, todayIso());
@@ -5386,8 +5389,14 @@
       return wrap;
     }
 
-    // "Last updated" keeps its compact top-right corner slot rather than
-    // sitting in the grid of questions people are asked to answer.
+    // "Last updated" is a fact about the whole plan, so on screen it is on
+    // the task list, where the plan is looked at as a whole, under the
+    // sentence that says how much is done (RPA-148, Gus, 17 September 2026).
+    // It sat in this corner on every page of Plan details, above questions
+    // it had nothing to do with. The printed plan is a document and keeps
+    // the convention: the header's corner still says when it was last
+    // updated, from the same value. Still editable, still stamped, still
+    // saved, sent and restored as before: only where it is shown changed.
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
     let identifier = null;
@@ -5398,7 +5407,13 @@
     const hatches = [];
     header.meta.forEach((f) => {
       if (f.key === 'lastUpdated') {
-        topRow.appendChild(buildDateline(f));
+        const printed = el('p', 'last-updated-print');
+        const printedLabel = el('span', 'last-updated-print-label');
+        printedLabel.textContent = f.label + ' ';
+        lastUpdatedPrintValue = el('span', 'last-updated-print-value');
+        printed.append(printedLabel, lastUpdatedPrintValue);
+        topRow.appendChild(printed);
+        lastUpdatedLine = buildDateline(f);   // placed on the task list when that is built
         return;
       }
       if (f.type === 'custom-fields') {
@@ -7203,6 +7218,8 @@
     const progress = el('p', 'task-list-progress', { 'aria-live': 'polite' });
     const list = el('ul', 'task-list');
     hub.append(h, intro, progress, list);
+    // When the plan was last updated, under how much of it is done (RPA-148).
+    if (lastUpdatedLine) progress.after(lastUpdatedLine);
     taskListEl = { hub, list, progress };
     return hub;
   }
