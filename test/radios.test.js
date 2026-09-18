@@ -37,7 +37,7 @@ test('renders one radio per option plus Other, with the reveal put away', async 
 
   const g = group(document);
   assert.deepEqual(g.radios.map((r) => r.value), [
-    'Small (1–5)', 'Medium (6–12)', 'Large (13–29)', 'Very Large (30+)', '__other__',
+    '1 to 5', '6 to 12', '13 to 29', '30 or more', '__other__',   // the bands' names of 18 September 2026 (RPA-119)
   ]);
   assert.equal(g.otherRow.hidden, true, 'the free-text reveal starts hidden');
   assert.equal(g.radios.filter((r) => r.checked).length, 0, 'nothing is preselected');
@@ -77,12 +77,12 @@ test('the choice is saved and restored in the shape a dropdown used', async (t) 
 
   choose(window, group(document).radios[2]);
   // The address given before the plan is already saved (RPA-99): wait for the choice itself.
-  const raw = await waitFor(() => { const r = window.localStorage.getItem(DRAFT_KEY); return r && r.includes('Large (13') && r; }, {
+  const raw = await waitFor(() => { const r = window.localStorage.getItem(DRAFT_KEY); return r && r.includes('13 to 29') && r; }, {
     timeout: 5000,
     message: 'the draft was never saved',
   });
   const saved = JSON.parse(raw);
-  assert.deepEqual(saved.studies[0].sampleSize, { v: 'Large (13–29)', o: '' }, 'saved with its study since RPA-142; written before a study is declared, it is kept as one');
+  assert.deepEqual(saved.studies[0].sampleSize, { v: '13 to 29', o: '' }, 'saved with its study since RPA-142; written before a study is declared, it is kept as one');
 
   const restored = await bootApp({ draft: saved });
   t.after(() => restored.close());
@@ -108,7 +108,7 @@ test('a draft saved while Sample Size was a dropdown still restores', async (t) 
   const g = group(app.document);
   const checked = g.radios.filter((r) => r.checked);
   assert.equal(checked.length, 1);
-  assert.equal(checked[0].value, 'Medium (6–12)', 'the old dropdown value selects its radio');
+  assert.equal(checked[0].value, '6 to 12', 'the old dropdown value, under the band\'s old name, selects its radio under the new (RPA-119)');
 });
 
 test('an Other value from an older draft comes back with the reveal open', async (t) => {

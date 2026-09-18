@@ -169,7 +169,7 @@ test('answers are shown as given: a date in words, a radio by its label, a list 
   completeStep(app, methodology);
   toCheckPage(methodology);
   const methodologyRows = Object.fromEntries(rowsOf(methodology));
-  assert.equal(methodologyRows['Sample Size for Study 1'], 'Small (1–5)', 'a radio by its label');
+  assert.equal(methodologyRows['Sample Size for Study 1'], '1 to 5', 'a radio by its label');
   assert.equal(methodologyRows['Methods for Study 1'], 'Filled.', 'methods for that study');
   assert.equal(methodologyRows['Methods for Study 2'], 'Filled.', 'the second study has rows of its own');
 });
