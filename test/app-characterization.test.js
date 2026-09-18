@@ -56,6 +56,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(app.scriptSources, [
     'test-profiles.js',
     'plan-model.js',
+    'plan-document.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
@@ -66,6 +67,7 @@ test('renders the complete form from the real index, template, rubric, and metho
   assert.deepEqual(app.executedScripts, [
     'test-profiles.js',
     'plan-model.js',
+    'plan-document.js',
     'plan-workflow.js',
     'score-classification.js',
     'textarea-autosize.js',
@@ -112,6 +114,8 @@ test('renders the complete form from the real index, template, rubric, and metho
       // Whether others are involved asks its question in its legend (RPA-141).
       'Who is leading this research?', 'Are other researchers involved in this research?', 'Researcher names', 'Who requested this research?',
       'When will the findings be used to make a decision?', 'When will the findings be shared with the team?',
+      // Plan details closes with the hatch every section has (RPA-145).
+      'Additional information',
       // One Additional information hatch closes each section (RPA-101).
       'What do people need to know about this project?', 'What is the goal of this project?', 'What problem are you trying to solve?', 'Additional information',
       // Hypothesis is dormant too (RPA-117, later the same day).
@@ -124,7 +128,7 @@ test('renders the complete form from the real index, template, rubric, and metho
       // Who takes part is one question since RPA-119, where it was Characteristics and User Groups.
       'Which research methods will you use for this study?', 'Who should take part in this study?', 'How many participants do you need?', 'Additional information',
       'Planned Schedule',
-      'Previous Knowledge', 'Additional information',
+      'Is there any existing research or documentation to review?', 'Additional information',
       // The review step closes the document, and Feedback closes the review
       // step — below the approvals, so a reader arrives at it having read the
       // whole plan (RPA-55).

@@ -82,6 +82,8 @@
   // Set by the dateline; the stamp writes the value directly and fires no
   // event, so the visible sentence has to be told to redraw.
   let refreshDateline = () => {};
+  let lastUpdatedLine = null;         // the dateline itself, shown on the task list (RPA-148)
+  let lastUpdatedPrintValue = null;   // and its words in the printed header's corner
   let stampingLastUpdated = false;
 
   function setLastUpdatedToday() {
@@ -191,6 +193,16 @@
       // GOV.UK width classes: 2, 3, 4, 5, 10, 20 or 30 characters (RPA-109).
       width: (() => { const part = typeParts.find((t) => /^width=(2|3|4|5|10|20|30)$/.test(t)); return part ? parseInt(part.slice(6), 10) : 0; })(),
       eval: typeParts.includes('eval'),
+      // "name": a person's name, asked as First name and Surname under the
+      // one question (RPA-146). People wrote one box inconsistently: a first
+      // name only, initials, "surname, first name". The field keeps its key
+      // and keeps holding the whole name as one string, first name, a space,
+      // surname, which is what the sign-off, the check page, print, the
+      // backup and the submission record read; the two parts are saved
+      // beside it under <key>FirstName and <key>Surname. So there is no new
+      // draft version and nothing else in the form had to change. Its type
+      // stays "text", which is what the submission contract expects of it.
+      nameParts: typeParts.includes('name'),
       // "jira": a text field that takes a Jira ticket, so it gets the ticket
       // picker and shows a chosen ticket as a tag. It was wired to the
       // jiraProject key until that field began asking for a project name
@@ -201,6 +213,9 @@
       // "closed": a radios field whose options are the whole set, so no
       // "Other" is offered. Yes or No has no third answer (RPA-141).
       closed: typeParts.includes('closed'),
+      // "nohelp": no help link of its own; the note that covers it sits on
+      // the field below (RPA-119).
+      nohelp: typeParts.includes('nohelp'),
       // "reveals=someKey": the field with that key is asked only when this
       // radios field's first option is chosen: the design system's way of
       // asking a follow-up question only of the people it applies to. Read
@@ -240,7 +255,12 @@
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
     } else if (type === 'select' || type === 'radios') {
-      field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
+      // "value | hint": the hint is shown under a radio option, and is not
+      // part of the value saved (RPA-119). A dropdown has nowhere to show
+      // one, so there it is simply dropped.
+      const parts = m[3].split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.split(/\s+\|\s+/));
+      field.options = parts.map((p) => p[0]);
+      field.optionHints = Object.fromEntries(parts.filter((p) => p[1]).map((p) => [p[0], p.slice(1).join(' | ')]));
     } else if (type === 'checkbox') {
       // The text after the colon is the statement the box agrees to (RPA-115).
       field.statement = m[3].trim();
@@ -336,7 +356,9 @@
       // say it has " for Study 2" added.
       const errorMatch = raw.match(/^\s+Error:\s*(.*)$/i);
       if (errorMatch && currentField) {
-        currentField.errorMessage = errorMatch[1].trim();
+        // A field asked in parts has a message for each, in order (RPA-146).
+        currentField.errorMessages = (currentField.errorMessages || []).concat(errorMatch[1].trim());
+        currentField.errorMessage = currentField.errorMessages[0];
         return;
       }
 
@@ -962,17 +984,21 @@
     if (error) error.hidden = true;
   }
 
+  // The message is a string, or a list of strings and elements when a way
+  // out of the problem is a link the person can follow (RPA-154).
   function showDateError(nativeInput, message) {
     const segments = dateSegments(nativeInput);
     if (!segments) return;
     const error = segments.control.querySelector('.date-error');
-    const text = message || 'Enter a valid date.';
+    const parts = (Array.isArray(message) ? message : [message || 'Enter a valid date.'])
+      .map((part) => typeof part === 'string' ? document.createTextNode(part) : part);
+    const text = parts.map((part) => part.textContent).join('');
     segments.day.setCustomValidity(text);
     segments.control.setAttribute('aria-invalid', 'true');
     // The element carries role="alert", so replacing the text is what
     // announces it. A range failure has to say which boundary was crossed and
     // by what — "invalid" tells someone nothing they can act on.
-    if (error) { error.textContent = text; error.hidden = false; }
+    if (error) { error.replaceChildren(...parts); error.hidden = false; }
   }
 
   function setDateInputValue(nativeInput, isoValue) {
@@ -4312,6 +4338,15 @@
         if (field.reveals) syncReveals();
       });
       item.append(radio, optLabel);
+      // The design system's radio hint: what choosing this option is for,
+      // under it in smaller text, read after the option's own label (RPA-119).
+      const optionHint = field.optionHints && field.optionHints[value];
+      if (optionHint) {
+        const hintEl = el('div', 'radio-hint', { id: id + '-hint' });
+        hintEl.textContent = optionHint;
+        radio.setAttribute('aria-describedby', hintEl.id);
+        item.appendChild(hintEl);
+      }
       group.appendChild(item);
       // The conditional reveal belongs directly under the option it belongs
       // to, which is the last one.
@@ -4486,7 +4521,7 @@
   // the title has none, so its block follows its box directly.
   function attachFieldHelp(schema) {
     const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
-    fields.filter((f) => f && f.key !== 'lastUpdated' && !f.perQuestion).forEach((f) => {
+    fields.filter((f) => f && f.key !== 'lastUpdated' && !f.perQuestion && !f.nohelp).forEach((f) => {
       const id = fieldControlId(f.key);
       const label = doc.querySelector('#' + id + '-label');
       if (!label) return;
@@ -4508,7 +4543,7 @@
     const render = () => {
       hint.replaceChildren();
       appendHintText(hint, field.key === 'previousKnowledge' && !capabilities.uploads
-        ? 'Name prior research or documentation relevant to this study. Saved file references are kept; attachment contents are unavailable through this app.'
+        ? 'Link prior findings, analytics reports, or past studies relevant to this work. Saved file references are kept; attachment contents are unavailable through this app.'
         : text);
     };
     render();
@@ -4893,9 +4928,28 @@
       if (stampSignOff(input)) input.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
+  // What the initials may be (RPA-153, Max's decision of 17 September 2026):
+  // up to ten characters before the date the form adds, in any alphabet,
+  // with the ordinary separators. The date does not count. Nothing is cut
+  // short: a longer value, typed, pasted or restored from an older backup,
+  // is left as it is, not dated, and refused until it is corrected.
+  const INITIALS_MAX = 10;
+  const INITIALS_SHAPE = /^[\p{L}\p{M} .'’-]+$/u;
+  const INITIALS_KEYS = ['signOffResearcher', 'signOffProjectOwner'];
+  function initialsOf(value) { return String(value || '').replace(/ — \d{2}\/\d{2}\/\d{4}$/, '').trim(); }
+  function initialsProblem(value) {
+    const initials = initialsOf(value);
+    if (!initials) return null;   // nothing there is the field's own "Error:" line
+    if (initials.length > INITIALS_MAX) return 'Initials must be ' + INITIALS_MAX + ' characters or fewer';
+    if (!INITIALS_SHAPE.test(initials)) return 'Initials must only include letters, spaces, full stops, apostrophes and hyphens';
+    return null;
+  }
+  function signOffInitialsInput(g) {
+    return INITIALS_KEYS.includes(unitKey(g)) ? g.querySelector('input[data-field]') : null;
+  }
   function stampSignOff(input) {
     const val = input.value.trim();
-    if (!val || / — \d{2}\/\d{2}\/\d{4}$/.test(val)) return false;
+    if (!val || / — \d{2}\/\d{2}\/\d{4}$/.test(val) || initialsProblem(val)) return false;
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -4931,11 +4985,43 @@
     // max= (constrains the native picker itself) plus a clamp-on-change
     // fallback, same approach as attachDateRangeConstraint for Stage
     // Timeline's start/completion pair (just the ceiling flipped).
-    function clampResearch() {
-      if (decisionInput.value && researchInput.value && researchInput.value > decisionInput.value) {
-        setDateInputValue(researchInput, decisionInput.value);
-      }
+    // Since RPA-144 the two dates are on different pages, so a decision
+    // brought forward moves a readout the person cannot see. That was in
+    // plain view while they shared a page. The decision's page says so, and
+    // says where the readout went; it stops saying it once either date is
+    // touched again, or the plan is cleared. A restore needs no guard: it
+    // sets the readout after the decision, which puts the note away.
+    const moved = el('div', 'field-warning date-moved-note', { role: 'status' });
+    moved.hidden = true;
+    decisionInput.closest('.date-control').insertAdjacentElement('afterend', moved);
+    const inWords = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    // Re-entry guard: the clamp tells the readout's own listeners below, and
+    // this function is one of them. Without the guard it would run again with
+    // no event and put away the note it had just written.
+    // This function listens to the readout, and it also speaks to it, so it
+    // hears itself. The guard is what stops the second, eventless run from
+    // putting away the note the first one has just written.
+    let clamping = false;
+    function clampResearch(event) {
+      if (clamping) return;
+      const clamps = Boolean(decisionInput.value && researchInput.value && researchInput.value > decisionInput.value);
+      const byDecision = clamps && event && event.target === decisionInput;
+      if (clamps) setDateInputValue(researchInput, decisionInput.value);
       researchInput.max = decisionInput.value || '';
+      if (byDecision) moved.textContent = 'Research readout was after this date, so it has been moved to ' + inWords(decisionInput.value) + '. You can change it on the next page.';
+      moved.hidden = !byDecision;
+      // Last, with everything this function had to say already said: a date
+      // the form moved is a date that changed, and the readout says so
+      // itself, the way a typed or pasted one does. Without it the Stage
+      // timeline's ceiling kept the readout that had just been replaced, and
+      // the stage calendars went on offering months the rule forbids
+      // (RPA-144, found reviewing it on 18 September 2026).
+      if (!clamps) return;
+      clamping = true;
+      try {
+        researchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        researchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { clamping = false; }
     }
     decisionInput.addEventListener('change', clampResearch);
     researchInput.addEventListener('change', clampResearch);
@@ -5244,7 +5330,58 @@
   function renderHeader(header) {
     const wrap = el('div', 'doc-header');
 
+    // A person's name in two parts (RPA-146): one question, so one fieldset
+    // whose legend asks it, with the hint and the help note belonging to the
+    // question as a whole; two labelled boxes, side by side where there is
+    // room. The hidden input carries the field's own key and the whole name.
+    function buildNameField(f) {
+      const mf = el('fieldset', 'mf mf-name');
+      const controlId = fieldControlId(f.key);
+      const legend = el('legend', 'mlabel', { id: controlId + '-label' });
+      legend.textContent = headingText(f);
+      if (f.question) mf.dataset.fieldName = f.label;
+      markOptional(legend, f);
+      const guidance = renderFieldHint(f, controlId + '-hint');
+      const whole = el('input', 'name-whole', { type: 'hidden', 'data-field': f.key });
+      const row = el('div', 'name-parts');
+      const messages = f.errorMessages || [];
+      const part = (suffix, words, i) => {
+        const id = controlId + '-' + suffix;
+        const wrap = el('div', 'name-part');
+        const label = el('label', 'name-part-label', { for: id });
+        label.textContent = words;
+        const input = el('input', 'minput name-part-input', { type: 'text', id, 'data-field': f.key + suffix, autocomplete: 'off' });
+        if (f.width) input.classList.add('input-w-' + f.width);
+        input.dataset.errorMessage = messages[i] || ('Enter the ' + words.toLowerCase() + ' of the ' + f.label.toLowerCase());
+        wrap.append(label, input);
+        row.appendChild(wrap);
+        return input;
+      };
+      const first = part('FirstName', 'First name', 0);
+      const surname = part('Surname', 'Surname', 1);
+      const printed = el('p', 'name-print');   // the whole name, for paper
+      const say = () => { printed.textContent = whole.value; };
+      const join = () => { whole.value = [first.value.trim(), surname.value.trim()].filter(Boolean).join(' '); say(); };
+      [first, surname].forEach((input) => input.addEventListener('input', join));
+      // The whole name arriving by itself, from a plan saved while it was one
+      // box, a backup, or a test profile: the first word is the first name
+      // and the rest the surname. The parts, where a plan has them, are
+      // restored after this and have the last word.
+      whole.addEventListener('input', (e) => {
+        if (e.target !== whole) return;
+        const words = whole.value.trim().split(/\s+/).filter(Boolean);
+        first.value = words[0] || '';
+        surname.value = words.slice(1).join(' ');
+        whole.value = words.join(' ');
+        say();
+      });
+      describeControl(mf, guidance);
+      mf.append(legend, whole, row, printed);
+      if (guidance) legend.insertAdjacentElement('afterend', guidance);
+      return mf;
+    }
     function buildMetaField(f) {
+      if (f.nameParts) return buildNameField(f);
       const mf = el('div', 'mf');
       const controlId = fieldControlId(f.key);
       const label = el(f.type === 'date' ? 'div' : 'label', 'mlabel', { id: controlId + '-label' });
@@ -5264,6 +5401,22 @@
         const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
         input = dateControl.input;
         control = dateControl.element;
+      } else if (f.prose && !f.jira) {
+        // One line that wraps: a long project name at phone width scrolled
+        // sideways in a single-line box and could not be read whole. The box
+        // grows with the answer and stays one line for a short one; Enter
+        // does nothing and a pasted line break becomes a space, so the answer
+        // is still one line of text and the record's type is still text
+        // (RPA-156). A field that takes a ticket keeps its single-line box:
+        // the picker is built for one.
+        input = el('textarea', 'minput prose-input', { rows: '1', 'data-field': f.key, placeholder: f.placeholder || '' });
+        if (f.width) input.classList.add('input-w-' + f.width);
+        input.addEventListener('keydown', (event) => { if (event.key === 'Enter') event.preventDefault(); });
+        input.addEventListener('input', () => {
+          if (/[\r\n]/.test(input.value)) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+        });
+        bindTextarea(input);
+        control = input;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         if (f.width) input.classList.add('input-w-' + f.width);
@@ -5302,7 +5455,7 @@
     // No separate "Change" link — that was tried and rejected as clutter in a
     // corner slot this small.
     function buildDateline(f) {
-      const wrap = el('div', 'mf mf-compact dateline');
+      const wrap = el('div', 'dateline task-list-updated');
       const controlId = fieldControlId(f.key);
       const label = el('div', 'mlabel', { id: controlId + '-label' });
       label.textContent = f.label;
@@ -5321,6 +5474,7 @@
       refreshDateline = () => {
         text.textContent = formatDateline(input.value);
         text.setAttribute('aria-label', f.label + ' ' + formatDateline(input.value) + ', edit');
+        if (lastUpdatedPrintValue) lastUpdatedPrintValue.textContent = formatDateline(input.value);
       };
 
       setDateInputValue(input, todayIso());
@@ -5355,14 +5509,35 @@
       return wrap;
     }
 
-    // "Last updated" keeps its compact top-right corner slot rather than
-    // sitting in the grid of questions people are asked to answer.
+    // "Last updated" is a fact about the whole plan, so on screen it is on
+    // the task list, where the plan is looked at as a whole, under the
+    // sentence that says how much is done (RPA-148, Gus, 17 September 2026).
+    // It sat in this corner on every page of Plan details, above questions
+    // it had nothing to do with. The printed plan is a document and keeps
+    // the convention: the header's corner still says when it was last
+    // updated, from the same value. Still editable, still stamped, still
+    // saved, sent and restored as before: only where it is shown changed.
     const topRow = el('div', 'doc-header-top');
     const metaGrid = el('div', 'meta-grid');
     let identifier = null;
+    // The section's Additional information hatch (RPA-145): the same control
+    // the content sections close with, drawn under the header's questions
+    // rather than in their grid. Not a numbered page, never required, and
+    // reached from the check page's Change, as everywhere else (RPA-101).
+    const hatches = [];
     header.meta.forEach((f) => {
       if (f.key === 'lastUpdated') {
-        topRow.appendChild(buildDateline(f));
+        const printed = el('p', 'last-updated-print');
+        const printedLabel = el('span', 'last-updated-print-label');
+        printedLabel.textContent = f.label + ' ';
+        lastUpdatedPrintValue = el('span', 'last-updated-print-value');
+        printed.append(printedLabel, lastUpdatedPrintValue);
+        topRow.appendChild(printed);
+        lastUpdatedLine = buildDateline(f);   // placed on the task list when that is built
+        return;
+      }
+      if (f.type === 'custom-fields') {
+        hatches.push(renderField(f));
         return;
       }
       // A question with options, or a list, is asked the way it is anywhere
@@ -5412,6 +5587,7 @@
     wrap.appendChild(titleField);
     if (identifier) wrap.appendChild(identifier);
     wrap.appendChild(metaGrid);
+    hatches.forEach((hatch) => wrap.appendChild(hatch));
 
     return wrap;
   }
@@ -5729,6 +5905,7 @@
 
     const list = el('div', 'review-list');
     step.appendChild(list);
+    step.appendChild(renderKeepCopy());
 
     // A redraw replaces every element. Whatever in the list had focus, the
     // equivalent element gets it back: the row a person just returned to,
@@ -6060,6 +6237,15 @@
       roleGroup.appendChild(item);
     });
     roleField.append(roleLegend, roleGroup);
+    // Its help note, the words Gus's (18 September 2026), here because the
+    // question is built here rather than read from the template.
+    roleField.appendChild(renderFieldHelp({ helpTitle: 'Why both roles need to sign off', guidance: [
+      'Signing off confirms that the researcher and the project lead are aligned before research begins.',
+      'Each role signs for a different reason:',
+      '- **Lead researcher:** Signs to confirm the research method, timeline, and participant criteria are practical and ready to run.',
+      '- **Project requester:** Signs to confirm the plan covers their business questions and that the team is ready to act on the findings.',
+      'Both people review and sign on this device. Once both have completed their review, the plan is locked and ready for testing.',
+    ] }));
     const otherField = el('div', 'field');
     const otherLabel = el('label', 'flabel', { for: 'sign-off-other-email', id: 'sign-off-other-email-label' });
     otherLabel.textContent = 'What is the other person’s email address?';
@@ -6099,9 +6285,21 @@
       const list = summary.querySelector('.error-summary-list');
       messages.forEach((message, i) => {
         const item = el('li');
-        item.textContent = message;
+        const group = groups && groups[i];
+        if (!group) { item.textContent = message; list.appendChild(item); return; }
+        // Said at the field as well, and the summary's line takes the person
+        // to it, as the summaries elsewhere on the form do (RPA-152).
+        markGroupError(group, message);
+        said.push(group);
+        const link = el('a', 'error-summary-link', { href: '#' });
+        link.textContent = message;
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const control = groupControl(group);
+          if (control) { control.focus(); if (typeof group.scrollIntoView === 'function') group.scrollIntoView({ block: 'center' }); }
+        });
+        item.appendChild(link);
         list.appendChild(item);
-        if (groups && groups[i]) { markGroupError(groups[i], message); said.push(groups[i]); }
       });
       summary.hidden = false;
       summary.focus();
@@ -6147,7 +6345,12 @@
     function create() {
       const other = String(otherInput.value || '').trim();
       const mine = String((doc.querySelector('[data-field="emailAddress"]') || {}).value || '').trim();
-      if (!other) { say(['Enter the other person’s email address.']); return; }
+      // The address is what identifies the other person, so it has to be
+      // one: the shape check the author's own address passed at the start
+      // (RPA-99), before anything is created. Without it, "asdf" was written
+      // into the record and its ledger, and kept (RPA-152).
+      if (!other) { say(['Enter the other person’s email address.'], [otherField]); return; }
+      if (!emailLooksRight(other)) { say(['Enter an email address in the correct format, like name@example.com'], [otherField]); return; }
       if (!judgePlan()) return;
       const authorRole = setupRole;
       const parties = {};
@@ -6529,8 +6732,13 @@
       const name = label.replace(/ date$/i, '') + ' date';
       return started.length ? name + ' must include a ' + started.join(started.length === 2 ? ' and ' : ', ') : name + ' must be a real date';
     }
+    // A name asked in parts asks for the part that is missing, in that part's words (RPA-146).
+    const lacking = (namePartsOf(g) || []).find((input) => !input.value.trim());
+    if (lacking) return lacking.dataset.errorMessage;
     // The template's own words, where it gives them. Choosing "Other" for the
     // sample size is an answer begun: its box is asked for in its own words below.
+    const initials = signOffInitialsInput(g);
+    if (initials && initialsProblem(initials.value)) return initialsProblem(initials.value);
     if (g.dataset && g.dataset.errorMessage && !customSampleSizeInput(g)) return g.dataset.errorMessage;
     // "Sample Size for Study 2" reads as "sample size for Study 2": the
     // field's name is lowered mid-sentence, the study's is not (RPA-142).
@@ -6580,6 +6788,11 @@
     const questions = methodGroup ? (studiesSnapshot()[methodsGroupEls().indexOf(methodGroup)] || { questions: [] }).questions.map((n) => n - 1) : [];
     return submissionErrors().filter(error => !error.key || (error.key === key && (error.question === undefined || questions.indexOf(error.question) !== -1)));
   }
+  // The two boxes of a name asked in parts, or null (RPA-146).
+  function namePartsOf(g) {
+    const inputs = g && g.querySelectorAll ? Array.from(g.querySelectorAll(':scope > .name-parts .name-part-input')) : [];
+    return inputs.length ? inputs : null;
+  }
   function requiredGroupComplete(g) {
     // A question no study answers is unanswered for as long as it exists (RPA-140).
     if (g.classList.contains('study-unclaimed')) return false;
@@ -6595,16 +6808,24 @@
     // Completed (found in RPA-120; true since RPA-141 and RPA-142).
     // Drafts stay editable and recoverable; moving on requires an actual count.
     // Use the same rule as final submission without requiring that capability.
+    const parts = namePartsOf(g);
+    if (parts) return parts.every((input) => input.value.trim());   // a first name alone is not a name
     const sample = customSampleSizeInput(g);
     if (sample) return window.RPA_SUBMISSION.validSampleSize(sample.value);
     if (unitKey(g) === 'stageTimeline') return !localCompletionErrors().some(error => !error.key || error.key === 'stageTimeline');
     const date = requiredDateInput(g);
     if (date) return Boolean(readDateSegments(date));
+    // Initials that are there and wrong are not a signature (RPA-153).
+    const initials = signOffInitialsInput(g);
+    if (initials && initialsProblem(initials.value)) return false;
     return fieldHasContent(g);
   }
   function missingGroups(stepEl) { return requiredGroupsOf(stepEl).filter((g) => !requiredGroupComplete(g)); }
   function clearGroupError(g) {
-    const err = g.querySelector(':scope > .field-error');
+    Array.from(g.querySelectorAll(':scope > .field-error')).forEach(removeGroupError.bind(null, g));
+    g.classList.remove('field-invalid');
+  }
+  function removeGroupError(g, err) {
     if (err) {
       g.querySelectorAll('[aria-describedby]').forEach((c) => {
         const ids = c.getAttribute('aria-describedby').split(/\s+/).filter((id) => id && id !== err.id);
@@ -6615,17 +6836,20 @@
     g.classList.remove('field-invalid');
   }
   let fieldErrorSeq = 0;
-  function markGroupError(g, message) {
-    if (g.querySelector(':scope > .field-error')) return;
+  function markGroupError(g, message, forControl) {
+    // One message per group, except a name asked in parts, which may have one for each box (RPA-146).
+    // Those are drawn afresh each time, every earlier one cleared first, so they need no guard of their own.
+    if (!forControl && g.querySelector(':scope > .field-error')) return;
     const err = el('p', 'field-error', { id: 'field-error-' + (++fieldErrorSeq) });
     const prefix = el('span', 'visually-hidden');
     prefix.textContent = 'Error: ';
     err.append(prefix, document.createTextNode(message));
     // Above the control, below the hint: read in the order a person meets it.
     const hint = g.querySelector(':scope > .field-hint-text, :scope > .field-guidance');
-    const anchor = g.querySelector(':scope > .field-guidance') || hint || g.querySelector(':scope > .flabel, :scope > .mlabel, :scope > label');
+    const earlier = Array.from(g.querySelectorAll(':scope > .field-error')).pop();
+    const anchor = earlier || g.querySelector(':scope > .field-guidance') || hint || g.querySelector(':scope > .flabel, :scope > .mlabel, :scope > label');
     if (anchor) anchor.insertAdjacentElement('afterend', err); else g.insertBefore(err, g.firstChild);
-    const control = groupControl(g);
+    const control = forControl || groupControl(g);
     if (control) {
       const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
       control.setAttribute('aria-describedby', ids.concat(err.id).join(' '));
@@ -6665,7 +6889,14 @@
       const named = new Set(errors.map(error => submissionTarget(error).group).filter(Boolean));
       const formOnly = checked.filter((g) => !named.has(g) && !requiredGroupComplete(g))
         .map((g) => ({ key: unitKey(g) || 'form', code: 'required', section: stepEl.dataset.stepSlug, message: groupMessage(g), formGroup: g }));
-      const inOrder = errors.concat(formOnly).sort((a, b) => {
+      // A name asked in parts is one field to the validator and two boxes to the person: each missing
+      // part is listed in its own words, with its own link, as it is with submissions off (RPA-146).
+      const byPart = (error) => {
+        const g = error.formGroup || submissionTarget(error).group;
+        const lacking = (namePartsOf(g) || []).filter((input) => !input.value.trim());
+        return lacking.length ? lacking.map((input) => ({ key: error.key, code: 'required', section: error.section, message: input.dataset.errorMessage, formGroup: g, formPart: input })) : [error];
+      };
+      const inOrder = errors.concat(formOnly).reduce((all, error) => all.concat(byPart(error)), []).sort((a, b) => {
         const ga = a.formGroup || submissionTarget(a).group, gb = b.formGroup || submissionTarget(b).group;
         if (!ga || !gb || ga === gb) return 0;
         return ga.compareDocumentPosition(gb) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
@@ -6678,20 +6909,24 @@
     list.replaceChildren();
     if (!missing.length) { summary.hidden = true; return false; }
     missing.forEach((g) => {
-      const message = groupMessage(g);
-      markGroupError(g, message);
-      const item = el('li');
-      const a = el('a', 'error-summary-link', { href: '#' });
-      a.textContent = message;
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        showPageOf(stepEl, g);   // the field may sit on another page (RPA-108)
-        rememberPosition();
-        const control = groupControl(g);
-        if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
+      // A name asked in parts lists each part that is missing, and each link goes to its own box (RPA-146).
+      const lacking = (namePartsOf(g) || []).filter((input) => !input.value.trim());
+      const entries = lacking.length ? lacking.map((input) => ({ message: input.dataset.errorMessage, own: input })) : [{ message: groupMessage(g), own: null }];
+      entries.forEach(({ message, own }) => {
+        markGroupError(g, message, own);
+        const item = el('li');
+        const a = el('a', 'error-summary-link', { href: '#' });
+        a.textContent = message;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          showPageOf(stepEl, g);   // the field may sit on another page (RPA-108)
+          rememberPosition();
+          const control = own || groupControl(g);
+          if (control) { control.focus(); if (typeof g.scrollIntoView === 'function') g.scrollIntoView({ block: 'center' }); }
+        });
+        item.appendChild(a);
+        list.appendChild(item);
       });
-      item.appendChild(a);
-      list.appendChild(item);
     });
     summary.hidden = false;
     if (focus) summary.focus();
@@ -7140,6 +7375,8 @@
     const progress = el('p', 'task-list-progress', { 'aria-live': 'polite' });
     const list = el('ul', 'task-list');
     hub.append(h, intro, progress, list);
+    // When the plan was last updated, under how much of it is done (RPA-148).
+    if (lastUpdatedLine) progress.after(lastUpdatedLine);
     taskListEl = { hub, list, progress };
     return hub;
   }
@@ -7181,6 +7418,15 @@
   // A slug carries the check page ("context/check", RPA-103) or the page
   // within the step ("context/2"; "context/more" for the review-only
   // Additional information, RPA-108).
+  // "Context – Research Plan", "Check your answers – Context – Research
+  // Plan": the tab, the history and a screen reader's page summary say the
+  // section (RPA-149). The task list is the plan itself and keeps the name.
+  const BASE_TITLE = document.title || 'Research Plan';
+  function titleThePage() {
+    const s = currentStep >= 0 && steps[currentStep];
+    const name = s && !s.classList.contains('task-list-step') && s.dataset.stepTitle;
+    document.title = (s && isChecking(s) ? 'Check your answers \u2013 ' : '') + (name ? name + ' \u2013 ' : '') + BASE_TITLE;
+  }
   function currentStepSlug() {
     const s = currentStep >= 0 && steps[currentStep];
     if (!s) return '';
@@ -7218,19 +7464,25 @@
       back.hidden = i === 0;
       back.addEventListener('click', () => {
         if (isChecking(stepEl)) { leaveCheck(stepEl); return; }
+        // Brought here by a link from another section's error: Back is the
+        // way back there, whether or not anything was changed (RPA-154).
+        if (returnAfterSave && returnAfterSave.from === stepEl && returnAfterSave.go) { returnAfterSave.go(); return; }   // showStep drops the return
         const page = pageOf(stepEl);
         delete stepEl.dataset.backToCheck;
         if (page === 'more') { showCheck(i); return; }   // the review-only page came from the check page
         if (page > 0) { showPage(stepEl, page - 1, { focus: true }); rememberPosition(); return; }
         showStep(i - 1);
       });
-      const caption = el('p', 'step-caption');
-      caption.textContent = 'Section ' + i + ' of ' + (total - 1);
+      // Where the person is is said by the section's name, which every page
+      // already carries as its heading (and the check page under its own).
+      // "Section 3 of 7" and "Question 1 of 2" stood here until RPA-149: two
+      // lines of position before the question, the second a total that
+      // climbed as research questions and studies were added. How much is
+      // left is the task list's to say, one press away on All sections.
       const all = el('button', 'step-all', { type: 'button' });
       all.textContent = 'All sections';
       all.addEventListener('click', () => showStep(0));
-      const pageCaption = el('p', 'step-page-caption');
-      top.append(back, caption, pageCaption, all);
+      top.append(back, all);
       if (stepEl !== hub) stepEl.insertBefore(top, stepEl.firstChild);
       if (stepEl === header) {
         const h = el('h2', 'step-heading', { tabindex: '-1' });
@@ -7261,7 +7513,10 @@
           judged = lastPage ? requiredGroupsOf(stepEl) : requiredGroupsOf(stepEl).filter((g) => pages[page].includes(g));
           errorsShowing = showStepErrors(stepEl, summary, { focus: true, groups: judged });
           if (errorsShowing) return;
-          if (returnAfterSave && returnAfterSave.from === stepEl) { returnToReview(stepEl); return; }
+          if (returnAfterSave && returnAfterSave.from === stepEl) {
+            if (returnAfterSave.go) { returnAfterSave.go(); return; }
+            returnToReview(stepEl); return;
+          }
           if (lastPage || stepEl.dataset.backToCheck === 'true') { delete stepEl.dataset.backToCheck; showCheck(i); return; }
           showPage(stepEl, page + 1, { focus: true });
           rememberPosition();
@@ -7339,6 +7594,7 @@
     if (!opts.fromHash && !opts.keepUrl) {
       try { history[opts.silent ? 'replaceState' : 'pushState'](null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     }
+    titleThePage();
     refreshTaskList();
     // Not without an email address (RPA-99): the page asking for it shows
     // instead, the URL and the draft keep this step, and Continue lands here.
@@ -7393,6 +7649,7 @@
   function showCheck(i) {
     const stepEl = steps[i];
     if (!setChecking(stepEl, true)) { showStep(i + 1); return; }
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     checkPanelOf(stepEl).querySelector('.check-heading').focus({ preventScroll: true });
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
@@ -7402,6 +7659,7 @@
     setChecking(stepEl, false);
     if (group) { showPageOf(stepEl, group); stepEl.dataset.backToCheck = 'true'; }
     else showPage(stepEl, lastRegularPage(stepEl), { silent: true });
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     const target = group ? (groupControl(group) || group.querySelector('button')) : stepEl.querySelector('.step-heading, .acc-head');
     if (target) target.focus({ preventScroll: true });
@@ -7412,7 +7670,7 @@
   // Every question of the step, optional ones and the hatch included: the
   // check page shows what was answered and what was not.
   function checkGroupsOf(stepEl) {
-    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
+    if (stepEl.classList.contains('doc-header')) return Array.from(stepEl.querySelectorAll('.title-field, .mf, .field-custom')).filter((g) => !g.hidden && !g.querySelector('[data-field="lastUpdated"]'));
     return Array.from(stepEl.querySelectorAll('.acc-body .field:not(.field-methods):not(.field-study-questions)'));
   }
   // The answer as the person gave it, one line or several: a radio by its
@@ -7421,6 +7679,8 @@
   function groupAnswer(g) {
     const lines = [];
     const push = (v) => { const t = String(v == null ? '' : v).trim(); if (t) lines.push(t); };
+    // A name asked in parts reads as one: first name, a space, surname (RPA-146).
+    if (namePartsOf(g)) { push((g.querySelector(':scope > .name-whole') || {}).value); return lines; }
     const optionText = (sel) => (sel.options[sel.selectedIndex] || {}).textContent || '';
     const dateWords = (input) => {
       const parsed = readDateSegments(input);
@@ -7560,12 +7820,20 @@
 
   // ---------- one question per page (RPA-108) ----------
   // Within a step, one question at a time, or one set whose answers depend
-  // on each other: the two plan dates, each research question with its
-  // outcomes. Methodology loops per research question, that question pinned
-  // above its pages. Additional information is not a page in the flow: it is
-  // reached from the check page's Change and shown on its own. Gus's
-  // field-placement table, 14 September 2026.
-  const PAGE_PAIRS = [['projectDecision', 'researchReadout'], ['researchQuestions', 'outcomes']];
+  // on each other: each research question with its outcomes. Methodology
+  // loops per study, its questions pinned above its pages. Additional
+  // information is not a page in the flow: it is reached from the check
+  // page's Change and shown on its own. Gus's field-placement table,
+  // 14 September 2026.
+  //
+  // The two plan dates were a pair too, and are not since RPA-144: two
+  // identical date controls on one page invited typing the decision into
+  // the readout, and the rule between them read as the form correcting the
+  // person rather than guiding them. Project decision is asked first, as the
+  // work happens, then Research readout, where the buffer warning appears
+  // beside the date it is about. The rule itself is unchanged (RPA-55): it
+  // reads both dates wherever they are shown.
+  const PAGE_PAIRS = [['researchQuestions', 'outcomes']];
   function unitKey(unit) {
     const keyed = unit.matches('[data-list-key], [data-field], [data-field-key]') ? unit
       : unit.querySelector('[data-list-key], [data-field], [data-field-key]');
@@ -7575,7 +7843,7 @@
   // one of a research question's fields inside its group.
   function pageUnitsOf(stepEl) {
     if (stepEl.classList.contains('doc-header')) {
-      return Array.from(stepEl.querySelectorAll('.title-field, .mf')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
+      return Array.from(stepEl.querySelectorAll('.title-field, .mf, .field-custom')).filter((u) => !u.hidden && !u.querySelector('[data-field="lastUpdated"]'));
     }
     const units = [];
     const walk = (container) => Array.from(container.children).forEach((c) => {
@@ -7611,6 +7879,7 @@
     if (index === 'more') { current = reviewOnlyUnits(stepEl); if (!current.length) index = pages.length - 1; }
     if (index !== 'more') { index = Math.max(0, Math.min(pages.length - 1, index)); current = pages[index]; }
     stepEl.dataset.page = String(index);
+    stepEl.dataset.pages = String(pages.length);   // how many pages the step has now; nothing shows it (RPA-149), tests and styles may read it
     const shown = new Set(current);
     pageUnitsOf(stepEl).forEach((u) => u.classList.toggle('page-hidden', !shown.has(u)));
     // A research question's group shows only while one of its pages does,
@@ -7618,12 +7887,20 @@
     stepEl.querySelectorAll('.methods-group').forEach((g) => g.classList.toggle('page-hidden', !current.some((u) => g.contains(u))));
     const evaluation = stepEl.querySelector('.acc-body .section-evaluation');
     if (evaluation) evaluation.classList.toggle('page-hidden', index !== 'more' && index !== pages.length - 1);
-    const caption = stepEl.querySelector('.step-page-caption');
-    if (caption) caption.textContent = index === 'more' ? 'Additional information' : 'Question ' + (index + 1) + ' of ' + pages.length;
+    titleThePage();
     if (opts.silent) return;
     const label = current[0].querySelector('.flabel, .mlabel, label');
     if (label) {
       if (!label.hasAttribute('tabindex')) label.setAttribute('tabindex', '-1');
+      // Focus moves to the question, not to the section's heading above it,
+      // so the question is described by its section: a screen reader says
+      // "What is the goal of this project? Context" on every page (RPA-149).
+      const named = stepEl.querySelector('.step-heading, .acc-title');
+      if (named) {
+        if (!named.id) named.id = 'step-name-' + stepEl.dataset.stepSlug;
+        const ids = (label.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+        if (ids.indexOf(named.id) === -1) label.setAttribute('aria-describedby', ids.concat(named.id).join(' '));
+      }
       label.focus({ preventScroll: true });
     }
     if (typeof stepEl.scrollIntoView === 'function') stepEl.scrollIntoView({ block: 'start' });
@@ -7637,6 +7914,7 @@
   }
   // The URL and the draft follow a page change the way they follow a step.
   function rememberPosition() {
+    titleThePage();
     try { history.pushState(null, '', '#' + currentStepSlug()); } catch (e) { /* no history here */ }
     saveDraft();
   }
@@ -7851,12 +8129,24 @@
     }
     return { v: sel.hidden ? '__other__' : sel.value, o: other ? other.value : '' };
   }
+  // Options that were renamed in the template, and the names a saved plan
+  // may still hold for them. The sample-size bands were reworded on 18
+  // September 2026 (RPA-119); a draft or backup saved before that keeps its
+  // choice. The contract accepts the old names on the wire for the same reason.
+  const RENAMED_OPTIONS = {
+    sampleSize: { 'Small (1–5)': '1 to 5', 'Medium (6–12)': '6 to 12', 'Large (13–29)': '13 to 29', 'Very Large (30+)': '30 or more' },
+  };
+  function currentOptionName(fieldKey, value) {
+    const renamed = RENAMED_OPTIONS[fieldKey];
+    return renamed && Object.prototype.hasOwnProperty.call(renamed, value) ? renamed[value] : value;
+  }
   function applyChoice(cell, snap) {
     const otherRow = cell.querySelector('.select-other-row');
     const other = cell.querySelector('.select-other-input');
     const radios = Array.from(cell.querySelectorAll('.radio-input'));
     radios.forEach((r) => { r.checked = false; });
-    const match = radios.find((r) => r.value === snap.v);
+    const wanted = currentOptionName(cell.dataset.fieldKey, snap.v);
+    const match = radios.find((r) => r.value === wanted);
     if (match) match.checked = true;
     const wantsOther = snap.v === '__other__';
     if (otherRow) otherRow.hidden = !wantsOther;
@@ -8442,6 +8732,36 @@
     return 'This is after the research readout on ' + formatDateline(ceiling)
       + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or change the readout date.';
   }
+  // The same sentence with its second way out made real: "change the readout
+  // date" opens Plan details on that question, and Back or Save and continue
+  // from there returns to this date (RPA-154).
+  function ceilingRemedy(ceiling, input) {
+    const link = el('a', 'date-error-link', { href: '#plan-details' });
+    link.textContent = 'change the readout date';
+    link.addEventListener('click', (event) => { event.preventDefault(); changeReadoutFrom(input); });
+    return ['This is after the research readout on ' + formatDateline(ceiling)
+      + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or ', link, '.'];
+  }
+  function changeReadoutFrom(input) {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    const header = steps.find((s) => s.classList.contains('doc-header'));
+    const from = steps.find((s) => s.contains(input));
+    if (!readout || !header || !from) return;
+    const question = readout.closest('.mf');
+    showStep(steps.indexOf(header), { force: true, check: false });
+    if (question) showPageOf(header, question);
+    rememberPosition();
+    // Back there is the page the link was on: the section is shown as it
+    // was left, and it was left on that page.
+    returnAfterSave = { from: header, go: () => {
+      showStep(steps.indexOf(from), { force: true, check: false });
+      rememberPosition();
+      const day = dateSegments(input)?.day;
+      if (day) { day.focus({ preventScroll: true }); if (typeof day.scrollIntoView === 'function') day.scrollIntoView({ block: 'center' }); }
+    } };
+    const day = dateSegments(readout)?.day;
+    if (day) { day.focus({ preventScroll: true }); if (typeof day.scrollIntoView === 'function') day.scrollIntoView({ block: 'center' }); }
+  }
 
   // Both columns: a stage that starts after the readout is as wrong as one
   // that ends after it.
@@ -8454,10 +8774,16 @@
       // max= constrains the native picker, and is not enough on its own:
       // typed, pasted and restored values never pass through it. Everything
       // below is the fallback that actually holds the rule.
-      if (ceiling) input.max = ceiling;
+      const inRange = !ceiling || !input.value || input.value <= ceiling;
+      // A date already past the readout is kept and flagged, and the
+      // calendar must open on it: with max= still set, Chrome opened on the
+      // readout's month instead, so the calendar said October 2020 while the
+      // date said September 2026 (RPA-154). The rule holds through the flag;
+      // a calendar pick past the readout is flagged like a typed one.
+      if (ceiling && inRange) input.max = ceiling;
       else input.removeAttribute('max');
 
-      if (!ceiling || !input.value || input.value <= ceiling) {
+      if (inRange) {
         if (input.dataset.ceilingFlagged) {
           delete input.dataset.ceilingFlagged;
           clearDateError(input);
@@ -8466,7 +8792,7 @@
       }
 
       input.dataset.ceilingFlagged = '1';
-      showDateError(input, ceilingMessage(ceiling));
+      showDateError(input, ceilingRemedy(ceiling, input));
     });
   }
 
@@ -8660,7 +8986,7 @@
     return target;
   }
   function resolveSubmissionTarget(error) {
-    if (error.formGroup) return { group: error.formGroup, control: groupControl(error.formGroup) };
+    if (error.formGroup) return { group: error.formGroup, control: error.formPart || groupControl(error.formGroup) };
     if (!error.key) return {};
     // The wire format is one group per question; on the page a question's
     // group is the first study that answers it (RPA-142).
@@ -8713,10 +9039,11 @@
   // among filled ones, a date out of bounds, a stage without a name. Which
   // errors exist, where they point and what the server checks are unchanged.
   function submissionMessage(error, group) {
+    if (error.formPart) return error.message;
     if (error.formGroup) return groupMessage(error.formGroup);
     if (!group || !error.key) return error.message;
     if (error.key === 'stageTimeline') return group.dataset.errorMessage && scheduleNotStarted(group) ? groupMessage(group) : error.message;
-    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration') return groupMessage(group);
+    if (error.key === 'sampleSize' || error.code === 'date' || error.code === 'declaration' || error.code === 'signoff_length') return groupMessage(group);
     if (['required', 'choice'].includes(error.code) && !fieldHasContent(group)) return groupMessage(group);
     return error.message;
   }
@@ -9134,6 +9461,94 @@
     });
   }
 
+  // ---------- the plan as a Word document (RPA-77) ----------
+  // An editable copy to take away: for a reviewer to comment on, for the
+  // person to carry on in Word. Made here, in the browser, by
+  // plan-document.js, with no library and nothing uploaded. It reads the
+  // live form, not the saved draft, so an edit still waiting for autosave is
+  // in it; and it only reads: the answers, Last updated, the page the person
+  // is on and the saved draft are as they were. One download at a time:
+  // every Word button is off while the file is made, so a second press
+  // cannot start a second download.
+  let wordBusy = false;
+  function wordButtons() { return Array.from(document.querySelectorAll('.download-word')); }
+  function downloadWord(say) {
+    if (planBlocked() || wordBusy) return Promise.resolve(false);
+    wordBusy = true;
+    const buttons = wordButtons();
+    const labels = buttons.map((b) => b.textContent);
+    buttons.forEach((b) => { b.disabled = true; b.setAttribute('aria-busy', 'true'); b.textContent = 'Preparing Word document…'; });
+    say('Preparing your Word document.');
+    // A turn of the event loop first, so the button and the status are seen to change.
+    return new Promise((resolve) => window.setTimeout(resolve, 0)).then(() => {
+      let url;
+      try {
+        const maker = window.RPA_PLAN_DOCUMENT;
+        const planView = maker.view(formSchema, collectDraft(), { today: todayIso() });
+        const blob = new Blob([maker.docx(planView, { when: new Date() })], { type: maker.DOCX_TYPE });
+        const name = maker.filename(planView.title, todayIso());
+        url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        say('Download started: ' + name);
+        return true;
+      } catch (err) {
+        say('The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.', true);
+        return false;
+      } finally {
+        if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        buttons.forEach((b, i) => { b.disabled = planBlocked(); b.removeAttribute('aria-busy'); b.textContent = labels[i]; });
+        wordBusy = false;
+      }
+    });
+  }
+  function wordStatusIn(status) {
+    return (message, error = false) => { status.dataset.error = String(error); status.textContent = message; };
+  }
+  function printPlan() { if (!planBlocked()) window.print(); }
+  function initWordDownload() {
+    const button = document.getElementById('download-word-btn');
+    if (!button) return;
+    button.disabled = planBlocked();
+    button.addEventListener('click', () => downloadWord(wordStatusIn(document.getElementById('word-status'))));
+  }
+  // On Review, where the person finishes: the same two ways of taking the
+  // plan away, under the summary and above the sign-off, so a copy is
+  // offered before signing and not as a reward for it. The Menu is closed
+  // most of the time, and people could not find how to save the plan (Max,
+  // 8 September 2026).
+  function renderKeepCopy() {
+    const panel = el('section', 'keep-copy', { 'aria-labelledby': 'keep-copy-heading' });
+    const heading = el('h3', 'keep-copy-h', { id: 'keep-copy-heading' });
+    heading.textContent = 'Keep a copy of this plan';
+    const lead = el('p', 'keep-copy-lead');
+    lead.textContent = 'The copy holds the plan as it is now, including anything you have just typed.';
+    const actions = el('div', 'keep-copy-actions');
+    const action = (button, helpText, id) => {
+      const wrap = el('div', 'keep-copy-action');
+      const help = el('p', 'menu-help', { id });
+      help.textContent = helpText;
+      button.setAttribute('aria-describedby', id);
+      wrap.append(button, help);
+      return wrap;
+    };
+    const word = el('button', 'btn btn-dark download-word', { type: 'button' });
+    word.textContent = 'Download as Word (.docx)';
+    const print = el('button', 'btn btn-ghost', { type: 'button' });
+    print.textContent = 'Print or save as PDF';
+    print.addEventListener('click', printPlan);
+    actions.append(action(word, 'To edit, or for others to comment on.', 'keep-copy-word-help'), action(print, 'To read or share as it is.', 'keep-copy-print-help'));
+    const status = el('p', 'word-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    word.addEventListener('click', () => downloadWord(wordStatusIn(status)));
+    const inset = el('p', 'keep-copy-inset');
+    inset.textContent = 'Changes made in Word stay in Word. They are not brought back into this form.';
+    panel.append(heading, lead, actions, status, inset);
+    return panel;
+  }
+
   function initBackupControls() {
     const download = document.getElementById('download-backup-btn');
     const restore = document.getElementById('restore-backup-btn');
@@ -9188,7 +9603,12 @@
     redrawSignOff();
     if (updateTimelineVisibility) updateTimelineVisibility();
     doc.querySelectorAll('input[type="text"]').forEach((el) => { el.value = ''; });
+    // The whole name is held in a hidden input, which the loop above does not reach (RPA-146).
+    doc.querySelectorAll('.name-whole').forEach((el) => { el.value = ''; el.dispatchEvent(new Event('input')); });
     doc.querySelectorAll('input[type="date"]').forEach((el) => { setDateInputValue(el, ''); });
+    // What was said about the old plan's two dates goes with them: the buffer
+    // warning, and the note that a readout was moved (RPA-144).
+    doc.querySelectorAll('.doc-header .field-warning').forEach((w) => { w.hidden = true; });
     doc.querySelectorAll('textarea').forEach((el) => {
       el.value = '';
       resizeTa(el);
@@ -9435,7 +9855,8 @@
         initDraftPersistence();
         initBackupControls();
         document.getElementById('clear-btn').addEventListener('click', clearForm);
-        document.getElementById('print-btn').addEventListener('click', () => { if (!planBlocked()) window.print(); });
+        document.getElementById('print-btn').addEventListener('click', printPlan);
+        initWordDownload();
         initOptionsMenu();
         initStickyOffsets();
       })

@@ -177,7 +177,10 @@ test('the template pins every field key, so labels can be reworded freely', asyn
     path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'
   );
   const start = template.indexOf('\n-->') + 4;
+  // A field line starts at the margin; the indented lines under it (Hint,
+  // Guidance, Error) are its words and may hold parentheses and a colon.
   const fieldLines = template.slice(start).split('\n')
+    .filter((line) => !/^\s/.test(line))
     .map((line) => line.replace(/^<!--\s*|\s*-->$/g, '').trim())
     .filter((line) => /^(#\s+)?[^(<][^(]*\([^)]*\)\s*:/.test(line));
 

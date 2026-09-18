@@ -22,8 +22,8 @@ test('the identifier-like fields are sized to their answers, in the header and i
   const d = app.document;
   const sized = (key) => widthClass(d.querySelector('[data-field="' + key + '"]'));
   assert.equal(sized('jiraProject'), '20', 'a project name, since RPA-119; it was a ticket key');
-  assert.equal(sized('leadResearcher'), '20', 'a name');
-  assert.equal(sized('projectRequester'), '20', 'a name');
+  // A name is two boxes since RPA-146, each the width of a name.
+  for (const key of ['leadResearcherFirstName', 'leadResearcherSurname', 'projectRequesterFirstName', 'projectRequesterSurname']) assert.equal(sized(key), '20', key);
   assert.equal(sized('signOffResearcher'), '20', 'a name, outside the header');
   assert.equal(sized('signOffProjectOwner'), '20');
 });
@@ -64,7 +64,10 @@ test('open-ended and fixed controls carry no width: textareas, dates and the doc
   t.after(() => app.close());
   const d = app.document;
   // List rows are sized on purpose (see above); the open-ended textareas are the fields.
-  for (const el of d.querySelectorAll('textarea[data-field]:not(.list-input), input[type=date]')) assert.equal(widthClass(el), '', el.dataset.field || 'date');
+  // The project name is a textarea only so that a long name can wrap: it is a
+  // text field, sized for a name, and keeps its width (RPA-156).
+  for (const el of d.querySelectorAll('textarea[data-field]:not(.list-input):not(.prose-input), input[type=date]')) assert.equal(widthClass(el), '', el.dataset.field || 'date');
+  assert.equal(widthClass(d.querySelector('textarea[data-field="jiraProject"]')), '20', 'the project name wraps within the width of a name');
   assert.equal(widthClass(d.querySelector('[data-field="researchTitle"]')), '', 'the title is the page heading');
   assert.deepEqual(app.jsdomErrors, []);
 });
@@ -74,7 +77,7 @@ test('the classes exist with the GOV.UK measures, and only the GOV.UK widths are
     assert.ok(CSS.includes('.input-w-' + n + '{max-width:' + em + '}'), 'input-w-' + n);
   }
   // width=15 is not a GOV.UK class; the flag is ignored rather than inventing one.
-  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('Project name (text, width=20,', 'Project name (text, width=15,') } });
+  const app = await bootApp({ textAssets: { 'research-plan-template.md': TEMPLATE.replace('Project name (text, prose, width=20,', 'Project name (text, prose, width=15,') } });
   t.after(() => app.close());
   assert.equal(widthClass(app.document.querySelector('[data-field="jiraProject"]')), '');
 });

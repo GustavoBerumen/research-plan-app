@@ -130,7 +130,7 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   // RPA-101: the draft remembers the step it was left on, and every
   // section's Additional information hatch is written, empty or not.
   expected.ui.section = 'sections';   // the task list is the first step (RPA-100)
-  Object.assign(expected.custom, { additionalContext: [], additionalResearch: [], additionalMethodology: [] });
+  Object.assign(expected.custom, { additionalPlanDetails: [], additionalContext: [], additionalResearch: [], additionalMethodology: [] });   // Plan details has one too (RPA-145)
   // RPA-116: participant answers live in every group; RPA-142 makes each group a study; v11 adds plan identity.
   expected.version = 11;
   expected.planId = saved.planId;
@@ -138,6 +138,8 @@ test('a draft saved by the pre-change app retains user spelling, multiline value
   expected.fields.declarationResearcher = '';   // the two declaration boxes, unticked (RPA-115)
   expected.fields.declarationRequester = '';
   expected.fields.emailAddress = 'name@example.com';   // the address given before the plan; the harness gives it (RPA-99)
+  // A name is kept whole and, beside it, in its two parts (RPA-146).
+  for (const k of ['leadResearcher', 'projectRequester']) { const w = String(expected.fields[k] || '').trim().split(/\s+/).filter(Boolean); expected.fields[k + 'FirstName'] = w[0] || ''; expected.fields[k + 'Surname'] = w.slice(1).join(' '); }
   expected.studies = expected.methods.map((g, i) => ({ questions: [i + 1], methods: g.methods, characteristics: expected.lists.characteristics || [], sampleSize: expected.selects.sampleSize || { v: '', o: '' } }));
   expected.selects.studyCount = { v: 'Three', o: '' };   // three groups became three studies
   expected.selects.otherResearchers = { v: '', o: '' };   // asked since RPA-141, not yet answered

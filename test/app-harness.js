@@ -306,6 +306,9 @@ function completeStep(app, stepEl) {
     // "Which questions does this study answer?" is answered with all of them,
     // so no research question is left outside every study (RPA-140).
     if (g.classList.contains('study-group')) { g.querySelectorAll('input[type=checkbox]').forEach((b) => { if (!b.checked) b.click(); }); return; }
+    // A name asked as First name and Surname needs both (RPA-146).
+    const nameParts = g.querySelectorAll('.name-part-input');
+    if (nameParts.length) { nameParts.forEach((input) => setValue(window, input, 'Filled.')); return; }
     const box = g.querySelector('input[type=checkbox]');
     if (box) { if (!box.checked) box.click(); return; }
     const radio = g.querySelector('input[type=radio]');
@@ -353,7 +356,24 @@ function toCheckPage(stepEl) {
   }
 }
 
+// Where a step is, since RPA-149 took the "Question 2 of 7" caption away: the
+// form still keeps the page, and how many the step has now, in the step's
+// data, and the page in the URL. "2 of 7" here is a test's shorthand, never
+// anything the person sees.
+function pagePosition(stepEl) {
+  const raw = stepEl.dataset.page;
+  return raw === 'more' ? 'more' : (parseInt(raw || '0', 10) || 0) + 1;
+}
+function pageCount(app, stepEl) { return Number((stepEl || app).dataset.pages || 0); }
+function pageOfTotal(stepEl) {
+  const at = pagePosition(stepEl);
+  return at === 'more' ? 'more' : at + ' of ' + pageCount(null, stepEl);
+}
+
 module.exports = {
+  pagePosition,
+  pageCount,
+  pageOfTotal,
   DRAFT_KEY,
   saveAndContinue,
   toCheckPage,
