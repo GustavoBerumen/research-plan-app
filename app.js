@@ -964,17 +964,21 @@
     if (error) error.hidden = true;
   }
 
+  // The message is a string, or a list of strings and elements when a way
+  // out of the problem is a link the person can follow (RPA-154).
   function showDateError(nativeInput, message) {
     const segments = dateSegments(nativeInput);
     if (!segments) return;
     const error = segments.control.querySelector('.date-error');
-    const text = message || 'Enter a valid date.';
+    const parts = (Array.isArray(message) ? message : [message || 'Enter a valid date.'])
+      .map((part) => typeof part === 'string' ? document.createTextNode(part) : part);
+    const text = parts.map((part) => part.textContent).join('');
     segments.day.setCustomValidity(text);
     segments.control.setAttribute('aria-invalid', 'true');
     // The element carries role="alert", so replacing the text is what
     // announces it. A range failure has to say which boundary was crossed and
     // by what — "invalid" tells someone nothing they can act on.
-    if (error) { error.textContent = text; error.hidden = false; }
+    if (error) { error.replaceChildren(...parts); error.hidden = false; }
   }
 
   function setDateInputValue(nativeInput, isoValue) {
@@ -7307,6 +7311,9 @@
       back.hidden = i === 0;
       back.addEventListener('click', () => {
         if (isChecking(stepEl)) { leaveCheck(stepEl); return; }
+        // Brought here by a link from another section's error: Back is the
+        // way back there, whether or not anything was changed (RPA-154).
+        if (returnAfterSave && returnAfterSave.from === stepEl && returnAfterSave.go) { returnAfterSave.go(); return; }   // showStep drops the return
         const page = pageOf(stepEl);
         delete stepEl.dataset.backToCheck;
         if (page === 'more') { showCheck(i); return; }   // the review-only page came from the check page
@@ -7353,7 +7360,10 @@
           judged = lastPage ? requiredGroupsOf(stepEl) : requiredGroupsOf(stepEl).filter((g) => pages[page].includes(g));
           errorsShowing = showStepErrors(stepEl, summary, { focus: true, groups: judged });
           if (errorsShowing) return;
-          if (returnAfterSave && returnAfterSave.from === stepEl) { returnToReview(stepEl); return; }
+          if (returnAfterSave && returnAfterSave.from === stepEl) {
+            if (returnAfterSave.go) { returnAfterSave.go(); return; }
+            returnToReview(stepEl); return;
+          }
           if (lastPage || stepEl.dataset.backToCheck === 'true') { delete stepEl.dataset.backToCheck; showCheck(i); return; }
           showPage(stepEl, page + 1, { focus: true });
           rememberPosition();
@@ -8555,6 +8565,36 @@
     return 'This is after the research readout on ' + formatDateline(ceiling)
       + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or change the readout date.';
   }
+  // The same sentence with its second way out made real: "change the readout
+  // date" opens Plan details on that question, and Back or Save and continue
+  // from there returns to this date (RPA-154).
+  function ceilingRemedy(ceiling, input) {
+    const link = el('a', 'date-error-link', { href: '#plan-details' });
+    link.textContent = 'change the readout date';
+    link.addEventListener('click', (event) => { event.preventDefault(); changeReadoutFrom(input); });
+    return ['This is after the research readout on ' + formatDateline(ceiling)
+      + '. Move it to ' + formatDateline(ceiling) + ' or earlier, or ', link, '.'];
+  }
+  function changeReadoutFrom(input) {
+    const readout = doc.querySelector('[data-field="researchReadout"]');
+    const header = steps.find((s) => s.classList.contains('doc-header'));
+    const from = steps.find((s) => s.contains(input));
+    if (!readout || !header || !from) return;
+    const question = readout.closest('.mf');
+    showStep(steps.indexOf(header), { force: true, check: false });
+    if (question) showPageOf(header, question);
+    rememberPosition();
+    // Back there is the page the link was on: the section is shown as it
+    // was left, and it was left on that page.
+    returnAfterSave = { from: header, go: () => {
+      showStep(steps.indexOf(from), { force: true, check: false });
+      rememberPosition();
+      const day = dateSegments(input)?.day;
+      if (day) { day.focus({ preventScroll: true }); if (typeof day.scrollIntoView === 'function') day.scrollIntoView({ block: 'center' }); }
+    } };
+    const day = dateSegments(readout)?.day;
+    if (day) { day.focus({ preventScroll: true }); if (typeof day.scrollIntoView === 'function') day.scrollIntoView({ block: 'center' }); }
+  }
 
   // Both columns: a stage that starts after the readout is as wrong as one
   // that ends after it.
@@ -8567,10 +8607,16 @@
       // max= constrains the native picker, and is not enough on its own:
       // typed, pasted and restored values never pass through it. Everything
       // below is the fallback that actually holds the rule.
-      if (ceiling) input.max = ceiling;
+      const inRange = !ceiling || !input.value || input.value <= ceiling;
+      // A date already past the readout is kept and flagged, and the
+      // calendar must open on it: with max= still set, Chrome opened on the
+      // readout's month instead, so the calendar said October 2020 while the
+      // date said September 2026 (RPA-154). The rule holds through the flag;
+      // a calendar pick past the readout is flagged like a typed one.
+      if (ceiling && inRange) input.max = ceiling;
       else input.removeAttribute('max');
 
-      if (!ceiling || !input.value || input.value <= ceiling) {
+      if (inRange) {
         if (input.dataset.ceilingFlagged) {
           delete input.dataset.ceilingFlagged;
           clearDateError(input);
@@ -8579,7 +8625,7 @@
       }
 
       input.dataset.ceilingFlagged = '1';
-      showDateError(input, ceilingMessage(ceiling));
+      showDateError(input, ceilingRemedy(ceiling, input));
     });
   }
 
