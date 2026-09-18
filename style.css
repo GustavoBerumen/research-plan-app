@@ -170,6 +170,12 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .input-w-2{max-width:2.5em}.input-w-3{max-width:3.5em}.input-w-4{max-width:4.5em}.input-w-5{max-width:5.5em}.input-w-10{max-width:11.5em}.input-w-20{max-width:20.5em}.input-w-30{max-width:29.5em}
 /* Last Updated is a computed corner value, kept compact. */
 .doc-header-top{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-bottom:8px}
+/* RPA-148. On screen Last updated is on the task list; the header's corner holds it for the printed plan only. */
+@media screen{.doc-header-top{display:none}}
+.last-updated-print{margin:0;font-size:var(--text-sm);color:var(--text-2);text-align:right}
+.dateline.task-list-updated{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;margin:0 0 20px;font-size:var(--text);color:var(--text-2)}
+.dateline.task-list-updated .mlabel{margin:0;font-weight:400;font-size:inherit;color:inherit}
+.dateline.task-list-updated .dateline-value{font-size:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 /* The ticket reference sits under the title on its own row, matching its
    width. Narrower looked tidier in isolation but wrapped the hint onto two
    lines and read as a different kind of thing from the title above it. */
@@ -205,7 +211,6 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .step-back{background:none;border:0;padding:0;font-family:inherit;font-size:var(--text);color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .step-back::before{content:"\2039\00a0"}
 .step-back:hover{color:var(--link-hover)}
-.step-caption{margin:0;font-size:var(--text);color:var(--text-2)}
 .step-heading{margin:8px 0 18px;font-size:var(--heading);font-weight:700;line-height:1.1;color:var(--ink)}
 .acc.step .acc-chevron{display:none}
 .acc.step .acc-head{cursor:default}
@@ -239,12 +244,11 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .summary-change:hover{color:var(--link-hover)}
 .summary-change:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink);text-decoration:none}
 @media (max-width:600px){.summary-key{flex-basis:100%}}
-.step-top .step-caption{flex-basis:100%;order:2}
 /* One question per page (RPA-108): what is not on the page is hidden on screen only; every page prints. */
 @media screen{.page-hidden{display:none!important}}
-.step-page-caption{margin:0;font-size:var(--text);color:var(--text-2)}
-.step-top .step-page-caption{flex-basis:100%;order:3}
-.step-page-caption:empty{display:none}
+/* RPA-149. No counting at the top of a question page: not the section's number, not the question's, and not the section's
+   count of fields beside its name, which one question per page had left with nothing to count. Print keeps it. */
+@media screen{.acc.step .acc-count{display:none}}
 /* The task list (RPA-100), on the GOV.UK task-list pattern. */
 .task-list-step{padding-top:22px}
 /* The email address before the plan (RPA-99): a page of its own with one question, its label the heading, standing in front of every step until a well-formed address is given. */
@@ -678,6 +682,11 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 .jira-status:not(:empty){margin-top:8px}
 
 /* ---------- Custom sections and comments ---------- */
+/* RPA-145. Plan details' hatch sits under the header's questions, not in their grid. On paper it is a titled part of the
+   document after the header's details when something was written there, and nothing at all when not: the header is where a
+   reader looks first, and an empty "Additional information" with its hint is not something to find there. */
+.doc-header > .field-custom{margin-top:24px}
+@media print{.doc-header > .field-custom:not(:has(.custom-field-block)){display:none!important}}
 .custom-fields-list{display:flex;flex-direction:column;gap:24px}
 .custom-fields-list:not(:empty){margin-bottom:16px}
 .custom-field-block{display:flex;flex-direction:column;gap:6px}
