@@ -5264,6 +5264,22 @@
         const dateControl = buildDateControl('minput', { 'data-field': f.key }, f.label);
         input = dateControl.input;
         control = dateControl.element;
+      } else if (f.prose && !f.jira) {
+        // One line that wraps: a long project name at phone width scrolled
+        // sideways in a single-line box and could not be read whole. The box
+        // grows with the answer and stays one line for a short one; Enter
+        // does nothing and a pasted line break becomes a space, so the answer
+        // is still one line of text and the record's type is still text
+        // (RPA-156). A field that takes a ticket keeps its single-line box:
+        // the picker is built for one.
+        input = el('textarea', 'minput prose-input', { rows: '1', 'data-field': f.key, placeholder: f.placeholder || '' });
+        if (f.width) input.classList.add('input-w-' + f.width);
+        input.addEventListener('keydown', (event) => { if (event.key === 'Enter') event.preventDefault(); });
+        input.addEventListener('input', () => {
+          if (/[\r\n]/.test(input.value)) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+        });
+        bindTextarea(input);
+        control = input;
       } else {
         input = el('input', 'minput', { type: 'text', 'data-field': f.key, placeholder: f.placeholder || '' });
         if (f.width) input.classList.add('input-w-' + f.width);
