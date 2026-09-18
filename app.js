@@ -4995,13 +4995,33 @@
     moved.hidden = true;
     decisionInput.closest('.date-control').insertAdjacentElement('afterend', moved);
     const inWords = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    // Re-entry guard: the clamp tells the readout's own listeners below, and
+    // this function is one of them. Without the guard it would run again with
+    // no event and put away the note it had just written.
+    // This function listens to the readout, and it also speaks to it, so it
+    // hears itself. The guard is what stops the second, eventless run from
+    // putting away the note the first one has just written.
+    let clamping = false;
     function clampResearch(event) {
+      if (clamping) return;
       const clamps = Boolean(decisionInput.value && researchInput.value && researchInput.value > decisionInput.value);
       const byDecision = clamps && event && event.target === decisionInput;
       if (clamps) setDateInputValue(researchInput, decisionInput.value);
       researchInput.max = decisionInput.value || '';
       if (byDecision) moved.textContent = 'Research readout was after this date, so it has been moved to ' + inWords(decisionInput.value) + '. You can change it on the next page.';
       moved.hidden = !byDecision;
+      // Last, with everything this function had to say already said: a date
+      // the form moved is a date that changed, and the readout says so
+      // itself, the way a typed or pasted one does. Without it the Stage
+      // timeline's ceiling kept the readout that had just been replaced, and
+      // the stage calendars went on offering months the rule forbids
+      // (RPA-144, found reviewing it on 18 September 2026).
+      if (!clamps) return;
+      clamping = true;
+      try {
+        researchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        researchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { clamping = false; }
     }
     decisionInput.addEventListener('change', clampResearch);
     researchInput.addEventListener('change', clampResearch);
