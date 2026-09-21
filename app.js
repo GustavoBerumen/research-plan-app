@@ -9472,6 +9472,30 @@
   // cannot start a second download.
   let wordBusy = false;
   function wordButtons() { return Array.from(document.querySelectorAll('.download-word')); }
+  // What can go wrong while making a Word document, and which of it is worth
+  // naming to the person. A failure to load is not a defect in the plan and
+  // has something they can do about it; anything else is ours to fix, and
+  // says so plainly without pretending to diagnose itself (RPA-157).
+  const WORD_FAILURES = {
+    load: 'The Word document could not be made because part of this app has not loaded. Reload the page and try again. Your plan has not changed.',
+  };
+  const WORD_FAILED = 'The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.';
+  function wordFailure(step, message) {
+    const err = new Error(message);
+    err.wordStep = step;
+    return err;
+  }
+  function wordFailureMessage(err) {
+    return (err && WORD_FAILURES[err.wordStep]) || WORD_FAILED;
+  }
+  function reportWordFailure(err) {
+    // A console that refuses is not a reason to fail a second time.
+    try {
+      if (window.console && typeof window.console.error === 'function') {
+        window.console.error('Research Plan: the Word document could not be made.', err);
+      }
+    } catch (ignored) { /* nothing more to try */ }
+  }
   function downloadWord(say) {
     if (planBlocked() || wordBusy) return Promise.resolve(false);
     wordBusy = true;
@@ -9483,7 +9507,15 @@
     return new Promise((resolve) => window.setTimeout(resolve, 0)).then(() => {
       let url;
       try {
+        // The document is made here, by plan-document.js. When that script
+        // has not loaded — a server started before it had a route, a request
+        // that failed or was blocked — every line below fails on "undefined"
+        // and the person is told the same unhelpful sentence as for a real
+        // defect. Say which part is missing while we still know (RPA-157).
         const maker = window.RPA_PLAN_DOCUMENT;
+        if (!maker || typeof maker.view !== 'function' || typeof maker.docx !== 'function') {
+          throw wordFailure('load', 'plan-document.js has not loaded, so there is nothing here to make the document with.');
+        }
         const planView = maker.view(formSchema, collectDraft(), { today: todayIso() });
         const blob = new Blob([maker.docx(planView, { when: new Date() })], { type: maker.DOCX_TYPE });
         const name = maker.filename(planView.title, todayIso());
@@ -9496,7 +9528,10 @@
         say('Download started: ' + name);
         return true;
       } catch (err) {
-        say('The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.', true);
+        // A person cannot act on a stack; whoever picks up their report can,
+        // and without one every cause looks alike (RPA-157).
+        reportWordFailure(err);
+        say(wordFailureMessage(err), true);
         return false;
       } finally {
         if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
