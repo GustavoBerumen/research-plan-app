@@ -584,8 +584,10 @@
           refreshReviewSummary(); refreshTaskList();
         }
         renderBuildMarker(cfg);
+        const demoNotice = document.getElementById('public-demo-notice');
+        if (demoNotice) demoNotice.hidden = cfg.publicDemo !== true;
         const status = document.getElementById('capability-status');
-        if (status) status.textContent = cfg.pilotMode
+        if (status) status.textContent = cfg.publicDemo ? '' : cfg.pilotMode
           ? 'Pilot: calibration Save/Like/Dislike, uploads, framework library changes, Jira and Google Drive are unavailable. AI evaluation and suggestions remain available.'
           : '';
         return { ...cfg, capabilities };

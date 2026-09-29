@@ -20,6 +20,16 @@ if (pilotSetting !== undefined && pilotSetting !== 'true' && pilotSetting !== 'f
   throw new Error('RPA_PILOT_MODE must be true or false');
 }
 const PILOT_MODE = pilotSetting === 'true';
+const demoSetting = process.env.RPA_PUBLIC_DEMO;
+if (demoSetting !== undefined && !['true', 'false'].includes(demoSetting)) {
+  throw new Error('RPA_PUBLIC_DEMO must be true or false');
+}
+const PUBLIC_DEMO = demoSetting === 'true';
+if (PUBLIC_DEMO && (!PILOT_MODE || process.env.RPA_AI_ENABLED !== 'true' ||
+    process.env.RPA_FEEDBACK_ENABLED === 'true' || process.env.RPA_SUBMISSIONS_ENABLED === 'true' ||
+    process.env.RPA_SIGN_OFF_ENABLED === 'true')) {
+  throw new Error('Public demo requires pilot restrictions and AI, with all server-side collection disabled');
+}
 // Tool feedback is separate from completed-plan submissions. Pilot collection
 // needs an explicit choice; retain the existing non-pilot default.
 const feedbackSetting = process.env.RPA_FEEDBACK_ENABLED;
@@ -27,7 +37,7 @@ if (feedbackSetting !== undefined && feedbackSetting !== 'true' && feedbackSetti
   throw new Error('RPA_FEEDBACK_ENABLED must be true or false');
 }
 const FEEDBACK_ENABLED = feedbackSetting === undefined ? !PILOT_MODE : feedbackSetting === 'true';
-const pilotGuard = createPilotGuard({ pilot: PILOT_MODE, env: process.env });
+const pilotGuard = createPilotGuard({ pilot: PILOT_MODE, publicDemo: PUBLIC_DEMO, env: process.env });
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error(
@@ -185,6 +195,12 @@ function bodyError(res, error) {
 }
 
 function aiError(res, error, label) {
+  if (PUBLIC_DEMO) {
+    if (!(error instanceof PilotAIError)) console.error(label, { status: Number.isInteger(error.status) ? error.status : 'unknown' });
+    return routeError(res, error instanceof PilotAIError ? error.status : 502,
+      'AI feedback is unavailable right now. Your draft is still in this browser; you can continue editing, back up, or export.',
+      error instanceof PilotAIError && error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
+  }
   if (error instanceof PilotAIError) {
     return routeError(res, error.status, error.message, error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {});
   }
@@ -864,7 +880,7 @@ async function handleEvaluate(req, res, evaluationOptions = {}) {
     res.end(JSON.stringify(result));
   } catch (err) {
     if (controller.signal.aborted) return;
-    if (err instanceof PilotAIError) return aiError(res, err, 'Evaluation failed:');
+    if (PUBLIC_DEMO || err instanceof PilotAIError) return aiError(res, err, 'Evaluation failed:');
     res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   } finally {
@@ -1587,6 +1603,7 @@ function handleConfig(req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify({
     pilotMode: PILOT_MODE,
+    ...(PUBLIC_DEMO ? { publicDemo: true } : {}),
     capabilities: CAPABILITIES,
     ...(submissions.enabled ? { submissions: submissions.publicConfig } : {}),
     ...(CAPABILITIES.googleDrive ? {

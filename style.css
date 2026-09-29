@@ -138,12 +138,13 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 .app-version{font-weight:400;color:var(--text-2);font-family:ui-monospace,Menlo,monospace;font-size:13px;margin-left:6px}
 .footer-print-only{display:none}
 .backup-help{max-width:860px;margin:0 auto 20px;font-size:var(--text-sm);color:var(--text-2)}
+.public-demo-notice{max-width:860px;margin:0 auto 20px;padding:12px 16px;border-left:4px solid var(--link);background:var(--panel);font-size:var(--text-sm)}
 .backup-help summary{cursor:pointer;color:var(--link);text-decoration:underline;margin-top:6px}
 .backup-help summary:focus-visible{outline:3px solid var(--focus);background:var(--focus);color:var(--ink)}
 .backup-help details p{margin-top:8px}
 #backup-status:not(:empty){margin-top:8px;font-weight:700;color:var(--ink)}
 #backup-status[data-error="true"]{color:var(--red-dark)}
-@media print{.backup-help{display:none!important}}
+@media print{.backup-help,.public-demo-notice{display:none!important}}
 .test-profile-controls{display:flex;align-items:center;gap:8px;padding-right:8px;border-right:1px solid var(--border)}
 .test-profile-select{font-family:inherit;font-size:var(--text-sm);color:var(--ink);background:#fff;border:2px solid var(--ink);padding:5px 30px 5px 8px;cursor:pointer;height:var(--control-h)}
 /* Button hierarchy: one primary action per page (Print), everything else
