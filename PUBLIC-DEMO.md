@@ -6,7 +6,7 @@ This is a deployment plan, not evidence that a public demo is live. Use a **new 
 
 1. Review the demo PR and its checks. Record the exact commit SHA to deploy. Do not connect this service to an environment group shared with the private pilot.
 2. In the Anthropic Console, confirm the intended prepaid workspace, current credit balance, auto-reload **off**, and which API key belongs to that workspace. Enter that key only as a secret in the new Render service. Do not copy it into a file, PR, log, command, or browser configuration. Stop if the account or auto-reload state cannot be verified.
-3. Obtain approval for the new service and any hosting cost. Create it from this repository and the reviewed demo commit/branch, with one instance, manual deploys only, `npm ci --omit=dev`, `node server.js`, and `/healthz`. Use Render HTTPS; choose the generated service URL as the initial candidate link. A custom demo domain is optional and requires separate DNS setup.
+3. Obtain approval to publish a separate **Free Render web service**. Check the Render workspace's remaining Free instance hours, included bandwidth, and build minutes before creating it. Create a Web Service manually from this repository and the reviewed demo commit/branch; select the `free` compute plan, one instance, manual deploys only, `npm ci --omit=dev`, `node server.js`, and `/healthz`. Do not use the repository's `render.yaml` Blueprint, which configures the paid private pilot. Use Render HTTPS and the generated service URL as the initial candidate link. A custom demo domain is optional and requires separate DNS setup.
 4. Set these environment variables on the **new** service:
 
    | Variable | Value |
@@ -21,6 +21,8 @@ This is a deployment plan, not evidence that a public demo is live. Use a **new 
    | `ANTHROPIC_MODEL` | `claude-haiku-4-5-20251001` |
 
    Do not set `RPA_PILOT_PASSWORD`, Jira, Google Drive, R2, or upload storage credentials on the demo service. `RPA_PUBLIC_DEMO=true` refuses startup unless pilot restrictions and AI are enabled and all three collection flags are off. Existing request, concurrency, body, output, and timeout limits remain active.
+
+The Free service may take about a minute to start after 15 minutes without traffic. Its ephemeral filesystem is acceptable because drafts and backups remain in the reader's browser and server-side collection is disabled. Render can suspend Free services when workspace usage runs out or outbound API traffic is unusually high; included bandwidth and build-minute overages may incur charges if the workspace has a payment method. Check actual workspace settings and usage rather than assuming the trial has no hosting charges.
 
 ## Acceptance after approved deployment
 
