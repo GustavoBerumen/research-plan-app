@@ -19,14 +19,14 @@ class PilotAIError extends Error {
   }
 }
 
-function createPilotGuard({ pilot, env, now = Date.now, timeoutMs = AI_TIMEOUT_MS }) {
+function createPilotGuard({ pilot, publicDemo = false, env, now = Date.now, timeoutMs = AI_TIMEOUT_MS }) {
   if (env.RENDER === 'true' && !pilot) {
     throw new Error('Render deployment requires RPA_PILOT_MODE=true');
   }
   if (!pilot) return { allowRequest: () => true, wrapClient: client => client, runRequest: (req, res, handler) => handler(req, res) };
 
   const password = env.RPA_PILOT_PASSWORD;
-  if (typeof password !== 'string' || !/^[\x21-\x7e]{20,200}$/.test(password)) {
+  if (!publicDemo && (typeof password !== 'string' || !/^[\x21-\x7e]{20,200}$/.test(password))) {
     throw new Error('RPA_PILOT_PASSWORD must be 20-200 printable ASCII characters without spaces');
   }
   if (env.RPA_AI_ENABLED !== undefined && !['true', 'false'].includes(env.RPA_AI_ENABLED)) {
@@ -35,7 +35,7 @@ function createPilotGuard({ pilot, env, now = Date.now, timeoutMs = AI_TIMEOUT_M
   // Fail closed until the operator explicitly enables AI after checking billing.
   const aiEnabled = env.RPA_AI_ENABLED === 'true';
   const digest = text => crypto.createHash('sha256').update(text).digest();
-  const expected = digest('pilot:' + password);
+  const expected = publicDemo ? null : digest('pilot:' + password);
   const attempts = [];
   const requests = [];
   let active = 0;
@@ -55,20 +55,22 @@ function createPilotGuard({ pilot, env, now = Date.now, timeoutMs = AI_TIMEOUT_M
     res.setHeader('Referrer-Policy', 'no-referrer');
     // Health probes disclose no configuration, writing or provider information.
     if (pathname === '/healthz' && ['GET', 'HEAD'].includes(req.method)) return true;
-    const authorization = req.headers.authorization;
-    const match = typeof authorization === 'string' && /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(authorization);
-    const decoded = match && Buffer.from(match[1], 'base64');
-    const valid = decoded && decoded.toString('base64') === match[1] &&
-      crypto.timingSafeEqual(digest(decoded), expected);
-    if (!valid) {
-      const time = now();
-      trim(failedLogins, time);
-      if (failedLogins.length >= 30) return reply(res, 429, 'Too many sign-in attempts. Try again in a minute.', { 'Retry-After': '60' });
-      failedLogins.push(time);
-      return reply(res, 401, 'Pilot sign-in required.', { 'WWW-Authenticate': 'Basic realm="Research Plan pilot", charset="UTF-8"' });
+    if (!publicDemo) {
+      const authorization = req.headers.authorization;
+      const match = typeof authorization === 'string' && /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(authorization);
+      const decoded = match && Buffer.from(match[1], 'base64');
+      const valid = decoded && decoded.toString('base64') === match[1] &&
+        crypto.timingSafeEqual(digest(decoded), expected);
+      if (!valid) {
+        const time = now();
+        trim(failedLogins, time);
+        if (failedLogins.length >= 30) return reply(res, 429, 'Too many sign-in attempts. Try again in a minute.', { 'Retry-After': '60' });
+        failedLogins.push(time);
+        return reply(res, 401, 'Pilot sign-in required.', { 'WWW-Authenticate': 'Basic realm="Research Plan pilot", charset="UTF-8"' });
+      }
     }
-    // Browsers can attach Basic credentials automatically. Reject cross-site
-    // submissions, including text/plain forms, before reading their bodies.
+    // Reject cross-site submissions, including text/plain forms, before
+    // reading their bodies in both protected and public modes.
     if (!['GET', 'HEAD'].includes(req.method)) {
       const origin = req.headers.origin;
       let sameOrigin = true;
@@ -86,8 +88,8 @@ function createPilotGuard({ pilot, env, now = Date.now, timeoutMs = AI_TIMEOUT_M
     if (req.method === 'POST' && ['/api/evaluate', '/api/suggest-framework', '/api/suggest-methods'].includes(pathname)) {
       const time = now();
       trim(requests, time);
-      if (!aiEnabled) return reply(res, 503, 'AI is paused for this pilot. Your writing is safe; contact the session organiser.');
-      if (requests.length >= 30) return reply(res, 429, 'Too many AI requests. Your writing is safe; try again in a minute.', { 'Retry-After': '60' });
+      if (!aiEnabled) return reply(res, 503, publicDemo ? 'AI feedback is unavailable right now. Your draft remains in this browser.' : 'AI is paused for this pilot. Your writing is safe; contact the session organiser.');
+      if (requests.length >= 30) return reply(res, 429, publicDemo ? 'AI feedback is temporarily unavailable. Your draft remains in this browser; try again in a minute.' : 'Too many AI requests. Your writing is safe; try again in a minute.', { 'Retry-After': '60' });
       requests.push(time);
     }
     return true;
