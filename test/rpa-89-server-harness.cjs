@@ -63,7 +63,9 @@ function loadServer(options = {}) {
       if (name === 'http') return { createServer(callback) { handler = callback; server = http.createServer(callback); return server; } };
       if (name === '@anthropic-ai/sdk') return MockAnthropic;
       if (name === './pilot-guard') return require('../pilot-guard');
+      if (name === './plan-store') return require('../plan-store');
       if (name === './submissions-server') return { createSubmissions: args => require('../submissions-server').createSubmissions({ ...args, store: options.submissionStore }) };
+      if (name === './sign-off-server') return { createSignOff: args => require('../sign-off-server').createSignOff({ ...args, store: options.planStore || args.store }) };
       return require(name);
     },
     module: { exports: {} }, __dirname: ROOT, process: { env, exit() { throw new Error('Unexpected exit'); } },

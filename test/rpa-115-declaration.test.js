@@ -46,7 +46,9 @@ test('the review step ends with a declaration for each role, each above its sign
     const hint = el.closest('.field').querySelector('.field-hint-text');
     assert.match(text(hint), /^Tick the box/, key);
     assert.ok((el.getAttribute('aria-describedby') || '').split(/\s+/).includes(hint.id), key + ': described by its hint');
-    assert.ok(el.closest('.field').querySelector('.field-help'), key + ': a help link like every field');
+    // No help link of its own (RPA-119, 18 September 2026): the note on the sign-off below,
+    // "What signing off means", covers the declaration too, so the pair has one link.
+    assert.equal(el.closest('.field').querySelector('.field-help'), null, key + ': no help link of its own');
   }
   assert.match(STATEMENTS.declarationResearcher, /conduct the research/, 'the researcher conducts the research');
   assert.match(STATEMENTS.declarationRequester, /responsible for/, 'the requester is responsible for the project');

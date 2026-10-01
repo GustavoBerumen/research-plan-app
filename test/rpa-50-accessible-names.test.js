@@ -71,7 +71,7 @@ test('a file cell names the native file input and its add button by column and r
   // (input.cinput) and never the native file input a person reaches.
   const app = await populated(t);
   const d = app.document;
-  const field = Array.from(d.querySelectorAll('.field')).find((f) => /^Previous Knowledge/.test(text(f.querySelector('.flabel'))));
+  const field = d.querySelector('#previousKnowledge-table').closest('.field');   // asked as a question since RPA-119
   assert.ok(field, 'Previous Knowledge field');
   const names = () => Array.from(field.querySelectorAll('tbody tr')).map((tr) => [
     tr.querySelector('input.file-native')?.getAttribute('aria-label'),

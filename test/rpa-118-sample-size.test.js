@@ -32,10 +32,13 @@ test('Sample Size is a fieldset: the question as its legend, the hint beneath, s
   assert.equal(text(legend), 'How many participants do you need?', 'a plain-English question; named for its study once one is declared (RPA-142)');
   const hint = fieldset.querySelector(':scope > .field-hint-text');
   assert.equal(legend.nextElementSibling, hint, 'the hint sits under the legend');
-  assert.match(text(hint), /^The number of people/);
+  assert.match(text(hint), /^Choose the sample size that best matches/, 'the hint of 18 September 2026');
   assert.ok((fieldset.getAttribute('aria-describedby') || '').split(/\s+/).includes(hint.id), 'the fieldset carries the hint');
   const items = Array.from(fieldset.querySelectorAll('.radio-item'));
-  assert.deepEqual(items.map((i) => text(i.querySelector('.radio-label'))), ['Small (1–5)', 'Medium (6–12)', 'Large (13–29)', 'Very Large (30+)', 'Other']);
+  assert.deepEqual(items.map((i) => text(i.querySelector('.radio-label'))), ['1 to 5', '6 to 12', '13 to 29', '30 or more', 'Other']);
+  // Each band says what it is for, under it, and the option is described by it (RPA-119, 18 September 2026).
+  assert.deepEqual(items.map((i) => text(i.querySelector('.radio-hint'))), ['to spot major issues and early feedback', 'to explore needs and identify recurring themes', 'to compare groups or spot trends', 'to measure patterns across a larger audience', '']);
+  items.slice(0, 4).forEach((i) => assert.equal(i.querySelector('input').getAttribute('aria-describedby'), i.querySelector('.radio-hint').id));
   items.forEach((i) => {
     const input = i.querySelector('input[type=radio]');
     const label = i.querySelector('label');
@@ -71,7 +74,7 @@ test('the field keeps its name for the check page and has its own words for the 
   assert.equal(fieldset.classList.contains('field-invalid'), false, 'and the mark goes with the choice');
   toCheckPage(methodology);
   const rows = Object.fromEntries(Array.from(methodology.querySelectorAll('.check-answers .summary-row')).map((r) => [text(r.querySelector('.summary-key')), text(r.querySelector('.summary-value'))]));
-  assert.equal(rows['Sample Size for Study 1'], 'Small (1–5)', 'the check page row keeps the field\'s name');
+  assert.equal(rows['Sample Size for Study 1'], '1 to 5', 'the check page row keeps the field\'s name, and the answer is the band\'s name alone, not its hint');
 });
 
 test('the stylesheet gives the radios the design system\'s shape: 40px targets, a drawn circle, a dot made of border so it prints, a visible focus', () => {

@@ -15,7 +15,7 @@ const { bootApp, waitFor, setValue, DRAFT_KEY, withFieldUncommented, withFieldFl
 const WITH_THEORY = { 'research-plan-template.md': withFieldFlag(withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'theory'), 'jiraProject', 'jira') };
 const { realisticBackup } = require('./rpa-40-fixtures.cjs');
 // Feedback on the tool is the one write a pilot advertises (RPA-98); everything else stays closed.
-const disabled = { submissions: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
+const disabled = { submissions: false, signOff: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false };
 const pilotConfig = { pilotMode: true, capabilities: disabled };
 const response = data => ({ ok: true, json: async () => data });
 

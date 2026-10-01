@@ -103,12 +103,14 @@ test('every field has one, title and header included; a note not written yet ope
     return next && next.classList.contains('field-help') ? next : null;
   };
   const missing = labels.filter((l) => !helpFor(l)).map((l) => l.id);
-  assert.deepEqual(missing, ['field-emailAddress-label', 'field-lastUpdated-label', 'field-studyQuestions-label'], 'every labelled field but the email address, asked before the plan and not about the research (RPA-99), and Last updated, a computed date nobody fills in');
-  assert.equal(d.querySelectorAll('.field-help').length, new Set(labels.map(helpFor).filter(Boolean)).size, 'one each, never two');
+  // The two declarations have no link of their own since RPA-119: the note on the sign-off below each covers both.
+  assert.deepEqual(missing, ['field-emailAddress-label', 'field-lastUpdated-label', 'field-studyQuestions-label', 'field-declarationResearcher-label', 'field-declarationRequester-label'], 'every labelled field but the email address, asked before the plan and not about the research (RPA-99), Last updated, a computed date nobody fills in, and the declarations');
+  // The sign-off's "Which of these are you?" has a note too (RPA-119); it is not a template field, so it has no field label to count under.
+  assert.equal(d.querySelectorAll('.field-help').length - d.querySelectorAll('.sign-off-setup .field-help').length, new Set(labels.map(helpFor).filter(Boolean)).size, 'one each, never two');
   assert.equal(d.getElementById('field-researchTitle').nextElementSibling, helpFor(d.getElementById('field-researchTitle-label')), 'the title has no wrapper, so it follows the box');
   const jira = d.getElementById('field-jiraProject-label').closest('.mf');
   assert.equal(jira.lastElementChild, helpIn(jira), 'a header field has it last');
-  assert.equal(text(helpFor(d.getElementById('field-previousKnowledge-label')).querySelector('.field-help-body')), 'No further help for this field yet.', 'Previous Knowledge has no note yet and says so');
+  assert.equal(text(helpFor(d.getElementById('field-stageTimeline-label')).querySelector('.field-help-body')), 'No further help for this field yet.', 'Planned Schedule has no note yet and says so');
   assert.doesNotMatch(text(helpFor(d.getElementById('field-background-label'))), /No further help/, 'a written note replaces the line');
   assert.equal(d.querySelector('.field-help-body:empty'), null, 'never empty');
 });

@@ -10,7 +10,12 @@
   const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
   const MAX_BYTES = 1024 * 1024;
   const MAX_ENTRIES = 500;
-  const SAMPLE_SIZES = ['Small (1–5)', 'Medium (6–12)', 'Large (13–29)', 'Very Large (30+)'];
+  const SAMPLE_SIZES = ['1 to 5', '6 to 12', '13 to 29', '30 or more'];
+  // The bands' names before 18 September 2026 (RPA-119). A plan saved or
+  // sent by an older build still names them so; both validators accept
+  // either name, and the form maps the old to the new when such a plan is opened.
+  const LEGACY_SAMPLE_SIZES = ['Small (1–5)', 'Medium (6–12)', 'Large (13–29)', 'Very Large (30+)'];
+  const isSampleSize = (v) => SAMPLE_SIZES.includes(v) || LEGACY_SAMPLE_SIZES.includes(v);
   const STAGES = ['Planning', 'Recruitment', 'Data Collection', 'Analysis', 'Reporting'];
   const FIELDS = ['researchTitle', 'jiraProject', 'leadResearcher', 'projectRequester', 'projectDecision', 'researchReadout', 'lastUpdated', 'background', 'goal', 'problemStatement', 'objective', 'comments', 'declarationResearcher', 'signOffResearcher', 'declarationRequester', 'signOffProjectOwner'];
   // Plan details has a hatch too since RPA-145. It comes first, as its section does.
@@ -185,7 +190,7 @@
       // userGroups is a dormant slot since RPA-119: allowed, never required.
       ['methods', 'characteristics'].forEach(k => list(k, g[k], { question }));
       const c = g.sampleSize;
-      if (!c || (!SAMPLE_SIZES.includes(c.v) && c.v !== '__other__')) add('sampleSize', 'choice', { question }, 'Select a sample size for research question ' + (question + 1) + '.');
+      if (!c || (!isSampleSize(c.v) && c.v !== '__other__')) add('sampleSize', 'choice', { question }, 'Select a sample size for research question ' + (question + 1) + '.');
       else if (c.v === '__other__' && !nonblank(c.o)) add('sampleSize', 'other', { question }, 'Enter the other sample size for research question ' + (question + 1) + '.');
       else if (c.v === '__other__' && !sampleSize(c.o)) add('sampleSize', 'other', { question }, 'Enter a valid sample size for research question ' + (question + 1) + '.');
     });
@@ -296,7 +301,7 @@
       });
       ['methods', 'characteristics'].forEach(k => list(k, study[k], { study: index }));
       const c = study.sampleSize;
-      if (!c || (!SAMPLE_SIZES.includes(c.v) && c.v !== '__other__')) add('sampleSize', 'choice', { study: index }, 'Select a sample size for Study ' + (index + 1) + '.');
+      if (!c || (!isSampleSize(c.v) && c.v !== '__other__')) add('sampleSize', 'choice', { study: index }, 'Select a sample size for Study ' + (index + 1) + '.');
       else if (c.v === '__other__' && !nonblank(c.o)) add('sampleSize', 'other', { study: index }, 'Enter the other sample size for Study ' + (index + 1) + '.');
       else if (c.v === '__other__' && !sampleSize(c.o)) add('sampleSize', 'other', { study: index }, 'Enter a valid sample size for Study ' + (index + 1) + '.');
     });
@@ -336,7 +341,7 @@
     if (schema === SCHEMA) return structureV2(plan);
     throw new Error('Unsupported submission schema');
   }
-  return Object.freeze({ SCHEMA, LEGACY_SCHEMA, MAX_BYTES, MAX_ENTRIES, FIELDS, CUSTOM, LEGACY_CUSTOM, SECTION, SAMPLE_SIZES, STAGES,
+  return Object.freeze({ SCHEMA, LEGACY_SCHEMA, MAX_BYTES, MAX_ENTRIES, FIELDS, CUSTOM, LEGACY_CUSTOM, SECTION, SAMPLE_SIZES, LEGACY_SAMPLE_SIZES, STAGES,
     project, projectLegacy, fingerprint, canonical, matchesSchema, structure, structureForSchema, validate, validateForSchema,
     isoDate, validSampleSize: sampleSize, UUID });
 });

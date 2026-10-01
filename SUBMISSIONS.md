@@ -70,6 +70,18 @@ Official implementation references: [R2 AWS SDK v3 configuration](https://develo
 
 Run `node scripts/submissions.cjs --help` from the repository. Provide the selected cohort configuration and the appropriate operator token through a private operator process environment. Never pass credentials/passphrases as command-line arguments or write them into a shared script/log. Store an independent backup passphrase (at least 20 characters) in a password manager as `RPA_BACKUP_PASSPHRASE`; do not deploy it with the app.
 
+### Verify an encrypted backup on macOS without recovery
+
+This check needs Node.js and a current repository checkout, but no `npm install`, R2 credentials or submission configuration. Download the intended `.rpa-encrypted` file into a private local folder. In Terminal, change to the repository directory and run:
+
+```
+node scripts/submissions.cjs verify-backup "/absolute/path/to/file.rpa-encrypted"
+```
+
+At `Backup passphrase (input hidden):`, copy the **RPA backup encryption passphrase** from the shared Bitwarden collection, paste it into Terminal and press Return. No characters or placeholders appear while it is entered. Do not screen-share the Bitwarden item, Terminal input or clipboard history. A successful result has `"verified": true`; compare its SHA-256 with the hash recorded when the encrypted file was created or transferred.
+
+The command decrypts and validates only in memory, then prints the encrypted filename, byte count, SHA-256, export identifiers/timestamps, collection state and record/deletion counts. It does not print plan contents, create a file, load the R2 client or perform recovery. Success proves only that this local file decrypted and passed its internal checks; it is not proof of an independent copy, R2 availability or recoverability. Use `recover` only under the maintenance and recovery procedure below.
+
 `init-cohort` creates metadata conditionally and reads it back. `list` prints only reference/time/digest. `export-record UUID NEW_FILE.json` creates the full operator envelope. `export-plan UUID NEW_FILE.json` creates the collected plan; a v2 plan is also a version 11 JSON plan suitable for Restore. Historical v1 exports remain recoverable. These JSON files are plaintext and must go only to an approved protected operator folder. All exports create a new file exclusively, verify its bytes and return the file SHA-256. Existing files are never overwritten. A successful command proves that local file exists; it does not prove an independent copy has been made.
 
 For backup, journal, pause/resume, deletion, close-out, purge or recovery: disable HTTP submission acceptance, drain in-flight sends (at least 75 seconds), stop other operator writes and set `RPA_SUBMISSIONS_MAINTENANCE=true` in the operator process. The drain covers the 15-second body limit and up to six private storage operations, each bounded to eight seconds including response-body consumption. The flag is an explicit operator attestation; it does not stop a running server. This prevents snapshots racing with collection/deletion. `cohort` displays the current durable metadata. `pause-cohort` also closes durable acceptance without declaring a final session. `resume-cohort` is explicit and refuses a cohort whose final session is recorded. Recovery never resumes acceptance automatically.

@@ -5,9 +5,10 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
+const { PassThrough } = require('node:stream');
 const { loadServer } = require('./rpa-89-server-harness.cjs');
 const { bootApp, waitFor } = require('./app-harness');
-const { main } = require('../scripts/submissions.cjs');
+const { main, readSecret } = require('../scripts/submissions.cjs');
 const ops = require('../submission-operations');
 const f = require('./rpa-64-fixtures.cjs');
 const config = { ...f.config, prefix: f.prefix }, PASSPHRASE = 'synthetic-independent-backup-passphrase';
@@ -90,6 +91,64 @@ test('operator exports are real verified files; the plan export restores through
   const saved = await main(['backup', encryptedFile], env, store);
   const bytes = await fs.readFile(encryptedFile); assert.equal(saved.sha256, crypto.createHash('sha256').update(bytes).digest('hex'));
   assert.equal(ops.decryptBundle(bytes.toString(), PASSPHRASE).records.length, 1);
+});
+test('verify-backup decrypts and validates locally without plaintext, R2 access or file writes', async t => {
+  const store = await populated(); const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'rpa64-verify-'));
+  t.after(() => fs.rm(temp, { recursive: true, force: true }));
+  const bundle = await ops.exportBundle(store, config, { now: Date.parse('2026-09-14T12:00:00.000Z') });
+  const encrypted = ops.encryptBundle(bundle, PASSPHRASE);
+  const filename = path.join(temp, 'synthetic-backup.rpa-encrypted');
+  await fs.writeFile(filename, encrypted);
+  const before = await fs.readdir(temp);
+  const result = await main(['verify-backup', filename], { RPA_BACKUP_PASSPHRASE: PASSPHRASE }, new Proxy({}, { get: () => { throw new Error('R2 must not be accessed'); } }));
+  assert.deepEqual(await fs.readdir(temp), before);
+  assert.equal(await fs.readFile(filename, 'utf8'), encrypted);
+  assert.deepEqual(result, {
+    verified: true,
+    file: 'synthetic-backup.rpa-encrypted',
+    bytes: Buffer.byteLength(encrypted),
+    sha256: crypto.createHash('sha256').update(encrypted).digest('hex'),
+    recordType: 'research-plan-export',
+    recordVersion: 2,
+    deployment: config.deployment,
+    cohort: config.cohort,
+    exportedAt: '2026-09-14T12:00:00.000Z',
+    journalOnly: false,
+    records: 1,
+    deletions: 0,
+    collectionOpen: true,
+    finalSessionAt: null,
+    deleteAfter: null
+  });
+  assert.equal(JSON.stringify(result).includes('Synthetic'), false);
+});
+test('verify-backup supports a hidden-prompt provider and rejects wrong or invalid content without touching R2', async t => {
+  const store = await populated(); const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'rpa64-verify-failure-'));
+  t.after(() => fs.rm(temp, { recursive: true, force: true }));
+  const bundle = await ops.exportBundle(store, config);
+  const filename = path.join(temp, 'backup.rpa-encrypted');
+  await fs.writeFile(filename, ops.encryptBundle(bundle, PASSPHRASE));
+  let prompted = 0;
+  const result = await main(['verify-backup', filename], {}, undefined, { readSecret: async () => { prompted++; return PASSPHRASE; } });
+  assert.equal(result.verified, true); assert.equal(prompted, 1);
+  await assert.rejects(main(['verify-backup', filename], { RPA_BACKUP_PASSPHRASE: PASSPHRASE + '-wrong' }), /authenticate|Unsupported state/i);
+  const malformed = { ...bundle, records: [{ authored: 'must not print' }] };
+  const malformedFile = path.join(temp, 'malformed.rpa-encrypted');
+  await fs.writeFile(malformedFile, ops.encryptBundle(malformed, PASSPHRASE));
+  await assert.rejects(main(['verify-backup', malformedFile], { RPA_BACKUP_PASSPHRASE: PASSPHRASE }), /Invalid/);
+});
+test('interactive passphrase entry hides characters and restores terminal mode', async () => {
+  const input = new PassThrough(), output = new PassThrough();
+  input.isTTY = true; input.isRaw = false; output.isTTY = true;
+  const rawModes = [];
+  input.setRawMode = value => { input.isRaw = value; rawModes.push(value); return input; };
+  let displayed = '';
+  output.on('data', chunk => { displayed += chunk.toString(); });
+  const secret = readSecret(input, output);
+  input.write('not-shown-passphrase\r');
+  assert.equal(await secret, 'not-shown-passphrase');
+  assert.deepEqual(rawModes, [true, false]);
+  assert.equal(displayed, 'Backup passphrase (input hidden): \n');
 });
 test('operator maintenance and passphrase requirements run before storage changes', async () => {
   const store = f.memoryStore();

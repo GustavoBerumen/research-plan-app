@@ -213,6 +213,9 @@
       // "closed": a radios field whose options are the whole set, so no
       // "Other" is offered. Yes or No has no third answer (RPA-141).
       closed: typeParts.includes('closed'),
+      // "nohelp": no help link of its own; the note that covers it sits on
+      // the field below (RPA-119).
+      nohelp: typeParts.includes('nohelp'),
       // "reveals=someKey": the field with that key is asked only when this
       // radios field's first option is chosen: the design system's way of
       // asking a follow-up question only of the people it applies to. Read
@@ -252,7 +255,12 @@
     if (type === 'table') {
       field.columns = parseColumns(m[3].trim());
     } else if (type === 'select' || type === 'radios') {
-      field.options = m[3].split(',').map((s) => s.trim()).filter(Boolean);
+      // "value | hint": the hint is shown under a radio option, and is not
+      // part of the value saved (RPA-119). A dropdown has nowhere to show
+      // one, so there it is simply dropped.
+      const parts = m[3].split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.split(/\s+\|\s+/));
+      field.options = parts.map((p) => p[0]);
+      field.optionHints = Object.fromEntries(parts.filter((p) => p[1]).map((p) => [p[0], p.slice(1).join(' | ')]));
     } else if (type === 'checkbox') {
       // The text after the colon is the statement the box agrees to (RPA-115).
       field.statement = m[3].trim();
@@ -538,7 +546,7 @@
   // ---------- Google Drive picker ----------
   let configPromise = null;
   // Submissions are independently configured; absent flags from older servers stay off.
-  const unavailableCapabilities = Object.freeze({ submissions: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
+  const unavailableCapabilities = Object.freeze({ submissions: false, signOff: false, feedback: false, calibration: false, uploads: false, addFramework: false, jira: false, googleDrive: false });
   let capabilities = unavailableCapabilities;
   let submissionConfig = null;
 
@@ -559,8 +567,8 @@
       }).then(cfg => {
         if (!cfg || typeof cfg.pilotMode !== 'boolean' || !cfg.capabilities ||
             // feedback may be absent from an older server's map: absent means unavailable, not invalid.
-            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (['feedback', 'submissions'].includes(key) && cfg.capabilities[key] === undefined)) ||
-            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => !['feedback', 'submissions'].includes(key) && value !== false)) ||
+            !Object.keys(unavailableCapabilities).every(key => typeof cfg.capabilities[key] === 'boolean' || (['feedback', 'submissions', 'signOff'].includes(key) && cfg.capabilities[key] === undefined)) ||
+            (cfg.pilotMode && Object.entries(cfg.capabilities).some(([key, value]) => !['feedback', 'submissions', 'signOff'].includes(key) && value !== false)) ||
             (cfg.capabilities.submissions && (!cfg.pilotMode || cfg.submissions?.formSchemaVersion !== window.RPA_SUBMISSION?.SCHEMA ||
               !['deployment', 'cohort', 'collectionPolicyVersion'].every(key => /^[a-z0-9][a-z0-9-]{0,63}$/.test(cfg.submissions?.[key] || '')) ||
               typeof cfg.submissions?.notice !== 'string' || cfg.submissions.notice.trim().length < 40)) ||
@@ -4330,6 +4338,15 @@
         if (field.reveals) syncReveals();
       });
       item.append(radio, optLabel);
+      // The design system's radio hint: what choosing this option is for,
+      // under it in smaller text, read after the option's own label (RPA-119).
+      const optionHint = field.optionHints && field.optionHints[value];
+      if (optionHint) {
+        const hintEl = el('div', 'radio-hint', { id: id + '-hint' });
+        hintEl.textContent = optionHint;
+        radio.setAttribute('aria-describedby', hintEl.id);
+        item.appendChild(hintEl);
+      }
       group.appendChild(item);
       // The conditional reveal belongs directly under the option it belongs
       // to, which is the last one.
@@ -4504,7 +4521,7 @@
   // the title has none, so its block follows its box directly.
   function attachFieldHelp(schema) {
     const fields = [schema.header.title].concat(schema.header.meta, ...schema.sections.map((s) => s.fields));
-    fields.filter((f) => f && f.key !== 'lastUpdated' && !f.perQuestion).forEach((f) => {
+    fields.filter((f) => f && f.key !== 'lastUpdated' && !f.perQuestion && !f.nohelp).forEach((f) => {
       const id = fieldControlId(f.key);
       const label = doc.querySelector('#' + id + '-label');
       if (!label) return;
@@ -4526,7 +4543,7 @@
     const render = () => {
       hint.replaceChildren();
       appendHintText(hint, field.key === 'previousKnowledge' && !capabilities.uploads
-        ? 'Name prior research or documentation relevant to this study. Saved file references are kept; attachment contents are unavailable through this app.'
+        ? 'Link prior findings, analytics reports, or past studies relevant to this work. Saved file references are kept; attachment contents are unavailable through this app.'
         : text);
     };
     render();
@@ -4978,13 +4995,33 @@
     moved.hidden = true;
     decisionInput.closest('.date-control').insertAdjacentElement('afterend', moved);
     const inWords = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    // Re-entry guard: the clamp tells the readout's own listeners below, and
+    // this function is one of them. Without the guard it would run again with
+    // no event and put away the note it had just written.
+    // This function listens to the readout, and it also speaks to it, so it
+    // hears itself. The guard is what stops the second, eventless run from
+    // putting away the note the first one has just written.
+    let clamping = false;
     function clampResearch(event) {
+      if (clamping) return;
       const clamps = Boolean(decisionInput.value && researchInput.value && researchInput.value > decisionInput.value);
       const byDecision = clamps && event && event.target === decisionInput;
       if (clamps) setDateInputValue(researchInput, decisionInput.value);
       researchInput.max = decisionInput.value || '';
       if (byDecision) moved.textContent = 'Research readout was after this date, so it has been moved to ' + inWords(decisionInput.value) + '. You can change it on the next page.';
       moved.hidden = !byDecision;
+      // Last, with everything this function had to say already said: a date
+      // the form moved is a date that changed, and the readout says so
+      // itself, the way a typed or pasted one does. Without it the Stage
+      // timeline's ceiling kept the readout that had just been replaced, and
+      // the stage calendars went on offering months the rule forbids
+      // (RPA-144, found reviewing it on 18 September 2026).
+      if (!clamps) return;
+      clamping = true;
+      try {
+        researchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        researchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { clamping = false; }
     }
     decisionInput.addEventListener('change', clampResearch);
     researchInput.addEventListener('change', clampResearch);
@@ -6200,6 +6237,15 @@
       roleGroup.appendChild(item);
     });
     roleField.append(roleLegend, roleGroup);
+    // Its help note, the words Gus's (18 September 2026), here because the
+    // question is built here rather than read from the template.
+    roleField.appendChild(renderFieldHelp({ helpTitle: 'Why both roles need to sign off', guidance: [
+      'Signing off confirms that the researcher and the project lead are aligned before research begins.',
+      'Each role signs for a different reason:',
+      '- **Lead researcher:** Signs to confirm the research method, timeline, and participant criteria are practical and ready to run.',
+      '- **Project requester:** Signs to confirm the plan covers their business questions and that the team is ready to act on the findings.',
+      'Both people review and sign on this device. Once both have completed their review, the plan is locked and ready for testing.',
+    ] }));
     const otherField = el('div', 'field');
     const otherLabel = el('label', 'flabel', { for: 'sign-off-other-email', id: 'sign-off-other-email-label' });
     otherLabel.textContent = 'What is the other person’s email address?';
@@ -8083,12 +8129,24 @@
     }
     return { v: sel.hidden ? '__other__' : sel.value, o: other ? other.value : '' };
   }
+  // Options that were renamed in the template, and the names a saved plan
+  // may still hold for them. The sample-size bands were reworded on 18
+  // September 2026 (RPA-119); a draft or backup saved before that keeps its
+  // choice. The contract accepts the old names on the wire for the same reason.
+  const RENAMED_OPTIONS = {
+    sampleSize: { 'Small (1–5)': '1 to 5', 'Medium (6–12)': '6 to 12', 'Large (13–29)': '13 to 29', 'Very Large (30+)': '30 or more' },
+  };
+  function currentOptionName(fieldKey, value) {
+    const renamed = RENAMED_OPTIONS[fieldKey];
+    return renamed && Object.prototype.hasOwnProperty.call(renamed, value) ? renamed[value] : value;
+  }
   function applyChoice(cell, snap) {
     const otherRow = cell.querySelector('.select-other-row');
     const other = cell.querySelector('.select-other-input');
     const radios = Array.from(cell.querySelectorAll('.radio-input'));
     radios.forEach((r) => { r.checked = false; });
-    const match = radios.find((r) => r.value === snap.v);
+    const wanted = currentOptionName(cell.dataset.fieldKey, snap.v);
+    const match = radios.find((r) => r.value === wanted);
     if (match) match.checked = true;
     const wantsOther = snap.v === '__other__';
     if (otherRow) otherRow.hidden = !wantsOther;
@@ -9414,6 +9472,30 @@
   // cannot start a second download.
   let wordBusy = false;
   function wordButtons() { return Array.from(document.querySelectorAll('.download-word')); }
+  // What can go wrong while making a Word document, and which of it is worth
+  // naming to the person. A failure to load is not a defect in the plan and
+  // has something they can do about it; anything else is ours to fix, and
+  // says so plainly without pretending to diagnose itself (RPA-157).
+  const WORD_FAILURES = {
+    load: 'The Word document could not be made because part of this app has not loaded. Reload the page and try again. Your plan has not changed.',
+  };
+  const WORD_FAILED = 'The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.';
+  function wordFailure(step, message) {
+    const err = new Error(message);
+    err.wordStep = step;
+    return err;
+  }
+  function wordFailureMessage(err) {
+    return (err && WORD_FAILURES[err.wordStep]) || WORD_FAILED;
+  }
+  function reportWordFailure(err) {
+    // A console that refuses is not a reason to fail a second time.
+    try {
+      if (window.console && typeof window.console.error === 'function') {
+        window.console.error('Research Plan: the Word document could not be made.', err);
+      }
+    } catch (ignored) { /* nothing more to try */ }
+  }
   function downloadWord(say) {
     if (planBlocked() || wordBusy) return Promise.resolve(false);
     wordBusy = true;
@@ -9425,7 +9507,15 @@
     return new Promise((resolve) => window.setTimeout(resolve, 0)).then(() => {
       let url;
       try {
+        // The document is made here, by plan-document.js. When that script
+        // has not loaded — a server started before it had a route, a request
+        // that failed or was blocked — every line below fails on "undefined"
+        // and the person is told the same unhelpful sentence as for a real
+        // defect. Say which part is missing while we still know (RPA-157).
         const maker = window.RPA_PLAN_DOCUMENT;
+        if (!maker || typeof maker.view !== 'function' || typeof maker.docx !== 'function') {
+          throw wordFailure('load', 'plan-document.js has not loaded, so there is nothing here to make the document with.');
+        }
         const planView = maker.view(formSchema, collectDraft(), { today: todayIso() });
         const blob = new Blob([maker.docx(planView, { when: new Date() })], { type: maker.DOCX_TYPE });
         const name = maker.filename(planView.title, todayIso());
@@ -9438,7 +9528,10 @@
         say('Download started: ' + name);
         return true;
       } catch (err) {
-        say('The Word document could not be made. Your plan has not changed. Try again, or use Print or save as PDF.', true);
+        // A person cannot act on a stack; whoever picks up their report can,
+        // and without one every cause looks alike (RPA-157).
+        reportWordFailure(err);
+        say(wordFailureMessage(err), true);
         return false;
       } finally {
         if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);

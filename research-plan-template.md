@@ -14,9 +14,13 @@ Types:
               email keyboard and autocomplete; judged by shape (something,
               an @, something with a dot) when Continue is pressed (RPA-99)
   select    — fixed dropdown; placeholder text becomes a comma-separated
-              option list, e.g. "Small (1–5),Medium (6–12)". Same dropdown
+              option list, e.g. "1 to 5,6 to 12". Same dropdown
               styling as a table's "status"/"select" columns, just for a
               single top-level field instead of a table cell.
+  radios    — the same option list as the design system's radios. An
+              option's text after " | " is its hint, shown under the option
+              in smaller text ("1 to 5 | to spot major issues"); the value
+              saved is the part before it (RPA-119).
   list      — dynamic stack of inputs, one per item, with its own "+ Add …"
               button (like table rows, but one column). Add the `prose` flag
               when list items should wrap and auto-expand vertically.
@@ -81,6 +85,9 @@ Flags (comma-separated inside the parentheses):
                        uses it today: the project field asks for a project
                        name since RPA-119, and its key stays jiraProject so
                        saved plans keep their answer.
+  nohelp            — the field has no "Help with this section" link of its
+                       own: the note that covers it sits on the field below,
+                       as the declaration's does on its sign-off (RPA-119).
   width=N           — text fields and list rows: the input is sized to the
                        answer it expects, in the GOV.UK width classes (2, 3, 4,
                        5, 10, 20 or 30 characters). A ticket key is 10, a name
@@ -392,10 +399,14 @@ Participant criteria (list, prose, width=30, perQuestion, question=Who should ta
 <!-- "question=" sets the legend of a radios field: the question as a
      person reads it, while the label stays the field's name for messages
      and the check page (RPA-118). -->
-Sample Size (radios, perQuestion, question=How many participants do you need?, key=sampleSize): Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)
-  Hint: The number of people this study's methods need.
+Sample Size (radios, perQuestion, question=How many participants do you need?, key=sampleSize): 1 to 5 | to spot major issues and early feedback,6 to 12 | to explore needs and identify recurring themes,13 to 29 | to compare groups or spot trends,30 or more | to measure patterns across a larger audience
+  Hint: Choose the sample size that best matches your research approach.
   Error: Select how many participants you need
-  Guidance: Five people find most usability problems in one design; interviews stop being surprising around eight to twelve; a survey needs many more. Pick the band for the method, not for ambition.
+  Guidance: Participant numbers should reflect what is practical and good enough to inform your team's decision.
+  Guidance: - **Just a few users (1–5):** Even a single participant can expose a broken workflow.
+  Guidance: - **A focused group (6–12):** Responses generally reach saturation, where you stop hearing new themes, within this range.
+  Guidance: - **Larger groups (30+):** Needed when you are measuring metrics, validating trends across diverse cohorts, or running surveys.
+  Guidance: Pick the band that matches your method and constraints. You can adjust this estimate later.
 
 Additional information (custom-fields, max=1, key=additionalMethodology):
   Hint: Anything this section needs that its fields have no place for. It becomes its own titled part of the document.
@@ -435,8 +446,15 @@ Planned Schedule (table, prefill, row=stage, key=stageTimeline): Stage:select:st
      field stays for the people who have something to hand and stops being a
      wall for everyone else. Marking it honestly is not the same as giving it
      a source, which is still open — see recommendation 4. -->
-Previous Knowledge (table, optional, key=previousKnowledge): Name:prose:name | File:file:file
-  Hint: Prior research or documentation relevant to this study, attached for reference. For example: Q3 Checkout Usability Study.
+Previous Knowledge (table, optional, question=Is there any existing research or documentation to review?, key=previousKnowledge): Name:prose:name | File:file:file
+  Hint: Attach or link prior findings, analytics reports, or past studies relevant to this work.
+  Help: Why we ask for existing research
+  Guidance: Reviewing existing findings prevents repeating work the team has already done and helps you build on what is already known.
+  Guidance: Adding relevant past documentation helps you:
+  Guidance: - **Avoid duplication:** Ensure you do not spend time and budget investigating questions that have already been answered.
+  Guidance: - **Build on existing evidence:** Connect past analytics, customer feedback, or usability reports to ground your current study.
+  Guidance: - **Focus on real knowledge gaps:** Spend research sessions uncovering new insights rather than re-proving known problems.
+  Guidance: This step is optional. Add links or files if you have them, or skip ahead if this is an entirely new exploration.
 <!-- Documentation (textarea, key=documentation): Reference materials required to understand and execute the study -->
 <!-- One Additional information hatch per section, rendered in place at the
      end of its section and capped at one block (max=1) — RPA-101 and
@@ -483,15 +501,25 @@ Additional information (custom-fields, max=1, key=additionalResources):
      box, the design system's single checkbox, directly above that person's
      sign-off. A "checkbox" line's text after the colon is the statement the
      box agrees to. -->
-Declaration: Lead researcher (checkbox, key=declarationResearcher): I confirm this plan is complete and current, and I will conduct the research as it describes.
+<!-- One help note per sign-off, "What signing off means", under the initials
+     box, covering the declaration above it too (Gus, 18 September 2026:
+     "combine both help sections into one"); the declaration carries nohelp so
+     the pair has one link, not two. -->
+Declaration: Lead researcher (checkbox, nohelp, key=declarationResearcher): I confirm this plan is complete and current, and I will conduct the research as it describes.
   Hint: Tick the box once every section is complete and current, then add your initials below.
   Error: Confirm that this plan is complete and current
 Sign off: Lead researcher (text, width=20, key=signOffResearcher):
   Hint: Lead researcher approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to sign this plan
-Declaration: Project requester (checkbox, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
+  Help: What signing off means
+  Guidance: Entering your initials and confirming the declaration locks your approval as the lead researcher.
+  Guidance: It confirms that the scope, methods, and schedule are realistic and ready to run. Once submitted, you will hand this device to the project requester to complete their review.
+Declaration: Project requester (checkbox, nohelp, key=declarationRequester): I confirm this plan meets the needs of the project I am responsible for, and I approve it.
   Hint: Tick the box to approve the plan for your project, then add your initials below.
   Error: Confirm that you approve this plan
 Sign off: Project requester (text, width=20, key=signOffProjectOwner):
   Hint: Project requester approval — type your initials, up to 10 characters, and the date is added automatically.
   Error: Enter your initials to approve this plan
+  Help: What signing off means
+  Guidance: Entering your initials and confirming the declaration locks your approval as the project requester.
+  Guidance: It confirms that the research directly supports your project goals and the delivery timeline meets your needs. If the scope, dates, or focus are not quite right, select Request changes instead to send feedback to the researcher.

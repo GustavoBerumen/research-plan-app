@@ -8,3 +8,4 @@ uploads/
 __pycache__/
 /test/manual/rpa-95-evidence/
 feedback-data.jsonl
+plan-data/

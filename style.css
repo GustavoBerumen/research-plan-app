@@ -605,6 +605,9 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 .radio-input:checked+.radio-label::after{opacity:1}
 .radio-input:focus-visible+.radio-label::before{box-shadow:0 0 0 4px var(--focus);outline:3px solid transparent}
 .radio-other-row{margin:0 0 0 18px;padding:8px 0 4px 33px;border-left:4px solid var(--border)}
+/* An option's hint (RPA-119): the design system's radio hint, under the label, in the hint's smaller grey. The item wraps so the hint takes the line below. */
+.radio-item:has(.radio-hint){flex-wrap:wrap}
+.radio-hint{flex-basis:100%;padding:0 15px 4px 52px;margin-top:-4px;font-size:var(--text-sm);line-height:1.4;color:var(--text-2)}
 /* A declaration to agree to (RPA-115): the design system's checkbox, one option, above the sign-offs. */
 .checkbox-item{display:flex;align-items:flex-start;gap:12px;min-height:40px;padding:4px 0}
 .checkbox-input{width:24px;height:24px;margin:2px 0 0;flex-shrink:0;accent-color:var(--ink);cursor:pointer}

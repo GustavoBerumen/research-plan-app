@@ -8,6 +8,8 @@ const { setTimeout: delay } = require('node:timers/promises');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createPilotGuard, PilotAIError, PILOT_BODY_BYTES } = require('./pilot-guard');
 const { createSubmissions } = require('./submissions-server');
+const { createSignOff } = require('./sign-off-server');
+const { createPlanStore } = require('./plan-store');
 
 const PORT = process.env.PORT || 8934;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
@@ -58,9 +60,16 @@ const APP_BUILD = (() => {
   } catch (e) { return 'dev'; }
 })();
 const submissions = createSubmissions({ env: process.env, pilot: PILOT_MODE, build: APP_BUILD });
+// Off unless asked for: a plan people have signed cannot live on a disk
+// that forgets, and this first destination is a local directory (RPA-136).
+const signOff = createSignOff({ env: process.env, pilot: PILOT_MODE,
+  store: process.env.RPA_SIGN_OFF_ENABLED === 'true' ? createPlanStore({ dir: path.join(ROOT, 'plan-data') }) : null });
 const CAPABILITIES = Object.freeze({
   // Completed plans have a separate, explicitly configured private destination.
   submissions: submissions.enabled,
+  // The sequential sign-off over HTTP (RPA-138), off until a durable
+  // destination is chosen. Max's MVP keeps the sign-off in the browser.
+  signOff: signOff.enabled,
   feedback: FEEDBACK_ENABLED,
   calibration: !PILOT_MODE,
   uploads: !PILOT_MODE,
@@ -1636,6 +1645,8 @@ const API_ROUTES = new Map([
   ['/api/calibration', ['POST', handleSaveCalibration, 'calibration']],
   ['/api/feedback', ['POST', handleSaveFeedback, 'feedback']],
   ['/api/submissions', ['POST', submissions.handle, 'submissions']],
+  ['/api/sign-off', ['POST', signOff.handle, 'signOff']],
+  ['/api/sign-off/read', ['GET', signOff.handle, 'signOff']],
   ['/api/suggest-framework', ['POST', handleSuggestFramework]],
   ['/api/add-framework', ['POST', handleAddFramework, 'addFramework']],
   ['/api/suggest-methods', ['POST', handleSuggestMethods]],
