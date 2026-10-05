@@ -706,6 +706,15 @@
   }
 
   // ---------- dynamic table rows ----------
+  // Nothing attached: no stored value, and no name beyond the empty label.
+  // The cell's own words and the check page's summary must agree about this
+  // (RPA-160), so they ask the same question rather than two that can drift.
+  function fileCellEmpty(cell) {
+    const value = (cell.querySelector('.file-value') || {}).value;
+    const name = cell.dataset.fileName;
+    return !value && (!name || name === 'No file chosen');
+  }
+
   function renderFileReference(cell) {
     const value = cell.querySelector('.file-value').value;
     const name = cell.dataset.fileName;
@@ -714,7 +723,7 @@
     // Display copy is never filename metadata. In particular, preserve an
     // explicitly empty legacy name rather than saving the fallback wording.
     cell.querySelector('.file-name').textContent = referenceOnly
-      ? ((!value && (!name || name === 'No file chosen')) ? 'No saved file reference' : (name || value))
+      ? (fileCellEmpty(cell) ? 'No saved file reference' : (name || value))
       : (name || 'No file chosen');
   }
 
@@ -7699,20 +7708,26 @@
       return lines;
     }
     if (g.querySelector('table')) {
+      // A file cell with nothing attached carries words but not an answer
+      // (RPA-160). "No file chosen" is in the cell so the column is not a
+      // bare button, not because the question was answered: a row holding
+      // nothing else is no answer at all, and an optional table of such rows
+      // reads "Not provided" like every other empty question. A row with a
+      // name still reports the label after it, as it always did.
       g.querySelectorAll('tbody tr').forEach((tr) => {
         const cells = Array.from(tr.querySelectorAll('td')).map((td) => {
           const file = td.querySelector('.file-cell');
-          if (file) return file.dataset.fileName || '';
+          if (file) return { words: file.dataset.fileName || '', answered: !fileCellEmpty(file) };
           const other = td.querySelector('.select-other-input');
-          if (other && !other.hidden) return other.value;
+          if (other && !other.hidden) return { words: other.value, answered: true };
           const sel = td.querySelector('select');
-          if (sel) return sel.hidden ? '' : optionText(sel);
+          if (sel) return { words: sel.hidden ? '' : optionText(sel), answered: true };
           const date = td.querySelector('input[type=date]');
-          if (date) return dateWords(date);
+          if (date) return { words: dateWords(date), answered: true };
           const c = td.querySelector('input:not([type=hidden]), textarea');
-          return c ? c.value : '';
-        }).map((v) => String(v || '').trim()).filter(Boolean);
-        if (cells.length) push(cells.join(' · '));
+          return { words: c ? c.value : '', answered: true };
+        }).map((cell) => ({ words: String(cell.words || '').trim(), answered: cell.answered })).filter((cell) => cell.words);
+        if (cells.some((cell) => cell.answered)) push(cells.map((cell) => cell.words).join(' · '));
       });
       return lines;
     }
