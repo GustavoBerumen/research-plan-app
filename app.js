@@ -2678,7 +2678,7 @@
       placeholder: list.dataset.placeholder || '',
     });
     if (list.dataset.width) inp.classList.add('input-w-' + list.dataset.width);
-    attachMethodsCombobox(inp, METHODS);
+    const comboStatus = attachMethodsCombobox(inp, METHODS);
     inp.value = value || '';
     inp.addEventListener('input', refreshMethodsSuggestSelection);
     const removeBtn = el('button', 'list-remove', { type: 'button' });
@@ -2690,6 +2690,10 @@
       refreshMethodsSuggestSelection();
     });
     row.append(num, inp, removeBtn);
+    // The note about the suggestions belongs under the box it explains, so it
+    // rides in the row and takes a line of its own when it has something to
+    // say (RPA-159) — the same way a submission error does.
+    if (comboStatus) row.appendChild(comboStatus);
     list.appendChild(row);
     renumberMethodsGroup(group);
     if (focus) inp.focus();
@@ -4611,8 +4615,21 @@
   // instead of getting clipped.
   const COMBO_MIN_WIDTH = 260;
 
+  // Returns the field's live region for the caller to place, or nothing when
+  // there is no suggestion list to search: without one the box is never
+  // dressed as a combobox, so it has nothing to explain (RPA-159).
   function attachMethodsCombobox(input, methods) {
     if (!methods || methods.length === 0) return;
+
+    // Typing a term that matches nothing used to remove the dropdown and say
+    // nothing at all, so a silence could mean no match, a broken list, or a
+    // field that never had suggestions. It says which now, in the shape the
+    // Jira picker already uses, and says it as a note: this field is free
+    // text, and what was typed is the answer (RPA-159).
+    const status = el('div', 'combo-status', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    const noMatchMessage = 'No matching research methods. You can still enter a method of your own.';
+    // One persistent live region; do not repeat an unchanged announcement.
+    const say = (message) => { if (status.textContent !== message) status.textContent = message; };
 
     const menu = el('div', 'combo-menu', { role: 'listbox' });
     menu.hidden = true;
@@ -4700,20 +4717,24 @@
 
     function updateMatches() {
       const q = input.value.trim().toLowerCase();
-      if (!q) { closeMenu(); return; }
+      // Nothing typed is not nothing found: an empty box has no news.
+      if (!q) { closeMenu(); say(''); return; }
       // No arbitrary cap here — .combo-menu's max-height + overflow-y:auto
       // (in style.css) is what limits how many show at once, so every match
       // stays reachable by scrolling instead of silently disappearing.
       matches = methods.filter((m) => m.toLowerCase().includes(q));
       activeIndex = -1;
-      if (matches.length === 0) { closeMenu(); return; }
+      if (matches.length === 0) { closeMenu(); say(noMatchMessage); return; }
+      say('');
       renderMatches();
       if (menu.hidden) openMenu(); else position();
     }
 
     input.addEventListener('input', updateMatches);
     input.addEventListener('focus', () => { if (input.value.trim()) updateMatches(); });
-    input.addEventListener('blur', () => { setTimeout(closeMenu, 100); });
+    // The note explains why no dropdown came; once the box is left it would
+    // only sit under every method written by hand, so it goes with the menu.
+    input.addEventListener('blur', () => { setTimeout(() => { closeMenu(); say(''); }, 100); });
     input.addEventListener('keydown', (e) => {
       if (menu.hidden) return;
       if (e.key === 'ArrowDown') {
@@ -4735,6 +4756,7 @@
         closeMenu();
       }
     });
+    return status;
   }
 
   // Jira ticket connector: searches the server-side Jira proxy (the API
