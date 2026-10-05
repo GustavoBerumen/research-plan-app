@@ -710,6 +710,13 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 /* Jira feedback stays in normal flow inside its field, outside the listbox. */
 .jira-status{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:var(--text-sm);color:var(--text-2);line-height:1.5}
 .jira-status:not(:empty){margin-top:8px}
+/* The Methods box says why no suggestions came (RPA-159). A list row is a
+   flex line of number, box and remove; the note wraps onto a line of its own
+   beneath them, as a submission error does, and takes no room when silent. */
+.combo-status{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:var(--text-sm);color:var(--text-2);line-height:1.5}
+.combo-status:empty{display:none}
+.list-row:has(>.combo-status:not(:empty)){flex-wrap:wrap}
+.list-row>.combo-status{flex:0 0 100%;margin:0}
 
 /* ---------- Custom sections and comments ---------- */
 /* RPA-145. Plan details' hatch sits under the header's questions, not in their grid. On paper it is a titled part of the
@@ -930,6 +937,7 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
   .eval-controls .eval-panel{box-decoration-break:clone;-webkit-box-decoration-break:clone}
   .eval-controls .eval-rec{break-inside:avoid}
   .jira-status{display:none!important}
+  .combo-status{display:none!important}
   /* @page margins apply per physical page, so every page gets consistent
      spacing regardless of where content happens to break. */
   @page{margin:0.75in}
