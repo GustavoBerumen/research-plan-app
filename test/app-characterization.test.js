@@ -399,16 +399,15 @@ test('Clear Form resets evaluation state', async (t) => {
   await runEvaluation(app, controls);
   assert.equal(evaluateButton.hidden, true);
   assert.equal(resultButton.hidden, false);
-  resultButton.click();
   assert.equal(panel.hidden, false);
   assert.equal(controls.querySelector('.eval-like-btn').disabled, false);
 
   document.getElementById('clear-btn').click();
 
   assert.equal(background.value, '');
-  assert.equal(evaluateButton.hidden, true);
+  assert.equal(evaluateButton.hidden, false);
   assert.equal(evaluateButton.disabled, false);
-  assert.equal(evaluateButton.textContent.trim(), 'Retry Background');
+  assert.equal(evaluateButton.textContent.trim(), 'Assess this answer');
   assert.equal(resultButton.hidden, true);
   assert.equal(resultButton.getAttribute('aria-expanded'), 'false');
   assert.equal(resultButton.hasAttribute('aria-label'), false);

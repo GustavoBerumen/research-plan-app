@@ -161,7 +161,7 @@ test('each section has one Additional information hatch, after its Evaluate cont
   assert.deepEqual(sections.map((s) => s.querySelector('.custom-fields-list').dataset.listKey),
     ['additionalContext', 'additionalResearch', 'additionalMethodology', 'additionalResources']);
   const context = sections[0];
-  const evalCtl = context.querySelector('.section-eval-btn');
+  const evalCtl = context.querySelector('[data-field="problemStatement"]').closest('.field').querySelector('.eval-btn');
   const hatch = context.querySelector('.field-custom');
   assert.ok(evalCtl && (evalCtl.compareDocumentPosition(hatch) & 4), 'the hatch follows the Evaluate control');
   assert.ok(hatch.compareDocumentPosition(context.querySelector('.step-continue')) & 4, 'and Continue follows the hatch');

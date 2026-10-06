@@ -75,7 +75,7 @@ for (const [name, ending] of [['LF', '\n'], ['CRLF', '\r\n']]) {
     }
     retained.tables = retained.tables.filter((t) => t.id !== 'actionPoints-table');
     assert.deepEqual(contract.tables, retained.tables);
-    for (const button of app.document.querySelectorAll('.section-eval-btn')) button.click();
+    for (const button of app.document.querySelectorAll('.section-eval-btn, .context-assessment > .eval-btn')) button.click();
     await waitFor(() => app.evaluationRequests.length === 7);
     const bodies = app.evaluationRequests.map(r => r.body);
     const actual = Object.fromEntries(bodies.map(body => [body.fieldKey, { label: body.fieldLabel, criteria: body.rubric.map(c => c.name) }]));

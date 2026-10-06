@@ -153,6 +153,34 @@ Outcomes retain structured numbering, positional pairing and relevant context.
 Existing detailed results, feedback controls, individual updates and retries
 remain. Section actions change how requests start, not the unit of scoring.
 
+## Resolved since: Context assessment beside each answer (5 October 2026)
+
+Max selected workflow A and authorised its first implementation slice. Context's
+Background, Goal and Problem Statement now each have an explicit **Assess this
+answer** action below the editor. Received feedback opens there; it can still be
+collapsed. Research retains its section-level action. Neither field navigation
+nor Save and continue starts an assessment request.
+
+Assessment remains advisory: required-answer validation and cross-section locks
+are unchanged. Weak, unavailable or out-of-date feedback offers **Continue and
+return later**, which records a field reminder for this session and uses the same
+Save and continue validation and navigation. A fresh result with every criterion scoring 3 clears that
+reminder; authors can also clear it explicitly. Results and reminders survive
+field revisits within the session, but do not enter saved drafts or backups and
+are reset by reload, Clear Form, profile changes and successful backup import.
+
+Context requests use the existing rubric, model, cancellation and shared limit
+of two concurrent requests. If a Context answer changes before dispatch or while
+its request runs, the obsolete response is discarded. Existing feedback remains
+visible and stale until reassessed; calibration controls retain their existing
+restrictions. Research's structured scoring and stale-result behaviour stay as
+recorded above.
+
+Optional refinement is a separate slice: its rewrite endpoint, payload, limits,
+cost and accept/reject/edit behaviour require a reviewed contract before real
+provider use. The sticky-header obstruction and textarea navigation collapse
+remain separate bugs; this slice does not claim to fix them.
+
 ## Open questions
 
 - How are the soft dependency nudges worded so they coach rather than nag?

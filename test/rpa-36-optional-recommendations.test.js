@@ -269,7 +269,7 @@ test('client accepts and saves an evaluation with no recommendations without sho
 
   assert.equal(controls.querySelector('.eval-error').hidden, true);
   assert.equal(controls.querySelector('.eval-result-btn').hidden, false);
-  controls.querySelector('.eval-result-btn').click();
+  if (controls.querySelector('.eval-panel').hidden) controls.querySelector('.eval-result-btn').click();
   assert.equal(controls.querySelector('.eval-panel').hidden, false);
   assert.equal(controls.querySelector('.eval-rlabel').hidden, true);
   assert.equal(controls.querySelector('.eval-recs').hidden, true);

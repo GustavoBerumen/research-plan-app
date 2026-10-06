@@ -185,6 +185,7 @@ test('test-profile loading still builds matching Question and Outcome structures
   );
   assert.equal(methodsGroups(app.document).length, 1, 'a profile declares no studies (RPA-142)');
   if (profile.fields.methods) assert.deepEqual(methodValues(methodsGroups(app.document)[0]), Array.from(profile.fields.methods));
-  assert.equal(app.document.querySelectorAll('.section-eval-btn').length, 2);
-  assert.ok(Array.from(app.document.querySelectorAll('.eval-controls > .eval-btn')).every(button => button.hidden));
+  assert.equal(app.document.querySelectorAll('.section-eval-btn').length, 1);
+  assert.equal(app.document.querySelectorAll('.context-assessment > .eval-btn').length, 3);
+  assert.ok(Array.from(app.document.querySelectorAll('.eval-controls:not(.context-assessment) > .eval-btn')).every(button => button.hidden));
 });

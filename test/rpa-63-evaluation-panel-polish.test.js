@@ -20,9 +20,9 @@ async function evaluatedApp(t, key = 'background', scenario = 'guardrail', evalu
     }
   }
   const controls = controlsFor(app.document, key);
-  controls.closest('.acc').querySelector('.section-eval-btn').click();
+  (key === 'background' ? controls.querySelector('.eval-btn') : controls.closest('.acc').querySelector('.section-eval-btn')).click();
   await waitFor(() => controls.querySelector('.eval-badge').textContent && !controls.querySelector('.eval-reevaluate-btn').disabled);
-  controls.querySelector('.eval-result-btn').click();
+  if (controls.querySelector('.eval-panel').hidden) controls.querySelector('.eval-result-btn').click();
   return { ...app, controls };
 }
 for (const key of ['background', 'researchQuestions', 'outcomes']) {
