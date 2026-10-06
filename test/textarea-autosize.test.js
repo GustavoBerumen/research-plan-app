@@ -133,7 +133,7 @@ test('defers a hidden textarea until its accordion is visible', () => {
   textarea.style.height = '96px';
 
   resizeTextarea(textarea);
-  assert.equal(textarea.style.height, 'auto');
+  assert.equal(textarea.style.height, '96px');
 
   textarea.scrollHeight = 104;
   resizeTextareas(fakeRoot([textarea]));
