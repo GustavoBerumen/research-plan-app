@@ -3,6 +3,11 @@
 Base: origin/main 2fb9f1b80d41d873d1ffd3c66be449177a434b62.
 
 - `npm test`: pretest 13/13, main suite 864/864 passed, zero failures.
+- Combined with RPA-163/RPA-164: full `npm test` passed 13/13 pretests and
+  867/867 main tests. Browser checks confirmed retained multiline writing after
+  hidden resize and Back, the session reminder, header clearance, retained
+  failure feedback and explicit keyboard retry together. The merge from main
+  retains both ticket-named test files in the npm inventory.
 - Focused Context, optional-recommendation and test-profile checks: 24/24 passed.
 - JavaScript syntax and `git diff --check`: passed.
 - Existing source tests that assumed a section-wide Context trigger were adapted

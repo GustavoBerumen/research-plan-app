@@ -8005,6 +8005,9 @@
     stepEl.querySelectorAll('.methods-group').forEach((g) => g.classList.toggle('page-hidden', !current.some((u) => g.contains(u))));
     const evaluation = stepEl.querySelector('.acc-body .section-evaluation');
     if (evaluation) evaluation.classList.toggle('page-hidden', index !== 'more' && index !== pages.length - 1);
+    // Re-measure the answer after its page is revealed, including Change from
+    // Check your answers and restored drafts. Hidden pages retain their height.
+    current.forEach(unit => resizeTextareas(unit));
     titleThePage();
     if (opts.silent) return;
     const label = current[0].querySelector('.flabel, .mlabel, label');

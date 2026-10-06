@@ -179,7 +179,8 @@ recorded above.
 Optional refinement is a separate slice: its rewrite endpoint, payload, limits,
 cost and accept/reject/edit behaviour require a reviewed contract before real
 provider use. The sticky-header obstruction and textarea navigation collapse
-remain separate bugs; this slice does not claim to fix them.
+are tracked separately in RPA-164 and RPA-163; they are not part of this workflow
+decision.
 
 ## Open questions
 
