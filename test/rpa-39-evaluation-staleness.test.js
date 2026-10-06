@@ -60,9 +60,9 @@ function assertStale(controls) {
 }
 
 function assertReset(controls, label) {
-  assert.equal(controls.querySelector('.eval-btn').hidden, true);
+  assert.equal(controls.querySelector('.eval-btn').hidden, false);
   assert.equal(controls.querySelector('.eval-btn').disabled, false);
-  assert.equal(controls.querySelector('.eval-btn').textContent.trim(), 'Retry ' + label);
+  assert.equal(controls.querySelector('.eval-btn').textContent.trim(), 'Assess this answer');
   assert.equal(controls.querySelector('.eval-result-summary').hidden, true);
   assert.equal(controls.querySelector('.eval-result-btn').getAttribute('aria-expanded'), 'false');
   assert.equal(controls.querySelector('.eval-result-btn').hasAttribute('aria-label'), false);
@@ -92,6 +92,8 @@ test('marks a scalar result stale and replaces it in one click without blanking 
 
   setValue(window, background, 'Original background');
   await runEvaluation(app, controls);
+  assert.equal(panel.hidden, false);
+  resultButton.click();
   assert.equal(panel.hidden, true);
   assert.equal(resultButton.getAttribute('aria-expanded'), 'false');
   assert.equal(quickButton.hidden, false);
@@ -119,9 +121,9 @@ test('marks a scalar result stale and replaces it in one click without blanking 
   replacement.resolve(evaluationResult('Replacement metric', 2));
   await waitFor(() => controls.querySelector('.eval-mname').textContent === 'Replacement metric');
   await waitFor(() => !quickButton.disabled);
-  assert.equal(panel.hidden, true);
-  assert.equal(resultButton.getAttribute('aria-expanded'), 'false');
-  assert.equal(quickButton.hidden, false);
+  assert.equal(panel.hidden, false);
+  assert.equal(resultButton.getAttribute('aria-expanded'), 'true');
+  assert.equal(quickButton.hidden, true);
   assert.equal(controls.querySelector('.eval-stale-status').hidden, true);
   assert.equal(resultButton.classList.contains('eval-result-stale'), false);
   assert.equal(controls.querySelector('.eval-like-btn').disabled, false);

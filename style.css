@@ -998,4 +998,19 @@ fieldset.field.field-invalid{border-left:5px solid var(--red);padding-left:14px}
 @media print{.submission-panel{display:none!important}}
 @media print{.sign-off-printed{display:block!important}.sign-off-note,.sign-off-link,.sign-off-actions,.sign-off-setup,.sign-off-state{display:none!important}}
 @media print{.footer-credit{display:none!important}}
+@media print{.context-field-position,.context-assessment-heading,.context-assessment-note,.context-review-reminder,.context-return-later,.context-clear-reminder{display:none!important}.context-answer .context-assessment{border-top:0;padding-top:0}}
 @media print{.step[hidden]{display:block!important}.step-top,.step-nav,.task-list-step,.start-step,.email-step,.dead-link,.check-answers,.review-answers,.tool-feedback,.error-summary,.field-error{display:none!important}.field-invalid{border-left:0;padding-left:0}}
+
+/* Context assessment stays below its answer at the existing reading width. */
+.context-field-position{font-size:var(--text-sm);color:var(--text-2);margin-bottom:12px}
+.context-answer .context-assessment{margin-top:24px;border-top:1px solid var(--border);padding-top:16px}
+.context-assessment-heading{font-size:var(--text);line-height:var(--lh)}
+.context-assessment-note{font-size:var(--text-sm);color:var(--text-2);margin:8px 0 12px}
+.context-review-reminder{padding:12px;border-left:4px solid var(--link);background:var(--panel);margin-top:16px;overflow-wrap:anywhere}
+.context-return-later{margin-top:16px}
+.context-clear-reminder{display:block;background:none;border:0;padding:0;color:var(--link);font:inherit;text-decoration:underline;margin-top:12px;cursor:pointer}
+.context-return-later[hidden],.context-clear-reminder[hidden],.context-review-reminder[hidden]{display:none}
+@media screen and (max-width:600px){.context-return-later{width:100%;white-space:normal}.context-answer .eval-controls .eval-actions button{max-width:100%}}
+
+.context-assessment .eval-result-btn{width:auto;max-width:100%;gap:8px;padding:8px 12px;white-space:normal;text-align:left}
+.context-result-label{font-size:var(--text);line-height:1.25}

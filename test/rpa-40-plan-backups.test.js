@@ -275,7 +275,7 @@ test('unexpected rendering failure rolls back and original controls still autosa
 test('replacement aborts old evaluation work and late responses never attach to the imported plan', async t => {
   let release;
   const app = await bootApp({ draft: smallBackup(), evaluate: () => new Promise(resolve => { release = resolve; }) }); t.after(() => app.close());
-  app.document.querySelector('[data-evaluate-section="context"]').click();
+  app.document.querySelector('[data-field="background"]').closest('.field').querySelector('.eval-btn').click();
   await waitFor(() => release);
   assert.match(await importBackup(app, realisticBackup()), /^Backup restored and saved/);
   assert.equal(app.evaluationRequests[0].signal.aborted, true);
@@ -290,7 +290,7 @@ test('failed persistence keeps in-flight evaluations attached to the original pl
   let release;
   const app = await bootApp({ draft: smallBackup(), evaluate: () => new Promise(resolve => { release = resolve; }) }); t.after(() => app.close());
   const root = app.document.getElementById('doc');
-  app.document.querySelector('[data-evaluate-section="context"]').click();
+  app.document.querySelector('[data-field="background"]').closest('.field').querySelector('.eval-btn').click();
   await waitFor(() => release);
   app.window.Storage.prototype.setItem = () => { throw new Error('Quota exceeded'); };
   assert.match(await importBackup(app, realisticBackup()), /could not be saved in browser storage/);

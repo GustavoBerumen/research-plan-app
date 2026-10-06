@@ -51,7 +51,7 @@ async function requestsOf(app) {
   // Something to evaluate in every evaluated field.
   for (const key of ['background', 'goal', 'problemStatement', 'objective']) { const el = d.querySelector('[data-field="' + key + '"]'); if (el) setValue(window, el, 'A sentence to evaluate for ' + key + '.'); }
   for (const key of ['researchQuestions', 'outcomes']) { const el = d.querySelector('.list-rows[data-list-key="' + key + '"] .list-input'); if (el) setValue(window, el, 'An entry to evaluate for ' + key + '.'); }
-  d.querySelectorAll('.section-eval-btn').forEach((button) => button.click());
+  d.querySelectorAll('.section-eval-btn, .context-assessment > .eval-btn').forEach((button) => button.click());
   await waitFor(() => app.evaluationRequests.length >= 6);
   await new Promise((r) => setTimeout(r, 300));
   return new Map(app.evaluationRequests.map((r) => [r.body.fieldKey, r.body]));

@@ -252,7 +252,9 @@ test('disconnect during provider work aborts the actual SDK fetch with no retry 
 
 const field = (app, key) => app.document.querySelector(`[data-field="${key}"]`);
 const controls = (app, key) => field(app, key).closest('.field').querySelector('.eval-controls');
-const section = app => app.document.querySelector('[data-evaluate-section="context"]');
+const assess = (app, key) => { const c = controls(app, key); return c.querySelector(c.querySelector('.eval-result-summary').hidden ? '.eval-btn' : '.eval-reevaluate-btn'); };
+const startContext = app => ['background', 'goal', 'problemStatement'].filter(key => field(app,key).value.trim()).forEach(key => assess(app,key).click());
+const contextIdle = app => ['background', 'goal', 'problemStatement'].every(key => !assess(app,key).disabled);
 async function connectedApp(t, p) {
   const url = await endpoint(t, p.options);
   const app = await bootApp({ evaluate: async (body, request) => {
@@ -286,15 +288,15 @@ test('click budgets, duplicate prevention, readable exhaustion, manual recovery 
   const app = await connectedApp(t, p);
   setValue(app.window, field(app, 'background'), 'Retain background');
   setValue(app.window, field(app, 'goal'), 'Retain goal');
-  section(app).click(); await waitFor(() => !section(app).disabled);
+  startContext(app); await waitFor(() => contextIdle(app));
   assert.equal(p.calls.length, 2, Array.from(app.document.querySelectorAll('.eval-error:not([hidden])'), e => e.textContent).join('\n'));
   const good = controls(app, 'background'), bad = controls(app, 'goal');
   const oldMetrics = bad.querySelector('.eval-metrics').textContent;
-  bad.querySelector('.eval-result-btn').click();
+  assert.equal(bad.querySelector('.eval-panel').hidden, false);
   remainingFailures = 3;
-  section(app).click(); section(app).click();
+  startContext(app); startContext(app);
   bad.querySelector('.eval-quick-reevaluate-btn').click();
-  await waitFor(() => !section(app).disabled);
+  await waitFor(() => contextIdle(app));
   assert.equal(p.calls.length, 6, 'one sibling success plus exactly three Goal attempts');
   assert.equal(app.evaluationRequests.length, 4, 'each field has one HTTP request per click');
   assert.equal(bad.querySelector('.eval-error').textContent,
@@ -314,7 +316,7 @@ test('click budgets, duplicate prevention, readable exhaustion, manual recovery 
   assert.equal(p.calls.length, 9, 'a fresh manual click may use all three attempts again');
   assert.equal(app.evaluationRequests.length, 5);
   assert.equal(bad.querySelector('.eval-error').hidden, true);
-  assert.equal(app.document.getElementById('evaluation-progress-context').textContent, '2 of 2 fields finished.');
+  assert.equal(bad.dataset.assessmentState, 'assessed');
 });
 
 test('Clear Form aborts retrying HTTP work and drops queued fields; fresh writing can evaluate', async t => {
@@ -324,7 +326,7 @@ test('Clear Form aborts retrying HTTP work and drops queued fields; fresh writin
   }) : wire(dynamicValid(call), call.body.tools[0].name));
   const app = await connectedApp(t, p);
   for (const key of ['background', 'goal', 'problemStatement']) setValue(app.window, field(app, key), key);
-  section(app).click(); await waitFor(() => p.calls.length === 2);
+  startContext(app); await waitFor(() => p.calls.length === 2);
   app.document.getElementById('clear-btn').click();
   await waitFor(() => p.calls.every(c => c.signal.aborted));
   assert.equal(app.evaluationRequests.length, 2, 'queued third field never starts');
@@ -335,7 +337,7 @@ test('Clear Form aborts retrying HTTP work and drops queued fields; fresh writin
   }
   hang = false;
   setValue(app.window, field(app, 'background'), 'New plan');
-  section(app).click(); await waitFor(() => !section(app).disabled);
+  startContext(app); await waitFor(() => contextIdle(app));
   assert.equal(p.calls.length, 3);
   assert.equal(controls(app, 'background').querySelector('.eval-result-summary').hidden, false);
 });

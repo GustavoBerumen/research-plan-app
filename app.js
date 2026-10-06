@@ -1791,9 +1791,11 @@
     const btn = el('button', 'eval-btn', { type: 'button' });
     const spinner = el('span', 'eval-spinner');
     const txt = el('span');
-    const sectionField = Object.values(evaluationSections).some(keys => keys.includes(field.key));
-    txt.textContent = sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
+    const contextField = evaluationSections.context.includes(field.key);
+    const sectionField = !contextField && Object.values(evaluationSections).some(keys => keys.includes(field.key));
+    txt.textContent = contextField ? 'Assess this answer' : sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
     btn.hidden = sectionField;
+    if (contextField) controls.classList.add('context-assessment');
     btn.append(spinner, txt);
 
     const detailsId = 'evaluation-details-' + (++evaluationControlCount);
@@ -1805,7 +1807,7 @@
     resultBtn.hidden = true;
     const resultChevron = el('span', 'eval-result-chevron', { 'aria-hidden': 'true' });
     resultChevron.textContent = '▾';
-    const resultStatus = el('span', 'visually-hidden');
+    const resultStatus = el('span', contextField ? 'context-result-label' : 'visually-hidden');
     resultBtn.append(resultChevron, resultStatus);
 
     const resultSummary = el('div', 'eval-result-summary');
@@ -1866,7 +1868,22 @@
       });
     });
     const progress = el('div', 'field-eval-progress', { role: 'status', 'aria-live': 'polite' });
+    const assessmentHeading = el('h3', 'context-assessment-heading');
+    assessmentHeading.textContent = 'Assessment of ' + field.label;
+    const assessmentNote = el('p', 'context-assessment-note');
+    assessmentNote.textContent = 'Assessment is optional. Save and continue keeps your answer without assessing it.';
+    const reminder = el('p', 'context-review-reminder', { role: 'status' });
+    reminder.hidden = true;
+    const laterBtn = el('button', 'btn context-return-later', { type: 'button' });
+    laterBtn.textContent = 'Continue and return later';
+    laterBtn.hidden = true;
+    const clearReminderBtn = el('button', 'context-clear-reminder', { type: 'button' });
+    clearReminderBtn.textContent = 'Clear return-later reminder';
+    clearReminderBtn.hidden = true;
+    let reviewLater = false;
+    if (contextField) controls.append(assessmentHeading, assessmentNote);
     controls.append(resultSummary, progress, error, btn, panel);
+    if (contextField) controls.append(reminder, laterBtn, clearReminderBtn);
     let pending = null;
     let requestState = 'idle';
     let revision = 0;
@@ -1875,17 +1892,48 @@
     let lastResult = null;
     let resultIsStale = false;
 
+    function updateContextState() {
+      if (!contextField) return;
+      const state = requestState === 'pending' ? 'pending'
+        : requestState === 'failed' ? 'unavailable'
+        : resultIsStale || requestState === 'outdated' ? 'outdated'
+        : lastResult ? 'assessed' : 'not-assessed';
+      controls.dataset.assessmentState = state;
+      if (state === 'not-assessed') progress.textContent = field.label + ': not assessed.';
+      else if (state === 'outdated') progress.textContent = field.label + ': answer changed. Assess this answer again.';
+      else if (state === 'unavailable') progress.textContent = field.label + ': assessment unavailable. Your answer is kept.';
+      const needsReview = state === 'unavailable' || state === 'outdated' ||
+        (lastResult && lastResult.data.metrics.some(metric => metric.score < 3));
+      laterBtn.hidden = !needsReview;
+      reminder.hidden = !reviewLater;
+      reminder.textContent = reviewLater ? field.label + ': marked to return later in this session.' : '';
+      clearReminderBtn.hidden = !reviewLater;
+    }
+    laterBtn.addEventListener('click', () => {
+      reviewLater = true;
+      updateContextState();
+      controls.closest('.step')?.querySelector('.step-continue')?.click();
+    });
+    clearReminderBtn.addEventListener('click', () => {
+      reviewLater = false;
+      updateContextState();
+      laterBtn.hidden ? btn.focus() : laterBtn.focus();
+    });
+    updateContextState();
+
     function updateResultPresentation() {
       if (!lastResult) return;
       const action = panel.hidden ? 'Show' : 'Hide';
       const staleText = resultIsStale ? ' Results out of date.' : '';
       resultBtn.classList.toggle('eval-result-stale', resultIsStale);
-      resultStatus.textContent = field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText;
+      resultStatus.textContent = contextField ? action + ' assessment: ' + lastResult.data.label
+        : field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText;
       resultBtn.title = lastResult.data.label + (resultIsStale ? ' — results out of date' : '') +
         ' — ' + action.toLowerCase() + ' evaluation details';
       resultBtn.setAttribute(
         'aria-label',
-        field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText + ' ' + action + ' details.'
+        contextField ? resultStatus.textContent + '. ' + field.label + ' evaluation.' + staleText
+          : field.label + ' evaluation: ' + lastResult.data.label + '.' + staleText + ' ' + action + ' details.'
       );
       staleStatus.hidden = !resultIsStale;
       quickReevaluateBtn.textContent = resultIsStale ? 'Update evaluation' : 'Evaluate again';
@@ -1930,21 +1978,25 @@
       resultIsStale = true;
       updateResultPresentation();
       disableFeedbackActions();
+      updateContextState();
     }
 
     function showResult(data) {
+      const focusOnResult = contextField && document.activeElement === btn;
       resultBtn.className = 'eval-result-btn eval-result-' + data.tone;
       resultSummary.hidden = false;
       resultBtn.hidden = false;
       btn.hidden = true;
-      setExpanded(false);
+      setExpanded(contextField);
+      if (focusOnResult) resultBtn.focus({ preventScroll: true });
     }
 
     function runEvaluation() {
       if (pending) return pending;
       const sectionKey = Object.keys(evaluationSections).find(key => evaluationSections[key].includes(field.key));
       const refreshSection = () => {
-        if (sectionKey) evaluationBatches.get(sectionKey).refresh();
+        if (sectionKey) evaluationBatches.get(sectionKey)?.refresh();
+        updateContextState();
         // The review summary reports evaluation currency, and finishing an
         // evaluation fires no input event, so it has to be told here or the
         // row keeps its old wording until the next keystroke.
@@ -1958,6 +2010,10 @@
         return Promise.resolve('skipped');
       }
       const epoch = evaluationEpoch;
+      const initiatedFromButton = contextField && [btn, reevaluateBtn, quickReevaluateBtn].includes(document.activeElement)
+        ? document.activeElement : null;
+      const queuedRevision = revision;
+      const queuedSignature = fingerprint();
       requestState = 'pending';
       refreshSection();
       const feedbackDisabledBeforeRun = lastResult
@@ -1974,6 +2030,10 @@
       quickReevaluateBtn.setAttribute('aria-busy', 'true');
       pending = queueEvaluation(async () => {
         if (epoch !== evaluationEpoch) return 'cancelled';
+        if (contextField && (revision !== queuedRevision || fingerprint() !== queuedSignature)) {
+          requestState = 'outdated';
+          return 'outdated';
+        }
         const value = getValue();
         const text = evaluationValueToText(value);
         if (!text.trim()) {
@@ -1990,6 +2050,10 @@
         try {
           const data = await evaluateField(body, controller.signal);
           if (epoch !== evaluationEpoch) return 'cancelled';
+          if (contextField && (revision !== requestRevision || fingerprint() !== signature)) {
+            requestState = 'outdated';
+            return 'outdated';
+          }
           renderEvalResult(panel, data);
           lastResult = { text, data, signature };
           resultIsStale = revision !== requestRevision || fingerprint() !== signature;
@@ -2002,10 +2066,15 @@
           }
           updateResultPresentation();
           requestState = 'success';
+          if (contextField && data.metrics.every(metric => metric.score === 3)) reviewLater = false;
           progress.textContent = field.label + ': evaluation complete.' + (resultIsStale ? ' Results out of date.' : '');
           return 'success';
         } catch (err) {
           if (epoch !== evaluationEpoch) return 'cancelled';
+          if (contextField && (revision !== requestRevision || fingerprint() !== signature)) {
+            requestState = 'outdated';
+            return 'outdated';
+          }
           requestState = 'failed';
           const reason = err.message.trim().replace(/[.!?]+$/, '');
           error.textContent = 'Evaluation request failed: ' + reason + '. Retry ' + field.label + ' below.';
@@ -2030,6 +2099,10 @@
         quickReevaluateBtn.disabled = false;
         quickReevaluateBtn.setAttribute('aria-busy', 'false');
         refreshSection();
+        if (initiatedFromButton && (document.activeElement === document.body || document.activeElement === initiatedFromButton)) {
+          const focusTarget = requestState === 'failed' ? btn : initiatedFromButton.hidden ? resultBtn : initiatedFromButton;
+          focusTarget.focus({ preventScroll: true });
+        }
       });
       return pending;
     }
@@ -2164,10 +2237,11 @@
       lastResult = null;
       resultIsStale = false;
       btn.hidden = sectionField;
+      reviewLater = false;
       btn.disabled = false;
       btn.setAttribute('aria-busy', 'false');
       btn.classList.remove('loading');
-      txt.textContent = sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
+      txt.textContent = contextField ? 'Assess this answer' : sectionField ? 'Retry ' + field.label : 'Evaluate ' + field.label;
       resultSummary.hidden = true;
       resultBtn.hidden = true;
       resultBtn.className = 'eval-result-btn';
@@ -2186,6 +2260,7 @@
       quickReevaluateBtn.setAttribute('aria-busy', 'false');
       quickReevaluateBtn.textContent = 'Evaluate again';
       resetFeedbackActions();
+      updateContextState();
     };
     controls._markEvaluationStale = markResultStale;
 
@@ -5215,7 +5290,13 @@
     if (field.examples) wrap.append(...renderExamplePanel(field));
     if (field.eval) {
       const controls = renderEvalControls(field, () => input.value)[0];
-      wrap.appendChild(controls);
+      if (evaluationSections.context.includes(field.key)) {
+        wrap.classList.add('context-answer');
+        const position = el('p', 'context-field-position');
+        position.textContent = field.label + ' · ' + (evaluationSections.context.indexOf(field.key) + 1) + ' of ' + evaluationSections.context.length;
+        wrap.prepend(position);
+        wrap.appendChild(controls);
+      } else wrap.appendChild(controls);
       bindEvaluationStaleness(wrap, controls);
     }
     if (field.key === 'theory') wrap.append(...renderFrameworkSuggest(input));
@@ -5347,7 +5428,7 @@
           fieldsWrap.appendChild(renderField(f));
         }
       });
-      if (evaluationSections[section.slug]) fieldsWrap.appendChild(renderSectionEvaluation(section.slug));
+      if (evaluationSections[section.slug] && section.slug !== 'context') fieldsWrap.appendChild(renderSectionEvaluation(section.slug));
       // Additional information comes after the questions and their Evaluate
       // control, and before Continue: it is extra, and not evaluated (RPA-101).
       section.fields.filter((f) => f.type === 'custom-fields').forEach((f) => fieldsWrap.appendChild(renderField(f)));
