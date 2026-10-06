@@ -18,11 +18,12 @@
 
   function resizeTextarea(textarea) {
     assertTextarea(textarea);
+    const previousHeight = textarea.style.height;
     textarea.style.height = 'auto';
     const contentHeight = Number(textarea.scrollHeight);
 
-    // Closed accordion bodies cannot be measured. Leave the textarea at its
-    // CSS minimum until the section becomes visible and is measured again.
+    // A hidden page cannot be measured. Preserve the last measured height
+    // until reveal; clearing it here collapses retained writing on return.
     if (Number.isFinite(contentHeight) && contentHeight > 0) {
       const view = textarea.ownerDocument && textarea.ownerDocument.defaultView;
       const computed = view && typeof view.getComputedStyle === 'function'
@@ -34,6 +35,8 @@
         : 0;
 
       textarea.style.height = Math.ceil(contentHeight + borderHeight) + 'px';
+    } else {
+      textarea.style.height = previousHeight || '';
     }
 
     return contentHeight;
