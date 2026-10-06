@@ -55,6 +55,9 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);background:var(--canvas);color:var(--ink);min-height:100vh}
 
+/* Keep navigation and keyboard scroll targets below the responsive sticky header. */
+@media screen{html{scroll-padding-top:calc(var(--site-header-h,0px) + 16px)}}
+
 /* ---------- Focus (shared) ---------- */
 /* Inputs: yellow ring, ink inset. Buttons and links: yellow fill, ink rule. */
 .finput:focus,.minput:focus,.cinput:focus,.th-input:focus,.ssel:focus,.select-other-input:focus,
