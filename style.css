@@ -55,7 +55,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);background:var(--canvas);color:var(--ink);min-height:100vh}
 
-/* Keep navigation and keyboard scroll targets below the responsive sticky header. */
+/* Give navigation and keyboard scroll targets a small clearance; only pinned headers reserve space. */
 @media screen{html{scroll-padding-top:calc(var(--site-header-h,0px) + 16px)}}
 
 /* ---------- Focus (shared) ---------- */
@@ -78,7 +78,8 @@ body{font-family:var(--font);font-size:var(--text);line-height:var(--lh);backgro
 /* One bar. The service name sits where a wordmark would, in the app's own
    ink rather than a brand colour — GOV.UK blue on a full-width band would
    read as a government service, which this is not. */
-.site-header{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--border)}
+/* The bar and BETA banner scroll away instead of covering the author's writing. */
+.site-header{position:static;background:#fff;border-bottom:1px solid var(--border)}
 .site-bar{max-width:960px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 /* The mark beside the name (RPA-105): one colour, the text's own, so it sits in ink here and prints in ink. The rule stays under the name alone. */
 .service-name{display:inline-flex;align-items:center;gap:9px;font-size:19px;font-weight:700;color:var(--ink);text-decoration:none;letter-spacing:-.01em}

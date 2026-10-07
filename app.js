@@ -8046,12 +8046,13 @@
   // it; an action closes it too, except Restore, which is about to open a
   // file dialog. The plan's name, not a person's: there is no sign-in yet.
   // No Save progress: autosave already does it (Gus, 14 September 2026).
-  // The pinned research question sits under the sticky site header, so the
-  // header's height is published for the stylesheet (RPA-116).
+  // Only a pinned site header needs clearance above the research question
+  // and navigation targets. A header in normal flow scrolls away.
   function initStickyOffsets() {
     const set = () => {
       const header = document.querySelector('.site-header');
-      document.documentElement.style.setProperty('--site-header-h', (header ? header.offsetHeight : 0) + 'px');
+      const pinned = header && ['sticky', 'fixed'].includes(window.getComputedStyle(header).position);
+      document.documentElement.style.setProperty('--site-header-h', (pinned ? header.offsetHeight : 0) + 'px');
     };
     set();
     window.addEventListener('resize', set);
