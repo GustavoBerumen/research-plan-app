@@ -200,3 +200,22 @@ test('the layout holds at laptop and narrow widths', () => {
     'the footer collapses to one column inside the 760px block');
   assert.doesNotMatch(CSS.match(/\.site-header\{[^}]*\}/)[0], /height:/, 'the header sizes to its content');
 });
+
+test('a header in normal flow reserves no sticky clearance, including after a narrow-screen resize', async (t) => {
+  const app = await bootApp({ configResponse: config() });
+  t.after(() => app.close());
+  const { window, document } = app;
+  const stylesheet = document.createElement('style');
+  stylesheet.textContent = CSS;
+  document.head.appendChild(stylesheet);
+  const header = document.querySelector('.site-header');
+  let height = 104;
+  Object.defineProperty(header, 'offsetHeight', { get: () => height });
+
+  assert.equal(window.getComputedStyle(header).position, 'static', 'the bar and BETA banner belong to normal page flow');
+  window.dispatchEvent(new window.Event('resize'));
+  assert.equal(document.documentElement.style.getPropertyValue('--site-header-h'), '0px');
+  height = 184;
+  window.dispatchEvent(new window.Event('resize'));
+  assert.equal(document.documentElement.style.getPropertyValue('--site-header-h'), '0px', 'a wrapped banner does not leave a header-sized gap');
+});

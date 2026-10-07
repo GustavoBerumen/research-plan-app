@@ -182,6 +182,22 @@ provider use. The sticky-header obstruction and textarea navigation collapse
 are tracked separately in RPA-164 and RPA-163; they are not part of this workflow
 decision.
 
+## Resolved since: the header scrolls with the page (7 October 2026)
+
+Tracked in [RPA-166](https://turingtestable.atlassian.net/browse/RPA-166).
+
+Max asked to eliminate the header hiding writing during manual scrolling,
+following Gustavo's Chrome screenshot. The service bar and BETA banner now
+remain in normal document flow and scroll away together. This is the smallest
+change that removes the overlap without adding scroll-direction behaviour.
+
+The Menu is available at the top of the page, rather than staying visible while
+reading further down. The footer remains in normal flow. Navigation keeps a
+small 16px clearance without reserving the height of the scrolled-away header;
+the Methodology question heading continues to use its existing sticky behaviour
+at the top of the viewport. The separate no-scroll Review route in RPA-165 is
+not resolved by this decision.
+
 ## Open questions
 
 - How are the soft dependency nudges worded so they coach rather than nag?
