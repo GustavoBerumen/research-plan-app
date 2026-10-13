@@ -10,17 +10,18 @@ Synthesised 13 October 2026 from the Re-design-October tab (Alignment, Unpriorit
 
 ## How to read this
 
-- **Fields Verdicts is authoritative** for what each field becomes. Where an Unprioritised item restated a field decision, it has been folded in rather than listed twice.
+- **Fields Verdicts is authoritative** for what each field becomes, **except where a 13 October decision overrides it** — see "Decisions taken". Two overrides exist so far: the per-approach scope changes where Methods, Participant criteria and Sample Size are asked, and dropping section-level evaluation overrides anything that implies a section keeps an Evaluate button. One conflict between the two is still open and is flagged on E2.6 and E4.12: the verdicts put Participant criteria under Execution, while the per-approach decision puts it with the approach answer. Where an Unprioritised item restated a field decision, it has been folded in rather than listed twice.
 - **Unprioritised items that are cross-cutting** (banners, help, titles, guardrails, identity) survive as their own tickets.
 - Tickets are **User Story / Acceptance Criteria / Technical Scope**, as asked. Acceptance criteria are outcomes a test could check.
 - `dependsOn` names the ticket that must land first. `openQuestion` is for Gus or Max and nobody else.
 - **Phase 0 is in Jira** under epic RPA-167 (RPA-168 to RPA-173, keys stamped on each ticket below). The other 51 tickets are drafts and are not raised.
+- **Six questions were answered on 13 October 2026.** See "Decisions taken" before the open-decisions list at the end. Each decision is also recorded on the ticket it affects, as a **Decided by Gus** note where the open question used to be.
 
 ## What the repo told us that the documents did not
 
 Four findings from grounding the tickets in the code. All four change the plan:
 
-1. **`submission-contract.js` hard-requires seven of the cut keys.** Loosen it *before* any field goes dormant, or every new plan fails validation in `pretest`. This single constraint sets the order of Phase 1.
+1. **`submission-contract.js` blocks the cut in two places, and the second one throws.** The required-key lists hard-require seven of the cut keys, so they must be loosened before any field goes dormant or every new plan fails validation in `pretest`. Beneath them sits a structural pass (lines 224-245) that runs first and does not report at all: `array(plan.studies, …)` and `choice(plan.selects.studyCount)` call `bad()`, which throws `Invalid submission structure`, and `plan.version !== 11` rejects a bumped version outright. A plan without the cut keys therefore raises an exception rather than returning errors, so `validate()` never returns a list to inspect. Both passes have to move in the same commit. This sets the order of Phase 1.
 2. **The existing field audit has already drifted.** `python3 research/field-audit-gen.py` exits 1 on main today: eight fields the template asks have no audit row, and nine audit rows describe fields the template no longer has. The eight unaudited fields are precisely the ones October rules on. The drift checker exists, says in its own docstring it is for CI, and is wired into nothing.
 3. **Decision record 001 is stale in ways beyond the one we knew.** It describes seven sections including Alignment and Feedback, which the template no longer has; it lists Hypothesis as evaluable, dormant since RPA-117; and it decided a persistent always-visible outline that was never built.
 4. **A `Good:` / `Bad:` example panel already exists** in the template machinery, wired into four renderers and used by zero fields. The "clear examples" item needs no engineering.
@@ -61,7 +62,9 @@ Every Unprioritised Suggested Change, and where it went.
 
 Nothing in the repo says what this app is for. 57 tickets of change on top of that is how a redesign loses its reasons. Everything here is Markdown; none of it touches the app.
 
-### Phase 1 — Unblock the cut — 9 tickets
+### Phase 1 — Unblock the cut — 10 tickets
+
+**Changed 13 October:** E4.5, the approach page, joins this phase from Phase 3. Methods, Participant criteria and Sample Size are now asked against the approach answer, so the page that asks for it has to exist before E2.8 retires Studies. It is a template edit plus the contract's Other validation, so moving it early costs little.
 
 Three things in code are keyed to the old structure and will NOT follow a template edit: submission-contract.js hard-requires seven of the cut keys, the tests list sections and fields explicitly, and evaluationSections is keyed by section slug. The contract must be loosened BEFORE any field goes dormant, or every new plan fails validation in pretest.
 
@@ -69,7 +72,9 @@ Three things in code are keyed to the old structure and will NOT follow a templa
 
 Almost all template. The form says better things without the app doing anything differently. Hold the label rename until the cut has landed — seven of those fields are on the cut list and renaming them is wasted work.
 
-### Phase 3 — The workflow redesigns — 15 tickets
+### Phase 3 — The workflow redesigns — 14 tickets
+
+**Changed 13 October:** E4.5 has moved to Phase 1, and E4.6 — which suggests methods from the chosen approach — can follow it there, since answering E4.5's question was its only blocker.
 
 The design-and-build half. Dates first because they are the ceiling everything downstream hangs from, then the new approach page and the suggestions it feeds, then the structural cuts, then the schedule.
 
@@ -78,6 +83,8 @@ The design-and-build half. Dates first because they are the ceiling everything d
 Everything buildable now is browser-local. The half of the link feature needing a hosted plan or hosted Word document is recorded as a decision, not drafted as work.
 
 ### Phase 5 — The evaluation model — 8 tickets
+
+**Changed 13 October:** two of these move earlier. Dropping section-level evaluation everywhere means E6.2 (per-answer actions for Research) then E6.3 (delete the section action) must both land before E2.6 renames Context in Phase 2 — otherwise the rename ships a button reading "Evaluate research-details". The rest of the phase stays here.
 
 RPA-162 already did this for Context. What is left is Research, deleting the last section-level action, and the refinement slice behind a reviewed contract.
 
@@ -121,7 +128,7 @@ Epic 1 — Foundations and documentation
 
 *Source: USC: "Easily Accessible App Mission Statement and Principles [Major Ticket]"; Alignment section (purpose, mission, guiding principle, how the app supports users)*
 
-> **Needs Gus or Max:** research/README.md deliberately does not mirror the Google Doc into the repo, on the grounds that a copy would fork from it within a week. MISSION.md is a mirror of the Doc's Alignment section and has exactly that problem. Gus or Max to decide which wins when they disagree: does MISSION.md become the canonical statement with the Doc as a drafting surface, or does it stay a summary that defers to the Doc?
+> **Decided by Gus, 13 October 2026:** MISSION.md is the **canonical** statement of purpose and principles. The external Doc becomes a drafting surface, and where the two disagree, MISSION.md wins. research/README.md's no-mirror rule therefore needs an explicit, written exception for this one file saying why it lives here — without it, the next reader applies the rule and deletes the thing it is meant to protect. Add that to this ticket's acceptance criteria when the branch opens.
 
 ### E1.2 Add CLAUDE.md so agent sessions load the mission and the decision records
 
@@ -174,7 +181,9 @@ Epic 1 — Foundations and documentation
 
 *Source: Fields Verdicts: the streamlined page list and the section-by-section redesign (Objective MERGE, Ways to find info NEW PAGE, Deliverables SPLIT PAGE, the two Declaration rows merged onto the previous page); Epic 1 scope note that the new section and page model is the decision everything else depends on*
 
-> **Needs Gus or Max:** October's group names do not line up with the template's section headings: "Entry" and "Research Details" have no counterpart in the template, and the template's Context and Methodology have no counterpart in October's list. Does Context become Research Details, and does Methodology dissolve into Studies? Gus or Max to confirm the final section names and their order before 002 is written, because every later ticket cites them.
+> **Decided by Gus, 13 October 2026:** the six sections, in this order, are **Entry, Research Details, Research, Studies, Execution, Review**. Context becomes Research Details and takes the Project decision field with it; Methodology dissolves, its Methods going to Studies and its Participant criteria and Sample Size to Execution per the verdicts; no Methodology heading survives. This is the list every later ticket cites, and 002 is now clear to be written.
+>
+> 002 must also record the other decisions of the same day, because they are structural rather than cosmetic: that Methods, Participant criteria and Sample Size are asked once against a single per-plan approach answer (E4.5, E2.8), and that section-level evaluation is dropped everywhere in favour of RPA-162's per-answer action (E2.6, E6.3). A record that fixes the section names but leaves those two unstated would be re-opened within a week.
 
 ### E1.4 Amend decision record 001 where the field audit overturned it
 
@@ -215,7 +224,7 @@ Epic 1 — Foundations and documentation
 - research/field-audit.md records an October verdict for every field the Fields Verdicts sheet rules on, including the implied cuts, so no field is cut later with no written reason.
 - The RPA-55 verdicts remain readable beside the October ones. The second pass is additive, so the change of mind is visible rather than overwritten.
 - python3 research/field-audit-gen.py exits 0 and reports no drift. It exits 1 today, with 8 fields missing from the audit and 9 stale rows.
-- The eight fields the template asks but the audit never covered each have a row: Project name, Other researchers, Researcher names, Study questions, Number of studies, Participant criteria, Declaration: Lead researcher and Declaration: Project requester.
+- The eight fields the template asks but the audit never covered each have a row: Project name, Other researchers, Researcher names, Study questions, Number of studies, Participant criteria, Declaration: Lead researcher and Declaration: Project requester. Each carries October's one-line reasoning from the details-change column in place of answers to the three protocol questions, and is **marked as inherited**, so no reader mistakes it for a row that went through the protocol. The tables have five columns per field, so a row that simply exists leaves three of them for someone to invent or leave blank.
 - The nine stale rows are reconciled rather than deleted: fields that are dormant appear in the "Already dormant" table, and fields removed from the template say which ticket removed them.
 - The scoreboard and the status line reflect the October pass, and the file no longer claims the audit is complete at 31 verdicts.
 - The file records that the October pass used the same Jarrett and Gaffney question protocol and reached the opposite conclusion to the first pass about deletion.
@@ -232,7 +241,7 @@ Epic 1 — Foundations and documentation
 
 *Source: Epic 1 scope note: the field audit itself transcribed from Miro into the repo as versioned evidence; Fields Verdicts (every row, plus the implied cuts: Project name, Lead researcher, Other researchers, Researcher names, Project requester, Study questions, Number of studies, and the two Sign-off initial fields)*
 
-> **Needs Gus or Max:** The eight fields the RPA-55 audit never covered have no answers to the three protocol questions. Do they inherit October's one-line reasoning from the details-change column, or does Gus want the three questions answered properly for them before the cuts are actioned? The second is more work and could change a verdict — two of the eight are the Declaration fields, which October marks CHANGE rather than cut.
+> **Decided by Gus, 13 October 2026:** the eight fields **inherit October's one-line reasoning** from the details-change column. The three protocol questions are deliberately not re-run for them. The audit should say so in as many words, so that a later reader can tell a deliberate shortcut from an oversight — and so the two Declaration fields, which October marks CHANGE rather than cut, are not read as having been through the full protocol.
 
 ### E1.6 Run the field-audit drift check in CI
 
@@ -265,7 +274,7 @@ Epic 1 — Foundations and documentation
 
 Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seven sections (Plan details, Context, Research, Studies, Methodology, Execution, Review) down to six (Entry, Research Details, Research, Studies, Execution, Review). Most of the cutting is an edit to research-plan-template.md, which app.js parses at load via parseSchema (app.js:281) — but three things in code are keyed to the old structure and will not follow a template edit on their own: evaluationSections in app.js (line 1671, keyed by section slug), the SECTION/FIELDS/LABEL maps and required-key lists in submission-contract.js (lines 20-26, 172, 273), and the explicit section and field lists in the test suite. Order matters: the submission contract hard-requires seven of the cut keys, so it has to be loosened before any field goes dormant or every new plan fails validation in pretest.
 
-### E2.1 Record the field cut as decision 002 and settle the fields the verdicts do not name
+### E2.1 Record the field cut as decision 003 and settle the fields the verdicts do not name
 
 `Task` · `S`
 
@@ -282,7 +291,7 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 **Technical scope**
 
-- New file research/decisions/002-the-field-cut.md, following the Context / Decision / Status headings of research/decisions/001-layout-and-navigation.md
+- New file research/decisions/**003**-the-field-cut.md, following the Context / Decision / Status headings of research/decisions/001-layout-and-navigation.md. **002 is taken** by E1.3's page-and-section model; two records cannot share a number, and four tickets in this document were claiming 002 before this was caught
 - Reconcile against the 32 field lines declared in research-plan-template.md: emailAddress, researchTitle, jiraProject, leadResearcher, otherResearchers, researcherNames, projectRequester, projectDecision, researchReadout, lastUpdated, additionalPlanDetails, background, goal, problemStatement, additionalContext, objective, researchQuestions, outcomes, additionalResearch, studyCount, studyQuestions, methods, characteristics, sampleSize, additionalMethodology, stageTimeline, previousKnowledge, additionalResources, declarationResearcher, signOffResearcher, declarationRequester, signOffProjectOwner
 - Note the three code-side consumers the record's readers will need: evaluationSections (app.js:1671), submission-contract.js SECTION/FIELDS/LABEL (lines 20-26), plan-workflow.js ROLES (line 31)
 - Cite the Alignment statement's purpose and principle rather than restating them
@@ -293,14 +302,14 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 ### E2.2 Let the submission contract accept a plan without the cut fields
 
-`Task` · `M` · depends on **Record the field cut as decision 002 and settle the fields the verdicts do not name**
+`Task` · `M` · depends on **Record the field cut as decision 003 and settle the fields the verdicts do not name**
 
 **User story.** As Max, I want the submission contract to validate a plan that no longer carries the cut fields, so that the first field to go dormant does not make every new submission fail validation.
 
 **Acceptance criteria**
 
 - A v2 plan with jiraProject, leadResearcher, projectRequester, goal and objective all blank produces no 'required' errors
-- A v2 plan with no studies array, no studyCount select and no otherResearchers select produces no 'choice' or 'pairing' errors
+- A v2 plan with no studies array, no studyCount select and no otherResearchers select **validates without throwing** and produces no 'choice' or 'pairing' errors. Today it does not merely report: the structural pass throws `Invalid submission structure` before any field is looked at
 - A plan sent before this change, carrying all of those keys populated, still validates clean
 - A plan that is genuinely incomplete — no research question, no schedule stage — still reports its errors, so the relaxation is scoped to the cut keys only
 - Every error still carries a section that exists in the new six-section structure
@@ -308,6 +317,7 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 **Technical scope**
 
+- **The structural pass is a second gate, and it throws rather than reporting.** Verified at submission-contract.js 224-245: `array(plan.studies, ...)` (line 240) calls `bad()` — `throw new Error('Invalid submission structure')` — when `studies` is absent, because `array` begins `if (!Array.isArray(v) ...) bad()`. `choice(plan.selects.studyCount)` (line 238) throws the same way through `record(v, ['v','o'])` when the select is gone. And `plan.version !== 11` (line 235) rejects any bumped version outright. So loosening only the required-key lists leaves a plan without the cut keys failing with an exception, not an error list, and `validate()` never returns. This pass must be loosened in the same commit
 - submission-contract.js: the required-key list in validateV2 (line 273) and the identical list in validateLegacy (line 172) — both currently force researchTitle, jiraProject, leadResearcher, projectRequester, background, goal, problemStatement, objective, signOffResearcher, signOffProjectOwner to be non-blank
 - submission-contract.js validateV2: the otherResearchers 'choice' check and researcherNames 'policy' check, and the studyCount / plan.studies expectedCount pairing check
 - submission-contract.js: FIELDS (line 20), SECTION (line 25) and LABEL (line 26) — SECTION routes each error to a section slug, so its values are structural, not cosmetic
@@ -384,7 +394,7 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 - The Research Questions question and guidance ask for what the team wants to learn, so nothing the Objective field collected is simply lost
 - A draft saved with objective text still holds it after an edit triggers an autosave
 - Method suggestions still return results with the objective field gone
-- No evaluation control offers to assess an objective, and the Research section's own evaluation still covers the questions and deliverables
+- No evaluation control offers to assess an objective, and nothing else in Research loses its assessment. Worded to hold in either order, because this ticket sits in Phase 1 and may land before E6.3: while the Research section-level action still exists it continues to cover the questions and deliverables, and once E6.3 removes it, Research Questions and Outcomes carry their own 'Assess this answer' actions instead (Gus, 13 October 2026 — section-level evaluation is dropped everywhere)
 - node --run test passes
 
 **Technical scope**
@@ -427,7 +437,9 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 *Source: Fields Verdicts section structure (Entry, Research Details, Research, Studies, Execution, Review); Fields Verdicts Research Details: Project decision KEEP (set constraints on duration of plan)*
 
-> **Needs Gus or Max:** renderSectionEvaluation names its button from the slug, so Research Details would read 'Evaluate research-details'. Does the button get wording of its own, or does Research Details lose its section-level evaluation entirely now that RPA-162 assesses each answer separately — and if so, does Research follow?
+> **Decided by Gus, 13 October 2026:** section-level evaluation is dropped **everywhere**, not given wording of its own. RPA-162's per-answer "Assess this answer" is the only way to ask for feedback, so the slug-named button problem disappears with the button. E6.3 already drafts the whole deletion and is the ticket that does it.
+>
+> **Sequencing this creates:** the rename must not land while a slug-named button still exists, so E6.3 has to come first — and E6.3 cannot land until every field the template marks `eval` has a per-answer action, which today is true only of Context (RPA-162). That makes E6.2 → E6.3 → this ticket the real order, which is not the phase order as drafted. See the Phase note in the roadmap.
 
 ### E2.7 Infer the research title from the plan's answers
 
@@ -460,7 +472,7 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 ### E2.8 Retire the Studies questions and settle what Methods is asked per
 
-`Story` · `L` · depends on **Let the submission contract accept a plan without the cut fields**
+`Story` · `L` · depends on **Let the submission contract accept a plan without the cut fields** and on **Ask how the research questions will be answered**
 
 **User story.** As a researcher, I want to stop declaring how many studies I will run and mapping each one to research questions, so that I describe how I will find answers instead of doing bookkeeping the plan does not need.
 
@@ -480,11 +492,13 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 - app.js: the `.field-study-questions` branches in pageUnitsOf (line 7970) and the two sibling collectors (lines 6769 and 7786), which currently push one page per study
 - plan-model.js: the studies block (studyLabel and studyCount, from line 57) holds the rule that methods, characteristics and sample size belong to a study rather than a question
 - app.js migrateDraft (line 8465) and DRAFT_VERSION (line 8113, currently 11): v10 built the per-study groups this ticket unwinds, so decide whether a new version is needed or whether the old shape is simply carried
+- Dead code this creates: app.js 4419 special-cases the Other *label* for one field — `value === '__other__' ? (field.key === 'studyCount' ? 'More than three' : 'Other')`. Retiring Number of studies makes that branch unreachable, so remove the studyCount arm and leave the plain 'Other'
+- Because one approach is asked per plan (E4.5), the three fields become ordinary plan-level fields: drop `perQuestion` and add no replacement grouping. plan-model.js's studies block is retired rather than re-keyed
 - test/rpa-142-studies.test.js, test/rpa-140-unclaimed-question.test.js and test/rpa-116-methodology-by-question.test.js encode the per-study structure directly
 
 *Source: Fields Verdicts implied cuts: Study questions, Number of studies; Fields Verdicts Studies: Ways to find info NEW PAGE, Methods KEEP, Deliverables SPLIT PAGE; Fields Verdicts Execution: Participant criteria CHANGE*
 
-> **Needs Gus or Max:** With studies gone, what are Methods, Participant criteria and Sample Size asked per — the plan as a whole, or the new 'Ways to find info' page? The verdicts put Methods under Studies and Participant criteria under Execution, which separates two fields plan-model.js currently keeps together as one study's properties.
+> **Decided by Gus, 13 October 2026:** Methods, Participant criteria and Sample Size are asked **per approach page** — they hang off the new 'Ways to find info' answer — and that answer is **one approach per plan**. So all three are asked once, framed by the chosen approach, with no loop and no per-approach grouping to build. This makes E4.5 a prerequisite: the answer they hang off has to exist first.
 
 ### E2.9 Triage the tests that assert the cut fields
 
@@ -540,7 +554,7 @@ Epic 3 — Content, labels and guidance. The cheapest work in the redesign: almo
 - Update the help-title column of the WORDS table in `test/rpa-119-field-words.test.js` (rows at lines 52-57) for any title that changes.
 - The notes currently share one shape — "A strong X covers 3 key areas" plus three bold bullets — which is a starting point to improve rather than a vacuum; keep what works about it.
 - New copy is British English: `test/rpa-78-british-english.test.js` boots the real template and asserts `document.documentElement.lang === 'en-GB'` alongside its copy checks.
-- Record the pattern either in the template's own header comment (which already documents the `Help:`/`Guidance:` syntax at lines 129-138) or as `research/decisions/002-…`, following `research/decisions/001-layout-and-navigation.md`.
+- Record the pattern either in the template's own header comment (which already documents the `Help:`/`Guidance:` syntax at lines 129-138) or as a new numbered record in `research/decisions/`, taking the next free number after 002 (the page and section model, E1.3) and 003 (the field cut, E2.1), following `research/decisions/001-layout-and-navigation.md`.
 
 *Source: USC "Help information" (concise, practical, clear examples, a framework for structuring)*
 
@@ -838,7 +852,7 @@ Epic 3 — Content, labels and guidance. The cheapest work in the redesign: almo
 - On a step page that accordion button is inert: `style.css` line 233 hides its chevron, line 234 sets `cursor:default`, line 235 kills the hover colour, and line 279 hides `.acc-count` on screen only, so the count still prints.
 - `dataset.stepTitle` is read off `.acc-title` at app.js:7566 and drives the tab title at app.js:7540. Focus management queries all three selectors — `.step-heading, .acc-head, .review-h` at app.js:7715 and 7776, `.step-heading, .acc-title` at 8019 — so any change must keep every path finding a name.
 - Held by `test/rpa-149-section-name-not-counters.test.js`: `.step-top` must contain exactly `['step-back', 'step-all']` with no digit in it, the page's name must equal `dataset.stepTitle`, no code may word a count, and `.acc.step .acc-count` must stay hidden on screen only. That test is the contract for this page furniture.
-- Record the outcome as `research/decisions/002-…`, following `research/decisions/001-layout-and-navigation.md`. Note while there that 001's persistent outline was never built — the task list is a separate screen — so the new record does not inherit a claim that is not true.
+- Record the outcome as a new numbered record in `research/decisions/`, taking the next free number after 002 (the page and section model, E1.3) and 003 (the field cut, E2.1), following `research/decisions/001-layout-and-navigation.md`. Note while there that 001's persistent outline was never built — the task list is a separate screen — so the new record does not inherit a claim that is not true.
 
 *Source: USC "Define section title placement"*
 
@@ -962,17 +976,21 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 - The answer appears in the plan document and the Word download under its section.
 - The answer saves and restores in the existing draft shape, with no new draft version.
 - The field's hint, error wording and help note come from the template, not from code.
+- The field keeps an Other option with a free-text box, so a plan whose approach is not one of the four offered can still name it in the author's own words.
+- A plan with Other selected and nothing typed is refused, with the error naming the approach field.
 
 **Technical scope**
 
 - Template-first: a field line in research-plan-template.md with a pinned key=, read by parseFieldLine() (app.js 155). A pinned key is what stops a later copy edit renaming it and silently breaking every lookup (the RPA-55 lesson written into that function).
-- One answer per plan fits the existing radios type and needs no code: `closed` suppresses the Other option, as on Other researchers. Several ticked answers do not — renderFieldOfType() (app.js 5167) offers table, list, custom-fields, checkbox, radios, study-questions and select only; checkbox is a single agreement statement (RPA-115) and the only multi-box control is renderStudyQuestionsField()'s, which is specific to studies.
+- **Decided 13 October 2026: one approach per plan, asked once for the plan rather than per research question.** That fits the existing radios type and needs no new field type, so the only engineering this ticket ever carried is gone. For contrast, several ticked answers would have needed one — renderFieldOfType() (app.js 5167) offers table, list, custom-fields, checkbox, radios, study-questions and select only; checkbox is a single agreement statement (RPA-115) and the only multi-box control is renderStudyQuestionsField()'s, which is specific to studies.
+- **Do not mark the field `closed`.** app.js 4413 builds a radio set as `(field.options || []).concat(field.closed ? [] : ['__other__'])`, so the Other option and its text box appear on every radio field unless the field declares `closed`. Keeping the free-text escape is therefore an omission, not an addition. Other researchers carries `closed` because Yes/No has no third answer; this field is the opposite case.
 - submission-contract.js must learn the key in three places: SECTION (line 25), LABEL (line 26) and the types map (lines 108/113). plan-document.js renders by type and needs nothing new.
+- Because the field carries an Other option, the contract needs the two-line choice pattern it already uses for Sample Size and the schedule's stage column (submission-contract.js 193-195): first refuse a value that is neither a known approach nor `__other__`, then separately require the `o` text to be non-blank when `__other__` is chosen. Validating the list alone lets a plan through with Other selected and nothing typed.
 - New test file, added to package.json's "test" list.
 
 *Source: Unprioritised: Investigating the best approach (new page). Fields Verdicts: Studies / Ways to find info NEW PAGE (ask how people see answering the research questions).*
 
-> **Needs Gus or Max:** One approach per plan or several ticked, and per plan or per research question? One per plan is a template edit with no code; several needs a new multi-select field type, which is the only engineering in this ticket.
+> **Decided by Gus, 13 October 2026:** one approach per plan, asked per plan rather than per research question, and the free-text Other escape stays. This removes the ticket's only engineering — it is now a template edit plus the contract's Other validation. It also makes this ticket a prerequisite for E2.8, because Methods, Participant criteria and Sample Size are now asked against this answer; see the Phase 1 note in the roadmap.
 
 ### E4.6 Suggest methods from the approach the researcher chose
 
@@ -987,6 +1005,7 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 - A request with no approach is still answered, so plans saved before the page existed keep working.
 - The response shape is unchanged: one entry per question, in order, at most three methods each.
 - The no-matching-method fallback still behaves as test/rpa-159-no-matching-method.test.js requires.
+- An approach the app has never seen — one typed into the Other box — is still answered. The suggestion either returns methods or says plainly that it could not work from that approach, and never fails silently or returns an empty list with no explanation.
 
 **Technical scope**
 
@@ -994,6 +1013,8 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 - Server: handleSuggestMethods() (server.js 1358) validates the payload, reads METHODS_FILE through parseMethodsList() (server.js 1221), prompts buildCoveragePrompt() (server.js 1285) with METHODS_COVERAGE_TOOL (server.js 1229), and falls back to GAP_METHOD_TOOL (server.js 1269) with web search for a question left uncovered.
 - Add the approach as an optional field in the handler and in buildCoveragePrompt(); keep the 400 for a missing objective or questions and the PILOT_MODE cap of 20 questions (server.js ~1378).
 - Server-side name validation stays: the handler only keeps methods whose names match the library, and caps at three.
+- **The approach arrives as free text, not as one of four known values**, because the field keeps its Other escape (E4.5, decided 13 October 2026). buildCoveragePrompt() must treat it as the author's own words rather than an enum, and must not branch on a fixed set — an unrecognised approach is the normal case, not an error. The handler's existing name validation remains the guard that keeps a suggested method inside research-methods.md.
+- RPA-159 is the precedent for what the page says when nothing comes back: "No matching research methods. You can still enter a method of your own." An approach the model cannot work from needs the equivalent sentence rather than silence. test/rpa-159-no-matching-method.test.js holds that wording for the combobox and is the shape to follow, not the string to reuse.
 
 *Source: Unprioritised: [SWR] Suggest methods based on research question and user input. Fields Verdicts: Studies / Methods KEEP (suggest methods from what the user said about how to answer).*
 
@@ -1496,6 +1517,8 @@ Epic 6 — The evaluation and feedback model: move feedback from the section to 
 
 `Task` · `M` · depends on **Assess Research Questions and Outcomes beside their answers**
 
+**Decided by Gus, 13 October 2026:** this deletion is agreed, and it is the whole answer to E2.6's question about the renamed section's button. It also moves earlier than its phase suggests: E2.6 cannot rename Context while a slug-named button exists, and this ticket cannot land until Research has per-answer actions (E6.2). The chain is E6.2 → this → E2.6.
+
 **User story.** As a researcher, I want one way to ask for feedback, so that I am not offered a section button and a per-answer action that do the same thing.
 
 **Acceptance criteria**
@@ -1505,7 +1528,7 @@ Epic 6 — The evaluation and feedback model: move feedback from the section to 
 - The shared limit of two concurrent assessment requests still holds, and Clear Form, a profile change and a successful backup import still abort work in flight.
 - The review step still reports evaluation currency per section, and a stale evaluation still counts towards a completed section.
 - Print output is unchanged apart from the removed action.
-- test/rpa-34-section-evaluation.test.js is either retired or rewritten to assert the per-answer model, and package.json's `test` list matches the files on disk.
+- All eleven test files that reach for a section-level control are reconciled, and package.json's `test` list matches the files on disk. Counted on main: test/rpa-34-section-evaluation.test.js (asserts the button's text is 'Evaluate research'), test/rpa-38-paired-outcome-deletion.test.js:188 (asserts exactly one `.section-eval-btn`), test/rpa-56-structured-score-guardrail.test.js, test/rpa-63-evaluation-panel-polish.test.js and test/rpa-78-british-english.test.js (each calls `.querySelector('.section-eval-btn').click()` unguarded, so they throw on null rather than failing with a message), test/app-characterization.test.js, test/rpa-36-optional-recommendations.test.js and test/rpa-39-evaluation-staleness.test.js (fall back to the section button only when the per-field control is hidden), test/rpa-150-rubric-binding.test.js and test/rpa-162-context-assessment.test.js (multi-selector, degrade quietly), and test/rpa-114-character-count.test.js (see the style.css bullet). Naming only rpa-34 understates this by ten files.
 
 **Technical scope**
 
@@ -1513,6 +1536,7 @@ Epic 6 — The evaluation and feedback model: move feedback from the section to 
 - app.js: remove the `evaluationBatches` map (line 1683) and its plumbing — the `evaluationBatches.set` inside `renderSectionEvaluation`, the `evaluationBatches.get(sectionKey)?.refresh()` in `runEvaluation`'s `refreshSection` (around line 1997), and the `evaluationBatches.forEach(batch => batch.reset())` in `resetEvaluationWork` (line 1708). Keep `evaluationEpoch`, `drainEvaluations` (1689), `queueEvaluation` (1701) and `evaluationControllers`: the per-answer flow uses all four.
 - app.js: keep `evaluationSections` itself. `sectionSummary` (line 5977) reads it for the review step's currency counts, and the per-answer position label reads it for "N of N".
 - style.css: remove `.section-evaluation` (line 749) and drop `.section-evaluation` from the print rule at line 953. No `.section-eval-btn` or `.section-eval-status` rules exist to remove.
+- **Do not edit that print rule without reading test/rpa-114-character-count.test.js:85 first.** It finds the rule by slicing the stylesheet at the literal string `.section-evaluation,.field-eval-progress` and then asserts `.word-count,` appears in what follows. Remove the first selector and `indexOf` returns -1, `slice(-1)` yields one character, and the assertion fails for a reason that has nothing to do with word counts. Either keep the selector order so the anchor survives, or change the test to anchor on `.field-eval-progress`.
 - package.json: drop test/rpa-34-section-evaluation.test.js from the `test` list if it is retired.
 - research/decisions/001-layout-and-navigation.md: add a "Resolved since" note. Its existing "Resolved since: section evaluation actions (RPA-34)" entry, approved by Max on 7 September 2026, is what this supersedes, and the record should not be left claiming two section actions exist.
 
@@ -1662,21 +1686,32 @@ Epic 6 — The evaluation and feedback model: move feedback from the section to 
 
 ---
 
-# Open decisions — 49 tickets carry one
+# Decisions taken — 13 October 2026
+
+Gus answered these six on 13 October 2026; they are no longer open. Each is recorded on the ticket it affects as well.
+
+- **One approach per plan, with its free-text escape** (E4.5) — the form asks how the research questions will be answered, offering four approaches plus Other, once for the plan rather than per research question. This removes the ticket's only engineering: one answer fits the existing radios type, and the Other box comes free because app.js appends it to every radio set that is not marked `closed`.
+- **Methods, Participant criteria and Sample Size are asked per approach** (E2.8) — they hang off that one answer, so all three are asked once with no loop and no per-approach grouping to build. E4.5 therefore has to land before the Studies retirement, which is earlier than its drafted phase.
+- **Section-level evaluation is dropped everywhere** (E2.6, E6.3) — RPA-162's per-answer "Assess this answer" becomes the only way to ask for feedback, so the slug-named "Evaluate research-details" button problem disappears with the button. E6.3 is the ticket that does it, and it has to precede the section rename.
+- **MISSION.md is canonical** (E1.1) — the external Doc becomes a drafting surface, and research/README.md's no-mirror rule gains an explicit written exception for this one file.
+- **The six sections are Entry, Research Details, Research, Studies, Execution, Review** (E1.3) — Context becomes Research Details and takes Project decision with it, and Methodology dissolves: Methods to Studies, Participant criteria and Sample Size to Execution. Decision record 002 carries this list, and must carry the per-approach scope and the dropped section evaluation with it.
+- **The eight never-audited fields inherit October's one-line reasoning** (E1.5) — the three protocol questions are deliberately not re-run for them, and the audit says so in as many words.
+
+Two consequences for the order of work, both recorded on the tickets and in the roadmap:
+
+- E4.5 (the approach page) moves ahead of E2.8 (retiring Studies).
+- E6.2 → E6.3 → E2.6: Research needs per-answer actions before the section button can go, and the button has to go before Context is renamed.
+
+# Open decisions — 43 tickets carry one
 
 No ticket with an open question should be started before it is answered.
 
-- **Write the app's mission and principles into the repo as MISSION.md** (E1) — research/README.
-- **Record the new page and section model as decision record 002** (E1) — October's group names do not line up with the template's section headings: "Entry" and "Research Details" have no counterpart in the template, and the template's Context and Methodology have no counterpart in October's list.
-- **Transcribe the October field verdicts into research/field-audit.md as a second pass** (E1) — The eight fields the RPA-55 audit never covered have no answers to the three protocol questions.
 - **Run the field-audit drift check in CI** (E1) — A Python step in a Node CI job makes the suite depend on the runner's python3, and the repo has no other Python in its test path.
-- **Record the field cut as decision 002 and settle the fields the verdicts do not name** (E2) — The verdicts name 16 fields and the implied-cut list covers 9, but the template declares 32 — so Goal, Sample Size, Research readout, Last updated and the four 'Additional information' hatches are unaccounted for.
+- **Record the field cut as decision 003 and settle the fields the verdicts do not name** (E2) — The verdicts name 16 fields and the implied-cut list covers 9, but the template declares 32 — so Goal, Sample Size, Research readout, Last updated and the four 'Additional information' hatches are unaccounted for.
 - **Let the submission contract accept a plan without the cut fields** (E2) — Bump SCHEMA to a v3 and keep v2 as a second legacy validator, or relax v2 in place? A bump means three validators to maintain; relaxing in place means the live pilot build and this build disagree about whether the same plan is valid.
 - **Make the five header identity fields dormant** (E2) — plan-workflow.
 - **Merge Objective into Research Questions** (E2) — Method suggestion is currently driven by objective plus the research questions.
-- **Restructure the form into Entry, Research Details, Research, Studies, Execution and Review** (E2) — renderSectionEvaluation names its button from the slug, so Research Details would read 'Evaluate research-details'.
 - **Infer the research title from the plan's answers** (E2) — Inference needs Background and Problem Statement, which sit in Research Details — the section after Entry.
-- **Retire the Studies questions and settle what Methods is asked per** (E2) — With studies gone, what are Methods, Participant criteria and Sample Size asked per — the plan as a whole, or the new 'Ways to find info' page? The verdicts put Methods under Studies and Participant criteria under Execution, which separates two fields plan-model.
 - **Agree one shape for help notes and rewrite the six assessed fields to it** (E3) — Where should the pattern live — the template's header comment, which is where a template editor already looks, or a decision record in research/decisions/, which is where a reviewer looks? Gus to pick one so there is a single place to check against.
 - **Ask research questions as questions, and show one** (E3) — Is a hint and an example enough, or does Gus want a soft nudge in the row itself? A hard validation would contradict decision 001's rejection of gates, so that option should be ruled in or out explicitly.
 - **Cut the footer back to what a person needs on arrival** (E3) — Does "bottom banner" mean this footer, or the `.
@@ -1692,7 +1727,6 @@ No ticket with an open question should be started before it is answered.
 - **Say when the readout and decision dates are more than a month apart** (E4) — Warn or refuse? The ceiling between these two dates is already hard (the readout is clamped), but decision 001 rejects gates that produce filler.
 - **Fix the readout date being moved with nothing shown** (E4) — The source line names a bug without describing it.
 - **Decide whether the plan still asks for a delivery date** (E4) — If the readout becomes an estimate, is it editable? An uneditable ceiling removes the second way out of the ceiling error that RPA-154 built on purpose ('or change the readout date').
-- **Ask how the research questions will be answered** (E4) — One approach per plan or several ticked, and per plan or per research question? One per plan is a template edit with no code; several needs a new multi-select field type, which is the only engineering in this ticket.
 - **Suggest methods without waiting for a click** (E4) — A proactive call spends model budget without being asked.
 - **Retire the Studies section** (E4) — Is Methodology then asked once per plan, or once per research question? Once per plan is what the code does on its own today; once per question restores RPA-116's grouping and is real work.
 - **Give deliverables their own page, after the methods** (E4) — After Methods inside Methodology, or a section of its own? That decides which section the evaluation control and the contract's SECTION entry name, and whether Review gains a heading.
