@@ -48,5 +48,6 @@ research/
   field-audit-gen.py   Drift-checks that audit against research-plan-template.md
   notes/               Synthesis notes, one per source or theme
   decisions/           Numbered decision records (context / decision / consequences)
+  redesign-october/    The October redesign: roadmap, tickets, open decisions
   images/              Small screenshots only — keep large sets in Drive
 ```
