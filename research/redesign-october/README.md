@@ -13,22 +13,23 @@ where they become work the repo can act on.
 | --- | --- | --- |
 | Gus and Max | [Roadmap and tickets](roadmap-and-tickets.md) | The whole proposal: 57 tickets, six epics, seven phases |
 | Anyone opening a branch | [Roadmap and tickets § The tickets](roadmap-and-tickets.md#the-tickets) | One ticket each: user story, acceptance criteria, technical scope |
-| Gus and Max, first | [Roadmap and tickets § Open decisions](roadmap-and-tickets.md#open-decisions--43-tickets-carry-one) | The 43 tickets that cannot start yet, and what each is waiting on |
-| Anyone wondering what was settled | [Roadmap and tickets § Decisions taken](roadmap-and-tickets.md#decisions-taken--13-october-2026) | The six decisions of 13 October and the two orderings they changed |
+| Gus and Max, first | [Roadmap and tickets § Open decisions](roadmap-and-tickets.md#open-decisions--42-tickets-carry-one) | The 42 tickets that cannot start yet, and what each is waiting on |
+| Anyone wondering what was settled | [Roadmap and tickets § Decisions taken](roadmap-and-tickets.md#decisions-taken--13-october-2026) | The seven decisions of 13 October and the two orderings they changed |
 | An AI session picking up this work | This README, then the roadmap's "How to read this" | What is decided, what is not, and what the code already constrains |
 
 ## Status
 
-- **57 tickets drafted. 43 carry an open question** that only Gus or Max can
+- **57 tickets drafted. 42 carry an open question** that only Gus or Max can
   answer. No ticket with an open question should be started before it is
   answered — the question is usually the design decision, not a detail.
-- **Six decisions were taken on 13 October 2026**, listed in the roadmap's
+- **Seven decisions were taken on 13 October 2026**, listed in the roadmap's
   "Decisions taken" section and recorded on each ticket they affect. They answered
-  six questions and reordered two chains of work.
-- **Fourteen tickets carry no open question, and ten of those can start today** —
-  E1.1, E1.2, E1.3, E1.4, E1.5, E2.3, E3.2, E4.5, E4.6 and E4.8. The other four
-  (E2.6, E2.8, E2.9, E6.3) are clear in themselves but wait on a ticket that still
-  carries a question.
+  seven questions, reordered two chains of work, and settled one conflict between
+  two of them.
+- **Fifteen tickets carry no open question, and ten of those can start today** —
+  E1.1, E1.2, E1.3, E1.4, E1.5, E2.3, E3.2, E4.5, E4.6 and E4.8. The other five
+  (E2.6, E2.8, E2.9, E4.12, E6.3) are clear in themselves but wait on a ticket
+  that still carries a question.
 - **Phase 0 is where the work starts, and five of its six are startable** —
   everything except E1.6, which waits on Max's call about Python in a Node CI job.
 - **Phase 6, the UI and visual redesign, is deliberately not drafted.** Changing
@@ -60,6 +61,12 @@ The six sections, in order, are **Entry, Research Details, Research, Studies,
 Execution, Review**. Context becomes Research Details and takes the Project
 decision field with it. Methodology dissolves — Methods to Studies, Participant
 criteria and Sample Size to Execution — and no Methodology heading survives.
+Methods, Participant criteria and Sample Size all sit with the approach question
+rather than being split between Studies and Execution — that placement overrides
+the Fields Verdicts, which had put Participant criteria under Execution. Execution
+keeps the Planned Schedule, Previous Knowledge and its Additional information
+hatch, so it is not emptied by the move.
+
 Decision record 002 carries this list, and every ticket that renames, moves or
 evaluates a section cites it rather than guessing.
 
