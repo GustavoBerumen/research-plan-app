@@ -20,7 +20,7 @@ The default split, which works because the two sets genuinely do not overlap:
 
 | Lane | Owns |
 |---|---|
-| Planning session | Jira, `research/decisions/`, `research/field-audit.md`, `README.md`, this file |
+| Planning session | Jira, `MISSION.md`, `research/decisions/`, `research/field-audit.md`, `README.md`, this file |
 | Implementation session | `app.js`, `server.js`, `style.css`, `test/`, `index.html`, the content Markdown |
 
 Crossing lanes is fine, but say so explicitly and stop the other session first.
@@ -113,6 +113,9 @@ this file exists to prevent. GitHub deletes the remote branch on merge anyway.
 
 In the repo, not in a session's context.
 
+- `MISSION.md` holds what the app is for — its purpose, its guiding principle and
+  the boundary it sets. It is the canonical statement, above the working document
+  it was drafted in, and it is what a proposal is argued against.
 - `research/decisions/` holds ADRs — what was settled, and why the alternatives
   were rejected. ADR 001 is the load-bearing one.
 - `research/field-audit.md` holds the per-field verdicts.

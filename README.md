@@ -2,6 +2,10 @@
 
 An interactive, coached version of a research plan template — built to help product team members, researchers, and non-researchers write higher-quality research plans, with tailored feedback instead of a blank page.
 
+**What it is for, and what it is not for, is in [MISSION.md](MISSION.md).** That file is the canonical
+statement of the app's purpose, its guiding principle and the boundary it sets; this README describes
+what it does and how to run it.
+
 The app takes a standard research plan document and turns it into a guided form: structured sections, examples, and an AI-assisted "Evaluate" step that reviews a draft against a rubric and gives Socratic-style feedback (pointing out gaps and asking questions) rather than rewriting it for you.
 
 ## Features
