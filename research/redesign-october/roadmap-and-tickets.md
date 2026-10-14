@@ -975,6 +975,8 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 ### E4.5 Ask how the research questions will be answered
 
+> **Not started on 14 October, deliberately.** Both of its own questions are answered, so it reads as startable — but adding a field to the template is not a local change. `matchesSchema` (submission-contract.js:97) enumerates the form's fields and their types explicitly, and `collectSubmissionPlan` (app.js:9058) **throws `Unsupported active form schema`** when the template and that list disagree. So the template edit and the contract edit have to land together, and what that edit should be is E2.2's open question: bump SCHEMA to v3, or relax v2 in place. Relaxing in place makes the live pilot build and this build disagree about whether the same plan is valid, which is a decision about a deployed thing rather than a code choice. Gus or Max to settle E2.2 first.
+
 `Story` · `M`
 
 **User story.** As a researcher who knows my questions but not my methods, I want to be asked how I see them being answered, so that what the app suggests starts from my own thinking.
