@@ -200,3 +200,54 @@ test('deleting a research question leaves the studies and their methods; a study
   assert.deepEqual(studyGroups(d).map((g) => Array.from(g.querySelectorAll('.study-question-input:checked')).map((c) => c.value)), [['1'], []]);
   assert.deepEqual(app.jsdomErrors, []);
 });
+
+// RPA-174. Suggest methods and its panel were appended to the methods field's
+// wrap, which sits outside .methods-group — so pageUnitsOf never collected
+// them and showPage never hid them. The button followed the reader onto the
+// Participant criteria and Sample Size pages, which are meant to ask one
+// thing. They now travel with the methods page, the way the section-level
+// evaluation control already travelled with the last page of its step.
+test('Suggest methods shows on the methods page and nowhere else in the step', async (t) => {
+  const app = await bootApp({});
+  t.after(() => app.close());
+  const { document: d, window } = app;
+  const steps = Array.from(d.querySelectorAll('.step'));
+  for (const i of [1, 2, 3]) {
+    window.location.hash = '#' + steps[i].dataset.stepSlug;
+    await waitFor(() => steps[i].hidden === false);
+    completeStep(app, steps[i]);
+  }
+  await twoQuestionsTwoStudies(app);
+  window.location.hash = '#methodology';
+  await waitFor(() => stepOf(d, 'methodology').hidden === false);
+  const step = stepOf(d, 'methodology');
+
+  // Fill the first study so Save and continue walks rather than refusing.
+  const g1 = groups(d)[0];
+  setValue(window, g1.querySelector('.list-rows[data-list-key="methods"] .list-input'), 'Interviews');
+  setValue(window, g1.querySelector('.list-rows[data-list-key="characteristics"] .list-input'), 'Abandoned a basket');
+  g1.querySelector('.select-cell[data-field-key="sampleSize"] input[value="1 to 5"]').click();
+  await settle();
+
+  const suggest = () => Array.from(step.querySelectorAll('.methods-suggest'));
+  assert.equal(suggest().length, 2, 'the button row and its panel');
+  const shown = () => suggest().every((n) => !n.classList.contains('page-hidden'));
+  const visibleUnit = () => Array.from(step.querySelectorAll('.field-per-question'))
+    .find((u) => !u.classList.contains('page-hidden') && !u.closest('.methods-group').classList.contains('page-hidden'));
+  const nameOf = (u) => !u ? 'none'
+    : u.classList.contains('field-question-methods') ? 'methods'
+    : (u.querySelector('.list-rows[data-list-key="characteristics"]') ? 'characteristics' : 'sampleSize');
+
+  const seen = [];
+  for (let i = 0; i < 8 && pagePosition(step) !== 'more' && !step.hidden; i++) {
+    seen.push([nameOf(visibleUnit()), shown()]);
+    step.querySelector('.step-continue').click();
+    await settle();
+  }
+
+  const byPage = new Map(seen);
+  assert.equal(byPage.get('methods'), true, 'shown on the methods page — saw ' + JSON.stringify(seen));
+  assert.equal(byPage.get('characteristics'), false, 'hidden on Participant criteria — saw ' + JSON.stringify(seen));
+  assert.equal(byPage.get('sampleSize'), false, 'hidden on Sample Size — saw ' + JSON.stringify(seen));
+  assert.deepEqual(app.jsdomErrors, []);
+});

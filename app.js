@@ -3199,9 +3199,14 @@
       });
     });
 
-    const btnRow = el('div', 'add-btn-row');
+    // Both nodes sit outside .methods-group, so pageUnitsOf never collects
+    // them and showPage never hid them: the button and its panel followed the
+    // reader onto the Participant criteria and Sample Size pages (RPA-174).
+    // The class is what lets showPage hide them with the methods page.
+    const btnRow = el('div', 'add-btn-row methods-suggest');
     btnRow.appendChild(btn);
-    
+    panel.classList.add('methods-suggest');
+
     return [btnRow, panel];
   }
 
@@ -8005,6 +8010,11 @@
     stepEl.querySelectorAll('.methods-group').forEach((g) => g.classList.toggle('page-hidden', !current.some((u) => g.contains(u))));
     const evaluation = stepEl.querySelector('.acc-body .section-evaluation');
     if (evaluation) evaluation.classList.toggle('page-hidden', index !== 'more' && index !== pages.length - 1);
+    // Suggest methods belongs to the methods question, not to the section, so
+    // it travels with the methods page rather than sitting on every page of
+    // the step (RPA-174).
+    const onMethodsPage = current.some((u) => u.classList.contains('field-question-methods'));
+    stepEl.querySelectorAll('.methods-suggest').forEach((n) => n.classList.toggle('page-hidden', !onMethodsPage));
     // Re-measure the answer after its page is revealed, including Change from
     // Check your answers and restored drafts. Hidden pages retain their height.
     current.forEach(unit => resizeTextareas(unit));
