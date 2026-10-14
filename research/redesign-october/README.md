@@ -37,8 +37,17 @@ where they become work the repo can act on.
 
 ## In Jira
 
-Phase 0 only. Raised 13 October 2026 under epic **RPA-167** — Foundations and
-documentation for the October redesign. Every other phase is still a draft.
+Phase 0 under epic **RPA-167** — Foundations and documentation for the October
+redesign — plus three tickets raised on 14 October from the startable set.
+
+| Ref | Jira | State |
+| --- | --- | --- |
+| E4.8 | RPA-174 | Review — PR #144, a real bug, suite green at 869 |
+| E2.3 | RPA-175 | Review — PR #145, tests only, same test count |
+| — | RPA-176 | Ready — found while doing RPA-175, on E2.6's critical path |
+
+E3.2 is **moot** and marked so in the roadmap: it rewrites the help note of
+Sample Size, which the October sheet cuts.
 
 | Ref | Jira | Type | Blocked by |
 | --- | --- | --- | --- |

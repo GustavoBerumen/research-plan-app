@@ -333,7 +333,9 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 ### E2.3 Derive the tests' section and field inventory from the template
 
-`Task` · `M`
+`Task` · `M` · **RPA-175** · done, in PR #145
+
+> **One acceptance criterion was not met, and RPA-176 carries it.** "Renaming a section in the template alone makes the suite pass" needs a second inventory this ticket did not account for: twenty-three test files navigate by writing `'#context'` and the like by hand, and `slugify` derives a slug from the heading, so a rename breaks every one. Measured by renaming `# Context` to `# Research Details` on a disposable copy: eight failures, all on slug navigation. The harness now carries each section's slug so RPA-176 is a find-and-replace. **This is on E2.6's critical path**, since E2.6 renames Context and removes Methodology.
 
 **User story.** As a developer cutting fields, I want the suite to state the section and field inventory in one place, so that each cut touches one fixture instead of twenty test files.
 
@@ -564,7 +566,9 @@ Epic 3 — Content, labels and guidance. The cheapest work in the redesign: almo
 
 ### E3.2 Take the participant bands out of the Sample Size help note
 
-`Task` · `S`
+`Task` · `S` · ~~do not build~~
+
+> **Moot, 14 October 2026.** Sample Size is absent from the October sheet, so it is cut. Rewriting the help note of a field that is being removed is wasted work. Kept rather than deleted because the reasoning still applies to any field whose help note restates the options beside it — the duplication this ticket describes is a pattern worth catching elsewhere, and the help-note ticket in this epic inherits it.
 
 **User story.** As someone choosing how many participants I need, I want the help note to explain the trade-off rather than restate the options I can already see, so that reading it adds something.
 
@@ -1052,7 +1056,7 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 ### E4.8 Keep the methods suggestion on the methods page only
 
-`Bug` · `S`
+`Bug` · `S` · **RPA-174** · done, in PR #144
 
 **User story.** As a researcher answering who should take part, I want the methods suggestion gone from that page, so that the page asks me one thing.
 
