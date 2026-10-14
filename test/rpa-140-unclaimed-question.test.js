@@ -18,7 +18,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY, pagePosition, pageCount } = require('./app-harness');
+const { bootApp, setValue, waitFor, listInputs, completeStep, DRAFT_KEY, pagePosition, pageCount, stepTitles } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -57,17 +57,23 @@ async function completedPlan(options = {}) {
   return app;
 }
 
+// Every step Completed except the ones named. The step list comes from the
+// template, so a rename or a cut does not touch this file (RPA-175); what the
+// assertion means is unchanged — these are still exact, whole-object compares.
+const allCompletedExcept = (over) =>
+  Object.fromEntries(stepTitles().map((name) => [name, over[name] || 'Completed']));
+
 test('the bug as found: a question added to a finished plan left every tick in place; now Studies reopens and Review is locked', async (t) => {
   const app = await completedPlan();
   t.after(() => app.close());
   const { document: d } = app;
   await go(app, 'sections');
-  assert.deepEqual(statuses(d), { 'Plan details': 'Completed', Context: 'Completed', Research: 'Completed', Studies: 'Completed', Methodology: 'Completed', Execution: 'Completed', Review: 'Not started' });
+  assert.deepEqual(statuses(d), allCompletedExcept({ Review: 'Not started' }));
 
   await go(app, 'research');
   await addQuestion(app, 'For whom does it break down?', 'A segment map.');
   await go(app, 'sections');
-  assert.deepEqual(statuses(d), { 'Plan details': 'Completed', Context: 'Completed', Research: 'Completed', Studies: 'Incomplete', Methodology: 'Completed', Execution: 'Completed', Review: 'Cannot start yet' },
+  assert.deepEqual(statuses(d), allCompletedExcept({ Studies: 'Incomplete', Review: 'Cannot start yet' }),
     'Studies is reopened; Methodology and Execution stay open to return to (RPA-100); Review waits');
   app.window.location.hash = '#review';
   await settle();

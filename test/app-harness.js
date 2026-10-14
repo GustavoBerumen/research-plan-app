@@ -22,6 +22,73 @@ function fieldLinePattern(key) {
   return new RegExp('^([^\\n]*\\()([^)]*\\bkey=' + key + ')(\\)[^\\n]*)$', 'm');
 }
 
+// ---------- the section and field inventory (RPA-175) ----------
+// Read from research-plan-template.md rather than written out by hand, so a
+// section rename or a field cut touches this function and not twenty test
+// files. The October redesign cuts eighteen of thirty-two fields and renames
+// four sections; before this, each of those edits meant hunting hardcoded
+// lists.
+//
+// Mirrors parseSchema (app.js:281) and parseHeading (app.js:274) in the three
+// rules that decide what counts: comments are stripped before anything else,
+// so a dormant field is invisible here exactly as it is to the app; the first
+// '#' heading is the document title, not a section; and a field is a line that
+// declares a key=, so prose and Hint/Help lines are skipped.
+function templateInventory(template) {
+  const text = (template || fs.readFileSync(path.join(ROOT, 'research-plan-template.md'), 'utf8'))
+    .replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '');
+  const beforeTitle = [], header = [], sections = [];
+  let titleKey = null, seenTitle = false, current = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/\s+$/, '');
+    if (!line.trim()) continue;
+    const heading = line.match(/^#\s+(.+?)(?:\s*\{([^}]*)\})?\s*$/);
+    if (heading && !seenTitle) {
+      seenTitle = true;
+      const k = /key=(\w+)/.exec(heading[1]);
+      titleKey = k ? k[1] : null;       // "# Research title (text, ..., key=researchTitle):"
+      continue;
+    }
+    if (heading) {
+      const title = heading[1].trim();
+      // slugify (app.js:102) is what turns a heading into the step slug the
+      // URL and the tests use, so the inventory carries it too.
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      current = { title, slug, keys: [] };
+      sections.push(current);
+      continue;
+    }
+    const key = /^[^#\s].*\([a-z][^)]*\bkey=(\w+)/.exec(line);
+    if (!key) continue;
+    (current ? current.keys : (seenTitle ? header : beforeTitle)).push(key[1]);
+  }
+  return { titleKey, beforeTitle, header, sections };
+}
+
+// The titles the steps show. "Plan details" is the header step, which the
+// template does not name — it is the fields between the title and the first
+// section, and app.js hardcodes its title in renderReviewStep and the
+// step-title pass.
+function stepTitles(template) {
+  return ['Plan details'].concat(templateInventory(template).sections.map((s) => s.title));
+}
+
+// The slugs the URL and the step elements use, in the template's order.
+// Nothing reads this yet: twenty-three test files still write '#context' and
+// the like by hand, which is why renaming a section in the template alone does
+// not yet make the suite pass. Converting them is a ticket of its own; the
+// inventory is here so that ticket is a find-and-replace rather than a parse.
+function sectionSlugs(template) {
+  return templateInventory(template).sections.map((s) => s.slug);
+}
+
+// The sections that render as collapsible accordions. Review is deliberately
+// not one (RPA-55 made it the review step), and it is last, so the accordion
+// list is every section before it.
+function accordionSectionTitles(template) {
+  return templateInventory(template).sections.map((s) => s.title).slice(0, -1);
+}
+
 // Adds a flag ("eval", "optional", ...) to one field's spec.
 function withFieldFlag(template, key, flag) {
   const pattern = fieldLinePattern(key);
@@ -382,4 +449,8 @@ module.exports = {
   bootApp,
   listInputs,
   setValue,
+  templateInventory,
+  stepTitles,
+  sectionSlugs,
+  accordionSectionTitles,
   waitFor, completeStep };

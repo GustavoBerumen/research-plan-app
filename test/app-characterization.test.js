@@ -2,13 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  DRAFT_KEY,
-  bootApp,
-  listInputs,
-  setValue,
-  waitFor,
-} = require('./app-harness');
+const { DRAFT_KEY, bootApp, listInputs, setValue, waitFor, accordionSectionTitles } = require('./app-harness');
 
 function ownText(element) {
   return Array.from(element.childNodes)
@@ -93,7 +87,9 @@ test('renders the complete form from the real index, template, rubric, and metho
     // and sign-off) closes; the two deadlines moved up into the header.
     // Alignment became the review step (RPA-55), which is deliberately not an
     // accordion, so it no longer appears among the collapsible sections.
-    ['Context', 'Research', 'Studies', 'Methodology', 'Execution']
+    // The list comes from the template, so a rename or a cut does not touch
+    // this file (RPA-175).
+    accordionSectionTitles()
   );
   assert.deepEqual(
     Array.from(document.querySelectorAll('.acc-count')).map((element) => element.textContent),
