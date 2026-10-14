@@ -4,8 +4,11 @@ Every field in `research-plan-template.md` put through Caroline Jarrett's
 question protocol (Jarrett & Gaffney, *Forms that Work*), to decide what stays,
 what goes, and what is being asked at the wrong moment.
 
-**Status: complete. All 31 verdicts are in.** The field list, types and hint text
-are generated from the template. Question 1 was filled from what the app
+**Status: first pass complete at 31 verdicts (RPA-55). A second pass was taken in
+October 2026 and reached the opposite conclusion about deletion — see "Second
+pass" below.** Thirty fields are accounted for against the template as it stands,
+and `python3 research/field-audit-gen.py` exits 0. The field list, types and hint
+text are generated from the template. Question 1 was filled from what the app
 demonstrably consumes; questions 2 and 3 from the template, the field order and
 how the app behaves.
 
@@ -76,8 +79,27 @@ Fill in as verdicts are reached.
 | undecided | 0 |
 | **total** | **31** |
 
-31 rather than 25: the three fixed-column tables are audited per column, per the
-unit rule above. Requirements left the sheet when it was made dormant — hidden,
+### October's second pass
+
+| Verdict | Count |
+|---|---|
+| keep | 8 |
+| change | 4 |
+| cut (implied — absent from the kept list) | 9 |
+| merge | 1 |
+| infer | 1 |
+| new page | 1 |
+| split page | 1 |
+| **ruled on** | **25** |
+
+Sixteen rows carry an explicit decision and nine more are cut by omission. That
+leaves fields the October sheet does not name — Goal, Sample Size, Research readout,
+Last updated and the Additional information hatches — which is an open question on
+the cut ticket rather than a verdict recorded here. **No field should be cut on the
+strength of a blank.**
+
+31 rather than 25 in the first pass: the three fixed-column tables are audited per
+column, per the unit rule above. Requirements left the sheet when it was made dormant — hidden,
 not decided; its reasoning is under *Already dormant*.
 
 It was 30 until User Groups came back. The sheet's one *merge* was reversed —
@@ -138,17 +160,66 @@ identifies where the tool is thin, not which questions are surplus. The question
 that finds real cuts is *can the person in front of the form actually answer this,
 here, now?*
 
+## Second pass: the October verdicts
+
+**14 October 2026, under [RPA-172](https://turingtestable.atlassian.net/browse/RPA-172).**
+
+The first pass used Jarrett and Gaffney's three questions and found one cut. The
+October pass used the same three questions and cut sixteen fields of thirty-two.
+The sheet below records both, because the change of mind is the evidence: the same
+protocol, applied by the researcher who runs these studies rather than inferred
+from the template, reached the opposite conclusion.
+
+What changed is not the protocol but who answered question 1. The first pass read
+it as *what does the app consume*, which measures the tool as much as the field and
+is why it found almost nothing to cut. October read it as *what decision does this
+answer change*, and a question whose answer changes no decision goes, whatever the
+code does with it.
+
+**Where October's reasoning comes from.** The verdicts sheet carries a decision per
+field — keep, cut, change, merge, infer, new page, split page — and a
+*details-change* column that is empty in fifteen of its sixteen rows. The reasoning
+is on the board instead, as sticky notes against the screen each question appears
+on, plus a band-level note per section. So the rows below cite the board, not the
+column. **Where a row says *inherited*, it carries October's note as written and
+was not re-run through the three questions** — Gus's decision of 13 October, taken
+so the cuts are not held up by re-auditing eight fields the first pass skipped.
+That is a deliberate shortcut, recorded here so a later reader can tell it from an
+oversight.
+
+**What the drift turned out to be.** The checker reported eight fields missing and
+nine stale rows. Reading them:
+
+- **Two were renames, not gaps.** Jira Project is now Project name and
+  Characteristics is now Participant criteria, both renamed by RPA-119 with their
+  keys unchanged. Their first-pass reasoning stands and their rows were relabelled
+  rather than rewritten.
+- **Five were dormant fields** — Hypothesis, Theory and the three Action Points
+  columns, commented out of the template by RPA-117. They moved to *Already
+  dormant* with their verdicts kept.
+- **Two were genuinely removed.** See *Removed since the first pass*.
+- **Six fields had never been audited at all**: Other researchers, Researcher
+  names, Number of studies, Study questions and the two Declaration checkboxes.
+  They have rows now, marked inherited.
+
+So the audit had drifted less through unexamined fields than through renaming —
+which is the failure mode its own open question predicted, and the reason the
+drift check belongs in CI
+([RPA-173](https://turingtestable.atlassian.net/browse/RPA-173)).
+
 ## Header (document meta)
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Research title** | `text` | Identifies the plan everywhere it is listed, shared or printed. | Researcher — naming their own plan. | Able, but usually **last**. You name a plan once you know what it is; this is asked first. | **move** — later. Named once the plan exists, not before it. |
-| **Jira Project** | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. |
-| **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** |
-| **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** |
-| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **done, and verified in the app this time.** It reads as a dateline in the header corner. It stays editable at Gus's request, so the sentence itself is the control: activating it swaps in the date editor in place, with no separate Change link. |
-| **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. The verdict used to read "sourced **or** optional"; the optional half was put to Gus under recommendation 5 and declined, so this is a required question and the answer is to pull it from the linked Jira issue. Nothing blocks on it in the meantime — the form has no validation — so an unanswered date costs the deadline warning, not the plan. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. |
-| **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. Proposed as optional under recommendation 5 and declined; question 3 flags the *timing* here rather than the ability, and the answer to a timing complaint is order, not a marker. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. |
+| **Research title** | `text` | Identifies the plan everywhere it is listed, shared or printed. | Researcher — naming their own plan. | Able, but usually **last**. You name a plan once you know what it is; this is asked first. | **move** — later. Named once the plan exists, not before it. **October: infer.** Plan Details screen 2: *"Do we already have this or can we infer/defer it?"*, *"We can infer it, and give the user the opportunity to edit it"*, *"Infer title by information provided"*. The first pass said *move — later*; October goes further and stops asking. |
+| **Project name**<br><sub>renamed from Jira Project by RPA-119; key is still `jiraProject`</sub> | `text` | Links plan to ticket; the picker resolves it live. | Project side owns the key, but the picker now fetches it, so the researcher no longer has to know it. | Yes — the picker searches, so recall is not required. | **keep** — the picker removed the recall cost. **October: cut** (implied — not among the 16 kept fields). The Plan Details band note reads *"Streamline; keep the essentials, decrease number of screens and consider removing the section"*, and screen 3 asks *"Position plan within wider initiatives — do users know the answer & trust us with it now?"* *Inherited from the October board, not re-run through the three questions.* |
+| **Other researchers**<br><sub>asks: Are other researchers involved in this research?</sub> | `radios` | Gates the Researcher names list below it and nothing else — a Yes/No whose only job is to reveal another question. | Researcher (self). | Yes — two options, zero recall. | **October: cut** (implied — not among the 16 kept fields). Plan Details screen 5: *"Add additional people involved"*, *"Suggest a recommendation based on information provided"*; the band note adds *"Obtain information in other areas, for example name of the researcher is asked again in sign off"*. A gate in front of a question that is itself cut has nothing left to gate. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
+| **Researcher names**<br><sub>asks: Who else is involved?</sub> | `list` | Attribution for people other than the lead. No in-app consumer. | Researcher — names colleagues. | Able; the names are to hand. | **October: cut** (implied — not among the 16 kept fields). Same Plan Details screen 5 notes as the gate above, and the same band note about asking for the researcher's name twice. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
+| **Lead researcher**<br><sub>asks: Name</sub> | `text` | Attribution, and the sign-off pair reads the name from here. | Researcher (self). | Yes — zero effort. | **keep** **October: cut** (implied — not among the 16 kept fields). The Plan Details band note reads *"Obtain information in other areas, for example name of the researcher is asked again in sign off"*. The name is asked twice today, here and at sign-off; October says ask once without saying which of the two asks survives, and the sign-off initials field is an implied cut as well. That is a gap, not a verdict: something has to carry the name. |
+| **Project requester**<br><sub>asks: Name</sub> | `text` | Attribution; names the approver for sign-off. | Researcher knows the name. | Yes — zero effort. | **keep** **October: cut** (implied — not among the 16 kept fields). Plan Details screen 6: *"Identify person who requested research"*, *"Do we already have this or can we infer/defer it?"*; Sign off screen 4 adds *"We already asked for the Project Requester name. Ask only one time"*. To be asked once, as an email address. |
+| **Last updated** | `date` | Tells a reader how current the plan is. Computed. | Nobody — computed. Already *move*. | N/A — computed, never asked. | **move** — **done, and verified in the app this time.** It reads as a dateline in the header corner. It stays editable at Gus's request, so the sentence itself is the control: activating it swaps in the date editor in place, with no separate Change link. **October: not ruled on.** Neither the sheet nor the board addresses it. **Not a verdict — a gap.** It is computed rather than asked, so it costs a reader nothing, but that is an argument not a decision. |
+| **Project decision** | `date` | **Feeds the deadline check** — warns when reporting lands less than a week before it. Also the reason the study has a deadline at all. | ⚠ **Project Owner.** A delivery date the researcher does not set. | ⚠ **Often not yet fixed.** Must be chased from someone else, and research planning frequently precedes the date being set. A blocker disguised as a date field. | **keep — sourced.** Load-bearing (feeds the deadline check) but routinely unanswerable at the moment it is asked. The verdict used to read "sourced **or** optional"; the optional half was put to Gus under recommendation 5 and declined, so this is a required question and the answer is to pull it from the linked Jira issue. Nothing blocks on it in the meantime — the form has no validation — so an unanswered date costs the deadline warning, not the plan. **Reorder done:** now in the header beside the names, so the constraint is visible before any section is written. **October: keep.** Plan Details screen 4: *"Set constraint on duration of plan"* — which is the field's purpose stated back, and the one Plan Details screen marked as settled. |
+| **Research readout** | `date` | **Feeds the deadline check** (the other side of it), and sets the delivery expectation. | Researcher — their own commitment. | ⚠ Able, but asked early — a delivery commitment made before the method is chosen in Methodology. | **keep** — the sequencing complaint is the form's order, not this field. Proposed as optional under recommendation 5 and declined; question 3 flags the *timing* here rather than the ability, and the answer to a timing complaint is order, not a marker. **Reorder done:** now in the header beside Project Decision, where a deadline belongs. **October: not ruled on.** Neither the sheet nor the board addresses it. **Not a verdict — a gap**, carried as an open question on the cut ticket. |
 
 ## Alignment
 
@@ -156,49 +227,56 @@ here, now?*
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. |
-| **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. |
+| **Declaration: Lead researcher**<br><sub>asks: I confirm the scope, methods and schedule are realistic and ready to run</sub> | `checkbox`<br><sub>nohelp</sub> | Locks the lead researcher's approval; the sign-off pair will not complete without it. | Researcher (self). | Yes, once there is a plan to approve. | **October: change.** Sign off screen 3: *"Sign off form as Lead Researcher"*, *"We already asked for the Lead Researcher name. Ask only one time"*, *"Bring tick mark to previous page, merge pages"*. Kept as an instrument, asked on fewer screens. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
+| **Declaration: Project requester**<br><sub>asks: I confirm the research supports my project goals and the timeline meets my needs</sub> | `checkbox`<br><sub>nohelp</sub> | Locks the requester's approval, and is the point at which Request changes is offered instead. | ⚠ **The project requester**, not the researcher. | ⚠ Not the researcher's to give — the same objection as the initials field below it. | **October: change.** Sign off screen 4: *"Identify other person signing off"*, *"We already asked for the Project Requester name. Ask only one time"*, *"Approve the form as requestor, copy link of form"*. Kept as an instrument, asked on fewer screens, and the requester is to be identified by email address once. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
+| **Sign off: Lead researcher**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | Researcher (self) — but see timing. | ⚠ Willing, but not yet — there is no plan to sign. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. **October: cut** (implied — not among the 16 kept fields). Sign off screen 3: *"We already asked for the Lead Researcher name. Ask only one time"*, *"Bring tick mark to previous page, merge pages"*. The declaration survives; the separate initials field does not. *Inherited from the October board, not re-run through the three questions.* |
+| **Sign off: Project requester**<br><sub>asks: Type initials</sub> | `text` | Records approval to proceed. | ⚠ **The Project Owner, by name.** The researcher cannot answer this one at all. | ⚠ **No.** Not the researcher's to give. Alignment now closes the form (reorder done), so there is at least a plan to approve — but the approver is still not the person filling it in. Already *move*. | **move** — **done.** The review step exists and both sign-offs are in it. **October: cut** (implied — not among the 16 kept fields). Sign off screen 4: *"We already asked for the Project Requester name. Ask only one time"*, *"Approve the form as requestor, copy link of form"*. *Inherited from the October board, not re-run through the three questions.* |
 
 ## Context
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester** and is scored by the rubric. Something does depend on it — which argues for sourcing it, not cutting it. | ⚠ Project side. The researcher transcribes it rather than knows it. | Able by transcription, and that is the problem: retyping a brief that already exists. Low willingness, and invites paraphrase drift. | **keep — source it.** Feeds the framework suggester, so it is needed; but it is transcription. Prefill from the linked Jira issue (recommendation 1). The output is a follow-up ticket, not a cut. |
-| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. Same argument: source it rather than ask for it again. | ⚠ **Project Owner.** This is the project's goal, not the research's. | ⚠ Able only by copying. If the brief is vague the researcher invents the project's goal — worse than leaving it blank. | **keep — source it.** As Background. Bad transcription here degrades an AI feature's input, which makes sourcing a quality fix, not a convenience. |
-| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. | ⚠ Project side — usually the reason research was commissioned in the first place. | Usually findable, being the reason research was commissioned. Still transcription rather than authorship. | **keep — source it.** As Background. |
+| **Background**<br><sub>asks: Relevant information to understand the project</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester** and is scored by the rubric. Something does depend on it — which argues for sourcing it, not cutting it. | ⚠ Project side. The researcher transcribes it rather than knows it. | Able by transcription, and that is the problem: retyping a brief that already exists. Low willingness, and invites paraphrase drift. | **keep — source it.** Feeds the framework suggester, so it is needed; but it is transcription. Prefill from the linked Jira issue (recommendation 1). The output is a follow-up ticket, not a cut. **October: keep.** Research screen 1: *"One of the most important section, keep it front and centred"*, *"Specify what info the user need to provide"*, and a proposal to *"Explore using a tempate like: As part of the project___, we are trying to ____ in order to ____ because _____"*. Kept, with the transcription complaint answered by a template rather than by sourcing. |
+| **Goal**<br><sub>asks: Aim of the project and the outcomes you are trying to achieve</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. Same argument: source it rather than ask for it again. | ⚠ **Project Owner.** This is the project's goal, not the research's. | ⚠ Able only by copying. If the brief is vague the researcher invents the project's goal — worse than leaving it blank. | **keep — source it.** As Background. Bad transcription here degrades an AI feature's input, which makes sourcing a quality fix, not a convenience. **October: not ruled on.** The sheet does not name it and no board sticky addresses it. **Not a verdict — a gap.** It must not be cut on the strength of a blank; the cut ticket carries this as an open question. |
+| **Problem Statement**<br><sub>asks: Issues requiring attention that could prevent the project achieving…</sub> | `textarea`<br><sub>eval</sub> | **Feeds the framework suggester**; scored by the rubric. | ⚠ Project side — usually the reason research was commissioned in the first place. | Usually findable, being the reason research was commissioned. Still transcription rather than authorship. | **keep — source it.** As Background. **October: keep.** Research screen 3: *"What the initiative aim to address"*, *"Specify what info the user need to provide before evaluation"*. |
 
 ## Research
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Objective**<br><sub>asks: Purpose and high-level goals of the research</sub> | `textarea`<br><sub>eval</sub> | **Feeds the methods suggester** and is scored by the rubric. | Researcher — core expertise. | Yes — this is what they came to write. | **keep** — the researcher's core contribution. |
-| **Hypothesis**<br><sub>asks: Baseline assumptions to be tested during the study</sub> | `textarea`<br><sub>optional, eval</sub> | Feeds the framework suggester; scored by the rubric. | Researcher. | Sometimes. Many studies have none; already optional, correctly. | **optional** — confirmed. Many studies have none. |
-| **Research Questions**<br><sub>asks: What do you want to understand?</sub> | `list`<br><sub>eval</sub> | **The load-bearing field.** Feeds the methods and framework suggesters, drives the Methods grouping, and pairs 1:1 with Outcomes. More depends on this than on anything else. | Researcher. | Yes — core expertise, and the reason they opened the form. | **keep** — core; the reason the form is opened. |
-| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> | Scored by the rubric, and paired 1:1 with Research Questions — the pairing is what makes each question answerable. | Researcher — tracks Research Questions 1:1. | Able, but asked before methods are chosen, so the deliverable is guessed and then revised. | **keep** — not *move*, deliberately: it is bound 1:1 to Research Questions, and moving it after Methods would break the pairing that gives it its value. The timing complaint is the form's order, handled by the reorder. |
+| **Objective**<br><sub>asks: Purpose and high-level goals of the research</sub> | `textarea`<br><sub>eval</sub> | **Feeds the methods suggester** and is scored by the rubric. | Researcher — core expertise. | Yes — this is what they came to write. | **keep** — the researcher's core contribution. **October: merge** into Research Questions. Studies screen 1: *"Simplify flow—Objective and Questions"*, *"Seems something more like research, need to evaluate"*. The first pass called it the researcher's core contribution; October keeps the contribution and stops asking for it separately. |
+| **Research Questions**<br><sub>asks: What do you want to understand?</sub> | `list`<br><sub>eval</sub> | **The load-bearing field.** Feeds the methods and framework suggesters, drives the Methods grouping, and pairs 1:1 with Outcomes. More depends on this than on anything else. | Researcher. | Yes — core expertise, and the reason they opened the form. | **keep** — core; the reason the form is opened. **October: keep.** Studies screen 2: *"Simplify the way we ask for questions"*, *"Add question mark at the end to show that this is a question"*, *"Autocomplete guidance"*, *"Split question and deliverable"*. Still the load-bearing field; the ask around it changes. |
+| **Outcomes**<br><sub>asks: Deliverable for this question</sub> | `list`<br><sub>eval</sub> | Scored by the rubric, and paired 1:1 with Research Questions — the pairing is what makes each question answerable. | Researcher — tracks Research Questions 1:1. | Able, but asked before methods are chosen, so the deliverable is guessed and then revised. | **keep** — not *move*, deliberately: it is bound 1:1 to Research Questions, and moving it after Methods would break the pairing that gives it its value. The timing complaint is the form's order, handled by the reorder. **October: split page.** Studies screen 3: *"Format of findings"*, *"Not necessary to ask for a deliverable for every question"*, *"Split question and deliverable"*. This reverses the first pass's reason for *keep* — it was kept because it pairs 1:1 with Research Questions, and October removes the pairing. Whether a plan may have no deliverable at all is open. |
+
+## Studies
+
+*A section the first pass never covered: it did not exist when RPA-55 was written.
+Both of its questions are implied cuts in October — neither appears among the 16
+kept fields, and the board's Methodology screens are where the reasoning sits.*
+
+| Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
+|---|---|---|---|---|---|
+| **Number of studies**<br><sub>asks: How many studies will you run?</sub> | `radios` | Sets how many times the form loops the questions below it. Its only consumer is the form's own structure — nothing downstream reads the count. | Researcher, in principle. | ⚠ **Asked before the method is chosen.** How many studies it takes is an output of deciding how to answer the questions, not an input to it. A number given here is a guess that the rest of the plan then has to honour. | **October: cut** (implied — not among the 16 kept fields). Methodology screen 1: *"Organise the flow of the studies"*, *"Redesign flow"*, *"Implement the question asking people on how they see answering the research questions"*; screen 3 adds *"Many steps in the flow"*. The approach question replaces it: how you will find out is asked instead of how many times you will do it. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
+| **Study questions**<br><sub>asks: Which research questions does this study answer?</sub> | `study` | Maps each study to the research questions it covers, and warns when a question is left unclaimed (RPA-140). | Researcher. | ⚠ Able, but it is bookkeeping rather than thinking: the mapping restates in a grid what the methods already imply. | **October: cut** (implied — not among the 16 kept fields). Methodology screen 2: *"Associate study to question"*, *"Flow is difficult to understand"*. With studies retired there is nothing to map, so the unclaimed-question warning goes with it. Not audited in the first pass. *Inherited from the October board, not re-run through the three questions.* |
 
 ## Methodology
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Theory**<br><sub>asks: Any useful framework that can guide our research</sub> | `textarea`<br><sub>optional</sub> | Grounds the design; the framework suggester writes into it. | Researcher. | Often not to hand. Already optional, and the suggester exists precisely because recall is unreliable here. | **optional** — confirmed. Rarely to hand. |
-| **Methods**<br><sub>asks: Search or type a method</sub> | `list` | The study design itself — what the plan exists to state. | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. | **keep** — core expertise, well supported. |
-| **Characteristics**<br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **keep — and the merge is reversed.** The merge argued that both fields wanted a short noun phrase naming a kind of person. True of the format, wrong about the function: a screener criterion filters who is eligible, a segment sets who must be represented among those who are. One is a filter, the other a quota, and a study can get the first right and the second wrong. Gus reversed it as the researcher who runs these studies, which outranks an inference drawn from the template. The hints now hold the line and a test objects if they ever collapse together again. Drafts saved while the fields were one keep everything in Characteristics: which entries had been segments was never recorded, so the split is forward-looking only. |
-| **User Groups**<br><sub>in *Participants*</sub><br><sub>asks: which segments to represent</sub> | `list` | ⚠ No in-app consumer. Sets the sampling quota — who must be present among the people recruited, which is a different instrument from the screener above it. Needs a reader to confirm, like its neighbour. | Researcher, usually with product: segment names are often the product's rather than research's. | Yes for the names; the numbers behind a quota usually sit with recruitment. | **keep** — restored. It was merged into Characteristics earlier in RPA-55 and split back out: filtering who is eligible and setting who must be represented are two questions, and a study can answer the first well and the second badly. |
-| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `radios` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. |
+| **Methods**<br><sub>asks: Search or type a method</sub> | `list` | The study design itself — what the plan exists to state. | Researcher — core expertise. | Yes — core expertise, with a 125-item list and a suggester behind it. | **keep** — core expertise, well supported. **October: keep.** Methodology screen 4: *"Identify method"*, *"Suggest studies based on the information given by user on how to answer the study"*, *"Suggest studies before"*. Kept, and asked against the new approach answer rather than per study. |
+| **Participant criteria**<br><sub>renamed from Characteristics by RPA-119, which also folded User Groups back in; key is still `characteristics`</sub><br><sub>in *Participants*</sub><br><sub>asks: who to recruit</sub> | `list` | ⚠ No in-app consumer. Recruitment screening, and since RPA-55 also the segments to represent — needs a reader to confirm either. | Researcher; recruitment/ops may hold the real numbers, product may own segment names. | Roughly, yes. Precise figures usually sit with recruitment. | **keep — and the merge is reversed.** The merge argued that both fields wanted a short noun phrase naming a kind of person. True of the format, wrong about the function: a screener criterion filters who is eligible, a segment sets who must be represented among those who are. One is a filter, the other a quota, and a study can get the first right and the second wrong. Gus reversed it as the researcher who runs these studies, which outranks an inference drawn from the template. The hints now hold the line and a test objects if they ever collapse together again. Drafts saved while the fields were one keep everything in Characteristics: which entries had been segments was never recorded, so the split is forward-looking only. **October: change.** Methodology screens 5 and 6: *"Specify characteristics of study"*, *"Consider removing the question, difficult to answer wihout enough context, it doesn't provide good enough value"*, *"Split question about participants"*. Kept but reframed, and asked on the approach page rather than in Execution (Gus, 13 October 2026). *Inherited from the October board, not re-run through the three questions.* |
+| **Sample Size**<br><sub>in *Participants*</sub><br><sub>asks: Small (1–5),Medium (6–12),Large (13–29),Very Large (30+)</sub> | `radios` | Sets recruitment effort and the confidence the study can claim. | Researcher. | Yes — a four-option dropdown, near-zero cost. | **keep** — drives recruitment; four-option dropdown. **October: not ruled on**, but noted. Methodology screen 1 carries *"Consider removing the question of sample size too specifc and dependent on the company context"* — a consideration raised, not a decision taken. **Not a verdict.** The cut ticket carries it as an open question. |
 
 ## Execution
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Planned Schedule → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** |
-| **Planned Schedule → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. Proposed as optional under recommendation 5 and declined: a schedule is part of what makes a plan reviewable. |
-| **Planned Schedule → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. |
-| **Action Points → Action** | `prose` | ⚠ No in-app consumer *yet*. Overlaps what Jira already tracks — which is the argument for feeding Jira from it, not for asking twice. | Researcher. | Yes. | **keep — pending its consumer.** The plan is where the work is decided; Jira is where it is tracked. The integration below makes this column the input to creating the subtask, which is the consumer it lacks. |
-| **Action Points → Responsible** | `prose` | ⚠ No in-app consumer *yet*. Overlaps Jira assignees. | ⚠ Names other people. Commits someone who is not in the room. | ⚠ Able to type a name; not able to secure the commitment. Records an obligation the named person has not agreed to. | **keep — pending its consumer, and question 3 stays open.** An assignee is half of an action, so cutting it leaves work with no owner. The integration answers question 1 and **does not answer question 3**: creating a Jira subtask still commits someone who was not asked. It arguably raises the stakes — a name in a document is a note, a ticket in a queue is a claim on someone's time. The mitigation is that Jira makes the commitment visible and refusable, which a printed plan does not. Becoming a person picker is part of that work. |
-| **Action Points → Status** | `status` | ⚠ **Nothing.** No consumer in the app, and a signed document cannot hold live state. | ⚠ Nobody, at authoring time. It changes after the plan is written. | ⚠ **Unanswerable here.** Nothing has happened yet. Any value is wrong the day after signing. | **cut** — **done.** Removed from the template, so the table asks two questions. The only row so far to fail all three questions at once. The `status` column type stays part of the template language and keeps its coverage from a fixture. |
-| **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. | **optional** — **done.** Question 3 decided this one. The field stays for the people who have something to hand, and stops being a wall for everyone else. Marking it honestly is not the same as giving it a source, which is still open — see recommendation 4. |
-| **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. | **optional** — **done.** With the Name column, since the two are one row of one table and cannot be optional separately. The harder half of an already-hard question. |
-| **Additional information**<br><sub>was *Additional Resources*</sub> | `custom-fields` | Escape hatch for anything the template did not anticipate. Also evidence: what people add here is a record of what the form is missing, which is why there is one of these rather than one per section. | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. | **optional** — confirmed, and **fixed.** It rendered as a bare "+ Add additional section" button: no label, no hint, and sitting in Execution only because the Resources section was folded there. It has a label and a hint now, and renders after the sections rather than inside one, because "what the template did not anticipate about Execution specifically" is not a question anyone is asking. GOV.UK has no pattern for a user-defined field — every *Ask users for* pattern is for a known thing — so one, scoped to the plan, is as far as this should go. |
+| **Planned Schedule → Stage** | `select` | **Labels the rows of the timeline visualisation.** | Researcher — their own plan. | Yes — a five-option dropdown. | **keep** **October: change.** Execution screen 1: *"Automate and simplify plan visualisation"*, *"Simplify it"*, *"Evaluate its value"*, and a sticky truncated on the board beginning *"Consider removing it. The section Execution may go after the research plan: What to do? vs How …"*. The sheet's one filled details-change cell says *simplify*. |
+| **Planned Schedule → Start Date** | `date` | **Drives the timeline visualisation** and the start-before-completion constraint. | ⚠ Researcher proposes; recruitment decides whether it holds. | ⚠ A proposal, not a commitment. Depends on recruitment lead times the researcher does not control. | **keep** — a planned date, like every date in a plan. Say so in the hint so the printed document is not read as a commitment. Proposed as optional under recommendation 5 and declined: a schedule is part of what makes a plan reviewable. **October: change**, with the Stage column — see above. |
+| **Planned Schedule → Completion Date** | `date` | **Drives the timeline visualisation** and the same constraint. | ⚠ As above — a forecast, not a fact. | ⚠ Weaker still — a forecast derived from a forecast. | **keep** — same note as Start Date. **October: change**, with the Stage column — see above. |
+| **Previous Knowledge → Name** | `prose` | ⚠ No in-app consumer. Meant to prevent repeating past work — the intent is good, the mechanism is absent. | ⚠ Often nobody's job. "What research already exists" is the classic unowned question. | ⚠ High effort, low willingness. Requires searching past work with no repository to search — the field most likely to be left blank. | **optional** — **done.** Question 3 decided this one. The field stays for the people who have something to hand, and stops being a wall for everyone else. Marking it honestly is not the same as giving it a source, which is still open — see recommendation 4. **October: keep.** Execution screen 2: *"Find relevant info"*, *"Optional, good in a company not great in an online version"*, *"Add a return on invesment, what people get in return"*. |
+| **Previous Knowledge → File** | `file` | ⚠ No in-app consumer beyond storing the upload. | ⚠ Harder than the name: needs the artefact to hand, not just its title. | ⚠ Harder again: needs the artefact itself, not just its title. | **optional** — **done.** With the Name column, since the two are one row of one table and cannot be optional separately. The harder half of an already-hard question. **October: keep**, with the Name column — see above. |
+| **Additional information**<br><sub>was *Additional Resources*</sub> | `custom-fields` | Escape hatch for anything the template did not anticipate. Also evidence: what people add here is a record of what the form is missing, which is why there is one of these rather than one per section. | Researcher — open-ended by definition. | Yes when they have something; the field only appears on demand. | **optional** — confirmed, and **fixed.** It rendered as a bare "+ Add additional section" button: no label, no hint, and sitting in Execution only because the Resources section was folded there. It has a label and a hint now, and renders after the sections rather than inside one, because "what the template did not anticipate about Execution specifically" is not a question anyone is asking. GOV.UK has no pattern for a user-defined field — every *Ask users for* pattern is for a known thing — so one, scoped to the plan, is as far as this should go. **October: not ruled on**, but questioned. Every band's last screen reads *"Review + Add Additional Info"*, and Plan Details screen 7 adds *"Is it redundant?"* — the question is asked and left open. **Not a verdict.** |
 
 *The Resources section was folded into Execution (RPA-55): two fields did not
 earn a section of their own.*
@@ -207,7 +285,6 @@ earn a section of their own.*
 
 | Field | Type | Why do we need it? | Who has the answer? | Able and willing? | Verdict |
 |---|---|---|---|---|---|
-| **Feedback**<br><sub>asks: Anything you'd like to say, any question you'd like to add, or some…</sub> | `textarea`<br><sub>optional</sub> | ⚠ **Nothing, and nobody.** No consumer and no defined reader — the only field failing both. | Whoever is filling it — but no defined reader. | Able, but why? No defined reader, so willingness is the open question — not capability. | **move** — **done.** Into the review step, above the approvals. The reader problem was a placement problem: a section of its own at the end of the document was nobody's stop, whereas the review step is the one moment somebody reads the plan rather than writes it. Above the sign-offs, because feedback offered after approval has missed its moment. It keeps the key `comments`, so no saved draft moved. |
 
 ## First pass: who has the answer?
 
@@ -506,8 +583,29 @@ routinely unknown when planning. The risk flagged there was willingness
 without knowledge, a confident guess at approvals. If it comes back, that is
 the problem to solve, and splitting Approvals out was the proposal.
 
+**Hypothesis and Theory were optional, then dormant (RPA-117, 14 September 2026).**
+Both had the verdict *optional — confirmed*: Hypothesis because many studies have
+none, Theory because a framework is rarely to hand and the suggester exists
+precisely because recall is unreliable there. Neither was cut on the evidence; both
+were made dormant later, and ADR 001 still lists Hypothesis as an evaluable Research
+field, which is one of the things RPA-171 corrects.
+
+**Action Points went dormant with its consumer unbuilt (RPA-117).** Its Action and
+Responsible columns held the verdict *keep — pending its consumer*: the argument was
+to build the Jira subtask integration rather than cut the questions, and RPA-69 is
+where that went. Responsible also left question 3 open — it records an obligation
+the named person has not agreed to, and a ticket in someone's queue is a larger
+claim on their time than a line in a document. Status was the sheet's one outright
+*cut*, the only row to fail all three questions at once; the whole table went dormant
+afterwards.
+
 | Field | Type | Was in |
 |---|---|---|
+| Hypothesis | `textarea` | Research |
+| Theory | `textarea` | Methodology |
+| Action Points → Action | `prose` | Execution |
+| Action Points → Responsible | `prose` | Execution |
+| Action Points → Status | `status` | Execution |
 | Project | `textarea` | Alignment |
 | Requirements | `table` | Execution |
 | Research Team | `text` | Header (document meta) |
@@ -515,6 +613,19 @@ the problem to solve, and splitting Approvals out was the proposal.
 | Jira Research | `text` | Alignment |
 | Timeframe | `textarea` | Execution |
 | Documentation | `textarea` | Execution |
+
+## Removed since the first pass
+
+Not dormant — gone from the template, so their first-pass rows no longer describe
+anything. Both verdicts were acted on rather than overturned.
+
+| Field | Type | Was in | Removed by | Verdict it carried |
+|---|---|---|---|---|
+| User Groups | `list` | Methodology | **RPA-119** (`e2ad626`, 17 September 2026) — "who takes part is one list" | **keep** — restored, having been merged into Characteristics earlier in RPA-55 and split back out. RPA-119 merged it again, this time for good. The key `userGroups` is still carried by `plan-model.js` and `submission-contract.js` so older drafts keep their values |
+| Feedback | `textarea`<br>optional | Feedback (its own section) | **RPA-55** (`7b772e4`) — "Move Feedback into the review step, closing the last open verdict" | **move** — done. The reader problem was a placement problem: a section of its own at the end was nobody's stop. It kept the key `comments`, so no saved draft moved |
+
+The Feedback section itself went with it, which is why ADR 001's list of seven
+sections names one the template does not have.
 
 ## Known before we start
 
@@ -541,6 +652,15 @@ long" was probably an orientation problem rather than a scope problem. If that
 holds, the win here comes from **sequencing and optionality** rather than deletion,
 and a verdict sheet full of *keep* is a legitimate outcome — provided the order
 changed. Worth holding open rather than treating a low cut-count as failure.
+
+**Settled the other way, October 2026.** The redesign cut sixteen of thirty-two
+fields, so "too long" was a scope problem as well as an orientation one. ADR 001's
+reasoning was not wrong about orientation — the task list and one-question-per-page
+work shipped and helped — it was wrong to conclude from that that the fields were
+all essential. Both were true at once, and only the second was testable by asking
+what decision each answer changes. ADR 001 is amended under
+[RPA-171](https://turingtestable.atlassian.net/browse/RPA-171); this record is the
+evidence that amendment cites.
 
 ## Open question this audit created
 
