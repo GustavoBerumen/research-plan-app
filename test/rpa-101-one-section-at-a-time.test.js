@@ -19,7 +19,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, stepTitles } = require('./app-harness');
 
 const CSS = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
 const text = (n) => (n && n.textContent || '').replace(/\s+/g, ' ').trim();
@@ -75,7 +75,7 @@ test('the plan opens on the task list; then seven sections in order, each with a
   assert.deepEqual(visible(d), ['sections']);
   // No "Section 3 of 7" since RPA-149: a step says where it is by its name, and the task list says how much is left.
   assert.equal(d.querySelector('.step-caption, .step-page-caption'), null);
-  assert.deepEqual(steps(d).slice(1).map((s) => s.dataset.stepTitle), ['Plan details', 'Context', 'Research', 'Studies', 'Methodology', 'Execution', 'Review']);
+  assert.deepEqual(steps(d).slice(1).map((s) => s.dataset.stepTitle), stepTitles(), 'the steps the template declares, in its order (RPA-175)');
   assert.equal(text(d.querySelector('.doc-header .step-heading')), 'Plan details');
   assert.equal(backOn(steps(d)[0]), null, 'the task list has no Back');
   assert.equal(backOn(steps(d)[1]).hidden, false, 'Plan details goes back to the list');

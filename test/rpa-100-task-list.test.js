@@ -12,7 +12,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented } = require('./app-harness');
+const { bootApp, setValue, waitFor, completeStep, saveAndContinue, withFieldUncommented, stepTitles } = require('./app-harness');
 // Hypothesis is dormant (RPA-117); the optional-field test brings it back.
 const WITH_HYPOTHESIS = withFieldUncommented(fs.readFileSync(path.join(__dirname, '..', 'research-plan-template.md'), 'utf8'), 'hypothesis');
 
@@ -82,7 +82,7 @@ test('the list is first, names the seven sections, and at the start only Plan de
   const d = app.document;
   assert.deepEqual(visible(d), ['sections']);
   assert.equal(text(d.querySelector('.task-list-step .step-heading')), 'Your research plan');
-  assert.deepEqual(rows(d).map((r) => r.name), ['Plan details', 'Context', 'Research', 'Studies', 'Methodology', 'Execution', 'Review']);
+  assert.deepEqual(rows(d).map((r) => r.name), stepTitles(), 'one row per step the template declares (RPA-175)');
   assert.deepEqual(rows(d).map((r) => r.status), ['Not yet started', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet', 'Cannot start yet']);
   assert.deepEqual(rows(d).map((r) => r.linked), [true, false, false, false, false, false, false], 'only what can be started is a link');
   assert.equal(text(d.querySelector('.task-list-progress')), 'You have completed 0 of 7 sections.');
