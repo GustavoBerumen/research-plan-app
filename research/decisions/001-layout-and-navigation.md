@@ -198,6 +198,98 @@ the Methodology question heading continues to use its existing sticky behaviour
 at the top of the viewport. The separate no-scroll Review route in RPA-165 is
 not resolved by this decision.
 
+## Amended since: the field audit overturned the deletion question (14 October 2026)
+
+Tracked in [RPA-171](https://turingtestable.atlassian.net/browse/RPA-171), on the
+evidence in [research/field-audit.md](../field-audit.md) (RPA-172).
+
+This record made one assumption it did not test, and four statements of fact that
+have since gone out of date. Appended rather than rewritten, so what was believed
+in August is still readable beside what is now known.
+
+### The assumption that did not hold
+
+The Context above says:
+
+> A separate question was whether to cut fields. The current fields are
+> considered essential, so the field audit is scoped to sequencing and
+> optionality rather than deletion.
+
+**That no longer holds.** The October 2026 field audit cut sixteen of the form's
+thirty-two fields.
+
+What overturned it was not new evidence but a different reading of the same
+question. The first pass asked question 1 — *what depends on this answer?* — as
+*what does the app consume*, which measures the tool as much as the field, and
+found exactly one cut. The October pass asked it as *what decision does this
+answer change*, and a question whose answer changes no decision goes, whatever
+the code does with it. The field audit says so under its own inherited open
+question, which was written expecting a sheet full of *keep* to be a legitimate
+outcome.
+
+**This record was not wrong about orientation.** The task list and
+one-question-per-page work shipped and helped. It was wrong to conclude from that
+that the fields were therefore all essential. "Too long" was a scope problem *and*
+an orientation problem, and only the scope half was testable by asking what each
+answer changes.
+
+### Four corrections of fact
+
+**Seven sections are now six, and two of the names here do not exist.** This
+record names Alignment and Feedback among its seven sections.
+`research-plan-template.md` has six headings and neither is one of them: Alignment
+became the review step, and Feedback moved into it under RPA-55. The new section
+set is recorded in [002](002-page-and-section-model.md) as Entry, Research
+Details, Research, Studies, Execution and Review.
+
+**Methodology is not a section with no evaluable fields — it is not a section.**
+002 dissolves it: its Methods, Participant criteria and Sample Size move to the
+pages that follow the new approach question. The sentence here that lists
+"Alignment, Methodology, Execution and Feedback" as having no evaluable fields now
+describes one surviving section.
+
+**Hypothesis is not an evaluable Research field.** It is listed here among
+Research's evaluable fields alongside Objective, Research Questions and Outcomes.
+It has been commented out of the template since RPA-117, 14 September 2026, and
+its audit verdict was *optional — confirmed*, not *cut*: many studies have none.
+It is dormant, not deleted, and would return evaluable if it were restored.
+
+**The persistent outline was never built.** The Decision above calls for "a
+persistent outline of all seven sections always visible, each showing its status".
+What shipped instead is a separate task-list screen, held by
+`test/rpa-100-task-list.test.js` and `test/rpa-101-one-section-at-a-time.test.js`.
+Recorded here as fact, not re-decided: whether the model is right belongs to 002,
+which describes what exists.
+
+### What this record still governs
+
+Nothing below is reopened by the amendment or by 002, and later tickets should not
+treat the corrections above as licence to revisit it:
+
+- **No hard forward-locks.** The reasoning stands exactly as written: *"The gate
+  does not produce thinking; it produces filler that satisfies the gate."* The
+  redesign gates nothing.
+- **Evaluation never blocks movement between sections.** Assessment is advisory.
+  RPA-162's "Continue and return later" is its current expression.
+- **A stale evaluation still counts** towards a completed section, with currency
+  tracked separately rather than folded into completion. The reasoning there — that
+  a rule which penalises honest work produces avoidance, not quality — is the same
+  reasoning that rejected the forward-lock, and it survives the cut.
+- **The section order is a default path, not a locked one**, and returning to an
+  existing draft must not replay the sequence.
+- **A completed section is one with information added, and evaluated where
+  evaluation exists.** 002 reads that per answer rather than per section; the rule
+  itself is unchanged.
+
+### One thing deliberately left to its own ticket
+
+002 decides that section-level evaluation is dropped everywhere, which supersedes
+the *Resolved since: section evaluation actions (RPA-34)* entry above as a
+decision. **It is not recorded here as resolved, because no code has changed yet.**
+E6.3 is the ticket that deletes the control, and it will append its own "Resolved
+since" note when it lands. Until then this record still describes two section
+actions that exist in the app, which is accurate.
+
 ## Open questions
 
 - How are the soft dependency nudges worded so they coach rather than nag?
