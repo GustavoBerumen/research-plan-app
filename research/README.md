@@ -39,6 +39,20 @@ to a source, and our own notes about it, are always fine to commit here.
 If a source actually changed a decision, it gets a short note in this folder —
 the Drive folder is the archive, this repo is the map.
 
+### One deliberate exception: MISSION.md
+
+The rule above is why the reading list is not mirrored into the repo: a copy
+forks from the Doc within a week. [`MISSION.md`](../MISSION.md) is a mirror of
+the same Doc's Alignment section and has exactly that problem, and it lives in
+the repo anyway.
+
+That is a decision, not an oversight (Gus, 13 October 2026). The difference is
+which way the authority runs: the reading list is a collection the Doc owns and
+the repo would only copy, whereas the mission is something we wrote and need to
+argue against proposals in pull requests. So `MISSION.md` is canonical and the
+Doc became its drafting surface — the opposite arrangement to the reading list.
+**Do not apply the no-mirror rule to it.**
+
 ## Layout
 
 ```

@@ -1,3 +1,7 @@
+> **Superseded, 14 October 2026.** This is the original concept note, kept for its history.
+> The current statement of purpose is [MISSION.md](MISSION.md); where the two differ, MISSION.md
+> is the one that holds. Do not plan work from this file.
+
 # Concept of the App  
 
 # Research Plan App Ideas
