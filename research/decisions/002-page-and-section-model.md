@@ -30,7 +30,7 @@ the sections are, what each page asks, and the consequences that bite code.
 ## Decision
 
 **Six sections, in this order: Entry, Research Details, Research, Studies,
-Execution, Review.**
+Execution, Review**, carrying fourteen of the template's thirty-two fields.
 
 Email address keeps its own page in front of everything, as RPA-99 built it. It
 is not a section; it is the question the app asks before it will show a plan.
@@ -45,16 +45,16 @@ seventh step. Mapped onto the new set:
 | `# Research title` and the nine fields under it, shown as the step "Plan details" | **Entry** | Renamed. The step is hardcoded in `app.js` as the title *Plan details* and the slug `plan-details` in three places — lines 6053, 7566 and a date-error link whose `href` is `#plan-details` at line 8861 — so this rename is code, not a template edit, and the third one is a navigation target that breaks silently if it is missed |
 | `# Context {open}` | **Research Details** | Renamed, and gains Project decision from Entry |
 | `# Research` | **Research** | Name unchanged. Objective merges into Research Questions; Deliverables splits onto its own page |
-| `# Studies` | **Studies** | Name unchanged, contents almost entirely replaced. Number of studies and Study questions retire. It gains the new approach question and, with it, Methods, Participant criteria and Sample Size |
-| `# Methodology` | **removed** | Its three live fields move to Studies behind the approach question. Its dormant Theory line stays commented out where it is |
-| `# Execution` | **Execution** | Unchanged by this record. It keeps Planned Schedule, Previous Knowledge and its Additional information hatch |
+| `# Studies` | **Studies** | Name unchanged, contents almost entirely replaced. Number of studies and Study questions retire. It gains the new approach question, paired on one page with Methods, and Deliverables on a page of its own |
+| `# Methodology` | **removed** | Methods moves to Studies, Participant criteria to Execution, and Sample Size is cut. Its dormant Theory line stays commented out where it is |
+| `# Execution` | **Execution** | Keeps Planned Schedule and Previous Knowledge, and **gains Participant criteria**, asked once for the whole plan. Its Additional information hatch is cut with the other four |
 | `# Review` | **Review** | Unchanged by this record |
 
-Execution is worth a note because the field audit proposed otherwise. Its
-verdicts moved Participant criteria from Methodology into Execution. **Gus
-decided on 13 October 2026 that Participant criteria goes on the approach page
-instead**, so it never arrives in Execution and Execution is untouched. See "Why
-not the verdicts' placement" below.
+**Participant criteria is in Execution**, as the October sheet has it: asked once
+for the whole plan, not per study and not per approach. An earlier draft of this
+record moved it onto the approach page, on the mistaken belief that the sheet and
+the per-approach scope conflicted. They never did — the sheet lists it under
+Execution — and the record was corrected on 14 October 2026.
 
 ### The page rule
 
@@ -79,14 +79,19 @@ Two changes in this redesign go through that constant:
 approach. It offers four approaches and keeps a free-text Other, and it is
 asked **once per plan**, not per research question.
 
-Methods, Participant criteria and Sample Size are asked **against that one
-answer**, each once. There is no loop and no per-approach grouping: one approach
-per plan means one set of ordinary plan-level fields, with the `perQuestion` flag
-removed from Participant criteria and Sample Size and nothing put in its place.
+**Methods** is asked once, against that one answer, and shares its page. **Participant
+criteria** is asked once in Execution. **Sample Size is cut.** There is no loop and no
+per-approach grouping: one approach per plan means ordinary plan-level fields, with
+the `perQuestion` flag removed from Participant criteria and nothing put in its place.
 
 **Split:** Deliverables, off the Research Questions page and onto its own.
 
-**Retired:** Number of studies, and the Study questions page that looped per
+**Cut:** Number of studies, Sample Size, Goal, Research readout, Last updated, all
+five Additional information hatches, the five Entry identity fields and the two
+sign-off initials fields — eighteen of the template's thirty-two in all. The October
+sheet is a complete list of what the form keeps, so a field absent from it is cut.
+
+**Retired with them:** the Study questions page that looped per
 study. With studies gone there is nothing for participants or methods to be
 mapped to, so the drag-and-drop mapping the audit floated falls away rather than
 being decided against.
@@ -113,22 +118,50 @@ labels itself from its slug, so Research Details would have rendered a button
 reading *Evaluate research-details*. With no section action there is no label to
 fix.
 
-## Why not the verdicts' placement
+## Why Methods and the approach share a page, and participants do not
 
-The field audit put Methods under Studies and Participant criteria under
-Execution, which separates two fields the form currently keeps together as
-properties of one study.
+The three fields that hung off the old Methodology section do not go to the same
+place. Methods pairs with the approach question in Studies; Participant criteria
+goes to Execution on its own; Sample Size is cut.
 
-They are kept together instead, behind the approach question, because they
-answer the same thing. How you will find out, who you will ask, and how many of
-them is one decision described three ways; a researcher who changes the approach
-changes all three. Splitting them across two sections means two pages a reader
-has to hold in their head at once, and a submission error about participants
-filed under a section that never asked about them.
+**Methods pairs with the approach** because the approach is what produces it. The
+suggestion feature reads the approach and proposes methods from it, so the two
+belong in view at once — a suggestion is easier to judge beside the answer that
+caused it than a page later.
 
-The audit's placement was not wrong on its own terms — participants are an
-execution concern once the plan is agreed. But the plan is being written, not
-executed, and at writing time they belong with the approach that produced them.
+**Participants do not travel with them**, because who takes part is not a property
+of how you will find out. One group of people is usually recruited for the whole
+plan, so asking once in Execution matches what a researcher actually does, and it
+is where the October sheet puts it.
+
+**Why not all three together, or all three apart?** All three on one page makes a
+page carrying two lists and three help notes, which stops being about one thing.
+All three apart is the default and costs nothing, but it separates the suggestion
+from the answer that drives it. The pairing is the one place where two questions
+really are one thought.
+
+### On the page count
+
+A correction worth recording, because the opposite was asserted in an earlier
+draft of this record. Pairing was considered partly to avoid "adding pages", which
+measurement showed was not a risk. Methodology is already paginated, and it scales
+with **studies**, not with research questions — measured on the current build at
+one, two and four research questions, and at one, two and three studies:
+
+| Plan | Methodology pages today | Under this record |
+| --- | --- | --- |
+| 1 study | 3, plus the Number of studies page | 2, plus Participant criteria in Execution |
+| 2 studies | 6, plus that page | the same 2 |
+| 3 studies | 9, plus that page | the same 2 |
+
+So the new model is never worse, and the gain is not the count but that the count
+stops multiplying.
+
+`PAGE_PAIRS` (`app.js` line 7954) is the only change needed: one entry pairing the
+approach key with `methods`. Worth knowing for later — the grouping loop in
+`stepPages` admits an entry of more than two keys, since it tests whether any unit
+already on the page shares the entry. It has only ever held pairs, but a group of
+three would work without code.
 
 ## Consequences
 
@@ -200,8 +233,8 @@ Still governing, and not reopened here:
   not answer whether it is needed for any.
 - Does the rubric's Alignment criterion survive the Question/Outcome pairing
   going, and if it is reworded, what replaces the positional comparison?
-- Does the approach question sit on a page of its own with Methods, Participant
-  criteria and Sample Size each following on their own pages, or is it one page
-  holding the group? The page rule above says one question per page, which
-  implies four pages; if the group should be one page, it needs a `PAGE_PAIRS`
-  entry that holds more than two.
+- Does Sample Size being cut leave a gap? Nothing in the plan now states how many
+  people take part. The October sheet cuts it deliberately — the board note reads
+  *"too specifc and dependent on the company context"* — but a reader of the
+  finished plan may still expect the number, and the rubric and the Word document
+  were written when it existed.

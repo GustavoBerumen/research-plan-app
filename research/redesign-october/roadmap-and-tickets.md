@@ -10,12 +10,12 @@ Synthesised 13 October 2026 from the Re-design-October tab (Alignment, Unpriorit
 
 ## How to read this
 
-- **Fields Verdicts is authoritative** for what each field becomes, **except where a 13 October decision overrides it** — see "Decisions taken". Two overrides exist so far: the per-approach scope changes where Methods, Participant criteria and Sample Size are asked, and dropping section-level evaluation overrides anything that implies a section keeps an Evaluate button. The one conflict between them is settled: the verdicts put Participant criteria under Execution, and Gus decided on 13 October that it goes on the approach page with Methods and Sample Size instead. Where an Unprioritised item restated a field decision, it has been folded in rather than listed twice.
+- **Fields Verdicts is authoritative** for what each field becomes, and it is a **complete list of what the form keeps**: a field absent from it is cut, not unaccounted for (Gus, 14 October 2026). Fourteen of the template's thirty-two fields survive. One decision overrides it — section-level evaluation is dropped everywhere, so anything implying a section keeps an Evaluate button is superseded. An earlier version of this document recorded a conflict over where Participant criteria lives; there was none, and the sheet's placement under Execution stands. Where an Unprioritised item restated a field decision, it has been folded in rather than listed twice.
 - **Unprioritised items that are cross-cutting** (banners, help, titles, guardrails, identity) survive as their own tickets.
 - Tickets are **User Story / Acceptance Criteria / Technical Scope**, as asked. Acceptance criteria are outcomes a test could check.
 - `dependsOn` names the ticket that must land first. `openQuestion` is for Gus or Max and nobody else.
 - **Phase 0 is in Jira** under epic RPA-167 (RPA-168 to RPA-173, keys stamped on each ticket below). The other 51 tickets are drafts and are not raised.
-- **Seven questions were answered on 13 October 2026.** See "Decisions taken" before the open-decisions list at the end. Each decision is also recorded on the ticket it affects, as a **Decided by Gus** note where the open question used to be.
+- **Seven questions were answered on 13 October 2026, and three more on 14 October** (with one of the seven withdrawn — see "Decisions taken"). See "Decisions taken" before the open-decisions list at the end. Each decision is also recorded on the ticket it affects, as a **Decided by Gus** note where the open question used to be.
 
 ## What the repo told us that the documents did not
 
@@ -47,7 +47,7 @@ Every Unprioritised Suggested Change, and where it went.
 | Remove — Number of studies | E4 — "Retire the Studies section". Same as Fields Verdicts implied cut of Study questions and Number of studies. |
 | Guardrails for incomplete user input | E6 — drafted as a DECISION, not a build. It contradicts decision 001 in terms. |
 | [SWR] Suggest methods / proactive | E4 — two tickets. |
-| [SWR] Reorganise participants and studies | E4 — "Ask for participants once, on the approach page". Same as Fields Verdicts Participant criteria / change, except for the placement: Gus decided on 13 October that it goes on the approach page rather than under Execution. The drag-and-drop mapping falls away with studies. |
+| [SWR] Reorganise participants and studies | E4 — "Ask for participants once, in Execution", which is where the Fields Verdicts put it: asked once for the whole plan, not per study and not per approach. The drag-and-drop mapping falls away with studies. |
 | [SWR] Remove Suggest Method button from Participants | E4 — filed as a bug. |
 | [SWR] Remove numbering from participant points | E3 — "Take the participant bands out of the Sample Size help note". |
 | [SWR] Review research method descriptions | E3 — "Rewrite the Methods help note to name families of methods". |
@@ -298,7 +298,9 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 *Source: Alignment (purpose: eliminate non-essential questions; principle: users know their project but may lack experience writing a plan); Fields Verdicts, all 16 rows plus the implied-cut list*
 
-> **Needs Gus or Max:** The verdicts name 16 fields and the implied-cut list covers 9, but the template declares 32 — so Goal, Sample Size, Research readout, Last updated and the four 'Additional information' hatches are unaccounted for. Separately, the Review row says 'we already asked for the name — ask once' while Lead researcher and Project requester are both implied cuts: if the header no longer asks, which page does, and what feeds plan-workflow.js ROLES?
+> **Decided by Gus, 14 October 2026:** nothing is unaccounted for. The October sheet is a **complete list of what the form keeps**, so every field absent from it is cut — Goal, Research readout, Last updated, Sample Size and all five Additional information hatches included. Fourteen of thirty-two kept, eighteen cut.
+>
+> **Needs Gus or Max, and narrower than it was:** the Review row says 'we already asked for the name — ask once' while Lead researcher and Project requester are both cut. If the header no longer asks, which page does, and what feeds `plan-workflow.js` ROLES? The Declaration checkboxes are kept but the sign-off initials beside them are cut, and `stampSignOff` currently fills those initials when a declaration is ticked.
 
 ### E2.2 Let the submission contract accept a plan without the cut fields
 
@@ -331,7 +333,9 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 ### E2.3 Derive the tests' section and field inventory from the template
 
-`Task` · `M`
+`Task` · `M` · **RPA-175** · done, in PR #145
+
+> **One acceptance criterion was not met, and RPA-176 carries it.** "Renaming a section in the template alone makes the suite pass" needs a second inventory this ticket did not account for: twenty-three test files navigate by writing `'#context'` and the like by hand, and `slugify` derives a slug from the heading, so a rename breaks every one. Measured by renaming `# Context` to `# Research Details` on a disposable copy: eight failures, all on slug navigation. The harness now carries each section's slug so RPA-176 is a find-and-replace. **This is on E2.6's critical path**, since E2.6 renames Context and removes Methodology.
 
 **User story.** As a developer cutting fields, I want the suite to state the section and field inventory in one place, so that each cut touches one fixture instead of twenty test files.
 
@@ -498,7 +502,7 @@ Epic 2 — The cut: fields and sections. 32 declared fields down to 16, and seve
 
 *Source: Fields Verdicts implied cuts: Study questions, Number of studies; Fields Verdicts Studies: Ways to find info NEW PAGE, Methods KEEP, Deliverables SPLIT PAGE; Fields Verdicts Execution: Participant criteria CHANGE*
 
-> **Decided by Gus, 13 October 2026:** Methods, Participant criteria and Sample Size are asked **per approach page** — they hang off the new 'Ways to find info' answer — and that answer is **one approach per plan**. So all three are asked once, framed by the chosen approach, with no loop and no per-approach grouping to build. This makes E4.5 a prerequisite: the answer they hang off has to exist first.
+> **Decided by Gus, 14 October 2026:** the three fields do not stay together. **Methods** is asked once against the approach answer and shares its page (one entry in `PAGE_PAIRS`). **Participant criteria** is asked once for the whole plan, in **Execution**, where the October sheet puts it. **Sample Size is cut** — absent from the sheet, which is a complete list of what the form keeps. One approach per plan, so no loop and no per-approach grouping anywhere. E4.5 is still a prerequisite: the answer Methods hangs off has to exist first.
 
 ### E2.9 Triage the tests that assert the cut fields
 
@@ -562,7 +566,9 @@ Epic 3 — Content, labels and guidance. The cheapest work in the redesign: almo
 
 ### E3.2 Take the participant bands out of the Sample Size help note
 
-`Task` · `S`
+`Task` · `S` · ~~do not build~~
+
+> **Moot, 14 October 2026.** Sample Size is absent from the October sheet, so it is cut. Rewriting the help note of a field that is being removed is wasted work. Kept rather than deleted because the reasoning still applies to any field whose help note restates the options beside it — the duplication this ticket describes is a pattern worth catching elsewhere, and the help-note ticket in this epic inherits it.
 
 **User story.** As someone choosing how many participants I need, I want the help note to explain the trade-off rather than restate the options I can already see, so that reading it adds something.
 
@@ -944,6 +950,8 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 `Task` · `S`
 
+> **Decided by Gus, 14 October 2026:** **it does not.** Research readout is absent from the October sheet, so it is cut. This ticket becomes the record of what that removes rather than a decision to take: the readout is what the Stage timeline ceiling clamps to (RPA-144), what the one-week buffer warning measures against (RPA-154), and one side of the deadline check. Thirteen test files reference it.
+
 **User story.** As Gus, I want a written decision on whether the readout date is asked for, estimated or dropped, so that the schedule redesign knows what its ceiling is before anyone builds it.
 
 **Acceptance criteria**
@@ -961,9 +969,13 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 *Source: Unprioritised: [PDWR] Dates configuration (consider removing the delivery date entirely and estimating it). Fields Verdicts: Execution / Planned Schedule CHANGE (evaluate its value).*
 
-> **Needs Gus or Max:** If the readout becomes an estimate, is it editable? An uneditable ceiling removes the second way out of the ceiling error that RPA-154 built on purpose ('or change the readout date').
+> ~~**Needs Gus or Max:** If the readout becomes an estimate, is it editable? An uneditable ceiling removes the second way out of the ceiling error that RPA-154 built on purpose ('or change the readout date').~~
+>
+> **Moot, 14 October 2026.** The readout is cut, so there is no estimate to make editable. What replaces this question is the one above it: what the ceiling, the buffer warning and the deadline check compare against once the field is gone.
 
 ### E4.5 Ask how the research questions will be answered
+
+> **Not started on 14 October, deliberately.** Both of its own questions are answered, so it reads as startable — but adding a field to the template is not a local change. `matchesSchema` (submission-contract.js:97) enumerates the form's fields and their types explicitly, and `collectSubmissionPlan` (app.js:9058) **throws `Unsupported active form schema`** when the template and that list disagree. So the template edit and the contract edit have to land together, and what that edit should be is E2.2's open question: bump SCHEMA to v3, or relax v2 in place. Relaxing in place makes the live pilot build and this build disagree about whether the same plan is valid, which is a decision about a deployed thing rather than a code choice. Gus or Max to settle E2.2 first.
 
 `Story` · `M`
 
@@ -1046,7 +1058,7 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 ### E4.8 Keep the methods suggestion on the methods page only
 
-`Bug` · `S`
+`Bug` · `S` · **RPA-174** · done, in PR #144
 
 **User story.** As a researcher answering who should take part, I want the methods suggestion gone from that page, so that the page asks me one thing.
 
@@ -1145,7 +1157,7 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 > **Needs Gus or Max:** Is a deliverable still required at all, or optional? 'Not necessary for every question' does not say whether a plan may have none.
 
-### E4.12 Ask for participants once, on the approach page
+### E4.12 Ask for participants once, in Execution
 
 `Story` · `M` · depends on **Retire the Studies section**
 
@@ -1169,7 +1181,7 @@ Epic 4 — Workflow redesigns: plan dates, the question-to-methods flow, partici
 
 *Source: Unprioritised: [SWR] Reorganise participants and studies (decouple participants from studies, define them upfront, consider drag-and-drop mapping). Fields Verdicts: Execution / Participant criteria CHANGE (specify relevant characteristics); Studies / Ways to find info (split participants from their characteristics).*
 
-> **Decided by Gus, 13 October 2026:** Participant criteria goes on the approach page. Sample Size moves with it — all three of Methods, Participant criteria and Sample Size hang off the one per-plan approach answer, so they travel together and none stays behind in Execution or Methodology. The drag-and-drop mapping falls away rather than being decided: with one approach per plan and no studies, there is nothing left to map participants to. Mapping them to research questions would be a new feature and is not in this ticket.
+> **Decided by Gus, 14 October 2026:** Participant criteria moves from Methodology to **Execution**, asked once for the whole plan — the October sheet's placement, which an earlier version of this document wrongly recorded as overridden. Sample Size does **not** move with it: Sample Size is cut. The drag-and-drop mapping falls away rather than being decided — with one approach per plan and no studies there is nothing left to map participants to, and mapping them to research questions would be a new feature not in this ticket.
 
 ### E4.13 Build the planned schedule from stage durations
 
@@ -1688,13 +1700,15 @@ Epic 6 — The evaluation and feedback model: move feedback from the section to 
 
 # Decisions taken — 13 October 2026
 
-Gus answered these seven on 13 October 2026; they are no longer open. Each is recorded on the ticket it affects as well.
+Gus answered seven of these on 13 October 2026 and three more on 14 October; they are no longer open. One decision of 13 October was withdrawn the next day, and says so where it sits. Each is recorded on the ticket it affects as well.
 
 - **One approach per plan, with its free-text escape** (E4.5) — the form asks how the research questions will be answered, offering four approaches plus Other, once for the plan rather than per research question. This removes the ticket's only engineering: one answer fits the existing radios type, and the Other box comes free because app.js appends it to every radio set that is not marked `closed`.
 - **Methods, Participant criteria and Sample Size are asked per approach** (E2.8) — they hang off that one answer, so all three are asked once with no loop and no per-approach grouping to build. E4.5 therefore has to land before the Studies retirement, which is earlier than its drafted phase.
 - **Section-level evaluation is dropped everywhere** (E2.6, E6.3) — RPA-162's per-answer "Assess this answer" becomes the only way to ask for feedback, so the slug-named "Evaluate research-details" button problem disappears with the button. E6.3 is the ticket that does it, and it has to precede the section rename.
 - **MISSION.md is canonical** (E1.1) — the external Doc becomes a drafting surface, and research/README.md's no-mirror rule gains an explicit written exception for this one file.
-- **Participant criteria goes on the approach page, not Execution** (E4.12, E2.6) — this overrides the Fields Verdicts' placement, and keeps Methods, Participant criteria and Sample Size together as the three fields sharing the approach's scope. Execution keeps the Planned Schedule, Previous Knowledge and its Additional information hatch.
+- **Participant criteria is in Execution** (E4.12, E2.6) — asked once for the whole plan, which is the October sheet's own placement. A decision recorded here on 13 October put it on the approach page instead; that rested on a conflict that did not exist and was withdrawn on 14 October.
+- **The October sheet is a complete list of what the form keeps** (E2.1) — a field absent from it is cut. Fourteen of the template's thirty-two fields survive and eighteen go, including Goal, Research readout, Last updated, Sample Size and all five Additional information hatches.
+- **Methods shares a page with the approach question** (E2.8, E4.5) — one entry in `PAGE_PAIRS`, because the suggestion feature reads the approach and a suggestion is easier to judge beside the answer that caused it.
 - **The six sections are Entry, Research Details, Research, Studies, Execution, Review** (E1.3) — Context becomes Research Details and takes Project decision with it, and Methodology dissolves: Methods to Studies, Participant criteria and Sample Size to Execution. Decision record 002 carries this list, and must carry the per-approach scope and the dropped section evaluation with it.
 - **The eight never-audited fields inherit October's one-line reasoning** (E1.5) — the three protocol questions are deliberately not re-run for them, and the audit says so in as many words.
 
@@ -1703,12 +1717,12 @@ Two consequences for the order of work, both recorded on the tickets and in the 
 - E4.5 (the approach page) moves ahead of E2.8 (retiring Studies).
 - E6.2 → E6.3 → E2.6: Research needs per-answer actions before the section button can go, and the button has to go before Context is renamed.
 
-# Open decisions — 42 tickets carry one
+# Open decisions — 41 tickets carry one
 
 No ticket with an open question should be started before it is answered.
 
 - **Run the field-audit drift check in CI** (E1) — A Python step in a Node CI job makes the suite depend on the runner's python3, and the repo has no other Python in its test path.
-- **Record the field cut as decision 003 and settle the fields the verdicts do not name** (E2) — The verdicts name 16 fields and the implied-cut list covers 9, but the template declares 32 — so Goal, Sample Size, Research readout, Last updated and the four 'Additional information' hatches are unaccounted for.
+- **Record the field cut as decision 003 and settle the fields the verdicts do not name** (E2) — The cut itself is settled: the October sheet is a complete list, so the eighteen fields absent from it are cut. What is left is the Review row's 'we already asked for the name — ask once' against Lead researcher and Project requester both being cut: if the header no longer asks, which page does, and what feeds `plan-workflow.js` ROLES? The Declaration checkboxes are kept but the sign-off initials beside them are cut, and `stampSignOff` fills those initials when a declaration is ticked.
 - **Let the submission contract accept a plan without the cut fields** (E2) — Bump SCHEMA to a v3 and keep v2 as a second legacy validator, or relax v2 in place? A bump means three validators to maintain; relaxing in place means the live pilot build and this build disagree about whether the same plan is valid.
 - **Make the five header identity fields dormant** (E2) — plan-workflow.
 - **Merge Objective into Research Questions** (E2) — Method suggestion is currently driven by objective plus the research questions.
@@ -1727,7 +1741,6 @@ No ticket with an open question should be started before it is answered.
 - **Refuse plan dates that are already in the past** (E4) — Does the floor apply to the Planned Schedule's stage dates too? timelineFloor() only warns there on purpose — a plan written up weeks after the work began has real stages that predate the document.
 - **Say when the readout and decision dates are more than a month apart** (E4) — Warn or refuse? The ceiling between these two dates is already hard (the readout is clamped), but decision 001 rejects gates that produce filler.
 - **Fix the readout date being moved with nothing shown** (E4) — The source line names a bug without describing it.
-- **Decide whether the plan still asks for a delivery date** (E4) — If the readout becomes an estimate, is it editable? An uneditable ceiling removes the second way out of the ceiling error that RPA-154 built on purpose ('or change the readout date').
 - **Suggest methods without waiting for a click** (E4) — A proactive call spends model budget without being asked.
 - **Retire the Studies section** (E4) — Is Methodology then asked once per plan, or once per research question? Once per plan is what the code does on its own today; once per question restores RPA-116's grouping and is real work.
 - **Give deliverables their own page, after the methods** (E4) — After Methods inside Methodology, or a section of its own? That decides which section the evaluation control and the contract's SECTION entry name, and whether Review gains a heading.

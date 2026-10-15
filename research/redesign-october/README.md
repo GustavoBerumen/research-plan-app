@@ -13,23 +13,22 @@ where they become work the repo can act on.
 | --- | --- | --- |
 | Gus and Max | [Roadmap and tickets](roadmap-and-tickets.md) | The whole proposal: 57 tickets, six epics, seven phases |
 | Anyone opening a branch | [Roadmap and tickets § The tickets](roadmap-and-tickets.md#the-tickets) | One ticket each: user story, acceptance criteria, technical scope |
-| Gus and Max, first | [Roadmap and tickets § Open decisions](roadmap-and-tickets.md#open-decisions--42-tickets-carry-one) | The 42 tickets that cannot start yet, and what each is waiting on |
-| Anyone wondering what was settled | [Roadmap and tickets § Decisions taken](roadmap-and-tickets.md#decisions-taken--13-october-2026) | The seven decisions of 13 October and the two orderings they changed |
+| Gus and Max, first | [Roadmap and tickets § Open decisions](roadmap-and-tickets.md#open-decisions--41-tickets-carry-one) | The 41 tickets that cannot start yet, and what each is waiting on |
+| Anyone wondering what was settled | [Roadmap and tickets § Decisions taken](roadmap-and-tickets.md#decisions-taken--13-october-2026) | The ten decisions of 13 and 14 October and the two orderings they changed |
 | An AI session picking up this work | This README, then the roadmap's "How to read this" | What is decided, what is not, and what the code already constrains |
 
 ## Status
 
-- **57 tickets drafted. 42 carry an open question** that only Gus or Max can
+- **57 tickets drafted. 41 carry an open question** that only Gus or Max can
   answer. No ticket with an open question should be started before it is
   answered — the question is usually the design decision, not a detail.
-- **Seven decisions were taken on 13 October 2026**, listed in the roadmap's
-  "Decisions taken" section and recorded on each ticket they affect. They answered
-  seven questions, reordered two chains of work, and settled one conflict between
-  two of them.
-- **Fifteen tickets carry no open question, and ten of those can start today** —
-  E1.1, E1.2, E1.3, E1.4, E1.5, E2.3, E3.2, E4.5, E4.6 and E4.8. The other five
-  (E2.6, E2.8, E2.9, E4.12, E6.3) are clear in themselves but wait on a ticket
-  that still carries a question.
+- **Seven decisions were taken on 13 October 2026 and three more on 14 October**,
+  listed in the roadmap's "Decisions taken" section and recorded on each ticket
+  they affect. One of the seven was withdrawn the next day — Participant criteria
+  was never moving to the approach page; the conflict it resolved did not exist.
+- **Sixteen tickets carry no open question, and eleven of those can start today** —
+  E1.1, E1.2, E1.3, E1.4, E1.5, E2.3, E3.2, E4.4, E4.5, E4.6 and E4.8. The others
+  are clear in themselves but wait on a ticket that still carries a question.
 - **Phase 0 is where the work starts, and five of its six are startable** —
   everything except E1.6, which waits on Max's call about Python in a Node CI job.
 - **Phase 6, the UI and visual redesign, is deliberately not drafted.** Changing
@@ -38,8 +37,17 @@ where they become work the repo can act on.
 
 ## In Jira
 
-Phase 0 only. Raised 13 October 2026 under epic **RPA-167** — Foundations and
-documentation for the October redesign. Every other phase is still a draft.
+Phase 0 under epic **RPA-167** — Foundations and documentation for the October
+redesign — plus three tickets raised on 14 October from the startable set.
+
+| Ref | Jira | State |
+| --- | --- | --- |
+| E4.8 | RPA-174 | Review — PR #144, a real bug, suite green at 869 |
+| E2.3 | RPA-175 | Review — PR #145, tests only, same test count |
+| — | RPA-176 | Ready — found while doing RPA-175, on E2.6's critical path |
+
+E3.2 is **moot** and marked so in the roadmap: it rewrites the help note of
+Sample Size, which the October sheet cuts.
 
 | Ref | Jira | Type | Blocked by |
 | --- | --- | --- | --- |
@@ -61,11 +69,14 @@ The six sections, in order, are **Entry, Research Details, Research, Studies,
 Execution, Review**. Context becomes Research Details and takes the Project
 decision field with it. Methodology dissolves — Methods to Studies, Participant
 criteria and Sample Size to Execution — and no Methodology heading survives.
-Methods, Participant criteria and Sample Size all sit with the approach question
-rather than being split between Studies and Execution — that placement overrides
-the Fields Verdicts, which had put Participant criteria under Execution. Execution
-keeps the Planned Schedule, Previous Knowledge and its Additional information
-hatch, so it is not emptied by the move.
+Methods shares a page with the approach question in Studies. **Participant criteria
+is in Execution**, asked once for the whole plan, which is where the October sheet
+puts it. **Sample Size is cut.**
+
+The October sheet is a **complete list of what the form keeps**: a field absent from
+it is cut, not unaccounted for. Fourteen of the template's thirty-two fields survive
+and eighteen go, including Goal, Research readout, Last updated, Sample Size and all
+five Additional information hatches.
 
 Decision record 002 carries this list, and every ticket that renames, moves or
 evaluates a section cites it rather than guessing.
